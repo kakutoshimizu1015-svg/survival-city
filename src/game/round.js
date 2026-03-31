@@ -1,20 +1,61 @@
-import { useGameStore } from '../store/useGameStore';
+import { useGameStore, isSameTeam } from '../store/useGameStore';
 import { logMsg } from './actions';
 import { dealDamage } from './combat';
 import { playSfx } from '../utils/audio';
+import { charEmoji } from '../constants/characters';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const getDestRandom = (start, steps, mapData) => {
+    let current = start, hitList = [];
+    for (let i = 0; i < steps; i++) {
+        let tile = mapData.find(t => t.id === current);
+        let nexts = tile.next;
+        if (nexts.length === 0) break;
+        current = nexts[Math.floor(Math.random() * nexts.length)];
+        hitList.push(current);
+    }
+    return { finalPos: current, hitList };
+};
+
+const endGame = () => {
+    const state = useGameStore.getState();
+    useGameStore.setState({ gameOver: true });
+    
+    let results = state.players.map(p => {
+        let terrValue = 0;
+        Object.keys(state.territories).filter(k => state.territories[k] === p.id).forEach(tId => {
+            let area = state.mapData.find(t => t.id == tId).area;
+            terrValue += (area === "slum" ? 3 : area === "commercial" ? 6 : 10);
+        });
+        let resourceValue = p.cans * state.canPrice + p.trash * state.trashPrice;
+        let scaledP = Math.round(p.p * 2.0);
+        let totalScore = scaledP + terrValue + resourceValue + (p.kills || 0) * 3 - (p.deaths || 0) * 5;
+        return { ...p, scaledP, terrValue, totalScore, emoji: charEmoji[p.charType] };
+    }).sort((a, b) => b.totalScore - a.totalScore);
+    
+    // チーム戦スコア合算
+    const hasTeams = state.players.some(p => p.teamColor !== 'none');
+    if (hasTeams) {
+        const teamScores = {};
+        results.forEach(r => {
+            const tk = r.teamColor !== 'none' ? r.teamColor : `_solo_${r.id}`;
+            if (!teamScores[tk]) teamScores[tk] = { color: r.teamColor, total: 0, members: [] };
+            teamScores[tk].total += r.totalScore;
+            teamScores[tk].members.push(r);
+        });
+        const sortedTeams = Object.values(teamScores).sort((a, b) => b.total - a.total);
+        logMsg(`🏆 優勝は ${sortedTeams[0].color !== 'none' ? sortedTeams[0].color+'チーム' : sortedTeams[0].members[0].name}！`);
+    } else {
+        logMsg(`🏆 優勝は ${results[0].name}！`);
+    }
+    playSfx('win');
+};
 
 export const processRoundEnd = async () => {
     const state = useGameStore.getState();
     let newRound = state.roundCount + 1;
-    
-    if (newRound > state.maxRounds) {
-        useGameStore.setState({ gameOver: true });
-        playSfx('win');
-        logMsg(`🏆 指定ラウンド終了！ゲームクリア！`);
-        return;
-    }
+    if (newRound > state.maxRounds) { endGame(); return; }
 
     logMsg(`<span style="color:#2980b9">--- 🌙 ラウンド${newRound}/${state.maxRounds} 開始 ---</span>`);
 
@@ -23,67 +64,66 @@ export const processRoundEnd = async () => {
     let canPrice = Math.max(1, Math.floor(Math.random() * 4));
     let trashPrice = Math.max(1, Math.floor(Math.random() * 6));
 
+    // 陣地維持費 (3ラウンド毎)
+    if (newRound % 3 === 0) {
+        const AREA_TAX = { slum: 0, commercial: 1, luxury: 2 };
+        state.players.forEach(p => {
+            const owned = Object.keys(state.territories).filter(k => state.territories[k] === p.id);
+            if (owned.length === 0) return;
+            let tax = 0;
+            owned.forEach(tId => { tax += AREA_TAX[state.mapData.find(x => x.id == tId)?.area || 'slum']; });
+            if (tax === 0) return;
+            if (p.p >= tax) {
+                useGameStore.getState().updatePlayer(p.id, prev => ({ p: prev.p - tax }));
+                logMsg(`💸 ${p.name}の維持費: -${tax}P`);
+            } else {
+                const lostId = owned.sort((a, b) => AREA_TAX[state.mapData.find(x=>x.id==b)?.area] - AREA_TAX[state.mapData.find(x=>x.id==a)?.area])[0];
+                const newTerr = { ...useGameStore.getState().territories };
+                delete newTerr[lostId];
+                useGameStore.getState().updatePlayer(p.id, { p: 0 });
+                useGameStore.setState({ territories: newTerr });
+                logMsg(`⚠️ ${p.name}は維持費不足で陣地没収！`);
+            }
+        });
+    }
+
     const md = state.mapData;
-    const canTrashTiles = md.filter(t => t.type === 'can' || t.type === 'trash');
-    let animalPos = canTrashTiles.length > 0 ? canTrashTiles[Math.floor(Math.random() * canTrashTiles.length)].id : 0;
+    let animalPos = md.filter(t=>t.type==='can'||t.type==='trash')[Math.floor(Math.random()*md.filter(t=>t.type==='can'||t.type==='trash').length)]?.id || 0;
     let unclePos = md[Math.floor(Math.random() * md.length)].id;
     let yakuzaPos = md[Math.floor(Math.random() * md.length)].id;
     let loansharkPos = md[Math.floor(Math.random() * md.length)].id;
     let friendPos = md[Math.floor(Math.random() * md.length)].id;
 
-    // ▼ ごみ収集車のホラー演出スタート
-    logMsg(`<span style="color:#c0392b">🛻 ごみ収集車が通過！</span>`);
-    useGameStore.setState({ horrorMode: true });
-    playSfx('hit');
-    await sleep(800);
+    // ごみ収集車 ホラー演出＆移動
+    logMsg(`<span style="color:#c0392b">🛻 ごみ収集車が暴走！</span>`);
+    useGameStore.setState({ horrorMode: true }); playSfx('hit'); await sleep(800);
+    
+    let truckRoll = Math.floor(Math.random()*6)+1 + Math.floor(Math.random()*6)+1;
+    let truckMove = getDestRandom(state.truckPos, truckRoll, md);
+    useGameStore.setState({ truckPos: truckMove.finalPos });
 
-    const hitPlayers = [];
     state.players.forEach(p => {
-        if (p.hp > 0 && Math.random() < 0.15) { // ランダムでひかれる確率
-            if (p.equip?.doll) {
-                useGameStore.getState().updatePlayer(p.id, prev => ({ equip: { ...prev.equip, doll: false } }));
-                logMsg(`🎎 身代わり人形が${p.name}を収集車から守った！`);
-                useGameStore.getState().addEventPopup(p.id, "🎎", "身代わり人形", "収集車を無効化", "good");
-            } else {
-                hitPlayers.push(p);
-            }
+        if (p.hp > 0 && truckMove.hitList.includes(p.pos)) {
+            if (p.equip?.doll) { useGameStore.getState().updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll:false} })); }
+            else if (Math.random() < 0.55) { useGameStore.setState({ bloodAnim: p.name }); dealDamage(p.id, 50, "収集車"); }
         }
     });
-
-    // 順番にひかれる演出
-    for (let p of hitPlayers) {
-        useGameStore.setState({ bloodAnim: p.name });
-        dealDamage(p.id, 50, "収集車");
-        await sleep(1000);
-        useGameStore.setState({ bloodAnim: null });
-    }
-
-    useGameStore.setState({ horrorMode: false });
-    // ▲ 演出終了
+    await sleep(1000);
+    useGameStore.setState({ horrorMode: false, bloodAnim: null });
 
     // 警察パトロール（偶数ラウンド）
     let newPolicePos = state.policePos;
     if (newRound % 2 === 0) {
-        logMsg(`🚓 警察がパトロールを実施！`);
-        newPolicePos = md[Math.floor(Math.random() * md.length)].id;
+        logMsg(`🚓 警察パトロール！`);
+        let policeRoll = Math.floor(Math.random()*6)+1 + Math.floor(Math.random()*6)+1 + Math.floor(Math.random()*6)+1;
+        let pMove = getDestRandom(state.policePos, policeRoll, md);
+        newPolicePos = pMove.finalPos;
         state.players.forEach(p => {
-            if (p.hp > 0 && p.pos === newPolicePos) {
-                if (!p.stealth && !p.hasID) {
-                    useGameStore.getState().updatePlayer(p.id, { penaltyAP: (p.penaltyAP || 0) + 2 });
-                    logMsg(`🚓 ${p.name}が補導された！次回AP-2`);
-                    useGameStore.getState().addEventPopup(p.id, "🚓", "警察パトロール", "次回AP-2", "bad");
-                }
+            if (p.hp > 0 && pMove.hitList.includes(p.pos)) {
+                if (!p.stealth && !p.hasID) { useGameStore.getState().updatePlayer(p.id, { penaltyAP: (p.penaltyAP||0)+2 }); logMsg(`🚓 ${p.name}補導！次回AP-2`); }
             }
         });
     }
 
-    // 予兆をセット
-    useGameStore.setState({ disasterWarning: "次のラウンドは収集車が活発化するかもしれない..." });
-    setTimeout(() => useGameStore.setState({ disasterWarning: null }), 3600);
-
-    useGameStore.setState({
-        roundCount: newRound, weatherState: weather, isRainy: weather === "rainy",
-        isNight, canPrice, trashPrice,
-        animalPos, unclePos, yakuzaPos, loansharkPos, friendPos, policePos: newPolicePos
-    });
+    useGameStore.setState({ roundCount: newRound, weatherState: weather, isRainy: weather === "rainy", isNight, canPrice, trashPrice, animalPos, unclePos, yakuzaPos, loansharkPos, friendPos, policePos: newPolicePos });
 };

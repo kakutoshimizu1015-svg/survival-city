@@ -6,12 +6,10 @@ const initialState = {
     isBranchPicking: false, currentBranchOptions: [],
     shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
     mgActive: false, mgType: "", mgValue: 0, mgResult: null, storyActive: false,
-    settingsActive: false, rulesActive: false, tutorialActive: false,
+    settingsActive: false, rulesActive: false, tutorialActive: false, teamActionActive: false,
     layoutMode: 'auto', volume: 1.0, tutorialStep: 0, sandboxActive: false, sandboxScenario: -1, sandboxStep: 0,
-    
-    // ▼ 追加：演出ステート
-    turnBanner: null, turnBannerActive: false,
-    eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,
+    turnBanner: null, turnBannerActive: false, eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,
+    npcMovePick: null, // 探偵のNPC移動ターゲット
 
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
     mapData: [], territories: {}, isRainy: false, weatherState: 'sunny', isNight: false,
@@ -26,11 +24,11 @@ export const useGameStore = create((set, get) => ({
     updateCurrentPlayer: (updater) => set((state) => ({ players: state.players.map(p => p.id === state.turn ? { ...p, ...updater(p) } : p) })),
     resetGame: () => set(initialState),
     applyNetworkAction: (action) => { console.log("Network action:", action); },
-    
-    // ▼ 追加：ポップアップ自動管理
     addEventPopup: (playerId, icon, title, detail = "", type = "neutral") => {
         const id = Date.now() + Math.random();
         set(state => ({ eventPopups: [...state.eventPopups.slice(-2), { id, playerId, icon, title, detail, type }] }));
         setTimeout(() => set(state => ({ eventPopups: state.eventPopups.filter(p => p.id !== id) })), 2800);
     }
 }));
+
+export const isSameTeam = (p1, p2) => p1 && p2 && p1.id !== p2.id && p1.teamColor !== 'none' && p1.teamColor === p2.teamColor;

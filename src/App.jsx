@@ -8,21 +8,21 @@ import { TutorialOverlay } from './components/overlays/TutorialOverlay';
 import { SandboxGuide } from './components/overlays/SandboxGuide';
 
 function App() {
-  const { gamePhase, layoutMode, weatherState, isNight } = useGameStore();
+  const { gamePhase, layoutMode, weatherState, isNight, horrorMode } = useGameStore();
 
-  // ▼ bodyタグに直接クラスを付与し、CSSのレイアウト切替を確実に発動させる
   useEffect(() => {
-    // 既存の関連クラスをリセット
-    document.body.classList.remove('layout-pc', 'layout-mobile', 'sunny', 'rainy', 'cloudy', 'night');
+    // 既存の関連クラスを全てリセットして競合を防ぐ
+    document.body.classList.remove('layout-pc', 'layout-mobile', 'sunny', 'rainy', 'cloudy', 'night', 'horror-mode');
     
     // レイアウトモードの適用
     if (layoutMode === 'sp') document.body.classList.add('layout-mobile');
     if (layoutMode === 'pc') document.body.classList.add('layout-pc');
     
-    // 天候と昼夜の適用
+    // 天候・昼夜・恐怖演出の適用
     if (weatherState) document.body.classList.add(weatherState);
     if (isNight) document.body.classList.add('night');
-  }, [layoutMode, weatherState, isNight]);
+    if (horrorMode) document.body.classList.add('horror-mode');
+  }, [layoutMode, weatherState, isNight, horrorMode]);
 
   return (
     <>
@@ -51,6 +51,7 @@ function App() {
       {gamePhase === 'online_lobby' && <OnlineLobby />}
       {gamePhase === 'playing' && <GameMain />}
 
+      {/* 共通のポップアップ画面群 */}
       <SettingsAndRules />
       <TutorialOverlay />
       <SandboxGuide />
