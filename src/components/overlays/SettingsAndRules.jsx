@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { ClayButton } from '../common/ClayButton';
 
 export const SettingsAndRules = () => {
-    const { settingsActive, rulesActive, layoutMode, volume, setGameState } = useGameStore();
+    const { settingsActive, rulesActive, layoutMode, volume, setGameState, resetGame } = useGameStore();
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
-    if (!settingsActive && !rulesActive) return null;
+    if (!settingsActive && !rulesActive && !confirmOpen) return null;
 
+    const handleReturnTitle = () => {
+        resetGame();
+        setConfirmOpen(false);
+    };
+
+    // 遊び方・ルール画面
     if (rulesActive) {
         return (
             <div className="modal-overlay" style={{ display: 'flex', zIndex: 25000 }} onClick={() => setGameState({ rulesActive: false })}>
@@ -188,6 +195,22 @@ export const SettingsAndRules = () => {
         );
     }
 
+    // タイトルに戻る確認モーダル
+    if (confirmOpen) {
+        return (
+            <div className="modal-overlay" style={{ display: 'flex', zIndex: 30000 }}>
+                <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723' }}>
+                    <h3 style={{ marginTop: 0, color: '#e74c3c' }}>⚠️ 確認</h3>
+                    <p style={{ fontWeight: 'bold' }}>現在のゲームは破棄されます。<br/>タイトルに戻りますか？</p>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                        <ClayButton onClick={handleReturnTitle} style={{ flex: 1, background: '#e74c3c' }}>はい</ClayButton>
+                        <ClayButton onClick={() => setConfirmOpen(false)} style={{ flex: 1, background: '#95a5a6' }}>いいえ</ClayButton>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // 設定メニュー
     return (
         <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={() => setGameState({ settingsActive: false })}>
@@ -212,7 +235,9 @@ export const SettingsAndRules = () => {
                 </div>
                 
                 <ClayButton onClick={() => setGameState({ rulesActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#3498db' }}>📖 遊び方・ルールを見る</ClayButton>
-                <ClayButton onClick={() => setGameState({ tutorialActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '15px', background: '#8e44ad', color: '#f1c40f' }}>📚 チュートリアル</ClayButton>
+                <ClayButton onClick={() => setGameState({ tutorialActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#8e44ad', color: '#f1c40f' }}>📚 チュートリアル</ClayButton>
+                
+                <ClayButton onClick={() => setConfirmOpen(true)} style={{ width: '100%', marginBottom: '15px', background: '#e74c3c' }}>🏠 タイトルに戻る</ClayButton>
                 
                 <ClayButton onClick={() => setGameState({ settingsActive: false })} style={{ width: '100%', background: '#95a5a6' }}>✖ 閉じる</ClayButton>
             </div>

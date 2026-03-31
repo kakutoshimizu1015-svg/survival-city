@@ -2,17 +2,21 @@ import React, { useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { charEmoji } from '../../constants/characters';
 import { getDistance } from '../../game/combat';
+import { executeMove } from '../../game/actions'; // ▼ アクションをインポート
 
 export const GameBoard = () => {
-    const { mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, isNight, npcMovePick } = useGameStore();
+    const { mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, isNight, npcMovePick, isBranchPicking, currentBranchOptions } = useGameStore();
 
-    // 探偵の移動先タップ機能
+    // 探偵の移動先タップ機能 ＆ 分岐時の移動先タップ機能
     const handleTileClick = (tileId) => {
-        if (!npcMovePick) return;
-        const state = useGameStore.getState();
-        const cp = state.players[state.turn];
-        state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
-        useGameStore.setState({ [npcMovePick]: tileId, npcMovePick: null });
+        if (npcMovePick) {
+            const state = useGameStore.getState();
+            state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
+            useGameStore.setState({ [npcMovePick]: tileId, npcMovePick: null });
+        } else if (isBranchPicking && currentBranchOptions.includes(tileId)) {
+            // ▼ クリックされたマスへ移動を実行する
+            executeMove(tileId);
+        }
     };
 
     // 夜間フォグ計算（自分のキャラから距離3以内のみ表示）
@@ -35,7 +39,10 @@ export const GameBoard = () => {
                 {mapData.map(tile => {
                     const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
                     const isFog = visibleTiles && !visibleTiles.has(tile.id);
-                    const isClickable = npcMovePick !== null;
+                    
+                    // ▼ 分岐マスかどうかの判定を追加
+                    const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
+                    const isClickable = npcMovePick !== null || isBranchTarget;
 
                     return (
                         <div key={tile.id} id={`tile-${tile.id}`} onClick={() => isClickable && handleTileClick(tile.id)} 

@@ -32,13 +32,10 @@ export const ActionPanel = () => {
 
     const isHandOverLimit = cp.hand.length > cp.maxHand;
     const canEndTurn = isMyTurn && diceRolled && !isBusy && !isHandOverLimit;
-
-    // ▼ 追加：ターン終了を促すプロンプト表示フラグ
     const showEndTurnPrompt = canEndTurn && cp.ap === 0 && !isHandOverLimit;
 
     return (
         <div id="action-panel" className="panel">
-            {/* ▼ ターン終了を強烈に促すバナー */}
             {showEndTurnPrompt && (
                 <div id="end-turn-prompt" style={{ position: 'fixed', top: '12%', left: 0, width: '100%', background: 'rgba(231,76,60,0.95)', color: '#fff', textAlign: 'center', padding: '15px 0', fontSize: '24px', fontWeight: 'bold', zIndex: 100, borderTop: '4px dashed #f1c40f', borderBottom: '4px dashed #f1c40f', textShadow: '2px 2px 4px rgba(0,0,0,0.8)', animation: 'pulse-banner 1.5s infinite', pointerEvents: 'none' }}>
                     👉 ターン終了ボタンを押してください 🛑
@@ -74,7 +71,7 @@ export const ActionPanel = () => {
                     <ClayButton color="red" onClick={actionEndTurn} disabled={!canEndTurn} className={showEndTurnPrompt ? "btn-end-highlight" : ""}>🛑 ターン終了</ClayButton>
                 </div>
                 {isMyTurn && (
-                    <button onClick={() => { useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false }); actionEndTurn(); }} style={{ background: '#34495e', color: '#fff', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }} title="エラーで動けなくなった場合に強制的にターンを終了します">
+                    <button onClick={() => { useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false, turnBannerActive: false }); actionEndTurn(); }} style={{ background: '#34495e', color: '#fff', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }} title="エラーで動けなくなった場合に強制的にターンを終了します">
                         ⚡スキップ
                     </button>
                 )}

@@ -2,29 +2,9 @@ import { useGameStore } from '../store/useGameStore';
 import { actionRollDice, executeMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, logMsg } from './actions';
 import { deckData } from '../constants/cards';
 import { actionUseCard, actionDiscardCard } from './cards';
-import { dealDamage } from './combat';
+import { dealDamage, getDistance } from './combat';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-// 距離計算ヘルパー（AI用）
-const getDistance = (posA, posB, mapData) => {
-    if (posA === posB) return 0;
-    let visited = new Set([posA]);
-    let queue = [{ id: posA, dist: 0 }];
-    while (queue.length > 0) {
-        let current = queue.shift();
-        let tile = mapData.find(t => t.id === current.id);
-        if (!tile) continue;
-        for (let nextId of tile.next) {
-            if (nextId === posB) return current.dist + 1;
-            if (!visited.has(nextId)) {
-                visited.add(nextId);
-                queue.push({ id: nextId, dist: current.dist + 1 });
-            }
-        }
-    }
-    return 999;
-};
 
 export const runCpuTurn = async () => {
     let state = useGameStore.getState();
@@ -68,11 +48,11 @@ export const runCpuTurn = async () => {
 
     // 4. メインアクションループ
     while (maxLoops-- > 0) {
-        // ★超重要：毎回のループの最初に「最新の」ゲーム状態を取得する
+        // 毎回のループの最初に「最新の」ゲーム状態を取得する
         state = useGameStore.getState();
         cp = state.players[turnId];
         
-        // 🛑 厄介なおじさん等でAPが0になったり、交番で行動不能になった場合は即座にループを抜ける！
+        // 🛑 APが0になったり、交番で行動不能になった場合はループを抜ける
         if (state.gameOver || cp.ap <= 0 || state.turn !== cp.id || cp.cannotMove || state.mgActive || state.storyActive || state.isBranchPicking) {
             break;
         }
@@ -86,9 +66,7 @@ export const runCpuTurn = async () => {
         
         let acted = false;
 
-        // --- CPUの思考・行動ルーチン ---
-
-        // ① 武器カードによる攻撃（AI専用の裏処理：人間用のUIを出さずに直接ダメージを与える）
+        // ① 武器カードによる攻撃
         const weaponCards = cp.hand.map((id, idx) => ({ id, idx, data: deckData.find(d => d.id === id) })).filter(c => c.data?.type === 'weapon');
         if (!acted && weaponCards.length > 0 && cp.ap >= 2 && Math.random() > 0.5) {
             const wc = weaponCards[0];
@@ -153,7 +131,6 @@ export const runCpuTurn = async () => {
 
         // ⑧ ショップでの購入
         if (!acted && currentTile.type === "shop" && cp.p >= 4 && cp.hand.length < cp.maxHand && Math.random() > 0.3) {
-            // ショップ画面を開かず、裏で直接ポイントを減らしてカードを増やす
             const pool = [0,1,2,3,4,5,6,7,8,9,10,11,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
             const cardId = pool[Math.floor(Math.random() * pool.length)];
             const cd = deckData.find(d => d.id === cardId);
@@ -193,10 +170,11 @@ export const runCpuTurn = async () => {
     }
 
     // 5. ターン終了処理
+    // ▼ ここが重要：await actionEndTurn() の完了を待ってから cpuActing = false にする
     state = useGameStore.getState();
     if (!state.gameOver && state.turn === turnId) {
-        useGameStore.setState({ cpuActing: false });
         await actionEndTurn();
+        useGameStore.setState({ cpuActing: false });
     } else {
         useGameStore.setState({ cpuActing: false });
     }

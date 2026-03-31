@@ -1,4 +1,4 @@
-import { useGameStore, isSameTeam } from '../store/useGameStore';
+import { useGameStore } from '../store/useGameStore';
 import { logMsg } from './actions';
 import { dealDamage } from './combat';
 import { playSfx } from '../utils/audio';
@@ -94,22 +94,38 @@ export const processRoundEnd = async () => {
     let loansharkPos = md[Math.floor(Math.random() * md.length)].id;
     let friendPos = md[Math.floor(Math.random() * md.length)].id;
 
-    // ごみ収集車 ホラー演出＆移動
+    // ▼ ごみ収集車 ホラー演出＆1マスずつの移動アニメーション
     logMsg(`<span style="color:#c0392b">🛻 ごみ収集車が暴走！</span>`);
-    useGameStore.setState({ horrorMode: true }); playSfx('hit'); await sleep(800);
+    useGameStore.setState({ horrorMode: true }); 
+    playSfx('hit'); 
+    await sleep(800);
     
     let truckRoll = Math.floor(Math.random()*6)+1 + Math.floor(Math.random()*6)+1;
     let truckMove = getDestRandom(state.truckPos, truckRoll, md);
-    useGameStore.setState({ truckPos: truckMove.finalPos });
+    
+    const hitPlayers = [];
+    for (let stepId of truckMove.hitList) {
+        useGameStore.setState({ truckPos: stepId });
+        
+        useGameStore.getState().players.forEach(p => {
+            if (p.hp > 0 && p.pos === stepId && !hitPlayers.includes(p.id)) {
+                if (p.equip?.doll) {
+                    useGameStore.getState().updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll:false} }));
+                    logMsg(`🎎 身代わり人形が${p.name}を守った！`);
+                } else if (Math.random() < 0.55) {
+                    hitPlayers.push(p.id);
+                    useGameStore.setState({ bloodAnim: p.name });
+                    dealDamage(p.id, 50, "収集車");
+                }
+            }
+        });
+        
+        await sleep(300); // これで1マスずつ進んでいくように見える
+        useGameStore.setState({ bloodAnim: null });
+    }
 
-    state.players.forEach(p => {
-        if (p.hp > 0 && truckMove.hitList.includes(p.pos)) {
-            if (p.equip?.doll) { useGameStore.getState().updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll:false} })); }
-            else if (Math.random() < 0.55) { useGameStore.setState({ bloodAnim: p.name }); dealDamage(p.id, 50, "収集車"); }
-        }
-    });
-    await sleep(1000);
-    useGameStore.setState({ horrorMode: false, bloodAnim: null });
+    await sleep(800);
+    useGameStore.setState({ horrorMode: false });
 
     // 警察パトロール（偶数ラウンド）
     let newPolicePos = state.policePos;
@@ -118,7 +134,7 @@ export const processRoundEnd = async () => {
         let policeRoll = Math.floor(Math.random()*6)+1 + Math.floor(Math.random()*6)+1 + Math.floor(Math.random()*6)+1;
         let pMove = getDestRandom(state.policePos, policeRoll, md);
         newPolicePos = pMove.finalPos;
-        state.players.forEach(p => {
+        useGameStore.getState().players.forEach(p => {
             if (p.hp > 0 && pMove.hitList.includes(p.pos)) {
                 if (!p.stealth && !p.hasID) { useGameStore.getState().updatePlayer(p.id, { penaltyAP: (p.penaltyAP||0)+2 }); logMsg(`🚓 ${p.name}補導！次回AP-2`); }
             }

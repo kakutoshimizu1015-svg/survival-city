@@ -10,7 +10,6 @@ import { PlayerList } from '../components/player/PlayerList';
 import { GameBoard } from '../components/board/GameBoard';
 import { LogPanel } from '../components/board/LogPanel';
 
-// オーバーレイ群
 import { DiceOverlay } from '../components/overlays/DiceOverlay';
 import { GameEventOverlays } from '../components/overlays/GameEventOverlays';
 import { WeaponArcOverlay } from '../components/overlays/WeaponArcOverlay';
@@ -18,10 +17,10 @@ import { EnvironmentOverlay } from '../components/overlays/EnvironmentOverlay';
 import { ShopOverlay } from '../components/overlays/ShopOverlay';
 import { TurnOrderOverlay } from '../components/overlays/TurnOrderOverlay';
 import { GameEffectsOverlay } from '../components/overlays/GameEffectsOverlay';
-import { TeamActionOverlay } from '../components/overlays/TeamActionOverlay'; // ▼ チーム連携画面を追加
+import { TeamActionOverlay } from '../components/overlays/TeamActionOverlay'; 
 
 export const GameMain = () => {
-    const { turn, players, gameOver, gamePhase } = useGameStore();
+    const { turn, players, gameOver, gamePhase, turnBannerActive } = useGameStore();
     const { status, isHost } = useNetworkStore();
     const prevTurn = useRef(-1);
 
@@ -38,21 +37,27 @@ export const GameMain = () => {
         }
     }, [turn, players, gameOver, gamePhase]);
 
-    // CPUの自動ターン進行
+    // CPUの自動ターン進行（修正版）
     useEffect(() => {
-        if (gameOver) return;
+        if (gameOver || gamePhase !== 'playing') return;
         const currentPlayer = players[turn];
         if (currentPlayer && currentPlayer.isCPU) {
             if (status === 'connected' && !isHost) return;
-            // ターンバナー表示中はCPUも待機
-            if (!useGameStore.getState().turnBannerActive) runCpuTurn();
+            
+            // ▼ ここがバグ修正のキモ。
+            // 人間のターン終了時に一瞬だけ turnBannerActive が false のまま
+            // turn が切り替わるタイミングがあり、そこでCPUが誤爆起動していたのを防ぐ
+            // 「現在CPUが動いていない」「バナーが消えている」「自分の番である」ことのトリプルチェック
+            const state = useGameStore.getState();
+            if (!turnBannerActive && !state.cpuActing && state.turn === currentPlayer.id) {
+                runCpuTurn();
+            }
         }
-    }, [turn, players, gameOver, status, isHost, useGameStore.getState().turnBannerActive]);
+    }, [turn, players, gameOver, gamePhase, status, isHost, turnBannerActive]);
 
     return (
         <div id="game-screen" style={{ display: 'flex', width: '100%', height: '100dvh', maxWidth: '1800px', flexDirection: 'column', alignItems: 'center', overflow: 'hidden', paddingBottom: '5px' }}>
             
-            {/* 画面に重なる演出・UI群 */}
             <GameEffectsOverlay />
             <DiceOverlay />
             <GameEventOverlays />
@@ -60,9 +65,8 @@ export const GameMain = () => {
             <EnvironmentOverlay />
             <ShopOverlay />
             <TurnOrderOverlay />
-            <TeamActionOverlay /> {/* ▼ チーム連携画面 */}
+            <TeamActionOverlay />
 
-            {/* 上部ステータスバー */}
             <div id="top-bar" style={{ display: 'flex', width: '100%', gap: '15px', marginBottom: '10px', alignItems: 'stretch', flexShrink: 0 }}>
                 <div id="left-status-area" style={{ display: 'flex', gap: '15px', flexShrink: 0 }}>
                     <StatusPanel />
@@ -70,7 +74,6 @@ export const GameMain = () => {
                 <HandCards />
             </div>
 
-            {/* 中央マップ ＆ 右側アクションパネル */}
             <div id="main-area" style={{ display: 'flex', width: '100%', gap: '15px', flexGrow: 1, minHeight: 0 }}>
                 <GameBoard />
                 <div id="right-side-area" style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '220px', flexShrink: 0, overflowY: 'auto' }}>
@@ -79,7 +82,6 @@ export const GameMain = () => {
                 </div>
             </div>
             
-            {/* 下部ログ */}
             <LogPanel />
         </div>
     );
