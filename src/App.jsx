@@ -5,16 +5,15 @@ import { SetupOffline } from './features/SetupOffline';
 import { OnlineLobby } from './features/OnlineLobby';
 import { SettingsAndRules } from './components/overlays/SettingsAndRules';
 import { TutorialOverlay } from './components/overlays/TutorialOverlay';
+import { SandboxGuide } from './components/overlays/SandboxGuide';
 
 function App() {
   const { gamePhase, layoutMode, setGameState } = useGameStore();
 
-  // レイアウトクラスの決定
   const layoutClass = layoutMode === 'sp' ? 'layout-mobile' : layoutMode === 'pc' ? 'layout-pc' : '';
 
   return (
     <div className={layoutClass}>
-      {/* 設定・チュートリアルボタン（タイトル以外で表示） */}
       {gamePhase !== 'title' && (
         <button id="settings-btn" onClick={() => setGameState({ settingsActive: true })}>⚙️</button>
       )}
@@ -40,9 +39,9 @@ function App() {
       {gamePhase === 'online_lobby' && <OnlineLobby />}
       {gamePhase === 'playing' && <GameMain />}
 
-      {/* 共通オーバーレイ */}
       <SettingsAndRules />
       <TutorialOverlay />
+      <SandboxGuide /> {/* ▼ 新規追加：体験モード用ガイドUI */}
     </div>
   );
 }

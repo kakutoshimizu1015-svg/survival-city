@@ -1,31 +1,21 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { startTutorialSandbox } from '../../game/sandbox';
 
-// タップで開閉するキャラクター攻略カードのコンポーネント
 const CharCard = ({ emoji, name, role, passive, action, strategy, color }) => {
     const [expanded, setExpanded] = useState(false);
     return (
         <div className={`tut-char-card ${expanded ? 'expanded' : ''}`} onClick={() => setExpanded(!expanded)}>
             <div className="tut-char-head">
                 <div className="tut-char-emoji" style={{ borderColor: color }}>{emoji}</div>
-                <div className="tut-char-meta">
-                    <div className="tut-char-name">{name}</div>
-                    <div className="tut-char-role">{role}</div>
-                </div>
+                <div className="tut-char-meta"><div className="tut-char-name">{name}</div><div className="tut-char-role">{role}</div></div>
             </div>
             <div className="tut-char-skills">
-                <div className="tut-skill-row">
-                    <span className="tut-skill-badge passive">パッシブ</span>
-                    <span>{passive}</span>
-                </div>
-                <div className="tut-skill-row">
-                    <span className="tut-skill-badge action">アクション</span>
-                    <span>{action}</span>
-                </div>
+                <div className="tut-skill-row"><span className="tut-skill-badge passive">パッシブ</span><span>{passive}</span></div>
+                <div className="tut-skill-row"><span className="tut-skill-badge action">アクション</span><span>{action}</span></div>
             </div>
             <div className="tut-char-strategy" style={{ display: expanded ? 'block' : 'none' }}>
-                <div className="tut-strat-title">📋 攻略・定石</div>
-                <div className="tut-strat-text">{strategy}</div>
+                <div className="tut-strat-title">📋 攻略・定石</div><div className="tut-strat-text">{strategy}</div>
             </div>
             <div className="tut-char-expand" style={{ display: expanded ? 'none' : 'block' }}>▼ タップして定石を表示</div>
             <div className="tut-char-expand" style={{ display: expanded ? 'block' : 'none' }}>▲ 閉じる</div>
@@ -40,13 +30,7 @@ export const TutorialOverlay = () => {
     if (!tutorialActive) return null;
 
     const tabs = ['🎯 目的', '🎮 ターンの流れ', '📊 画面の見方', '🗺️ マスの種類', '🃏 カード＆装備', '👥 NPCと危険', '🎯 ミニゲーム', '🏆 キャラ攻略'];
-
-    const handleNext = () => {
-        if (currentTab < tabs.length - 1) setCurrentTab(prev => prev + 1);
-    };
-    const handlePrev = () => {
-        if (currentTab > 0) setCurrentTab(prev => prev - 1);
-    };
+    const sandboxLabels = ['🎮 スコア計算を体験する', '🎮 1ターンをプレイしてみる', '🎮 画面の各要素を確認する', '🎮 いろんなマスを巡ってみる', '🎮 カードを使ってみる', '🎮 NPCに遭遇してみる', '🎮 ミニゲームを遊んでみる', '🎮 キャラスキルを試す'];
 
     return (
         <div className="tut-overlay">
@@ -55,15 +39,12 @@ export const TutorialOverlay = () => {
                 .tut-header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; background:linear-gradient(135deg, #1a1a3e 0%, #2c1e3e 100%); border-bottom:3px solid #f1c40f; flex-shrink:0; }
                 .tut-header-title { font-size:20px; font-weight:900; color:#f1c40f; text-shadow:0 0 12px rgba(241,196,15,0.4); display:flex; align-items:center; gap:8px; }
                 .tut-close-btn { background:rgba(231,76,60,0.15); border:2px solid #e74c3c; color:#e74c3c; border-radius:8px; padding:6px 14px; font-weight:bold; cursor:pointer; font-size:14px; transition:all 0.2s; }
-                .tut-close-btn:hover { background:#e74c3c; color:#fff; }
                 .tut-tabs { display:flex; overflow-x:auto; gap:0; background:#1a1a2e; border-bottom:2px solid #2c2c4e; flex-shrink:0; scrollbar-width:thin; }
                 .tut-tab { padding:10px 16px; font-size:13px; font-weight:bold; color:#7f8c8d; background:transparent; border:none; cursor:pointer; white-space:nowrap; border-bottom:3px solid transparent; transition:all 0.25s; flex-shrink:0; }
-                .tut-tab:hover { color:#bdc3c7; background:rgba(255,255,255,0.03); }
                 .tut-tab.active { color:#f1c40f; border-bottom-color:#f1c40f; background:rgba(241,196,15,0.06); }
                 .tut-content { flex:1; overflow-y:auto; padding:20px; scrollbar-width:thin; }
-                .tut-card { background:linear-gradient(145deg, rgba(40,40,65,0.95), rgba(30,30,50,0.95)); border:2px solid rgba(255,255,255,0.08); border-radius:14px; padding:20px; margin-bottom:18px; box-shadow:0 4px 20px rgba(0,0,0,0.4); transition:border-color 0.3s; }
-                .tut-card:hover { border-color:rgba(241,196,15,0.2); }
-                .tut-card h3 { margin:0 0 12px 0; font-size:18px; color:#f1c40f; display:flex; align-items:center; gap:8px; border-bottom:1px dashed rgba(241,196,15,0.3); padding-bottom:8px; }
+                .tut-card { background:linear-gradient(145deg, rgba(40,40,65,0.95), rgba(30,30,50,0.95)); border:2px solid rgba(255,255,255,0.08); border-radius:14px; padding:20px; margin-bottom:18px; box-shadow:0 4px 20px rgba(0,0,0,0.4); }
+                .tut-card h3 { margin:0 0 12px 0; font-size:18px; color:#f1c40f; border-bottom:1px dashed rgba(241,196,15,0.3); padding-bottom:8px; }
                 .tut-card p, .tut-card li { color:#d5d5e0; font-size:14px; line-height:1.75; margin:6px 0; }
                 .tut-card ul { padding-left:18px; margin:8px 0; }
                 .tut-card b { color:#fdf5e6; }
@@ -77,15 +58,14 @@ export const TutorialOverlay = () => {
                 .tut-step-desc { font-size:13px; color:#b0b0c0; line-height:1.6; }
                 .tut-highlight { background:rgba(241,196,15,0.08); border-left:4px solid #f1c40f; padding:12px 16px; border-radius:0 8px 8px 0; margin:12px 0; }
                 .tut-highlight p { color:#e0d5a0; margin:0; }
-                .tut-highlight strong { color:#f1c40f; }
                 .tut-ui-mock { background:rgba(92,74,68,0.6); border:2px solid #8d6e63; border-radius:12px; padding:14px; margin:12px 0; position:relative; }
                 .tut-ui-label { position:absolute; top:-10px; left:14px; background:#f1c40f; color:#1a1a2e; padding:2px 10px; border-radius:4px; font-size:11px; font-weight:900; }
                 .tut-mock-row { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0; }
-                .tut-mock-stat { background:#8d7b68; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; color:#fdf5e6; border:1px solid #4a3b32; display:flex; align-items:center; gap:4px; }
-                .tut-mock-btn { background:#e07a5f; color:#fff; padding:8px 14px; border-radius:6px; font-size:12px; font-weight:bold; border:2px solid #3e2f2a; display:inline-block; }
+                .tut-mock-stat { background:#8d7b68; padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; color:#fdf5e6; border:1px solid #4a3b32; }
+                .tut-mock-btn { background:#e07a5f; color:#fff; padding:8px 14px; border-radius:6px; font-size:12px; font-weight:bold; border:2px solid #3e2f2a; }
                 .tut-mock-btn.highlight { box-shadow:0 0 12px rgba(241,196,15,0.6); border-color:#f1c40f; }
                 .tut-mock-btn.disabled { opacity:0.4; }
-                .tut-arrow-label { display:flex; align-items:center; gap:6px; font-size:12px; color:#f1c40f; font-weight:bold; margin:6px 0; }
+                .tut-arrow-label { font-size:12px; color:#f1c40f; font-weight:bold; margin:6px 0; }
                 .tut-tile-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; margin:12px 0; }
                 .tut-tile-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); }
                 .tut-tile-dot { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,0.4); border:2px solid rgba(255,255,255,0.3); }
@@ -98,8 +78,7 @@ export const TutorialOverlay = () => {
                 .tut-npc-name { font-size:13px; font-weight:bold; color:#fdf5e6; }
                 .tut-npc-desc { font-size:11px; color:#95a5a6; line-height:1.4; margin-top:2px; }
                 .tut-char-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:14px; margin:12px 0; }
-                .tut-char-card { background:linear-gradient(145deg, rgba(50,50,75,0.9), rgba(35,35,55,0.9)); border:2px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px; transition:all 0.3s; cursor:pointer; }
-                .tut-char-card:hover { border-color:rgba(241,196,15,0.4); transform:translateY(-2px); box-shadow:0 6px 24px rgba(0,0,0,0.5); }
+                .tut-char-card { background:linear-gradient(145deg, rgba(50,50,75,0.9), rgba(35,35,55,0.9)); border:2px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px; cursor:pointer; }
                 .tut-char-head { display:flex; align-items:center; gap:12px; }
                 .tut-char-emoji { font-size:38px; width:56px; height:56px; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.3); border-radius:12px; border:2px solid; flex-shrink:0; }
                 .tut-char-meta { flex:1; }
@@ -113,44 +92,40 @@ export const TutorialOverlay = () => {
                 .tut-strat-title { font-size:12px; font-weight:bold; color:#f1c40f; margin-bottom:6px; margin-top:12px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.1); }
                 .tut-strat-text { font-size:12px; color:#a0a0b8; line-height:1.65; }
                 .tut-char-expand { font-size:11px; color:#7f8c8d; text-align:center; margin-top:8px; transition:color 0.2s; }
-                .tut-char-card:hover .tut-char-expand { color:#f1c40f; }
                 .tut-footer { display:flex; justify-content:space-between; align-items:center; padding:12px 20px; background:#1a1a2e; border-top:2px solid #2c2c4e; flex-shrink:0; }
                 .tut-footer-btn { padding:8px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; border:2px solid; transition:all 0.2s; }
                 .tut-footer-btn.prev { background:transparent; border-color:#7f8c8d; color:#7f8c8d; }
-                .tut-footer-btn.prev:hover { border-color:#bdc3c7; color:#bdc3c7; }
                 .tut-footer-btn.next { background:#f1c40f; border-color:#f1c40f; color:#1a1a2e; }
-                .tut-footer-btn.next:hover { background:#f39c12; border-color:#f39c12; }
-                .tut-footer-btn:disabled { opacity:0.3; cursor:not-allowed; }
+                .tut-try-btn { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; margin-bottom:16px; background:linear-gradient(135deg,#f1c40f,#e67e22); color:#1a1a2e; font-weight:900; font-size:14px; border:none; border-radius:10px; cursor:pointer; box-shadow:0 4px 16px rgba(241,196,15,0.4); transition:all 0.2s; }
             `}</style>
 
-            {/* ヘッダー */}
             <div className="tut-header">
                 <div className="tut-header-title">📚 チュートリアル</div>
                 <button className="tut-close-btn" onClick={() => setGameState({ tutorialActive: false })}>✕ 閉じる</button>
             </div>
 
-            {/* タブナビゲーション */}
             <div className="tut-tabs">
                 {tabs.map((tab, idx) => (
-                    <button key={idx} className={`tut-tab ${currentTab === idx ? 'active' : ''}`} onClick={() => setCurrentTab(idx)}>
-                        {tab}
-                    </button>
+                    <button key={idx} className={`tut-tab ${currentTab === idx ? 'active' : ''}`} onClick={() => setCurrentTab(idx)}>{tab}</button>
                 ))}
             </div>
 
-            {/* コンテンツエリア */}
             <div className="tut-content">
-                
+                {currentTab < sandboxLabels.length && (
+                    <div style={{ textAlign: 'center' }}>
+                        <button className="tut-try-btn" onClick={() => startTutorialSandbox(currentTab)}>
+                            {sandboxLabels[currentTab]}
+                        </button>
+                    </div>
+                )}
+
                 {/* 1. 目的 */}
                 {currentTab === 0 && (
                     <div className="tut-page active">
                         <div className="tut-card">
                             <h3>🏆 勝利条件</h3>
                             <p>このゲームは<b>指定ラウンド数</b>が終わった時点で、<em>最も高い総合スコア</em>を持つプレイヤーの勝利です。</p>
-                            <div className="tut-highlight">
-                                <p><strong>スコア計算式</strong><br/>
-                                スコア ＝ 所持P × 2 ＋ 陣地の価値 ＋ 資源価値 ＋ キル×3 − デス×5</p>
-                            </div>
+                            <div className="tut-highlight"><p><strong>スコア計算式</strong><br/>スコア ＝ 所持P × 2 ＋ 陣地の価値 ＋ 資源価値 ＋ キル×3 − デス×5</p></div>
                             <p>つまり、<b>お金（P）</b>を稼ぐだけでなく、<b>陣地の確保</b>や<b>他プレイヤーとの戦闘</b>も重要です。死亡回数が多いと大きく減点されるので注意！</p>
                         </div>
                         <div className="tut-card">
@@ -182,39 +157,10 @@ export const TutorialOverlay = () => {
                             <h3>🔄 1ターンの流れ</h3>
                             <p>各プレイヤーは1ターンに以下の流れでプレイします。</p>
                             <div className="tut-steps">
-                                <div className="tut-step">
-                                    <div className="tut-step-num">1</div>
-                                    <div className="tut-step-body">
-                                        <div className="tut-step-title">🎲 サイコロを振る</div>
-                                        <div className="tut-step-desc">2つのサイコロの合計が<b>AP（行動力）</b>になります。<br/>
-                                        <em>ゾロ目</em>が出るとAPが2倍！自転車装備なら+2AP追加。</div>
-                                    </div>
-                                </div>
-                                <div className="tut-step">
-                                    <div className="tut-step-num">2</div>
-                                    <div className="tut-step-body">
-                                        <div className="tut-step-title">🚶 移動＆アクション</div>
-                                        <div className="tut-step-desc">APを消費して自由に行動します。<br/>
-                                        移動は1AP（雨の日は2AP）、各マスのアクション（缶拾い、バイト等）を実行できます。<br/>
-                                        <em>APが続く限り何度でも行動OK！</em></div>
-                                    </div>
-                                </div>
-                                <div className="tut-step">
-                                    <div className="tut-step-num">3</div>
-                                    <div className="tut-step-body">
-                                        <div className="tut-step-title">🃏 カード使用</div>
-                                        <div className="tut-step-desc">手札のカードを<b>2AP</b>で使用可能。回復、攻撃、バフなど多彩。<br/>
-                                        APがあれば1ターンに何枚でも使えます。</div>
-                                    </div>
-                                </div>
-                                <div className="tut-step">
-                                    <div className="tut-step-num">4</div>
-                                    <div className="tut-step-body">
-                                        <div className="tut-step-title">🛑 ターン終了</div>
-                                        <div className="tut-step-desc">やることが終わったら「ターン終了」ボタンを押します。<br/>
-                                        <em>残ったAPは持ち越せません！</em>なるべく使い切りましょう。</div>
-                                    </div>
-                                </div>
+                                <div className="tut-step"><div className="tut-step-num">1</div><div className="tut-step-body"><div className="tut-step-title">🎲 サイコロを振る</div><div className="tut-step-desc">2つのサイコロの合計が<b>AP（行動力）</b>になります。<br/><em>ゾロ目</em>が出るとAPが2倍！自転車装備なら+2AP追加。</div></div></div>
+                                <div className="tut-step"><div className="tut-step-num">2</div><div className="tut-step-body"><div className="tut-step-title">🚶 移動＆アクション</div><div className="tut-step-desc">APを消費して自由に行動します。<br/>移動は1AP（雨の日は2AP）、各マスのアクション（缶拾い、バイト等）を実行できます。<br/><em>APが続く限り何度でも行動OK！</em></div></div></div>
+                                <div className="tut-step"><div className="tut-step-num">3</div><div className="tut-step-body"><div className="tut-step-title">🃏 カード使用</div><div className="tut-step-desc">手札のカードを<b>2AP</b>で使用可能。回復、攻撃、バフなど多彩。<br/>APがあれば1ターンに何枚でも使えます。</div></div></div>
+                                <div className="tut-step"><div className="tut-step-num">4</div><div className="tut-step-body"><div className="tut-step-title">🛑 ターン終了</div><div className="tut-step-desc">やることが終わったら「ターン終了」ボタンを押します。<br/><em>残ったAPは持ち越せません！</em>なるべく使い切りましょう。</div></div></div>
                             </div>
                         </div>
                         <div className="tut-card">
@@ -239,20 +185,10 @@ export const TutorialOverlay = () => {
                             <p>現在のターンプレイヤーの情報が表示されます。タップするとキャラの詳細スキルが見れます。</p>
                             <div className="tut-ui-mock">
                                 <div className="tut-ui-label">ステータス表示</div>
-                                <div className="tut-mock-row" style={{ marginTop: '12px' }}>
-                                    <div className="tut-mock-stat">❤️ HP: 100</div>
-                                    <div className="tut-mock-stat" style={{ background: '#4a6b5d' }}>⚡ AP: 8</div>
-                                </div>
-                                <div className="tut-mock-row">
-                                    <div className="tut-mock-stat">💰 P: 15</div>
-                                    <div className="tut-mock-stat">🚩 領土: 3</div>
-                                </div>
-                                <div className="tut-mock-row">
-                                    <div className="tut-mock-stat" style={{ background: '#4a3b32' }}>⚔️ 2K / 💀1D</div>
-                                </div>
-                                <div className="tut-mock-row">
-                                    <div className="tut-mock-stat" style={{ background: '#6d5c4e' }}>🥫3 🗑️2 🎴4/7</div>
-                                </div>
+                                <div className="tut-mock-row" style={{ marginTop: '12px' }}><div className="tut-mock-stat">❤️ HP: 100</div><div className="tut-mock-stat" style={{ background: '#4a6b5d' }}>⚡ AP: 8</div></div>
+                                <div className="tut-mock-row"><div className="tut-mock-stat">💰 P: 15</div><div className="tut-mock-stat">🚩 領土: 3</div></div>
+                                <div className="tut-mock-row"><div className="tut-mock-stat" style={{ background: '#4a3b32' }}>⚔️ 2K / 💀1D</div></div>
+                                <div className="tut-mock-row"><div className="tut-mock-stat" style={{ background: '#6d5c4e' }}>🥫3 🗑️2 🎴4/7</div></div>
                             </div>
                             <div className="tut-arrow-label">👆 各項目の意味</div>
                             <ul>
@@ -295,11 +231,22 @@ export const TutorialOverlay = () => {
                                     <div className="tut-mock-btn disabled">💼 バイト (3AP)</div>
                                 </div>
                             </div>
-                            <div className="tut-highlight">
-                                <p><strong>ポイント：</strong>ボタンが明るく光っている＝今使えるアクション。<br/>
-                                灰色の半透明＝条件未達（APが足りない、現在のマスでは使えない等）。<br/>
-                                まずサイコロを振り、APを確保してから他のアクションを行います。</p>
-                            </div>
+                            <div className="tut-highlight"><p><strong>ポイント：</strong>ボタンが明るく光っている＝今使えるアクション。<br/>灰色の半透明＝条件未達（APが足りない、現在のマスでは使えない等）。<br/>まずサイコロを振り、APを確保してから他のアクションを行います。</p></div>
+                        </div>
+                        <div className="tut-card">
+                            <h3>🃏 手札エリア（上部中央〜右）</h3>
+                            <p>取得したカードが並びます。カード上の「使う」ボタンで<b>2AP</b>消費して使用、「捨てる」で破棄します。</p>
+                            <div className="tut-highlight"><p><strong>手札上限に注意！</strong>上限（通常7枚）を超えるとカードを捨てるまで行動できません。<br/>不要なカードは早めに使うか捨てましょう。</p></div>
+                        </div>
+                        <div className="tut-card">
+                            <h3>🗺️ マップエリア（中央）</h3>
+                            <p>ゲームボードが表示されます。丸いタイル上にプレイヤーのコマやNPCが配置されています。</p>
+                            <ul>
+                                <li>🔍 <b>ズーム</b> — 左上のボタン（＋/−/⟳）またはマウスホイール/ピンチ操作</li>
+                                <li>🖐️ <b>スクロール</b> — ドラッグまたは1本指スワイプで視点移動</li>
+                                <li>👆 <b>タイルタップ</b> — 分岐点で進む方向を選択する時に使用</li>
+                                <li>⚡ <b>右上のAP表示</b> — マップ上でも残りAPが常に見える</li>
+                            </ul>
                         </div>
                     </div>
                 )}
@@ -332,10 +279,7 @@ export const TutorialOverlay = () => {
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: '#a89481' }}>🏢</div><div className="tut-tile-info"><div className="tut-tile-name">商業地区</div><div className="tut-tile-desc">中間コスト。収入2P/ターン</div></div></div>
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: '#d1c4b9', color: '#333' }}>💎</div><div className="tut-tile-info"><div className="tut-tile-name">高級住宅街</div><div className="tut-tile-desc">占領コスト高め。収入3P/ターン</div></div></div>
                             </div>
-                            <div className="tut-highlight">
-                                <p><strong>定石：</strong>序盤はスラム街の安いマスを2〜3個確保し、安定した固定収入を作ることが重要です。<br/>
-                                リヤカー装備を取得すると陣地収入が<em>2倍</em>になるため非常に強力。</p>
-                            </div>
+                            <div className="tut-highlight"><p><strong>定石：</strong>序盤はスラム街の安いマスを2〜3個確保し、安定した固定収入を作ることが重要です。<br/>リヤカー装備を取得すると陣地収入が<em>2倍</em>になるため非常に強力。</p></div>
                         </div>
                     </div>
                 )}
@@ -351,9 +295,7 @@ export const TutorialOverlay = () => {
                                 <li>🗑️ <b>ゴミ漁り</b>で低確率ドロップ</li>
                                 <li>特定のイベントやキャラスキルによる獲得</li>
                             </ul>
-                            <div className="tut-highlight">
-                                <p><strong>使用コスト：</strong>すべてのカード使用に<em>2AP</em>必要。カード自体の効果は無料。</p>
-                            </div>
+                            <div className="tut-highlight"><p><strong>使用コスト：</strong>すべてのカード使用に<em>2AP</em>必要。カード自体の効果は無料。</p></div>
                         </div>
                         <div className="tut-card">
                             <h3>🟢 バフ・収入系カード</h3>
@@ -376,10 +318,7 @@ export const TutorialOverlay = () => {
                                 <li><b>缶泥棒</b> — 他人から最大2P強奪</li>
                                 <li><b>通報</b> — 相手の次AP-2。地味に強い妨害</li>
                             </ul>
-                            <div className="tut-highlight">
-                                <p><strong>武器の射程について：</strong>射程はマス数です。射程2なら2マス離れた相手まで攻撃可能。<br/>
-                                使用すると<em>扇形の照準UI</em>が出るので、スライダーで角度を調整して攻撃します。</p>
-                            </div>
+                            <div className="tut-highlight"><p><strong>武器の射程について：</strong>射程はマス数です。射程2なら2マス離れた相手まで攻撃可能。<br/>使用すると<em>扇形の照準UI</em>が出るので、スライダーで角度を調整して攻撃します。</p></div>
                         </div>
                         <div className="tut-card">
                             <h3>🛡️ 装備品カード（永続効果）</h3>
@@ -400,10 +339,7 @@ export const TutorialOverlay = () => {
                                 <li><b>裏取引</b> — 「下剋上」「大暴落」を使った相手に効果を反射</li>
                                 <li><b>反撃の一撃</b> — 受けたダメージをそのまま相手に返す</li>
                             </ul>
-                            <div className="tut-highlight">
-                                <p><strong>定石：</strong>トップに立った時は「弁護士の盾」や「裏取引」を予約しておくと、<br/>
-                                逆転カードからの防御が可能。1位の防衛に必須。</p>
-                            </div>
+                            <div className="tut-highlight"><p><strong>定石：</strong>トップに立った時は「弁護士の盾」や「裏取引」を予約しておくと、<br/>逆転カードからの防御が可能。1位の防衛に必須。</p></div>
                         </div>
                     </div>
                 )}
@@ -415,13 +351,13 @@ export const TutorialOverlay = () => {
                             <h3>👥 マップ上のNPC</h3>
                             <p>マップには複数のNPCが巡回しています。近づくと自動的にイベントが発生します。</p>
                             <div className="tut-npc-list">
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🚓</div><div className="tut-npc-info"><div className="tut-npc-name">警察</div><div className="tut-npc-desc">同マスに止まると補導。次のターンAP-2ペナルティ。<br/>「身分証明書」カードや「ステルス行動」で回避可能。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🛻</div><div className="tut-npc-info"><div className="tut-npc-name">ゴミ収集車</div><div className="tut-npc-desc">ラウンド開始時に一定確率で出現し、エリアを走り抜ける。<br/>通過マスにいるとダメージ！事前にどのエリアが危険か告知されます。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🐕</div><div className="tut-npc-info"><div className="tut-npc-name">野良犬</div><div className="tut-npc-desc">同マスにいると缶拾い・ゴミ漁りができなくなる。<br/>避けて通るか、追い払うまで待つ。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">👴</div><div className="tut-npc-info"><div className="tut-npc-name">おじさん</div><div className="tut-npc-desc">同マスにいると陣地占領ができない。<br/>タイミングを見て避ける必要あり。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">😎</div><div className="tut-npc-info"><div className="tut-npc-name">ヤクザ</div><div className="tut-npc-desc">同マスに止まるとPを強奪される。<br/>「身代わり人形」装備で1回無効化可能。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">💰</div><div className="tut-npc-info"><div className="tut-npc-name">闇金</div><div className="tut-npc-desc">同マスに止まるとP没収のリスク。<br/>借金状態になることも。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🤝</div><div className="tut-npc-info"><div className="tut-npc-name">仲間</div><div className="tut-npc-desc">同マスに止まるとHP回復やPボーナスなど良い効果。<br/>見つけたら積極的に寄ろう。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🚓</div><div className="tut-npc-name">警察</div><div className="tut-npc-desc">同マスに止まると補導。次のターンAP-2ペナルティ。<br/>「身分証明書」カードや「ステルス行動」で回避可能。</div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🛻</div><div className="tut-npc-name">ゴミ収集車</div><div className="tut-npc-desc">ラウンド開始時に一定確率で出現し、エリアを走り抜ける。<br/>通過マスにいるとダメージ！事前にどのエリアが危険か告知されます。</div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🐕</div><div className="tut-npc-name">野良犬</div><div className="tut-npc-desc">同マスにいると缶拾い・ゴミ漁りができなくなる。<br/>避けて通るか、追い払うまで待つ。</div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">👴</div><div className="tut-npc-name">おじさん</div><div className="tut-npc-desc">同マスにいると陣地占領ができない。<br/>タイミングを見て避ける必要あり。</div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">😎</div><div className="tut-npc-name">ヤクザ</div><div className="tut-npc-desc">同マスに止まるとPを強奪される。<br/>「身代わり人形」装備で1回無効化可能。</div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">💰</div><div className="tut-npc-name">闇金</div><div className="tut-npc-desc">同マスに止まるとP没収のリスク。<br/>借金状態になることも。</div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🤝</div><div className="tut-npc-name">仲間</div><div className="tut-npc-desc">同マスに止まるとHP回復やPボーナスなど良い効果。<br/>見つけたら積極的に寄ろう。</div></div>
                             </div>
                         </div>
                         <div className="tut-card">
@@ -431,10 +367,7 @@ export const TutorialOverlay = () => {
                                 <li>🌙 <b>夜</b> — 自分の前後3マスしか見えない。ゴミ漁りにボーナスあり</li>
                                 <li>🚧 <b>道路工事</b> — 一定確率で発生。該当マスが2ラウンド通行不可</li>
                             </ul>
-                            <div className="tut-highlight">
-                                <p><strong>定石：</strong>雨の日は移動が重いので、ショップやバイトマスに留まってカードを買ったり働いたりするのが効率的。<br/>
-                                元アスリートなら雨でも移動1APなので大チャンス！</p>
-                            </div>
+                            <div className="tut-highlight"><p><strong>定石：</strong>雨の日は移動が重いので、ショップやバイトマスに留まってカードを買ったり働いたりするのが効率的。<br/>元アスリートなら雨でも移動1APなので大チャンス！</p></div>
                         </div>
                         <div className="tut-card">
                             <h3>💀 死亡とリスポーン</h3>
@@ -456,38 +389,23 @@ export const TutorialOverlay = () => {
                     <div className="tut-page active">
                         <div className="tut-card">
                             <h3>🎲 ミニゲームとは</h3>
-                            <p>イベントマスに止まると、ランダムでミニゲームが発生します。<br/>
-                            <em>勝つとカードが確定で手に入ります！</em></p>
-                            <div className="tut-highlight">
-                                <p><strong>逆転要素：</strong>順位が低いプレイヤーほど、ミニゲーム勝利時に<em>強力なカード</em>が出やすくなります。<br/>
-                                負けている時こそイベントマスに積極的に止まりましょう！</p>
-                            </div>
+                            <p>イベントマスに止まると、ランダムでミニゲームが発生します。<br/><em>勝つとカードが確定で手に入ります！</em></p>
+                            <div className="tut-highlight"><p><strong>逆転要素：</strong>順位が低いプレイヤーほど、ミニゲーム勝利時に<em>強力なカード</em>が出やすくなります。<br/>負けている時こそイベントマスに積極的に止まりましょう！</p></div>
                         </div>
                         <div className="tut-card">
                             <h3>📊 ハイ＆ロー</h3>
                             <p>基準の数字（0〜13）が表示され、次に出る数字がHighかLowかを当てます。</p>
-                            <ul>
-                                <li>基準が<b>0〜5</b>の時 → Highを選ぶのが有利</li>
-                                <li>基準が<b>8〜13</b>の時 → Lowを選ぶのが有利</li>
-                                <li>基準が<b>6〜7</b>の時 → ほぼ半々。直感で！</li>
-                            </ul>
+                            <ul><li>基準が<b>0〜5</b>の時 → Highを選ぶのが有利</li><li>基準が<b>8〜13</b>の時 → Lowを選ぶのが有利</li><li>基準が<b>6〜7</b>の時 → ほぼ半々。直感で！</li></ul>
                         </div>
                         <div className="tut-card">
                             <h3>📦 宝箱ゲーム</h3>
                             <p>3つの宝箱から1つを選びます。1つが当たり。</p>
-                            <ul>
-                                <li>単純な1/3の運ゲーです</li>
-                                <li>どれを選んでも確率は同じなので、直感で選びましょう</li>
-                            </ul>
+                            <ul><li>単純な1/3の運ゲーです</li><li>どれを選んでも確率は同じなので、直感で選びましょう</li></ul>
                         </div>
                         <div className="tut-card">
                             <h3>🎰 スロット</h3>
                             <p>3つのリールをSTOPして、絵柄を揃えます。</p>
-                            <ul>
-                                <li>各リールを1つずつ止めていきます</li>
-                                <li>3つ揃えば大当たり（確率は低め）</li>
-                                <li>2つ揃いでも小当たりになることがあります</li>
-                            </ul>
+                            <ul><li>各リールを1つずつ止めていきます</li><li>3つ揃えば大当たり（確率は低め）</li><li>2つ揃いでも小当たりになることがあります</li></ul>
                         </div>
                     </div>
                 )}
@@ -497,8 +415,7 @@ export const TutorialOverlay = () => {
                     <div className="tut-page active">
                         <div className="tut-card">
                             <h3>🏆 キャラクター選びのコツ</h3>
-                            <p>各キャラクターには<b>パッシブスキル</b>（常時発動）と<b>アクションスキル</b>（APを消費して任意発動）があります。<br/>
-                            プレイスタイルに合ったキャラを選びましょう。カードをタップすると定石が表示されます。</p>
+                            <p>各キャラクターには<b>パッシブスキル</b>（常時発動）と<b>アクションスキル</b>（APを消費して任意発動）があります。<br/>プレイスタイルに合ったキャラを選びましょう。カードをタップすると定石が表示されます。</p>
                         </div>
                         <div className="tut-char-grid">
                             <CharCard emoji="🏃" name="元アスリート" role="機動力特化型" passive="移動が常に1AP＆雨の影響なし" action="疾風ダッシュ（3AP）:3マス先へジャンプ" strategy="序盤から積極的に動き回り、缶拾い→換金のサイクルを素早く回すのが基本。雨の日は他プレイヤーが動けない中で独走できるため、雨の日にイベントマスや遠方の買取所を狙う。疾風ダッシュは危険なNPCからの脱出にも有効。陣地は通り道沿いに確保し、高回転の移動で稼ぐスタイル。" color="#e74c3c" />
@@ -515,7 +432,6 @@ export const TutorialOverlay = () => {
                 )}
             </div>
 
-            {/* フッター */}
             <div className="tut-footer">
                 <button className="tut-footer-btn prev" disabled={currentTab === 0} onClick={handlePrev}>◀ 前へ</button>
                 <span className="tut-progress">{currentTab + 1} / {tabs.length}</span>
