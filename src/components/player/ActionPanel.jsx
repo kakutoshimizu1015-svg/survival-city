@@ -7,7 +7,7 @@ import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, 
 
 export const ActionPanel = () => {
     const state = useGameStore();
-    const { turn, players, mapData, diceRolled, isBranchPicking, mgActive, storyActive, canPickedThisTurn, territories, animalPos } = state;
+    const { turn, players, mapData, diceRolled, isBranchPicking, mgActive, storyActive, canPickedThisTurn, territories, animalPos, turnBannerActive } = state;
     const cp = players[turn];
     const { myUserId, status, isHost } = useNetworkStore();
 
@@ -16,12 +16,9 @@ export const ActionPanel = () => {
     const tileType = currentTile.type;
 
     let isMyTurn = !cp.isCPU;
-    // オンライン時はホストならCPUも操作補助可能、人間なら本人のみ
-    if (status === 'connected') { 
-        isMyTurn = cp.isCPU ? isHost : (cp.userId === myUserId); 
-    }
+    if (status === 'connected') { isMyTurn = cp.isCPU ? isHost : (cp.userId === myUserId); }
 
-    const isBusy = isBranchPicking || mgActive || storyActive;
+    const isBusy = isBranchPicking || mgActive || storyActive || turnBannerActive;
     const hasAP = (cost) => cp.ap >= cost;
     const othersOnTile = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
 
@@ -33,21 +30,23 @@ export const ActionPanel = () => {
     const canDoTrash = isMyTurn && diceRolled && hasAP(cp.equip?.shoes ? 1 : 2) && tileType === 'trash' && !isBlockedByAnimal && !isBusy;
     const canDoOccupy = isMyTurn && diceRolled && ["normal","can","trash","job","exchange","shelter"].includes(tileType) && territories[cp.pos] !== cp.id && !isBusy;
 
-    // 手札上限オーバー時は行動不可
     const isHandOverLimit = cp.hand.length > cp.maxHand;
     const canEndTurn = isMyTurn && diceRolled && !isBusy && !isHandOverLimit;
 
-    // フリーズ脱出用の強制終了処理
-    const forceEndTurn = () => {
-        useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false });
-        actionEndTurn();
-    };
+    // ▼ 追加：ターン終了を促すプロンプト表示フラグ
+    const showEndTurnPrompt = canEndTurn && cp.ap === 0 && !isHandOverLimit;
 
     return (
         <div id="action-panel" className="panel">
+            {/* ▼ ターン終了を強烈に促すバナー */}
+            {showEndTurnPrompt && (
+                <div id="end-turn-prompt" style={{ position: 'fixed', top: '12%', left: 0, width: '100%', background: 'rgba(231,76,60,0.95)', color: '#fff', textAlign: 'center', padding: '15px 0', fontSize: '24px', fontWeight: 'bold', zIndex: 100, borderTop: '4px dashed #f1c40f', borderBottom: '4px dashed #f1c40f', textShadow: '2px 2px 4px rgba(0,0,0,0.8)', animation: 'pulse-banner 1.5s infinite', pointerEvents: 'none' }}>
+                    👉 ターン終了ボタンを押してください 🛑
+                </div>
+            )}
+            
             <div id="btn-roll"><ClayButton onClick={actionRollDice} disabled={!canRoll} highlight={canRoll}>🎲 サイコロを振る</ClayButton></div>
             <div id="btn-move"><ClayButton onClick={actionMove} disabled={!canMove} highlight={canMove}>🚶 移動 (1AP)</ClayButton></div>
-            
             <div id="btn-can"><ClayButton onClick={actionCan} disabled={!canDoCan}>🥫 缶拾い (1AP)</ClayButton></div>
             <div id="btn-trash"><ClayButton onClick={actionTrash} disabled={!canDoTrash}>🗑️ ゴミ漁り ({cp.equip?.shoes ? 1 : 2}AP)</ClayButton></div>
             <div id="btn-occupy"><ClayButton onClick={actionOccupy} disabled={!canDoOccupy}>🚩 陣地占領 (3P〜)</ClayButton></div>
@@ -68,16 +67,14 @@ export const ActionPanel = () => {
             {cp.charType === 'detective' && <ClayButton onClick={actionNpcMove} disabled={!hasAP(3) || !isMyTurn || isBusy} style={{borderColor:'#95a5a6'}}>🕵️ 情報操作 (3AP)</ClayButton>}
 
             <div style={{ flexGrow: 1, minHeight: '5px' }}></div>
-            
             {isHandOverLimit && <div style={{ color: '#e74c3c', fontSize: '12px', fontWeight: 'bold', textAlign: 'center', marginBottom: '4px' }}>手札が上限です！カードを捨てるか使ってください</div>}
             
             <div style={{ display: 'flex', gap: '5px' }}>
                 <div id="btn-end" style={{ flex: 1 }}>
-                    <ClayButton color="red" onClick={actionEndTurn} disabled={!canEndTurn} highlight={canEndTurn && cp.ap === 0}>🛑 ターン終了</ClayButton>
+                    <ClayButton color="red" onClick={actionEndTurn} disabled={!canEndTurn} className={showEndTurnPrompt ? "btn-end-highlight" : ""}>🛑 ターン終了</ClayButton>
                 </div>
-                {/* フリーズ脱出用の強制スキップボタン（自分のターンの時だけ押せる） */}
                 {isMyTurn && (
-                    <button onClick={forceEndTurn} style={{ background: '#34495e', color: '#fff', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }} title="エラーで動けなくなった場合に強制的にターンを終了します">
+                    <button onClick={() => { useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false }); actionEndTurn(); }} style={{ background: '#34495e', color: '#fff', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }} title="エラーで動けなくなった場合に強制的にターンを終了します">
                         ⚡スキップ
                     </button>
                 )}

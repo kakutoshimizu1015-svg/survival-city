@@ -1,20 +1,17 @@
 import { create } from 'zustand';
 
 const initialState = {
-    gamePhase: 'title', 
-    diceAnim: { active: false, d1: 1, d2: 1, text: '' },
+    gamePhase: 'title', diceAnim: { active: false, d1: 1, d2: 1, text: '' },
     turnOrderActive: false, turnOrderData: null, gameOver: false, 
     isBranchPicking: false, currentBranchOptions: [],
     shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
     mgActive: false, mgType: "", mgValue: 0, mgResult: null, storyActive: false,
     settingsActive: false, rulesActive: false, tutorialActive: false,
-    layoutMode: 'auto', volume: 1.0, tutorialStep: 0,
+    layoutMode: 'auto', volume: 1.0, tutorialStep: 0, sandboxActive: false, sandboxScenario: -1, sandboxStep: 0,
     
-    // ▼ 新規追加：体験モード（サンドボックス）用の状態
-    sandboxActive: false,
-    sandboxScenario: -1,
-    sandboxStep: 0,
-    // ----------------------------------------
+    // ▼ 追加：演出ステート
+    turnBanner: null, turnBannerActive: false,
+    eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,
 
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
     mapData: [], territories: {}, isRainy: false, weatherState: 'sunny', isNight: false,
@@ -28,5 +25,12 @@ export const useGameStore = create((set, get) => ({
     updatePlayer: (id, updater) => set((state) => ({ players: state.players.map(p => p.id === id ? { ...p, ...updater(p) } : p) })),
     updateCurrentPlayer: (updater) => set((state) => ({ players: state.players.map(p => p.id === state.turn ? { ...p, ...updater(p) } : p) })),
     resetGame: () => set(initialState),
-    applyNetworkAction: (action) => { console.log("Network action:", action); }
+    applyNetworkAction: (action) => { console.log("Network action:", action); },
+    
+    // ▼ 追加：ポップアップ自動管理
+    addEventPopup: (playerId, icon, title, detail = "", type = "neutral") => {
+        const id = Date.now() + Math.random();
+        set(state => ({ eventPopups: [...state.eventPopups.slice(-2), { id, playerId, icon, title, detail, type }] }));
+        setTimeout(() => set(state => ({ eventPopups: state.eventPopups.filter(p => p.id !== id) })), 2800);
+    }
 }));

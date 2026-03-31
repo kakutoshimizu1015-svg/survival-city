@@ -1,6 +1,7 @@
 import { useGameStore } from '../store/useGameStore';
 import { checkNpcCollision } from './npc';
 import { processRoundEnd } from './round';
+import { playSfx } from '../utils/audio';
 
 export const logMsg = (htmlMsg) => {
     const logger = document.getElementById("log");
@@ -20,7 +21,11 @@ export const actionRollDice = async (isCpuCall = false) => {
     if (diceRolled || (!isCpuCall && cp.isCPU)) return;
 
     useGameStore.setState({ diceAnim: { active: true, d1: 1, d2: 1, text: `${cp.name}がサイコロを振っています...` }});
+    
+    // SFXループ再生
+    const sfxInterval = setInterval(() => playSfx('dice'), 100);
     await new Promise(r => setTimeout(r, 1000));
+    clearInterval(sfxInterval);
 
     const d1 = Math.floor(Math.random() * 6) + 1;
     const d2 = Math.floor(Math.random() * 6) + 1;
@@ -32,7 +37,10 @@ export const actionRollDice = async (isCpuCall = false) => {
     let textResult = `${d1}+${d2}=${d1+d2}AP${isZorome ? " (🎲ゾロ目×2)" : ""}`;
     useGameStore.setState({ diceAnim: { active: true, d1, d2, text: textResult }, diceRolled: true, canPickedThisTurn: 0 });
     state.updateCurrentPlayer(p => ({ ap: p.ap + totalAP }));
+    
+    playSfx('success');
     logMsg(`<span style="color:${cp.color}">${cp.name}</span>は${totalAP}AP獲得！`);
+    state.addEventPopup(cp.id, "⚡", `AP+${totalAP}！`, isZorome ? "ゾロ目！" : "", "good");
 
     await new Promise(r => setTimeout(r, 1800));
     useGameStore.setState(prev => ({ diceAnim: { ...prev.diceAnim, active: false } }));
@@ -61,11 +69,10 @@ export const executeMove = (targetTileId) => {
     state.updateCurrentPlayer(p => ({ ap: Math.max(0, p.ap - moveCost), pos: targetTileId, rainGear: state.isRainy ? false : p.rainGear }));
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [] });
     logMsg(`🚶 「${tile.name}」に移動しました。`);
+    playSfx('move');
 
-    // NPCとの接触判定
     checkNpcCollision(cp.id);
 
-    // イベントマス判定
     if (tile.type === "event") {
         if (!cp.isCPU) {
             if (Math.random() < 0.3) {
@@ -79,14 +86,18 @@ export const executeMove = (targetTileId) => {
     if (tile.type === "shelter") {
         state.updateCurrentPlayer(p => ({ stealth: true }));
         logMsg(`🏕️ 避難所で休息。ステルス獲得！`);
+        state.addEventPopup(cp.id, "🏕️", "避難所", "ステルス獲得", "good");
     }
 };
 
 export const actionCan = () => {
     const state = useGameStore.getState();
+    const cp = state.players[state.turn];
     state.updateCurrentPlayer(p => ({ ap: p.ap - 1, cans: p.cans + 1 }));
     useGameStore.setState(s => ({ canPickedThisTurn: s.canPickedThisTurn + 1 }));
     logMsg(`🥫 空き缶を拾った！`);
+    playSfx('coin');
+    state.addEventPopup(cp.id, "🥫", "空き缶ゲット", "+1缶", "good");
 };
 
 export const actionTrash = () => {
@@ -104,10 +115,14 @@ export const actionTrash = () => {
         } else {
             state.updateCurrentPlayer(p => ({ ap: Math.max(0, p.ap - 2) }));
             logMsg(`👮 ゴミ漁り失敗！警察に見つかりAP減少！`);
+            playSfx('fail');
+            state.addEventPopup(cp.id, "👮", "ゴミ漁り失敗", "次回AP-2", "bad");
         }
     } else {
         state.updateCurrentPlayer(p => ({ trash: p.trash + gain }));
         logMsg(`🗑️ ゴミを${gain}個見つけた！`);
+        playSfx('coin');
+        state.addEventPopup(cp.id, "🗑️", `ゴミ${gain}個発見`, "", "good");
     }
 };
 
@@ -116,7 +131,13 @@ export const actionJob = () => {
     const cp = state.players[state.turn];
     const isSuccess = Math.random() < (cp.charType === "sales" ? 0.8 : 0.6);
     state.updateCurrentPlayer(p => ({ ap: p.ap - 3, p: p.p + (isSuccess ? 12 : 0) }));
-    logMsg(isSuccess ? `💼 バイト成功！12P獲得！` : `💼 バイト失敗...`);
+    if (isSuccess) {
+        logMsg(`💼 バイト成功！12P獲得！`); playSfx('success');
+        state.addEventPopup(cp.id, "💼", "バイト成功", "+12P", "good");
+    } else {
+        logMsg(`💼 バイト失敗...`); playSfx('fail');
+        state.addEventPopup(cp.id, "😞", "バイト失敗", "報酬なし", "bad");
+    }
 };
 
 export const actionOccupy = () => {
@@ -128,6 +149,8 @@ export const actionOccupy = () => {
     state.updateCurrentPlayer(p => ({ p: p.p - pCost }));
     useGameStore.setState(s => ({ territories: { ...s.territories, [cp.pos]: cp.id } }));
     logMsg(`🚩 陣地を占領した！(-${pCost}P)`);
+    playSfx('success');
+    state.addEventPopup(cp.id, "🚩", "陣地占領", `-${pCost}P`, "good");
 };
 
 export const actionExchange = () => {
@@ -136,6 +159,8 @@ export const actionExchange = () => {
     const total = cp.cans * state.canPrice + cp.trash * state.trashPrice;
     state.updateCurrentPlayer(p => ({ p: p.p + total, cans: 0, trash: 0 }));
     logMsg(`💱 換金！${total}P獲得！`);
+    playSfx('coin');
+    state.addEventPopup(cp.id, "💱", "換金完了", `+${total}P`, "good");
 };
 
 export const actionManhole = () => {
@@ -146,6 +171,7 @@ export const actionManhole = () => {
         const dest = manholes[Math.floor(Math.random() * manholes.length)];
         state.updateCurrentPlayer(p => ({ ap: p.ap - 1, pos: dest.id }));
         logMsg(`🕳️ ワープ！→ ${dest.name}`);
+        playSfx('move');
         checkNpcCollision(cp.id);
     }
 };
@@ -157,18 +183,13 @@ export const actionEndTurn = async () => {
         const nextTurn = (state.turn + 1) % state.players.length;
         
         state.updateCurrentPlayer(p => ({ ap: 0, stealth: false })); 
+        useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false, turnBannerActive: false });
         
-        // 分岐やミニゲームのスタック状態を強制リセットしてフリーズを防ぐ
-        useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false });
-        
-        if (isLastPlayer) {
-            await processRoundEnd();
-        }
+        if (isLastPlayer) await processRoundEnd();
         
         useGameStore.setState({ turn: nextTurn, diceRolled: false });
     } catch (error) {
-        console.error("ターン終了処理でエラー発生:", error);
-        // エラーが起きても強引に次のターンへ回すフェイルセーフ
+        console.error("Turn End Error:", error);
         useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false, isBranchPicking: false }));
     }
 };
