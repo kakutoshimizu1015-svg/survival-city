@@ -64,7 +64,7 @@ export const GameMain = () => {
     }, []);
 
     return (
-        <div id="game-screen" className="game-screen" style={{ display: 'flex' }}>
+        <div id="game-screen" className="game-screen" style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100dvh', overflow: 'hidden' }}>
             <GameEffectsOverlay />
             <DiceOverlay />
             <GameEventOverlays />
@@ -74,16 +74,16 @@ export const GameMain = () => {
             <TurnOrderOverlay />
             <TeamActionOverlay />
 
-            <div id="top-bar" className="top-bar">
+            <div id="top-bar" className="top-bar" style={{ flexShrink: 0 }}>
                 <div id="left-status-area" className="left-status-area">
                     <StatusPanel />
                 </div>
                 <HandCards />
             </div>
 
-            <div id="main-area" className="main-area">
+            <div id="main-area" className="main-area" style={{ display: 'flex', flexGrow: 1, minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
                 <GameBoard />
-                <div id="right-side-area" className="right-side-area">
+                <div id="right-side-area" className="right-side-area" style={{ display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
                     <ActionPanel />
                     <PlayerList />
                 </div>

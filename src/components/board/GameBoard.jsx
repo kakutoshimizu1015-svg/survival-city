@@ -12,13 +12,10 @@ export const GameBoard = () => {
     } = useGameStore();
 
     const cp = players[turn];
-
-    // ズーム機能のステート (初期値を少し小さめに設定し、見切れを防ぐ)
     const [scale, setScale] = useState(0.85);
     const handleZoom = (delta) => setScale(prev => Math.min(Math.max(0.3, prev + delta), 3.0));
     const resetZoom = () => setScale(0.85);
 
-    // 探偵の移動先タップ機能 ＆ 分岐時の移動先タップ機能
     const handleTileClick = (tileId) => {
         if (npcMovePick) {
             const state = useGameStore.getState();
@@ -29,7 +26,6 @@ export const GameBoard = () => {
         }
     };
 
-    // 夜間フォグ計算
     const visibleTiles = useMemo(() => {
         if (!isNight) return null;
         const visible = new Set();
@@ -42,7 +38,6 @@ export const GameBoard = () => {
         return visible;
     }, [isNight, players, mapData, turn]);
 
-    // ズームボタンの共通スタイル
     const zoomBtnStyle = {
         width: '32px', height: '32px', borderRadius: '8px', border: '2px solid #8d6e63', 
         background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '16px', fontWeight: 'bold', 
@@ -51,9 +46,16 @@ export const GameBoard = () => {
     };
 
     return (
-        <div id="board-area">
+        <div id="board-area" style={{ position: 'relative', flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
             
-            {/* ▼ 左上：環境情報HUD & ズームコントロール */}
+            {/* ▼ ターゲット選択バナー（スクロール領域の外に出して絶対配置で固定） */}
+            {npcMovePick && (
+                <div style={{ position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(241,196,15,0.95)', color: '#000', padding: '10px 20px', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', zIndex: 1000, border: '3px solid #fff', boxShadow: '0 4px 8px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+                    🎯 マップをタップして移動先を選択してください
+                </div>
+            )}
+
+            {/* 左上：環境情報HUD & ズームコントロール */}
             <div id="map-env-hud" style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 55, display: 'flex', flexDirection: 'column', gap: '4px', pointerEvents: 'none' }}>
                 <div style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', fontWeight: 'bold', color: '#fdf5e6', lineHeight: 1.6, whiteSpace: 'nowrap' }}>
                     <span style={{ color: '#f1c40f' }}>R:{roundCount}/{maxRounds}</span>
@@ -70,7 +72,7 @@ export const GameBoard = () => {
                 </div>
             </div>
 
-            {/* ▼ 右上：残りAP表示 */}
+            {/* 右上：残りAP表示 */}
             {cp && (
                 <div id="map-ap-hud" style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 50, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', border: `2px solid ${cp.ap > 0 ? 'rgba(255,220,50,0.5)' : 'rgba(200,80,80,0.5)'}`, borderRadius: '10px', padding: '6px 12px', color: cp.ap > 0 ? '#f1c40f' : '#e74c3c', fontWeight: 'bold', fontSize: '18px', textShadow: '0 0 8px currentColor', pointerEvents: 'none', transition: 'all 0.3s' }}>
                     ⚡ {cp.ap}
@@ -78,12 +80,9 @@ export const GameBoard = () => {
             )}
 
             {/* マップ本体 (スクロール制御) */}
-            <div id="game-board-container" className="panel">
-                {npcMovePick && <div style={{ position:'sticky', top:0, left:0, background:'rgba(241,196,15,0.9)', color:'#000', padding:'10px', textAlign:'center', fontWeight:'bold', zIndex:1000 }}>🎯 マップをタップして移動先を選択してください</div>}
-                
-                {/* ズーム用のラッパー */}
+            <div id="game-board-container" className="panel" style={{ flexGrow: 1, overflow: 'auto', position: 'relative', padding: 0, margin: 0 }}>
                 <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 'max-content', transition: 'transform 0.2s ease-out' }}>
-                    <div id="game-board">
+                    <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '40px', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', position: 'relative' }}>
                         {mapData.map(tile => {
                             const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
                             const isFog = visibleTiles && !visibleTiles.has(tile.id);
@@ -118,7 +117,6 @@ export const GameBoard = () => {
                                         </div>
                                     ))}
                                     
-                                    {/* ▼ 収集車：CSSクラスの適用のみにすることで通常時・暴走時をCSSで制御 */}
                                     {!isFog && tile.id === truckPos && (
                                         <div className="truck-token">🚛</div>
                                     )}

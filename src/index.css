@@ -84,8 +84,8 @@ select, .name-input { padding:6px; font-size:14px; border-radius:5px; border:2px
 
 /* ▼ レイアウト修正：メインエリア全体とマップの柔軟な伸縮 */
 #main-area { display:flex; width:100%; gap:15px; flex-grow: 1; min-height: 0; overflow: hidden; }
-#board-area { flex-grow:1; display:flex; flex-direction:column; position:relative; min-width:0; overflow:hidden; }
-#game-board-container { flex-grow:1; overflow:auto; position:relative; padding-bottom:10px; margin:0; }
+#board-area { flex-grow:1; display:flex; flex-direction:column; position:relative; min-width:0; min-height:0; overflow:hidden; }
+#game-board-container { flex-grow:1; overflow:auto; position:relative; padding:0; margin:0; }
 
 /* ズームコントロール */
 #zoom-controls { position:absolute; top:8px; left:8px; z-index:55; display:flex; flex-direction:column; gap:4px; }
@@ -119,17 +119,17 @@ select, .name-input { padding:6px; font-size:14px; border-radius:5px; border:2px
 
 /* ▼ レイアウト修正：モバイル向けレイアウトの見切れ防止・スクロール制御 */
 /* ===== MOBILE LAYOUT ===== */
-body.layout-mobile #top-bar { flex-direction:column; gap:5px; }
-body.layout-mobile #left-status-area { flex-direction:row; overflow-x:auto; width: 100%; }
+body.layout-mobile #top-bar { flex-direction:column; gap:5px; flex-shrink: 0; }
+body.layout-mobile #left-status-area { flex-direction:row; overflow-x:auto; width: 100%; flex-shrink: 0; }
 body.layout-mobile #portrait-active { width:100%; flex-direction:row; flex-wrap:wrap; padding:6px; }
 body.layout-mobile #weather-panel { width:auto; min-width:100px; flex-shrink:0; }
-body.layout-mobile #hand-cards-area { overflow-x:auto; }
-body.layout-mobile #main-area { flex-direction:column; }
-body.layout-mobile #right-side-area { width:100%; flex-direction:row; flex-wrap:wrap; gap:8px; max-height: 40dvh; overflow-y: hidden; flex-shrink: 0; }
-body.layout-mobile #action-panel { flex:1; display:grid !important; grid-template-columns:repeat(3,1fr) !important; padding:6px; gap:4px; overflow-y:auto; height: 100%; }
+body.layout-mobile #hand-cards-area { overflow-x:auto; flex-shrink: 0; min-height: 80px; }
+body.layout-mobile #main-area { flex-direction:column; flex-grow: 1; min-height: 0; overflow: hidden; }
+body.layout-mobile #right-side-area { width:100%; flex-direction:row; flex-wrap:wrap; gap:8px; max-height: 35dvh; overflow-y: auto; flex-shrink: 0; }
+body.layout-mobile #action-panel { flex:1; display:grid !important; grid-template-columns:repeat(3,1fr) !important; padding:6px; gap:4px; overflow-y:visible; height: auto; }
 body.layout-mobile #action-panel .btn-clay { flex:1; min-width:auto; font-size:11px; padding:4px; text-align: center; }
 body.layout-mobile .btn-end-clay { grid-column: span 3; }
-body.layout-mobile #player-list-panel { flex:1; min-width:150px; overflow-y:auto; height: 100%; }
+body.layout-mobile #player-list-panel { flex:1; min-width:150px; overflow-y:visible; height: auto; }
 body.layout-mobile #game-board-wrapper { height:100%; max-height:none !important; overflow:hidden; }
 body.layout-mobile #log-area { display:none; }
 
