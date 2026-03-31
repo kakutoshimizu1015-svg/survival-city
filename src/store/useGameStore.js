@@ -9,7 +9,7 @@ const initialState = {
     settingsActive: false, rulesActive: false, tutorialActive: false, teamActionActive: false,
     layoutMode: 'auto', volume: 1.0, tutorialStep: 0, sandboxActive: false, sandboxScenario: -1, sandboxStep: 0,
     turnBanner: null, turnBannerActive: false, eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,
-    npcMovePick: null, // 探偵のNPC移動ターゲット
+    npcMovePick: null, 
 
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
     mapData: [], territories: {}, isRainy: false, weatherState: 'sunny', isNight: false,
@@ -20,8 +20,22 @@ const initialState = {
 export const useGameStore = create((set, get) => ({
     ...initialState,
     setGameState: (newState) => set((state) => ({ ...state, ...newState })),
-    updatePlayer: (id, updater) => set((state) => ({ players: state.players.map(p => p.id === id ? { ...p, ...updater(p) } : p) })),
-    updateCurrentPlayer: (updater) => set((state) => ({ players: state.players.map(p => p.id === state.turn ? { ...p, ...updater(p) } : p) })),
+    
+    // ▼ ここを改良：関数だけでなく、オブジェクト({hp: 100}など)を直接渡してもエラーにならないようにしました！
+    updatePlayer: (id, updater) => set((state) => ({
+        players: state.players.map(p => p.id === id ? { 
+            ...p, 
+            ...(typeof updater === 'function' ? updater(p) : updater) 
+        } : p)
+    })),
+    
+    updateCurrentPlayer: (updater) => set((state) => ({
+        players: state.players.map(p => p.id === state.turn ? { 
+            ...p, 
+            ...(typeof updater === 'function' ? updater(p) : updater) 
+        } : p)
+    })),
+    
     resetGame: () => set(initialState),
     applyNetworkAction: (action) => { console.log("Network action:", action); },
     addEventPopup: (playerId, icon, title, detail = "", type = "neutral") => {
