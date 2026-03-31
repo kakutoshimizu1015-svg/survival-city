@@ -4,8 +4,10 @@ import { ref, set, get, onDisconnect, remove, onValue, off, update } from 'fireb
 import { db } from '../lib/firebase';
 import { useGameStore } from './useGameStore';
 
+// ▼ ネットワーク受信中フラグ（無限ループ防止用）
+let isReceivingNetworkData = false;
+
 export const useNetworkStore = create((setStore, getStore) => ({
-    // ▼ 追加：自分自身のユニークID
     myUserId: Math.random().toString(36).substring(2, 10),
     isHost: false,
     roomId: null,
@@ -21,13 +23,9 @@ export const useNetworkStore = create((setStore, getStore) => ({
         onValue(roomsRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                const roomsList = Object.entries(data)
-                    .map(([roomId, info]) => ({ roomId, ...info }))
-                    .filter(room => room.status === 'waiting');
+                const roomsList = Object.entries(data).map(([roomId, info]) => ({ roomId, ...info })).filter(room => room.status === 'waiting');
                 setStore({ activeRooms: roomsList });
-            } else {
-                setStore({ activeRooms: [] });
-            }
+            } else { setStore({ activeRooms: [] }); }
         });
     },
 
@@ -36,23 +34,16 @@ export const useNetworkStore = create((setStore, getStore) => ({
     createRoom: async (roomCode, playerName) => {
         setStore({ status: 'connecting', isHost: true, roomId: roomCode });
         const peer = new Peer();
-
         peer.on('open', async (id) => {
             const roomRef = ref(db, `rooms/${roomCode}`);
             await set(roomRef, { hostPeerId: id, createdAt: Date.now(), hostName: playerName, status: 'waiting' });
             onDisconnect(roomRef).remove(); 
-
-            setStore({ 
-                peer, status: 'connected', 
-                // ホスト自身もリストに追加
-                lobbyPlayers: [{ userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none', isHost: true, isCPU: false }] 
-            });
+            setStore({ peer, status: 'connected', lobbyPlayers: [{ userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none', isHost: true, isCPU: false }] });
         });
 
         peer.on('connection', (conn) => {
             conn.on('open', () => {
                 setStore(state => ({ connections: [...state.connections, conn] }));
-                
                 conn.on('data', (data) => {
                     if (data.type === 'JOIN') {
                         const newPlayer = { ...data.user, isHost: false, isCPU: false };
@@ -60,14 +51,21 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         setStore({ lobbyPlayers: updatedPlayers });
                         getStore().broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
                     }
-                    if (data.type === 'LOBBY_CHANGE') { // ▼ ゲストからの設定変更を受信して全員に配信
+                    if (data.type === 'LOBBY_CHANGE') {
                         const updatedPlayers = getStore().lobbyPlayers.map(p => p.userId === data.user.userId ? { ...p, ...data.user } : p);
                         setStore({ lobbyPlayers: updatedPlayers });
                         getStore().broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
                     }
-                    if (data.type === 'ACTION') {
-                        useGameStore.getState().applyNetworkAction(data.action);
-                        getStore().broadcastGameState();
+                    if (data.type === 'GAME_SYNC') {
+                        // ゲストからのアクション（同期データ）を受信し、他ゲストへ中継
+                        if (data.lastUpdater !== getStore().myUserId) {
+                            isReceivingNetworkData = true;
+                            useGameStore.setState(data.gameState);
+                            setTimeout(() => { isReceivingNetworkData = false; }, 50);
+                        }
+                        getStore().connections.forEach(c => {
+                            if (c.peer !== conn.peer && c.open) c.send(data);
+                        });
                     }
                 });
             });
@@ -86,31 +84,33 @@ export const useNetworkStore = create((setStore, getStore) => ({
         const snapshot = await get(roomRef);
         if (!snapshot.exists()) { setStore({ status: 'error' }); return; }
 
-        const peer = new Peer(getStore().myUserId); // peer idをuserIdと統一
+        const peer = new Peer(getStore().myUserId); 
         peer.on('open', () => {
             const conn = peer.connect(snapshot.val().hostPeerId);
             conn.on('open', () => {
                 setStore({ peer, hostConnection: conn, status: 'connected' });
-                // 参加時に初期設定を送信
                 conn.send({ type: 'JOIN', user: { userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none' } }); 
-                
                 conn.on('data', (data) => {
                     if (data.type === 'LOBBY_UPDATE') setStore({ lobbyPlayers: data.players });
                     if (data.type === 'GAME_START') useGameStore.setState({ ...data.gameState, gamePhase: 'playing' });
-                    if (data.type === 'GAME_SYNC') useGameStore.setState(data.gameState);
+                    if (data.type === 'GAME_SYNC') {
+                        if (data.lastUpdater !== getStore().myUserId) {
+                            isReceivingNetworkData = true;
+                            useGameStore.setState(data.gameState);
+                            setTimeout(() => { isReceivingNetworkData = false; }, 50);
+                        }
+                    }
                 });
             });
             conn.on('error', () => setStore({ status: 'error' }));
         });
     },
 
-    // ▼ 追加：自分の設定（名前・キャラ・チーム）を変更して同期する
     updateMyInfo: (updater) => {
         const state = getStore();
         const me = state.lobbyPlayers.find(p => p.userId === state.myUserId);
         if (!me) return;
         const newUser = { ...me, ...updater };
-        
         if (state.isHost) {
             const updatedPlayers = state.lobbyPlayers.map(p => p.userId === state.myUserId ? newUser : p);
             setStore({ lobbyPlayers: updatedPlayers });
@@ -120,7 +120,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
         }
     },
 
-    // ▼ 追加：ホスト専用操作群
     addCpu: () => {
         const state = getStore();
         if (!state.isHost || state.lobbyPlayers.length >= 8) return;
@@ -170,16 +169,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
         if (isHost && roomId) await update(ref(db, `rooms/${roomId}`), { status: newStatus });
     },
     broadcast: (data) => getStore().connections.forEach(conn => conn.send(data)),
-    broadcastGameState: () => {
-        if (!getStore().isHost) return;
-        const state = useGameStore.getState();
-        const { setGameState, updatePlayer, updateCurrentPlayer, resetGame, applyNetworkAction, ...pureState } = state;
-        getStore().broadcast({ type: 'GAME_SYNC', gameState: pureState });
-    },
-    sendActionToHost: (action) => {
-        const conn = getStore().hostConnection;
-        if (conn && conn.open) conn.send({ type: 'ACTION', action });
-    },
     leaveRoom: () => {
         const { peer, isHost, roomId } = getStore();
         if (peer) peer.destroy();
@@ -187,3 +176,21 @@ export const useNetworkStore = create((setStore, getStore) => ({
         setStore({ isHost: false, roomId: null, peer: null, connections: [], hostConnection: null, lobbyPlayers: [], status: 'disconnected' });
     }
 }));
+
+// ▼ 究極の自動同期エンジン：ゲームの状態が変わったら自動的に全員へ送信
+useGameStore.subscribe((state) => {
+    const netState = useNetworkStore.getState();
+    // オフライン時、または受信データを反映中の場合は送信しない
+    if (netState.status !== 'connected' || isReceivingNetworkData || state.gamePhase !== 'playing') return;
+
+    // 通信に必要な純粋なデータだけを抽出
+    const { setGameState, updatePlayer, updateCurrentPlayer, resetGame, applyNetworkAction, ...pureState } = state;
+    
+    const data = { type: 'GAME_SYNC', gameState: pureState, lastUpdater: netState.myUserId };
+    
+    if (netState.isHost) {
+        netState.broadcast(data);
+    } else if (netState.hostConnection && netState.hostConnection.open) {
+        netState.hostConnection.send(data);
+    }
+});

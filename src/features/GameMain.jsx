@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
+import { useNetworkStore } from '../store/useNetworkStore';
 import { runCpuTurn } from '../game/cpu';
 
 import { StatusPanel } from '../components/player/StatusPanel';
@@ -13,20 +14,24 @@ import { GameEventOverlays } from '../components/overlays/GameEventOverlays';
 import { WeaponArcOverlay } from '../components/overlays/WeaponArcOverlay';
 import { EnvironmentOverlay } from '../components/overlays/EnvironmentOverlay';
 import { ShopOverlay } from '../components/overlays/ShopOverlay';
-import { TurnOrderOverlay } from '../components/overlays/TurnOrderOverlay'; // ▼ 新規追加！
+import { TurnOrderOverlay } from '../components/overlays/TurnOrderOverlay';
 
 export const GameMain = () => {
     const turn = useGameStore(state => state.turn);
     const players = useGameStore(state => state.players);
     const gameOver = useGameStore(state => state.gameOver);
+    const { status, isHost } = useNetworkStore();
 
     useEffect(() => {
         if (gameOver) return;
         const currentPlayer = players[turn];
+        
         if (currentPlayer && currentPlayer.isCPU) {
+            // ▼ オンライン対戦の場合、CPUを動かすのは「ホスト」だけ！
+            if (status === 'connected' && !isHost) return;
             runCpuTurn();
         }
-    }, [turn, players, gameOver]);
+    }, [turn, players, gameOver, status, isHost]);
 
     return (
         <div id="game-screen" style={{ display: 'flex', width: '100%', maxWidth: '1800px', flexDirection: 'column', alignItems: 'center' }}>
@@ -36,7 +41,7 @@ export const GameMain = () => {
             <WeaponArcOverlay />
             <EnvironmentOverlay />
             <ShopOverlay />
-            <TurnOrderOverlay /> {/* ▼ 新規追加！ */}
+            <TurnOrderOverlay />
 
             <div id="top-bar" style={{ display: 'flex', width: '100%', gap: '15px', marginBottom: '15px', alignItems: 'stretch' }}>
                 <div id="left-status-area" style={{ display: 'flex', gap: '15px', flexShrink: 0 }}>
