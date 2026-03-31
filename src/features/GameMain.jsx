@@ -49,7 +49,7 @@ export const GameMain = () => {
         }
     }, [turn, players, gameOver, gamePhase, status, isHost, turnBannerActive]);
 
-    // layout-mobile を付与するかどうかを自動判定（画面幅が狭い場合）
+    // モバイルレイアウト付与判定
     useEffect(() => {
         const handleResize = () => {
             if (window.innerWidth <= 768) {
@@ -59,12 +59,12 @@ export const GameMain = () => {
             }
         };
         window.addEventListener('resize', handleResize);
-        handleResize(); // 初回実行
+        handleResize(); // 初回
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     return (
-        <div id="game-screen" className="game-screen">
+        <div id="game-screen" className="game-screen" style={{ display: 'flex' }}>
             <GameEffectsOverlay />
             <DiceOverlay />
             <GameEventOverlays />
@@ -88,8 +88,6 @@ export const GameMain = () => {
                     <PlayerList />
                 </div>
             </div>
-            
-            {/* ログパネルは画面領域圧迫を防ぐため一旦非表示(またはモーダル化)が推奨 */}
         </div>
     );
 };
