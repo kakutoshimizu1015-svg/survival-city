@@ -104,22 +104,31 @@ export const processRoundEnd = async () => {
     let truckMove = getDestRandom(state.truckPos, truckRoll, md);
     
     const hitPlayers = [];
-    for (let stepId of truckMove.hitList) {
+    // ▼ 収集車のスタート地点にいるプレイヤーも巻き込むようにパスを統合
+    const allTruckPath = [state.truckPos, ...truckMove.hitList];
+
+    for (let stepId of allTruckPath) {
         useGameStore.setState({ truckPos: stepId });
         
         useGameStore.getState().players.forEach(p => {
+            // CPU(NPC)を含め、このマスにいる全プレイヤーを判定
             if (p.hp > 0 && p.pos === stepId && !hitPlayers.includes(p.id)) {
+                hitPlayers.push(p.id); // 一度判定した人はリストに入れて重複ヒットを防ぐ
+
                 if (p.equip?.doll) {
                     useGameStore.getState().updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll:false} }));
                     logMsg(`🎎 身代わり人形が${p.name}を守った！`);
                     useGameStore.getState().addEventPopup(p.id, "🎎", "回避", "身代わり人形が守った", "good");
                 } else if (Math.random() < 0.55) {
-                    hitPlayers.push(p.id);
-                    // ▼ 血しぶき・ダメージ演出を確実に呼び出す
+                    // ▼ 血しぶき・ダメージ演出
                     useGameStore.setState({ bloodAnim: p.name });
                     setTimeout(() => useGameStore.setState({ bloodAnim: null }), 2000); // 2秒間表示して消す
                     dealDamage(p.id, 50, "収集車");
                     useGameStore.getState().addEventPopup(p.id, "💥", "轢かれた！", "収集車に轢かれた", "damage");
+                } else {
+                    // ▼ 轢かれたが回避できた時のポップアップを追加
+                    logMsg(`💨 ${p.name}は収集車をギリギリ回避！`);
+                    useGameStore.getState().addEventPopup(p.id, "💨", "回避！", "収集車をギリギリかわした", "good");
                 }
             }
         });

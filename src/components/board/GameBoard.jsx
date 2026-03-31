@@ -118,20 +118,9 @@ export const GameBoard = () => {
                                         </div>
                                     ))}
                                     
-                                    {/* ▼ 収集車：ホラーモードでなくても見やすく赤く光るように修正 */}
+                                    {/* ▼ 収集車：CSSクラスの適用のみにすることで通常時・暴走時をCSSで制御 */}
                                     {!isFog && tile.id === truckPos && (
-                                        <div className="truck-token" style={{
-                                            opacity: 1,
-                                            border: '3px solid #ff0000',
-                                            boxShadow: '0 0 20px #ff0000, inset 0 0 10px #ff0000',
-                                            background: 'rgba(150,0,0,0.8)',
-                                            transform: 'scale(1.2)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '24px',
-                                            animation: 'pulse 1s infinite alternate'
-                                        }}>🚛</div>
+                                        <div className="truck-token">🚛</div>
                                     )}
 
                                     {!isFog && tile.id === policePos && <div className="npc-token npc-police">👮</div>}
