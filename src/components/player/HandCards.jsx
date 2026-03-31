@@ -12,6 +12,8 @@ export const HandCards = () => {
     if (!cp) return null;
 
     let isMyTurn = !cp.isCPU;
+    
+    // マルチプレイ時は自分以外のプレイヤーのカードは裏面として扱う
     if (status === 'connected') {
         isMyTurn = (cp.userId === myUserId);
     }

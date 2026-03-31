@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { ClayButton } from '../common/ClayButton';
 import { logMsg } from '../../game/actions';
+import { deckData } from '../../constants/cards'; // 追加：カード情報取得用
 
 export const GameEventOverlays = () => {
     const { mgActive, mgType, mgValue, mgResult, storyActive, players, turn } = useGameStore();
@@ -26,7 +27,7 @@ export const GameEventOverlays = () => {
         }
     }, [mgActive, mgResult]);
 
-    // ★ スロットを回すアニメーション（slotStoppedが変わっても安全に回るように修正）
+    // ★ スロットを回すアニメーション
     useEffect(() => {
         if (mgActive && mgType === 'slot' && !mgResult) {
             const interval = setInterval(() => {
@@ -44,10 +45,17 @@ export const GameEventOverlays = () => {
         if (!isMyTurn) return;
         useGameStore.setState({ mgResult: isWin ? '大成功！' : '失敗...' });
         logMsg(`🎲 ${msg}`);
+        
         if (isWin) {
             const cardId = Math.floor(Math.random() * 38);
             useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
+            
+            // ▼ イベントでゲットしたカードをポップアップ等で表示する処理を追加
+            const cardData = deckData.find(c => c.id === cardId) || { name: '謎のカード', icon: '🃏' };
+            useGameStore.getState().addEventPopup(cp.id, cardData.icon, "カード獲得！", `${cardData.name}を手に入れた`, "card");
+            logMsg(`🎁 ${cp.name}は「${cardData.name}」を手に入れた！`);
         }
+        
         // ★ 失敗しても必ず mgResult を null に戻してフリーズを回避
         setTimeout(() => useGameStore.setState({ mgActive: false, mgResult: null }), 2000);
     };

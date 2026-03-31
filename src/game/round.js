@@ -112,16 +112,19 @@ export const processRoundEnd = async () => {
                 if (p.equip?.doll) {
                     useGameStore.getState().updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll:false} }));
                     logMsg(`🎎 身代わり人形が${p.name}を守った！`);
+                    useGameStore.getState().addEventPopup(p.id, "🎎", "回避", "身代わり人形が守った", "good");
                 } else if (Math.random() < 0.55) {
                     hitPlayers.push(p.id);
+                    // ▼ 血しぶき・ダメージ演出を確実に呼び出す
                     useGameStore.setState({ bloodAnim: p.name });
+                    setTimeout(() => useGameStore.setState({ bloodAnim: null }), 2000); // 2秒間表示して消す
                     dealDamage(p.id, 50, "収集車");
+                    useGameStore.getState().addEventPopup(p.id, "💥", "轢かれた！", "収集車に轢かれた", "damage");
                 }
             }
         });
         
-        await sleep(300); // これで1マスずつ進んでいくように見える
-        useGameStore.setState({ bloodAnim: null });
+        await sleep(300); // 1マスずつ進むアニメーションの表現
     }
 
     await sleep(800);
@@ -136,9 +139,34 @@ export const processRoundEnd = async () => {
         newPolicePos = pMove.finalPos;
         useGameStore.getState().players.forEach(p => {
             if (p.hp > 0 && pMove.hitList.includes(p.pos)) {
-                if (!p.stealth && !p.hasID) { useGameStore.getState().updatePlayer(p.id, { penaltyAP: (p.penaltyAP||0)+2 }); logMsg(`🚓 ${p.name}補導！次回AP-2`); }
+                if (!p.stealth && !p.hasID) { 
+                    useGameStore.getState().updatePlayer(p.id, { penaltyAP: (p.penaltyAP||0)+2 }); 
+                    logMsg(`🚓 ${p.name}補導！次回AP-2`); 
+                    useGameStore.getState().addEventPopup(p.id, "🚓", "補導", "次回AP-2", "bad");
+                }
             }
         });
+    }
+
+    // ▼ 次の収集車のエリア予兆を生成して表示
+    const nextPreviewRoll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1;
+    const nextMove = getDestRandom(truckMove.finalPos, nextPreviewRoll, md);
+    const areaCounts = {};
+    nextMove.hitList.forEach(tid => {
+        const t = md.find(x => x.id === tid);
+        if (t) areaCounts[t.area] = (areaCounts[t.area] || 0) + 1;
+    });
+    const sortedAreas = Object.entries(areaCounts).sort((a,b)=>b[1]-a[1]);
+    if (sortedAreas.length > 0) {
+        const dangerArea = sortedAreas[0][0];
+        const areaNames = { slum: 'スラムエリア', commercial: '商業エリア', luxury: '高級エリア' };
+        const warningMsg = `次の収集車は「${areaNames[dangerArea] || dangerArea}」を中心に暴走するらしい…`;
+        
+        useGameStore.setState({ disasterWarning: warningMsg });
+        // 3.5秒後に予兆表示を自動で消す
+        setTimeout(() => {
+            useGameStore.setState({ disasterWarning: null });
+        }, 3500);
     }
 
     useGameStore.setState({ roundCount: newRound, weatherState: weather, isRainy: weather === "rainy", isNight, canPrice, trashPrice, animalPos, unclePos, yakuzaPos, loansharkPos, friendPos, policePos: newPolicePos });

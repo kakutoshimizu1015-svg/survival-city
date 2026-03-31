@@ -117,7 +117,23 @@ export const GameBoard = () => {
                                             </div>
                                         </div>
                                     ))}
-                                    {!isFog && tile.id === truckPos && <div className="truck-token">🚛</div>}
+                                    
+                                    {/* ▼ 収集車：ホラーモードでなくても見やすく赤く光るように修正 */}
+                                    {!isFog && tile.id === truckPos && (
+                                        <div className="truck-token" style={{
+                                            opacity: 1,
+                                            border: '3px solid #ff0000',
+                                            boxShadow: '0 0 20px #ff0000, inset 0 0 10px #ff0000',
+                                            background: 'rgba(150,0,0,0.8)',
+                                            transform: 'scale(1.2)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '24px',
+                                            animation: 'pulse 1s infinite alternate'
+                                        }}>🚛</div>
+                                    )}
+
                                     {!isFog && tile.id === policePos && <div className="npc-token npc-police">👮</div>}
                                     {!isFog && tile.id === unclePos && <div className="npc-token npc-uncle">🧓</div>}
                                     {!isFog && tile.id === animalPos && <div className="npc-token npc-animal">🐀</div>}
