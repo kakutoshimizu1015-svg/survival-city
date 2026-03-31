@@ -32,6 +32,14 @@ export const TutorialOverlay = () => {
     const tabs = ['🎯 目的', '🎮 ターンの流れ', '📊 画面の見方', '🗺️ マスの種類', '🃏 カード＆装備', '👥 NPCと危険', '🎯 ミニゲーム', '🏆 キャラ攻略'];
     const sandboxLabels = ['🎮 スコア計算を体験する', '🎮 1ターンをプレイしてみる', '🎮 画面の各要素を確認する', '🎮 いろんなマスを巡ってみる', '🎮 カードを使ってみる', '🎮 NPCに遭遇してみる', '🎮 ミニゲームを遊んでみる', '🎮 キャラスキルを試す'];
 
+    // ▼ 先ほどここがすっぽり抜けていました！大変失礼しました。
+    const handleNext = () => {
+        if (currentTab < tabs.length - 1) setCurrentTab(prev => prev + 1);
+    };
+    const handlePrev = () => {
+        if (currentTab > 0) setCurrentTab(prev => prev - 1);
+    };
+
     return (
         <div className="tut-overlay">
             <style>{`
@@ -351,13 +359,13 @@ export const TutorialOverlay = () => {
                             <h3>👥 マップ上のNPC</h3>
                             <p>マップには複数のNPCが巡回しています。近づくと自動的にイベントが発生します。</p>
                             <div className="tut-npc-list">
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🚓</div><div className="tut-npc-name">警察</div><div className="tut-npc-desc">同マスに止まると補導。次のターンAP-2ペナルティ。<br/>「身分証明書」カードや「ステルス行動」で回避可能。</div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🛻</div><div className="tut-npc-name">ゴミ収集車</div><div className="tut-npc-desc">ラウンド開始時に一定確率で出現し、エリアを走り抜ける。<br/>通過マスにいるとダメージ！事前にどのエリアが危険か告知されます。</div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🐕</div><div className="tut-npc-name">野良犬</div><div className="tut-npc-desc">同マスにいると缶拾い・ゴミ漁りができなくなる。<br/>避けて通るか、追い払うまで待つ。</div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">👴</div><div className="tut-npc-name">おじさん</div><div className="tut-npc-desc">同マスにいると陣地占領ができない。<br/>タイミングを見て避ける必要あり。</div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">😎</div><div className="tut-npc-name">ヤクザ</div><div className="tut-npc-desc">同マスに止まるとPを強奪される。<br/>「身代わり人形」装備で1回無効化可能。</div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">💰</div><div className="tut-npc-name">闇金</div><div className="tut-npc-desc">同マスに止まるとP没収のリスク。<br/>借金状態になることも。</div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🤝</div><div className="tut-npc-name">仲間</div><div className="tut-npc-desc">同マスに止まるとHP回復やPボーナスなど良い効果。<br/>見つけたら積極的に寄ろう。</div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🚓</div><div className="tut-npc-info"><div className="tut-npc-name">警察</div><div className="tut-npc-desc">同マスに止まると補導。次のターンAP-2ペナルティ。<br/>「身分証明書」カードや「ステルス行動」で回避可能。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🛻</div><div className="tut-npc-info"><div className="tut-npc-name">ゴミ収集車</div><div className="tut-npc-desc">ラウンド開始時に一定確率で出現し、エリアを走り抜ける。<br/>通過マスにいるとダメージ！事前にどのエリアが危険か告知されます。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🐕</div><div className="tut-npc-info"><div className="tut-npc-name">野良犬</div><div className="tut-npc-desc">同マスにいると缶拾い・ゴミ漁りができなくなる。<br/>避けて通るか、追い払うまで待つ。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">👴</div><div className="tut-npc-info"><div className="tut-npc-name">おじさん</div><div className="tut-npc-desc">同マスにいると陣地占領ができない。<br/>タイミングを見て避ける必要あり。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">😎</div><div className="tut-npc-info"><div className="tut-npc-name">ヤクザ</div><div className="tut-npc-desc">同マスに止まるとPを強奪される。<br/>「身代わり人形」装備で1回無効化可能。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">💰</div><div className="tut-npc-info"><div className="tut-npc-name">闇金</div><div className="tut-npc-desc">同マスに止まるとP没収のリスク。<br/>借金状態になることも。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🤝</div><div className="tut-npc-info"><div className="tut-npc-name">仲間</div><div className="tut-npc-desc">同マスに止まるとHP回復やPボーナスなど良い効果。<br/>見つけたら積極的に寄ろう。</div></div></div>
                             </div>
                         </div>
                         <div className="tut-card">
