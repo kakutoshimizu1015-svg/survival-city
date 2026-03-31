@@ -13,10 +13,10 @@ export const GameBoard = () => {
 
     const cp = players[turn];
 
-    // ズーム機能のステート
-    const [scale, setScale] = useState(1.0);
+    // ズーム機能のステート (初期値を少し小さめに設定し、見切れを防ぐ)
+    const [scale, setScale] = useState(0.85);
     const handleZoom = (delta) => setScale(prev => Math.min(Math.max(0.3, prev + delta), 3.0));
-    const resetZoom = () => setScale(1.0);
+    const resetZoom = () => setScale(0.85);
 
     // 探偵の移動先タップ機能 ＆ 分岐時の移動先タップ機能
     const handleTileClick = (tileId) => {
@@ -51,7 +51,7 @@ export const GameBoard = () => {
     };
 
     return (
-        <div id="board-area" style={{ position: 'relative', flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+        <div id="board-area">
             
             {/* ▼ 左上：環境情報HUD & ズームコントロール */}
             <div id="map-env-hud" style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 55, display: 'flex', flexDirection: 'column', gap: '4px', pointerEvents: 'none' }}>
@@ -64,8 +64,8 @@ export const GameBoard = () => {
                     <span style={{ color: '#bdc3c7', marginLeft: '6px' }}>ゴミ:{trashPrice}P</span>
                 </div>
                 <div style={{ display: 'flex', gap: '4px', pointerEvents: 'auto' }}>
-                    <button style={zoomBtnStyle} onClick={() => handleZoom(0.2)} title="ズームイン">＋</button>
-                    <button style={zoomBtnStyle} onClick={() => handleZoom(-0.2)} title="ズームアウト">－</button>
+                    <button style={zoomBtnStyle} onClick={() => handleZoom(0.15)} title="ズームイン">＋</button>
+                    <button style={zoomBtnStyle} onClick={() => handleZoom(-0.15)} title="ズームアウト">－</button>
                     <button style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={resetZoom} title="リセット">⟳</button>
                 </div>
             </div>
@@ -77,13 +77,13 @@ export const GameBoard = () => {
                 </div>
             )}
 
-            {/* マップ本体 */}
-            <div id="game-board-container" className="panel" style={{ flexGrow: 1, overflow: 'auto', position: 'relative', margin: 0, padding: 0 }}>
+            {/* マップ本体 (スクロール制御) */}
+            <div id="game-board-container" className="panel">
                 {npcMovePick && <div style={{ position:'sticky', top:0, left:0, background:'rgba(241,196,15,0.9)', color:'#000', padding:'10px', textAlign:'center', fontWeight:'bold', zIndex:1000 }}>🎯 マップをタップして移動先を選択してください</div>}
                 
                 {/* ズーム用のラッパー */}
                 <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 'max-content', transition: 'transform 0.2s ease-out' }}>
-                    <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', position: 'relative' }}>
+                    <div id="game-board">
                         {mapData.map(tile => {
                             const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
                             const isFog = visibleTiles && !visibleTiles.has(tile.id);
