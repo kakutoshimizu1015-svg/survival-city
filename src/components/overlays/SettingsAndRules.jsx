@@ -9,47 +9,212 @@ export const SettingsAndRules = () => {
 
     if (rulesActive) {
         return (
-            <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }}>
-                <div className="modal-box" style={{ maxWidth: '600px', background: '#fdf5e6', color: '#3e2723', textAlign: 'left' }}>
-                    <h2 style={{ textAlign: 'center', color: '#c0392b' }}>📖 遊び方・ルール</h2>
-                    <div style={{ maxHeight: '60vh', overflowY: 'auto', padding: '10px', border: '1px solid #ccc' }}>
-                        <h3>🏆 ゲームの目的</h3>
-                        <p>規定ラウンド終了時に最も高いスコアを獲得したプレイヤーが優勝です。</p>
-                        <h3>🎮 ターンの流れ</h3>
-                        <ul>
-                            <li>① サイコロを振りAPを獲得。ゾロ目は2倍！</li>
-                            <li>② APを消費して移動、缶拾い、占領などのアクション。</li>
-                            <li>③ カード（2AP消費）を使用して有利に進める。</li>
-                        </ul>
-                        <h3>⚠️ NPC</h3>
-                        <p>警察はAP減少、ヤクザはダメージとカード強奪が発生します。</p>
+            <div className="modal-overlay" style={{ display: 'flex', zIndex: 25000 }} onClick={() => setGameState({ rulesActive: false })}>
+                <div className="modal-box" style={{ maxWidth: '660px', width: '95%', background: '#fdf5e6', color: '#3e2723' }} onClick={(e) => e.stopPropagation()}>
+                    <h2 style={{ marginTop: 0, textAlign: 'center', color: '#c0392b' }}>📖 遊び方・ルール</h2>
+                    
+                    <div style={{ textAlign: 'left', padding: '10px', maxHeight: '70vh', overflowY: 'auto', border: '2px solid #8d6e63', borderRadius: '8px', background: '#fff' }}>
+                        
+                        {/* 目的 */}
+                        <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(0,0,0,0.1)' }}>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#c0392b', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🏆 ゲームの目的</h3>
+                            <p style={{ fontSize: '14px', lineHeight: '1.5', margin: '5px 0', color: '#333' }}>
+                                指定のラウンド数終了時に、最も多くの<b>総合スコア</b>を獲得したプレイヤーが優勝！<br/>
+                                スコア ＝ <b>所持P × 2</b> ＋ 陣地の価値 ＋ 資源価値 ＋ キル×3 − デス×5
+                            </p>
+                        </div>
+
+                        {/* ターンの流れ */}
+                        <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(0,0,0,0.1)' }}>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#c0392b', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🎮 ターンの流れ</h3>
+                            <ul style={{ margin: '5px 0', paddingLeft: '20px', fontSize: '14px', lineHeight: '1.5', color: '#333' }}>
+                                <li><b>① サイコロ:</b> 出た目の合計分 <b>AP(行動力)</b> を獲得。ゾロ目は2倍！</li>
+                                <li><b>② 移動 & アクション:</b> APを消費して移動・缶拾い・バイトなど好きに行動。</li>
+                                <li><b>③ カード使用:</b> 手札のカードを <b>2AP</b> で使用可能（自分のターン中なら何枚でも）。</li>
+                                <li><b>④ ターン終了:</b> APが切れたら「ターン終了」ボタンを押す。APは翌ターンに持ち越せません。</li>
+                            </ul>
+                        </div>
+
+                        {/* ステータス */}
+                        <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(0,0,0,0.1)' }}>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#c0392b', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>📊 ステータス</h3>
+                            <ul style={{ margin: '5px 0', paddingLeft: '20px', fontSize: '14px', lineHeight: '1.5', color: '#333' }}>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>⚡</span><b>AP:</b> 行動力。移動・アクション・カード使用に消費。ターン終了で0になる。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>❤️</span><b>HP:</b> 体力。0になると病院送り → 所持Pから最大15P没収、装備1つランダム喪失、缶・ゴミをその場にドロップ。復活後HP100で再開。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💰</span><b>P:</b> お金。陣地化・カード購入などに使用。スコアの最大比重。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🚩</span><b>陣地:</b> 占領したマスから毎ターンのダイスロール時に収入（スラム1P/商業2P/高級3P）。3ラウンドに1回、維持費が徴収される（スラム0P/商業1P/高級2P）。</li>
+                            </ul>
+                        </div>
+
+                        {/* キャラクター */}
+                        <div style={{ background: '#f0fff4', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #2ecc71' }}>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#27ae60', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🎭 キャラクター一覧（全9種）</h3>
+                            <p style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>各キャラは <b>パッシブ（自動発動）</b> と <b>アクションスキル（AP消費）</b> を1つずつ持ちます。<br/>キャラアイコンをクリックすると詳細を確認できます。</p>
+                            <ul style={{ fontSize: '13px', lineHeight: '1.7', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🏃</span><b>元アスリート —【健脚】</b>移動常に1AP・雨無効 ／ <b>【疾風ダッシュ】</b>3AP: ピッタリ3マス先へ跳躍（交番・罠を飛び越え可）</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💼</span><b>元営業マン —【コミュ力】</b>バイト成功率80%・ショップ1P割引 ／ <b>【訪問販売】</b>2AP: 手札1枚を同マスの相手に強制購入させ3P徴収</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🌿</span><b>サバイバー —【危機察知】</b>ゴミ漁り失敗の警察ペナ無効 ／ <b>【野宿】</b>2AP: その場でHP+15回復</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>👊</span><b>元ヤン —【威圧】</b>同マス/すれ違いで自動1Pカツアゲ（1ターン2P上限）／ <b>【殴る】</b>2AP: 同マス相手に10ダメージ</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💻</span><b>元ハッカー —【クラウドストレージ】</b>手札上限+2（デフォルト9枚）／ <b>【遠隔ハッキング】</b>3AP: どこからでもショップ在庫を強制入替え＆1枚購入</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🎸</span><b>ストリートミュージシャン —【投げ銭】</b>他者が同マスor隣接に来るたび銀行から+3P ／ <b>【路上ライブ】</b>4AP: 周囲2マス以内の全員を強制引き寄せ</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🩺</span><b>闇医者 —【自己治癒】</b>ターン開始時に自動HP+5 ／ <b>【闇診療】</b>2AP: 同マスの相手HP+30の代わりに5P強制徴収</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🎲</span><b>ギャンブラー —【アドレナリン】</b>ゾロ目でAP倍＋HP+10回復 ／ <b>【イカサマ勝負】</b>2AP: 同マスの相手と1d6対決・勝者が5P奪取（同点は仕掛け側の負け）</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🕵️</span><b>元探偵 —【張り込み】</b>自分の陣地に相手が止まると手札1枚没収 ／ <b>【情報操作】</b>3AP: NPC1体を任意のマスへ強制移動</li>
+                            </ul>
+                        </div>
+
+                        {/* マスの種類 */}
+                        <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(0,0,0,0.1)' }}>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#c0392b', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🗺️ マスの種類と効果</h3>
+                            <ul style={{ fontSize: '13px', lineHeight: '1.6', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🏥</span><b>病院(開始地点):</b> HPが0になるとここへ搬送され、最大15P没収・装備1つ喪失・資源ドロップが発生する。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🛣️</span><b>通常の道:</b> 特別な効果なし。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🥫</span><b>空き缶:</b> 1APで缶を拾う（1ターン3回まで）。雨の日は雨具が必要。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🗑️</span><b>ゴミ山:</b> 2APでゴミを漁る。失敗すると次回AP-2ペナルティ。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>💱</span><b>買取所:</b> 缶・ゴミを現在の相場でP換金（0AP）。相場はラウンドごとに変動。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>💼</span><b>バイト:</b> 3APで挑戦。成功率60%（営業マンは80%）で12P獲得。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🛒</span><b>ショップ:</b> カード購入（毎ターン在庫が刷新）や手札の売却（2P）ができる。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🎲</span><b>イベント:</b> ミニゲームかストーリーイベントが発生。カード獲得のチャンス。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🏕️</span><b>避難所:</b> 止まると「ステルス」状態になり、次の敵を1回やり過ごせる。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🕳️</span><b>マンホール:</b> 1APで別のマンホールへランダムワープ。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🚓</span><b>交番:</b> 職務質問で足止め、そのターンは移動不可。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🎯</span><b>目的地(的):</b> 到達するとボーナスP（ラウンド×2+5P）獲得。的は別の場所へ移動。</li>
+                                <hr style={{ border: 0, borderTop: '1px dashed #ccc', margin: '8px 0' }} />
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🚩</span><b>陣地占領（3P / 敵陣地5P）:</b> マスを自分の陣地にすると毎ターン収入（スラム1P・商業2P・高級3P）。敵の陣地は距離が遠いほど安く奪取できる（空き巣割引）。</li>
+                            </ul>
+                        </div>
+
+                        {/* NPC */}
+                        <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #e74c3c' }}>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#e74c3c', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>⚠️ NPC（敵）と危険なイベント</h3>
+                            <p style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>「身代わり人形」を装備していると1回だけ無効化可能。探偵の【情報操作】でNPCを移動させることもできます。</p>
+                            <ul style={{ fontSize: '13px', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🚓</span><b>警察:</b> 補導されると次回AP-2（身分証・ステルス・サバイバーで回避可）。偶数ラウンド終了時にパトロール巡回あり。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>😎</span><b>ヤクザ:</b> 30ダメージ＋手札1枚ランダム強奪。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💀</span><b>闇金:</b> 所持金から最大10P没収。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🧓</span><b>厄介なおじさん:</b> 絡まれてターン強制終了＋カード1枚喪失。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🐀</span><b>野良動物:</b> 同マスにいる間、缶拾い・ゴミ漁りが不可能になる。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🤝</span><b>仲間のホームレス:</b> 出会うと空き缶を1つもらえる有益なNPC。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🛻</span><b>ごみ収集車（毎ラウンド末）:</b> マップを暴走。轢かれると<b>50の大ダメージ</b>（55%の確率で命中）。次のラウンド開始前に「予兆」として危険エリアが予告される。</li>
+                            </ul>
+                        </div>
+
+                        {/* 全カード */}
+                        <div style={{ background: '#fffaf0', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #8e44ad' }}>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#8e44ad', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🃏 全カード一覧と効果</h3>
+                            <p style={{ fontSize: '12px', color: '#555', marginBottom: '10px' }}>カードはターン中に <b>2AP</b> で使用可能。手札上限は <b>7枚</b>（リュック+2、ハッカー+2）。ショップで購入またはイベントマスで獲得できます。</p>
+
+                            <h4 style={{ margin: '8px 0 4px 0', fontSize: '14px', color: '#2ecc71', borderBottom: '1px solid #ccc' }}>【バフ・収入系】</h4>
+                            <ul style={{ fontSize: '12px', marginTop: 0, paddingLeft: '20px', color: '#333' }}>
+                                <li><b>支援面談:</b> +5P ＆ 次回ターンAP+2</li>
+                                <li><b>炊き出し:</b> +3P確定</li>
+                                <li><b>野良猫の導き:</b> +2P確定</li>
+                                <li><b>今日の運勢:</b> 50%で+3P / -3P（ギャンブル）</li>
+                                <li><b>密かなバイト:</b> 50%で+6P / -3P（高リスク）</li>
+                                <li><b>宝くじ当選:</b> 10%で+15Pの大当たり</li>
+                                <li><b>エナジードリンク:</b> 即座にAP+5</li>
+                                <li><b>スケボー:</b> 次回ダイスロールの結果にAP+5ボーナス</li>
+                            </ul>
+
+                            <h4 style={{ margin: '12px 0 4px 0', fontSize: '14px', color: '#3498db', borderBottom: '1px solid #ccc' }}>【装備品（期間限定 or 使い切り）】</h4>
+                            <ul style={{ fontSize: '12px', marginTop: 0, paddingLeft: '20px', color: '#333' }}>
+                                <li>🚲 <b>ボロボロの自転車:</b> 毎ターン獲得AP+2（<em>5ターン限定</em>）</li>
+                                <li>👢 <b>安全靴:</b> ゴミ漁りのAPコストが1に（永続）</li>
+                                <li>🛒 <b>大きなリヤカー:</b> 陣地収入が2倍に（<em>5ターン限定</em>）</li>
+                                <li>🎒 <b>リュック:</b> 手札上限+2（永続）</li>
+                                <li>☂️ <b>雨具ゲット:</b> 雨の日のペナルティを<em>1回だけ</em>無効化（1回消費）</li>
+                                <li>🛡️ <b>段ボールの盾:</b> 次のダメージを<em>50%の確率で半減</em>（1回で消費）</li>
+                                <li>🪖 <b>ヘルメット:</b> 次のダメージを<em>半減</em>（1回で消費）</li>
+                                <li>🎎 <b>身代わり人形:</b> NPC・収集車などの妨害を1回無効（1回で消費）</li>
+                            </ul>
+
+                            <h4 style={{ margin: '12px 0 4px 0', fontSize: '14px', color: '#27ae60', borderBottom: '1px solid #ccc' }}>【回復系】<span style={{ fontSize: '11px', color: '#2ecc71' }}> ※すべて0AP</span></h4>
+                            <ul style={{ fontSize: '12px', marginTop: 0, paddingLeft: '20px', color: '#333' }}>
+                                <li><b>腐ったバーガー:</b> HP+20回復（50%で食中毒10ダメージのリスクあり）</li>
+                                <li><b>落ちてたポテト:</b> HP+15確定回復</li>
+                                <li><b>拾ったホットドッグ:</b> HP+30回復（50%で食中毒25ダメージのリスクあり）</li>
+                                <li><b>謎のエネルギーバー:</b> HP+10 ＆ AP+3</li>
+                                <li><b>水道水:</b> HP+5確定回復</li>
+                            </ul>
+
+                            <h4 style={{ margin: '12px 0 4px 0', fontSize: '14px', color: '#e74c3c', borderBottom: '1px solid #ccc' }}>【攻撃・妨害系】</h4>
+                            <p style={{ fontSize: '11px', color: '#888', margin: '0 0 4px 0' }}>※ 武器カードは使用に2AP必要。その他のカード（バフ・回復・装備・リアクション等）はAP消費なしで使用可能。</p>
+                            <ul style={{ fontSize: '12px', marginTop: 0, paddingLeft: '20px', color: '#333' }}>
+                                <li><b>ステルス行動:</b> 次に遭遇する敵・NPCを回避 <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
+                                <li><b>身分証明書:</b> +1P ＆ 次の警察を回避 <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
+                                <li><b>通報:</b> 他のプレイヤー1人に次回AP-2 <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
+                                <li><b>缶泥棒:</b> 他人から最大2Pを奪う <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
+                                <li><b>領土挑戦状:</b> サイコロ4以上で他人の陣地を<em>選んで</em>乗っ取る <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
+                                <li><b>レンガ(射程2):</b> 10ダメージ <span style={{ color: '#e74c3c' }}>[2AP]</span></li>
+                                <li><b>バット(射程1):</b> 20ダメージ <span style={{ color: '#e74c3c' }}>[2AP]</span></li>
+                                <li><b>釘バット(射程1):</b> 30ダメージ <span style={{ color: '#e74c3c' }}>[2AP]</span></li>
+                                <li><b>拳銃(射程3):</b> 40ダメージ <span style={{ color: '#e74c3c' }}>[2AP]</span></li>
+                                <li><b>ショットガン(射程2・広域):</b> 射程内の全員に50ダメージ <span style={{ color: '#e74c3c' }}>[2AP]</span></li>
+                                <li><b>パンチングマシン(同マスのみ):</b> 80ダメージ <span style={{ color: '#e74c3c' }}>[2AP]</span></li>
+                                <li><b>レーザー銃(射程5・広域):</b> 射程内の全員に100ダメージ <span style={{ color: '#e74c3c' }}>[2AP]</span></li>
+                            </ul>
+
+                            <h4 style={{ margin: '12px 0 4px 0', fontSize: '14px', color: '#8e44ad', borderBottom: '1px solid #ccc' }}>【強力な全体効果（逆転用）】</h4>
+                            <ul style={{ fontSize: '12px', marginTop: 0, paddingLeft: '20px', color: '#333' }}>
+                                <li><b>大暴落:</b> 自分以外全員の所持Pが半分になる（チームメイトは効果を受けない） <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
+                                <li><b>下剋上:</b> 1位プレイヤーと自分の所持Pをそっくり入れ替える <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
+                            </ul>
+
+                            <h4 style={{ margin: '12px 0 4px 0', fontSize: '14px', color: '#16a085', borderBottom: '1px solid #ccc' }}>【リアクション系（相手の効果を無効・反射）】</h4>
+                            <ul style={{ fontSize: '12px', marginTop: 0, paddingLeft: '20px', color: '#333' }}>
+                                <li><b>弁護士の盾:</b> 次に受ける攻撃・カツアゲを完全無効化（1回） <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
+                                <li><b>裏取引:</b> 次の「下剋上」「大暴落」を使った相手に反射（1回） <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
+                                <li><b>反撃の一撃:</b> 次にダメージを受けた時、同量を相手に返す（1回） <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
+                            </ul>
+                        </div>
+
+                        {/* 天候・昼夜 */}
+                        <div style={{ background: '#f0f8ff', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #3498db' }}>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#2980b9', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🌤️ 天候・昼夜・特殊イベント</h3>
+                            <ul style={{ fontSize: '13px', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🌧️</span><b>雨:</b> 移動コスト2AP・缶拾い/ゴミ漁り不可（雨具・元アスリートで無効）。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🌙</span><b>夜:</b> 視界が自分の前後3マスに制限される。ゴミ漁りにボーナスあり。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🚧</span><b>道路工事:</b> 一定確率で発生。そのマスは2ラウンド通行不可になる。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>📈</span><b>相場変動:</b> 缶とゴミの換金相場がラウンドごとにランダムに変わる。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🎯</span><b>目的地ボーナス:</b> 的のマスに止まるとボーナスP獲得。的は移動後に別の場所へ。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🛻</span><b>収集車の予兆:</b> 次ラウンド開始前に「どのエリアが危険か」が告知される。</li>
+                            </ul>
+                        </div>
+
                     </div>
-                    <ClayButton onClick={() => setGameState({ rulesActive: false })} style={{ width: '100%', marginTop: '10px' }}>閉じる</ClayButton>
+                    <ClayButton onClick={() => setGameState({ rulesActive: false })} style={{ width: '100%', marginTop: '10px', background: '#95a5a6' }}>✖ 閉じる</ClayButton>
                 </div>
             </div>
         );
     }
 
+    // 設定メニュー
     return (
-        <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }}>
-            <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723' }}>
-                <h2>⚙️ メニュー</h2>
-                <div style={{ marginBottom: '20px', textAlign: 'left' }}>
-                    <label>🔊 音量: {Math.round(volume * 100)}%</label>
-                    <input type="range" min="0" max="1" step="0.1" value={volume} onChange={(e) => setGameState({ volume: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+        <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={() => setGameState({ settingsActive: false })}>
+            <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723' }} onClick={(e) => e.stopPropagation()}>
+                <h2 style={{ marginTop: 0 }}>⚙️ メニュー</h2>
+                
+                <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>🔊 音量: {Math.round(volume * 100)}%</label>
+                    <input type="range" min="0" max="2" step="0.1" value={volume} onChange={(e) => setGameState({ volume: parseFloat(e.target.value) })} style={{ width: '100%' }} />
                 </div>
-                <div style={{ marginBottom: '20px' }}>
-                    <p style={{ fontWeight: 'bold' }}>📱 レイアウト切替</p>
-                    <div style={{ display: 'flex', gap: '5px' }}>
-                        {['auto', 'pc', 'sp'].map(m => (
-                            <ClayButton key={m} onClick={() => setGameState({ layoutMode: m })} style={{ flex: 1, opacity: layoutMode === m ? 1 : 0.5 }}>
-                                {m.toUpperCase()}
-                            </ClayButton>
-                        ))}
+                
+                <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>📱 レイアウト切替</div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <ClayButton onClick={() => setGameState({ layoutMode: 'auto' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#2ecc71', opacity: layoutMode === 'auto' ? 1 : 0.5 }}>🔄 自動</ClayButton>
+                        <ClayButton onClick={() => setGameState({ layoutMode: 'pc' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#3498db', opacity: layoutMode === 'pc' ? 1 : 0.5 }}>🖥️ PC</ClayButton>
+                        <ClayButton onClick={() => setGameState({ layoutMode: 'sp' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#8e44ad', opacity: layoutMode === 'sp' ? 1 : 0.5 }}>📱 スマホ</ClayButton>
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '6px', textAlign: 'center' }}>
+                        現在: {layoutMode === 'auto' ? '自動（画面幅で切替）' : layoutMode === 'pc' ? 'PCレイアウト固定' : 'スマホレイアウト固定'}
                     </div>
                 </div>
-                <ClayButton onClick={() => setGameState({ rulesActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px' }}>📖 ルールを見る</ClayButton>
-                <ClayButton onClick={() => setGameState({ settingsActive: false })} style={{ width: '100%', background: '#7f8c8d' }}>閉じる</ClayButton>
+                
+                <ClayButton onClick={() => setGameState({ rulesActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#3498db' }}>📖 遊び方・ルールを見る</ClayButton>
+                <ClayButton onClick={() => setGameState({ tutorialActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '15px', background: '#8e44ad', color: '#f1c40f' }}>📚 チュートリアル</ClayButton>
+                
+                <ClayButton onClick={() => setGameState({ settingsActive: false })} style={{ width: '100%', background: '#95a5a6' }}>✖ 閉じる</ClayButton>
             </div>
         </div>
     );
