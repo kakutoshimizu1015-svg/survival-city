@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { ClayButton } from '../common/ClayButton';
@@ -11,20 +11,34 @@ export const GameEventOverlays = () => {
 
     const [slotReels, setSlotReels] = useState([0, 0, 0]);
     const [slotStopped, setSlotStopped] = useState([false, false, false]);
+    // ★ 最新の絵柄を確実に判定するためのRef
+    const slotReelsRef = useRef([0, 0, 0]);
     const marks = ["🍒", "🔔", "🍇"];
 
-    // オンライン時の操作権限チェック
     const isMyTurn = status === 'connected' ? (cp?.userId === myUserId) : true;
 
+    // ミニゲーム起動時の初期化
+    useEffect(() => {
+        if (mgActive && !mgResult) {
+            setSlotStopped([false, false, false]);
+            setSlotReels([0, 0, 0]);
+            slotReelsRef.current = [0, 0, 0];
+        }
+    }, [mgActive, mgResult]);
+
+    // ★ スロットを回すアニメーション（slotStoppedが変わっても安全に回るように修正）
     useEffect(() => {
         if (mgActive && mgType === 'slot' && !mgResult) {
-            setSlotStopped([false, false, false]);
             const interval = setInterval(() => {
-                setSlotReels(prev => prev.map((r, i) => slotStopped[i] ? r : Math.floor(Math.random() * 3)));
+                setSlotReels(prev => {
+                    const next = prev.map((r, i) => slotStopped[i] ? r : Math.floor(Math.random() * 3));
+                    slotReelsRef.current = next; // 常に最新の絵柄をRefに保存
+                    return next;
+                });
             }, 100);
             return () => clearInterval(interval);
         }
-    }, [mgActive, mgType, mgResult]);
+    }, [mgActive, mgType, mgResult, slotStopped]);
 
     const handleResult = (isWin, msg) => {
         if (!isMyTurn) return;
@@ -34,7 +48,8 @@ export const GameEventOverlays = () => {
             const cardId = Math.floor(Math.random() * 38);
             useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
         }
-        setTimeout(() => useGameStore.setState({ mgActive: false }), 2000);
+        // ★ 失敗しても必ず mgResult を null に戻してフリーズを回避
+        setTimeout(() => useGameStore.setState({ mgActive: false, mgResult: null }), 2000);
     };
 
     if (!mgActive && !storyActive) return null;
@@ -67,8 +82,17 @@ export const GameEventOverlays = () => {
                                             <div key={i}>
                                                 <div style={{ fontSize: '40px', background: '#fff', color: '#000', padding: '10px', borderRadius: '10px' }}>{marks[slotReels[i]]}</div>
                                                 <ClayButton disabled={slotStopped[i]} onClick={() => {
-                                                    const ns = [...slotStopped]; ns[i]=true; setSlotStopped(ns);
-                                                    if(ns.every(s=>s)) handleResult(slotReels[0]===slotReels[1] && slotReels[1]===slotReels[2], "スロット判定");
+                                                    const ns = [...slotStopped]; 
+                                                    ns[i] = true; 
+                                                    setSlotStopped(ns);
+                                                    // 全て止まったら、最新の絵柄（Ref）を元に判定
+                                                    if(ns.every(s => s)) {
+                                                        setTimeout(() => {
+                                                            const finalReels = slotReelsRef.current;
+                                                            const isWin = finalReels[0] === finalReels[1] && finalReels[1] === finalReels[2];
+                                                            handleResult(isWin, "スロット判定");
+                                                        }, 150);
+                                                    }
                                                 }}>STOP</ClayButton>
                                             </div>
                                         ))}

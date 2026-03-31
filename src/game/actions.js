@@ -23,7 +23,6 @@ export const actionRollDice = async (isCpuCall = false) => {
     if (isZorome) totalAP *= 2;
     if (cp.equip?.bicycle) totalAP += 2; 
 
-    // 🎲 ギャンブラー: ゾロ目でHP回復
     if (isZorome && cp.charType === 'gambler') {
         const heal = Math.min(10, 100 - cp.hp);
         if (heal > 0) { state.updateCurrentPlayer(p => ({ hp: p.hp + heal })); logMsg(`🎲 ギャンブラー興奮！HP+${heal}`); }
@@ -57,7 +56,13 @@ export const executeMove = (targetTileId) => {
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [] });
     logMsg(`🚶 「${tile.name}」に移動。`); playSfx('move');
 
-    // 👊 元ヤン: すれ違い・同マスカツアゲ
+    // ▼ 追加：交番マスの処理
+    if (tile.type === "koban") {
+        state.updateCurrentPlayer(p => ({ ap: 0, cannotMove: true }));
+        logMsg(`<span style="color:#e74c3c">🚓 交番！職務質問で足止め！</span>`); playSfx('fail');
+        state.addEventPopup(cp.id, "🚓", "交番で職務質問", "ターンエンドしてください", "bad");
+    }
+
     const sameOrPassed = state.players.filter(op => op.id !== cp.id && (op.pos === targetTileId || op.pos === prevPos) && op.p > 0 && op.hp > 0 && !isSameTeam(cp, op));
     sameOrPassed.forEach(t => {
         if (cp.charType === 'yankee' && (!cp._katsuage || cp._katsuage < 2)) {
@@ -70,14 +75,12 @@ export const executeMove = (targetTileId) => {
         }
     });
 
-    // 🎸 ミュージシャン: 隣接投げ銭
     state.players.forEach(m => {
         if (m.id !== cp.id && m.charType === 'musician' && m.hp > 0 && getDistance(m.pos, targetTileId, state.mapData) <= 1) {
             state.updatePlayer(m.id, p => ({ p: p.p + 3 })); logMsg(`🎸 ${m.name}【投げ銭】${cp.name}が来て+3P！`);
         }
     });
 
-    // 🕵️ 探偵: 張り込み
     const terrOwnerId = state.territories[targetTileId];
     if (terrOwnerId !== undefined && terrOwnerId !== cp.id) {
         const det = state.players.find(p => p.id === terrOwnerId && p.charType === 'detective' && p.hp > 0 && !isSameTeam(p, cp));
@@ -87,7 +90,6 @@ export const executeMove = (targetTileId) => {
         }
     }
 
-    // アイテム回収
     if (tile.fieldCans > 0 || tile.fieldTrash > 0) {
         state.updateCurrentPlayer(p => ({ cans: p.cans + (tile.fieldCans||0), trash: p.trash + (tile.fieldTrash||0) }));
         useGameStore.setState(s => ({ mapData: s.mapData.map(t => t.id === targetTileId ? { ...t, fieldCans: 0, fieldTrash: 0 } : t) }));
@@ -114,12 +116,12 @@ export const actionEndTurn = async () => {
         const state = useGameStore.getState();
         const cp = state.players[state.turn];
         
-        // 装備損耗タイマー
         let newEquip = { ...cp.equip }, newTimer = { ...cp.equipTimer };
         if (newEquip.bicycle) { newTimer.bicycle = (newTimer.bicycle || 5) - 1; if (newTimer.bicycle <= 0) { newEquip.bicycle = false; logMsg(`🚲 自転車が壊れた！`); } }
         if (newEquip.cart) { newTimer.cart = (newTimer.cart || 5) - 1; if (newTimer.cart <= 0) { newEquip.cart = false; logMsg(`🛒 リヤカーが壊れた！`); } }
 
-        state.updateCurrentPlayer(p => ({ ap: 0, stealth: false, _katsuage: 0, equip: newEquip, equipTimer: newTimer })); 
+        // ▼ 行動不能フラグ(cannotMove)もリセットする
+        state.updateCurrentPlayer(p => ({ ap: 0, stealth: false, _katsuage: 0, equip: newEquip, equipTimer: newTimer, cannotMove: false })); 
         useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null });
         
         if (state.turn === state.players.length - 1) await processRoundEnd();

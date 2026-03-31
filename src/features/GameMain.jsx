@@ -24,7 +24,7 @@ export const GameMain = () => {
     const { status, isHost } = useNetworkStore();
     const prevTurn = useRef(-1);
 
-    // ターンバナーの表示管理
+    // ターンバナー表示
     useEffect(() => {
         if (gamePhase !== 'playing' || gameOver || !players[turn]) return;
         if (prevTurn.current !== turn) {
@@ -37,17 +37,12 @@ export const GameMain = () => {
         }
     }, [turn, players, gameOver, gamePhase]);
 
-    // CPUの自動ターン進行（修正版）
+    // CPUの自動ターン進行
     useEffect(() => {
         if (gameOver || gamePhase !== 'playing') return;
         const currentPlayer = players[turn];
         if (currentPlayer && currentPlayer.isCPU) {
             if (status === 'connected' && !isHost) return;
-            
-            // ▼ ここがバグ修正のキモ。
-            // 人間のターン終了時に一瞬だけ turnBannerActive が false のまま
-            // turn が切り替わるタイミングがあり、そこでCPUが誤爆起動していたのを防ぐ
-            // 「現在CPUが動いていない」「バナーが消えている」「自分の番である」ことのトリプルチェック
             const state = useGameStore.getState();
             if (!turnBannerActive && !state.cpuActing && state.turn === currentPlayer.id) {
                 runCpuTurn();
@@ -56,8 +51,8 @@ export const GameMain = () => {
     }, [turn, players, gameOver, gamePhase, status, isHost, turnBannerActive]);
 
     return (
-        <div id="game-screen" style={{ display: 'flex', width: '100%', height: '100dvh', maxWidth: '1800px', flexDirection: 'column', alignItems: 'center', overflow: 'hidden', paddingBottom: '5px' }}>
-            
+        // ▼ idと併せて className を付与し、CSSメディアクエリで制御しやすくする
+        <div id="game-screen" className="game-screen" style={{ display: 'flex', width: '100%', height: '100dvh', maxWidth: '1800px', flexDirection: 'column', alignItems: 'center', overflow: 'hidden', paddingBottom: '5px' }}>
             <GameEffectsOverlay />
             <DiceOverlay />
             <GameEventOverlays />
@@ -67,16 +62,16 @@ export const GameMain = () => {
             <TurnOrderOverlay />
             <TeamActionOverlay />
 
-            <div id="top-bar" style={{ display: 'flex', width: '100%', gap: '15px', marginBottom: '10px', alignItems: 'stretch', flexShrink: 0 }}>
-                <div id="left-status-area" style={{ display: 'flex', gap: '15px', flexShrink: 0 }}>
+            <div id="top-bar" className="top-bar" style={{ display: 'flex', width: '100%', gap: '15px', marginBottom: '10px', alignItems: 'stretch', flexShrink: 0 }}>
+                <div id="left-status-area" className="left-status-area" style={{ display: 'flex', gap: '15px', flexShrink: 0 }}>
                     <StatusPanel />
                 </div>
                 <HandCards />
             </div>
 
-            <div id="main-area" style={{ display: 'flex', width: '100%', gap: '15px', flexGrow: 1, minHeight: 0 }}>
+            <div id="main-area" className="main-area" style={{ display: 'flex', width: '100%', gap: '15px', flexGrow: 1, minHeight: 0 }}>
                 <GameBoard />
-                <div id="right-side-area" style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '220px', flexShrink: 0, overflowY: 'auto' }}>
+                <div id="right-side-area" className="right-side-area" style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '220px', flexShrink: 0, overflowY: 'auto' }}>
                     <ActionPanel />
                     <PlayerList />
                 </div>

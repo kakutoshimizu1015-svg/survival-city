@@ -14,13 +14,14 @@ export const checkNpcCollision = (playerId) => {
         else if (p.hasID) { state.updatePlayer(p.id, { hasID: false }); logMsg(`🔵 身分証で警察回避！`); }
         else if (p.charType === "survivor") { logMsg(`🌿 サバイバーの勘で回避！`); }
         else {
-            state.updatePlayer(p.id, { penaltyAP: (p.penaltyAP || 0) + 2, ap: 0 });
+            // ▼ cannotMove: true を追加し、確実に行動を封じる
+            state.updatePlayer(p.id, { penaltyAP: (p.penaltyAP || 0) + 2, ap: 0, cannotMove: true });
             logMsg(`<span style="color:#e74c3c">🚓 警察に補導！次回AP-2、行動終了！</span>`); playSfx('fail');
             state.addEventPopup(p.id, "🚓", "警察に補導", "次回AP-2", "bad");
         }
     }
     if (p.pos === state.unclePos) {
-        state.updatePlayer(p.id, prev => ({ ap: 0, hand: prev.hand.slice(0, -1) }));
+        state.updatePlayer(p.id, prev => ({ ap: 0, cannotMove: true, hand: prev.hand.slice(0, -1) }));
         logMsg(`<span style="color:#e74c3c">🧓 厄介なおじさん！カード破棄＆ターン終了！</span>`); playSfx('fail');
         state.addEventPopup(p.id, "🧓", "厄介なおじさん", "カード破棄＆行動終了", "bad");
     }
