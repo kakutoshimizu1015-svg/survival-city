@@ -22,7 +22,7 @@ export const HandCards = () => {
     if (!isMyTurn) {
         return (
             <div id="hand-cards-area" style={{ flexGrow: 1, display: 'flex', overflowX: 'auto', minWidth: 0 }}>
-                <div id="card-panel-clay" className="panel" style={{ flex: 1, display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center', width: '100%', padding: '10px', margin: 0 }}>
+                <div id="card-panel-clay" className="panel" style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center', width: '100%', padding: '10px', margin: 0, minHeight: '120px' }}>
                     {cp.hand.map((_, idx) => (
                         <div key={idx} style={{ background: 'repeating-linear-gradient(45deg,#e07a5f,#e07a5f 10px,#c0392b 10px,#c0392b 20px)', border: '3px solid #fff', borderRadius: '8px', padding: '8px', textAlign: 'center', minWidth: '110px', height: '80px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)' }}>
                             <div style={{ fontSize: '30px' }}>🎴</div>
@@ -35,7 +35,8 @@ export const HandCards = () => {
 
     return (
         <div id="hand-cards-area" style={{ flexGrow: 1, display: 'flex', overflowX: 'auto', minWidth: 0 }}>
-            <div id="card-panel-clay" className="panel" style={{ flex: 1, display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center', width: '100%', padding: '10px', margin: 0 }}>
+            {/* ▼ flex: 1 などのインライン設定を外し、間延びを防ぐ */}
+            <div id="card-panel-clay" className="panel" style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center', width: '100%', padding: '10px', margin: 0, minHeight: '120px' }}>
                 {cp.hand.length === 0 && <div style={{ color: '#fdf5e6', width: '100%', textAlign: 'center' }}>手札なし</div>}
                 
                 {cp.hand.map((cardId, index) => {

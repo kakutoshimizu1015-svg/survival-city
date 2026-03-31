@@ -46,9 +46,9 @@ export const GameBoard = () => {
     };
 
     return (
-        <div id="board-area" style={{ position: 'relative', flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, overflow: 'hidden' }}>
+        <div id="board-area" className="board-area">
             
-            {/* ▼ ターゲット選択バナー（スクロール領域の外に出して絶対配置で固定） */}
+            {/* ▼ ターゲット選択バナー */}
             {npcMovePick && (
                 <div style={{ position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(241,196,15,0.95)', color: '#000', padding: '10px 20px', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', zIndex: 1000, border: '3px solid #fff', boxShadow: '0 4px 8px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
                     🎯 マップをタップして移動先を選択してください
@@ -80,9 +80,9 @@ export const GameBoard = () => {
             )}
 
             {/* マップ本体 (スクロール制御) */}
-            <div id="game-board-container" className="panel" style={{ flexGrow: 1, overflow: 'auto', position: 'relative', padding: 0, margin: 0 }}>
+            <div id="game-board-container" className="game-board-container panel">
                 <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 'max-content', transition: 'transform 0.2s ease-out' }}>
-                    <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '40px', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', position: 'relative' }}>
+                    <div id="game-board">
                         {mapData.map(tile => {
                             const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
                             const isFog = visibleTiles && !visibleTiles.has(tile.id);
