@@ -27,14 +27,14 @@ export const GameMain = () => {
         const currentPlayer = players[turn];
         
         if (currentPlayer && currentPlayer.isCPU) {
-            // ▼ オンライン対戦の場合、CPUを動かすのは「ホスト」だけ！
             if (status === 'connected' && !isHost) return;
             runCpuTurn();
         }
     }, [turn, players, gameOver, status, isHost]);
 
     return (
-        <div id="game-screen" style={{ display: 'flex', width: '100%', maxWidth: '1800px', flexDirection: 'column', alignItems: 'center' }}>
+        // ▼ height: 100dvh と overflow: hidden で全体のはみ出しを防止！
+        <div id="game-screen" style={{ display: 'flex', width: '100%', height: '100dvh', maxWidth: '1800px', flexDirection: 'column', alignItems: 'center', overflow: 'hidden', paddingBottom: '5px' }}>
             
             <DiceOverlay />
             <GameEventOverlays />
@@ -43,16 +43,17 @@ export const GameMain = () => {
             <ShopOverlay />
             <TurnOrderOverlay />
 
-            <div id="top-bar" style={{ display: 'flex', width: '100%', gap: '15px', marginBottom: '15px', alignItems: 'stretch' }}>
+            <div id="top-bar" style={{ display: 'flex', width: '100%', gap: '15px', marginBottom: '10px', alignItems: 'stretch', flexShrink: 0 }}>
                 <div id="left-status-area" style={{ display: 'flex', gap: '15px', flexShrink: 0 }}>
                     <StatusPanel />
                 </div>
                 <HandCards />
             </div>
 
-            <div id="main-area" style={{ display: 'flex', width: '100%', gap: '15px' }}>
+            {/* ▼ flexGrow: 1 と minHeight: 0 で、このエリアが画面下端にピッタリ収まるようにする */}
+            <div id="main-area" style={{ display: 'flex', width: '100%', gap: '15px', flexGrow: 1, minHeight: 0 }}>
                 <GameBoard />
-                <div id="right-side-area" style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '220px', flexShrink: 0 }}>
+                <div id="right-side-area" style={{ display: 'flex', flexDirection: 'column', gap: '15px', width: '220px', flexShrink: 0, overflowY: 'auto' }}>
                     <ActionPanel />
                     <PlayerList />
                 </div>
