@@ -5,12 +5,10 @@ import { deckData } from '../../constants/cards';
 import { ClayButton } from '../common/ClayButton';
 import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, actionManhole } from '../../game/actions';
 import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove } from '../../game/skills';
-import { playSfx } from '../../utils/audio';
 
 const ActionBtn = ({ action, condition, failMsg, highlight, color, style, children, isMyTurn, isBusy }) => (
     <ClayButton 
         onClick={() => {
-            playSfx('click');
             if (!isMyTurn || isBusy) return;
             if (!condition) { useGameStore.getState().showToast(failMsg); return; }
             action();
@@ -94,7 +92,7 @@ export const ActionPanel = () => {
             
             {tileType === 'exchange' && <ActionBtn action={actionExchange} condition={canDoExchange} failMsg="換金するものがありません" style={{borderColor: '#d4a017'}} isMyTurn={isMyTurn} isBusy={isBusy}>💱 換金 (0AP)</ActionBtn>}
             {tileType === 'manhole' && <ActionBtn action={actionManhole} condition={isMyTurn && diceRolled && hasAP(1) && !isBusy} failMsg="AP不足です" style={{borderColor: '#2c3e50'}} isMyTurn={isMyTurn} isBusy={isBusy}>🕳️ ワープ (1AP)</ActionBtn>}
-            {tileType === 'shop' && <ActionBtn action={() => { playSfx('click'); useGameStore.setState({ shopActive: true }); }} condition={canDoShop} failMsg="今は開けません" style={{borderColor: '#8e44ad'}} isMyTurn={isMyTurn} isBusy={isBusy}>🛒 ショップ</ActionBtn>}
+            {tileType === 'shop' && <ActionBtn action={() => useGameStore.setState({ shopActive: true })} condition={canDoShop} failMsg="今は開けません" style={{borderColor: '#8e44ad'}} isMyTurn={isMyTurn} isBusy={isBusy}>🛒 ショップ</ActionBtn>}
 
             <div id="btn-dash">{cp.charType === 'athlete' && <ActionBtn action={actionDash} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" color="green" isMyTurn={isMyTurn} isBusy={isBusy}>💨 疾風ダッシュ (3AP)</ActionBtn>}</div>
             {cp.charType === 'yankee' && othersOnTile.length > 0 && <ActionBtn action={actionPunch} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="red" isMyTurn={isMyTurn} isBusy={isBusy}>👊 殴る (2AP)</ActionBtn>}
@@ -113,7 +111,7 @@ export const ActionPanel = () => {
                     <ActionBtn action={actionEndTurn} condition={canEndTurn} failMsg={isHandOverLimit ? "手札が上限です！カードを捨ててください" : "今は終了できません"} color="red" className={(canEndTurn && cp.ap === 0 && !isHandOverLimit) ? "btn-end-highlight" : ""} isMyTurn={isMyTurn} isBusy={isBusy}>🛑 ターン終了</ActionBtn>
                 </div>
                 {isMyTurn && showSkipButton && (
-                    <button onClick={() => { playSfx('click'); useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false, turnBannerActive: false }); actionEndTurn(); }} style={{ background: '#34495e', color: '#fff', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }} title="エラーで動けなくなった場合に強制的にターンを終了します">
+                    <button onClick={() => { useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false, turnBannerActive: false }); actionEndTurn(); }} style={{ background: '#34495e', color: '#fff', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }} title="エラーで動けなくなった場合に強制的にターンを終了します">
                         ⚡スキップ
                     </button>
                 )}

@@ -58,11 +58,11 @@ export const GameEffectsOverlay = () => {
                                 if (!cd) return null;
                                 return (
                                     <button key={idx} onClick={() => {
-                                        playSfx('click');
                                         useGameStore.getState().updateCurrentPlayer(p => {
                                             const h = [...p.hand]; h.splice(idx, 1); return { hand: h };
                                         });
                                         logMsg(`🗑️ 手札整理：「${cd.name}」を捨てた。`);
+                                        playSfx('coin');
                                     }} style={{ padding: '8px 12px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer', border: `2px solid ${cd.color}`, background: '#fff', fontWeight: 'bold', boxShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
                                         {cd.icon} {cd.name} を捨てる
                                     </button>
@@ -116,7 +116,7 @@ export const GameEffectsOverlay = () => {
             )}
 
             {targetPlayer && detail && cInfo && (
-                <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={(e) => { if(e.target === e.currentTarget) { playSfx('click'); useGameStore.setState({ charInfoModal: null }); } }}>
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={(e) => { if(e.target === e.currentTarget) useGameStore.setState({ charInfoModal: null }); }}>
                     <div className="modal-box" style={{ maxWidth: '420px', background: '#1a1a2e', color: '#fdf5e6', border: `3px solid ${targetPlayer.color}`, padding: 0, overflow: 'hidden' }}>
                         <div style={{ padding: '18px 20px 14px', display: 'flex', alignItems: 'center', gap: '12px', background: `linear-gradient(135deg,${targetPlayer.color}22 0%,rgba(26,26,46,0.95) 100%)`, borderBottom: `2px solid ${targetPlayer.color}44` }}>
                             <div style={{ fontSize: '52px', lineHeight: 1 }}>{charEmoji[targetPlayer.charType]}</div>
@@ -124,7 +124,7 @@ export const GameEffectsOverlay = () => {
                                 <div style={{ fontSize: '19px', fontWeight: 900, color: '#f1c40f' }}>{cInfo.name}</div>
                                 <div style={{ fontSize: '12px', color: '#bdc3c7', marginTop: '3px', fontStyle: 'italic' }}>{detail.tagline}</div>
                             </div>
-                            <button onClick={() => { playSfx('click'); useGameStore.setState({ charInfoModal: null }); }} style={{ background: 'none', border: 'none', color: '#bdc3c7', fontSize: '22px', cursor: 'pointer' }}>✕</button>
+                            <button onClick={() => useGameStore.setState({ charInfoModal: null })} style={{ background: 'none', border: 'none', color: '#bdc3c7', fontSize: '22px', cursor: 'pointer' }}>✕</button>
                         </div>
                         <div style={{ padding: '14px 18px' }}>
                             <div style={{ background: 'rgba(46,204,113,0.12)', border: '2px solid #2ecc71', borderRadius: '10px', padding: '11px 13px', marginBottom: '9px', textAlign: 'left' }}>
@@ -178,7 +178,6 @@ export const GameEffectsOverlay = () => {
                                 const owner = players.find(p => p.id == ownerId);
                                 return (
                                     <button key={tId} onClick={() => {
-                                        playSfx('click');
                                         useGameStore.setState(s => ({ territories: { ...s.territories, [tId]: cp.id }, territorySelectOptions: null }));
                                         logMsg(`🚩 マス${tId}「${tile?.name}」を奪取！（${owner?.name}から）`);
                                         useGameStore.getState().addEventPopup(cp.id, "🚩", "陣地奪取！", `${tile?.name}を乗っ取った`, "good");
@@ -189,13 +188,13 @@ export const GameEffectsOverlay = () => {
                                 );
                             })}
                         </div>
-                        <button className="btn-large" style={{ width: '100%', marginTop: '15px', background: '#7f8c8d', borderColor: '#2c3e50' }} onClick={() => { playSfx('click'); useGameStore.setState({ territorySelectOptions: null }); }}>キャンセル</button>
+                        <button className="btn-large" style={{ width: '100%', marginTop: '15px', background: '#7f8c8d', borderColor: '#2c3e50' }} onClick={() => useGameStore.setState({ territorySelectOptions: null })}>キャンセル</button>
                     </div>
                 </div>
             )}
 
             {gameResult && (
-                <div className="modal-overlay" style={{ display: 'flex', zIndex: 9998, background: 'radial-gradient(circle,#f1c40f,#e67e22,#c0392b)', flexDirection: 'column', alignItems: 'center', color: 'white', textAlign: 'center', animation: 'win-bg-anim 2s infinite alternate', cursor: 'pointer' }} onClick={() => { playSfx('click'); setConfirmEnd(true); }}>
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 9998, background: 'radial-gradient(circle,#f1c40f,#e67e22,#c0392b)', flexDirection: 'column', alignItems: 'center', color: 'white', textAlign: 'center', animation: 'win-bg-anim 2s infinite alternate', cursor: 'pointer' }} onClick={() => setConfirmEnd(true)}>
                     <div style={{ fontSize: '80px', marginBottom: '20px' }}>🏆</div>
                     <h1 style={{ fontSize: '36px', textShadow: '2px 2px 10px #000', margin: 0 }}>
                         {gameResult.isTeamGame 
@@ -240,8 +239,8 @@ export const GameEffectsOverlay = () => {
                          <h3 style={{ color: '#e74c3c', marginTop: 0 }}>⚠️ ゲーム終了確認</h3>
                          <p style={{ fontWeight: 'bold' }}>本当にゲームを終えてタイトルに戻りますか？</p>
                          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                             <button className="btn-clay" onClick={() => { playSfx('click'); setConfirmEnd(false); useGameStore.getState().resetGame(); }} style={{ flex: 1, background: '#e74c3c', color: '#fff', border: '2px solid #c0392b', padding: '10px' }}>はい</button>
-                             <button className="btn-clay" onClick={() => { playSfx('click'); setConfirmEnd(false); }} style={{ flex: 1, background: '#95a5a6', color: '#fff', border: '2px solid #7f8c8d', padding: '10px' }}>いいえ</button>
+                             <button className="btn-clay" onClick={() => { setConfirmEnd(false); useGameStore.getState().resetGame(); }} style={{ flex: 1, background: '#e74c3c', color: '#fff', border: '2px solid #c0392b', padding: '10px' }}>はい</button>
+                             <button className="btn-clay" onClick={() => setConfirmEnd(false)} style={{ flex: 1, background: '#95a5a6', color: '#fff', border: '2px solid #7f8c8d', padding: '10px' }}>いいえ</button>
                          </div>
                      </div>
                 </div>

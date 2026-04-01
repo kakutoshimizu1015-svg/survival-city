@@ -6,7 +6,6 @@ import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { BoardPaths } from './BoardPaths';
 import { Tile } from './Tile';
 import { TileTooltip } from '../overlays/TileTooltip';
-import { playSfx } from '../../utils/audio';
 
 export const GameBoard = () => {
     const { 
@@ -202,7 +201,6 @@ export const GameBoard = () => {
 
     const handleTileClick = (tileId) => {
         if (isClickPrevented.current) return;
-        playSfx('click');
 
         if (npcMovePick) {
             const state = useGameStore.getState();
@@ -265,7 +263,7 @@ export const GameBoard = () => {
             <TileTooltip />
 
             {npcMovePick && (
-                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { playSfx('click'); useGameStore.setState({ npcMovePick: null }); useGameStore.getState().showToast("情報操作をキャンセルしました"); }}>
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ npcMovePick: null }); useGameStore.getState().showToast("情報操作をキャンセルしました"); }}>
                     🕵️ 移動先マスをタップしてください（タップでキャンセル）
                 </div>
             )}
@@ -285,9 +283,9 @@ export const GameBoard = () => {
                     <span style={{ color: '#bdc3c7', marginLeft: '6px' }}>ゴミ:<span id="hud-trash-price">{trashPrice}</span>P</span>
                 </div>
                 <div id="zoom-controls" style={{ display: 'flex', flexDirection: 'row', position: 'static', gap: '6px', pointerEvents: 'auto', marginTop: '8px' }}>
-                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => { playSfx('click'); handleZoomBtn(0.15); }} title="ズームイン">＋</button>
-                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => { playSfx('click'); handleZoomBtn(-0.15); }} title="ズームアウト">－</button>
-                    <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={() => { playSfx('click'); resetZoom(); }} title="リセット">⟳</button>
+                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(0.15)} title="ズームイン">＋</button>
+                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(-0.15)} title="ズームアウト">－</button>
+                    <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={resetZoom} title="リセット">⟳</button>
                 </div>
             </div>
 
