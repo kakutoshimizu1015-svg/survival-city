@@ -197,9 +197,22 @@ useGameStore.subscribe((state) => {
     const netState = useNetworkStore.getState();
     if (netState.status !== 'connected' || isReceivingNetworkData || state.gamePhase !== 'playing') return;
 
+    // ▼ 同期させない（ローカルのみで保持する）Stateのキーを指定
+    const localOnlyKeys = [
+        'charInfoModal',
+        'acquiredCard',
+        'toastMsg',
+        'centerWarning',
+        'tooltipData',
+        'settingsActive',
+        'rulesActive',
+        'tutorialActive'
+    ];
+
     const pureState = {};
     for (const key in state) {
-        if (typeof state[key] !== 'function') {
+        // 関数と、ローカル専用のキーを除外して同期データを作る
+        if (typeof state[key] !== 'function' && !localOnlyKeys.includes(key)) {
             pureState[key] = state[key];
         }
     }

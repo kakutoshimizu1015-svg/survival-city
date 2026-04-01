@@ -74,12 +74,17 @@ export const GameBoard = () => {
         applyTransform(true);
     }, [applyTransform]);
 
+    // ▼ マップのマス数を取得
+    const mapTileCount = mapData?.length || 0;
+
     useEffect(() => {
+        if (mapTileCount === 0) return; // マップが存在しない時は何もしない
+        
         const timer = setTimeout(() => {
             resetZoom();
         }, 100);
         return () => clearTimeout(timer);
-    }, [mapData, resetZoom]);
+    }, [mapTileCount, resetZoom]); // ▼ mapDataの参照ではなくlengthに依存させる
 
     const getTouchCoords = (touches) => {
         return Array.from(touches).map(t => ({ clientX: t.clientX, clientY: t.clientY }));
