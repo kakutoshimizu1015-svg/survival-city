@@ -107,6 +107,13 @@ export const processRoundEnd = async () => {
     let loansharkPos = md[Math.floor(Math.random() * md.length)].id;
     let friendPos = md[Math.floor(Math.random() * md.length)].id;
 
+    // --- ① ラウンドサマリーの表示と待機 ---
+    useGameStore.setState({ roundSummary: summaryDigest });
+    await sleep(summaryDigest.length * 400 + 2500);
+    useGameStore.setState({ roundSummary: null });
+    await sleep(300);
+
+    // --- ② ごみ収集車 ホラー演出 ---
     logMsg(`<span style="color:#c0392b">🛻 ごみ収集車が暴走！</span>`);
     useGameStore.setState({ horrorMode: true }); 
     playSfx('hit'); 
@@ -147,6 +154,7 @@ export const processRoundEnd = async () => {
     await sleep(800);
     useGameStore.setState({ horrorMode: false });
 
+    // --- ③ 警察パトロール ---
     let newPolicePos = state.policePos;
     if (newRound % 2 === 0) {
         logMsg(`🚓 警察パトロール！`);
@@ -164,6 +172,7 @@ export const processRoundEnd = async () => {
         });
     }
 
+    // --- ④ 次の収集車のエリア予兆表示 ---
     const nextPreviewRoll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1;
     const nextMove = getDestRandom(truckMove.finalPos, nextPreviewRoll, md);
     const areaCounts = {};
@@ -178,15 +187,11 @@ export const processRoundEnd = async () => {
         const warningMsg = `次の収集車は「${areaNames[dangerArea] || dangerArea}」を中心に暴走するらしい…`;
         
         useGameStore.setState({ disasterWarning: warningMsg });
-        setTimeout(() => {
-            useGameStore.setState({ disasterWarning: null });
-        }, 3500);
+        await sleep(3500);
+        useGameStore.setState({ disasterWarning: null });
+        await sleep(300);
     }
 
+    // --- ⑤ ラウンド状態の最終更新 ---
     useGameStore.setState({ roundCount: newRound, weatherState: weather, isRainy: weather === "rainy", isNight, canPrice, trashPrice, animalPos, unclePos, yakuzaPos, loansharkPos, friendPos, policePos: newPolicePos });
-
-    useGameStore.setState({ roundSummary: summaryDigest });
-    setTimeout(() => {
-        useGameStore.setState({ roundSummary: null });
-    }, summaryDigest.length * 400 + 2500);
 };

@@ -19,6 +19,18 @@ export const GameEffectsOverlay = () => {
     const detail = targetPlayer ? charDetailData[targetPlayer.charType] : null;
     const cInfo = targetPlayer ? charInfo[targetPlayer.charType] : null;
 
+    // ▼ 追加：モーダル内の装備品タグの生成
+    const equipLabels = {bicycle:'🚲自転車',shoes:'👢安全靴',cart:'🛒リヤカー',shield:'🛡️段ボール盾',helmet:'🪖ヘルメット',doll:'🎎身代わり人形',backpack:'🎒リュック'};
+    const reactionLabels = {block:'⚖️弁護士の盾',reflect:'🤝裏取引',counter:'🔄反撃'};
+    const activeTags = [];
+    if (targetPlayer) {
+        if (targetPlayer.stealth) activeTags.push('💨ステルス中');
+        if (targetPlayer.rainGear) activeTags.push('☂️雨具装備');
+        if (targetPlayer.hasID) activeTags.push('🪪身分証あり');
+        if (targetPlayer.reaction) activeTags.push(reactionLabels[targetPlayer.reaction] || targetPlayer.reaction);
+        Object.entries(targetPlayer.equip || {}).forEach(([k, v]) => { if (v && equipLabels[k]) activeTags.push(equipLabels[k]); });
+    }
+
     const isMyTurn = status === 'connected' ? (cp?.userId === myUserId) : !cp?.isCPU;
     const isHandOverLimit = cp && cp.hand.length > cp.maxHand;
 
@@ -137,6 +149,20 @@ export const GameEffectsOverlay = () => {
                                 <div style={{ fontSize: '14px', fontWeight: 900, marginBottom: '3px' }}>{detail.action.name}</div>
                                 <div style={{ fontSize: '12px', color: '#bdc3c7', lineHeight: 1.6 }}>{detail.action.desc}</div>
                             </div>
+
+                            {/* ▼ 追加: 装備タグの表示領域 */}
+                            {activeTags.length > 0 && (
+                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '12px', paddingTop: '10px', textAlign: 'left' }}>
+                                    <div style={{ fontSize: '10px', color: '#bdc3c7', marginBottom: '5px', fontWeight: 'bold' }}>現在の状態・装備</div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                        {activeTags.map((tag, idx) => (
+                                            <span key={idx} style={{ background: 'rgba(241,196,15,0.15)', border: '1px solid rgba(241,196,15,0.4)', borderRadius: '5px', padding: '2px 7px', fontSize: '11px', color: '#f1c40f' }}>
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -145,9 +171,9 @@ export const GameEffectsOverlay = () => {
             {roundSummary && (
                 <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(92,74,68,0.98)', border: '6px solid #f1c40f', borderRadius: '15px', padding: '25px 40px', zIndex: 280, display: 'flex', flexDirection: 'column', color: '#fdf5e6', boxShadow: '0 0 40px rgba(0,0,0,0.8)', minWidth: '350px' }}>
                     <h2 style={{ margin: '0 0 15px 0', color: '#f1c40f', textAlign: 'center', borderBottom: '2px dashed #f1c40f', paddingBottom: '10px' }}>🌙 ラウンド終了レポート</h2>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                         {roundSummary.map((item, i) => (
-                            <div key={i} style={{ fontSize: '16px', fontWeight: 'bold', animation: `slide-down 0.3s forwards ${i * 0.4}s`, opacity: 0 }}>
+                            <div key={i} style={{ fontSize: '16px', fontWeight: 'bold', animation: `slide-down 0.3s forwards ${i * 0.4}s`, opacity: 0, textAlign: 'center' }}>
                                 {item}
                             </div>
                         ))}
