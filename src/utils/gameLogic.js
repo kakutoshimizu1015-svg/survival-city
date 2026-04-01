@@ -19,3 +19,40 @@ export function getDistance(posA, posB, mapData) {
     }
     return 999;
 }
+
+// 1〜3マス先のタイルを割り出す関数 (Path Preview用)
+export function getPathPreviewTiles(startPos, mapData) {
+    const visited = new Set([startPos]);
+    let frontier = [startPos];
+    const result = { depth1: new Set(), depth2: new Set(), depth3: new Set() };
+
+    for (let depth = 1; depth <= 3; depth++) {
+        const nextFrontier = [];
+        frontier.forEach(id => {
+            const tile = mapData.find(t => t.id === id);
+            if (!tile) return;
+            tile.next.forEach(nid => {
+                if (!visited.has(nid)) {
+                    visited.add(nid);
+                    nextFrontier.push(nid);
+                    if (depth === 1) result.depth1.add(nid);
+                    if (depth === 2) result.depth2.add(nid);
+                    if (depth === 3) result.depth3.add(nid);
+                }
+            });
+        });
+        frontier = nextFrontier;
+    }
+    return result;
+}
+
+// リンクしているマンホールを割り出す関数
+export function getManholeLinkedTiles(currentPos, mapData) {
+    const linked = new Set();
+    mapData.forEach(t => {
+        if (t.type === 'manhole' && t.id !== currentPos) {
+            linked.add(t.id);
+        }
+    });
+    return linked;
+}

@@ -14,9 +14,9 @@ const initialState = {
     jobResult: null,
     logs: [],
 
-    // ▼ 追加：警告トーストと画面中央の警告用ステート
     toastMsg: null,
     centerWarning: null,
+    tooltipData: null, // 追加：ツールチップの状態管理
 
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
     mapData: [], territories: {}, isRainy: false, weatherState: 'sunny', isNight: false,
@@ -51,7 +51,6 @@ export const useGameStore = create((set, get) => ({
         setTimeout(() => set(state => ({ eventPopups: state.eventPopups.filter(p => p.id !== id) })), 2800);
     },
 
-    // ▼ 追加：トーストと中央警告の呼び出しアクション
     showToast: (msg) => {
         set({ toastMsg: msg });
         setTimeout(() => set({ toastMsg: null }), 3000);
@@ -59,7 +58,10 @@ export const useGameStore = create((set, get) => ({
     showCenterWarning: (msg) => {
         set({ centerWarning: msg });
         setTimeout(() => set({ centerWarning: null }), 4000);
-    }
+    },
+    
+    // 追加：ツールチップ更新アクション
+    setTooltipData: (data) => set({ tooltipData: data })
 }));
 
 export const isSameTeam = (p1, p2) => p1 && p2 && p1.id !== p2.id && p1.teamColor !== 'none' && p1.teamColor === p2.teamColor;

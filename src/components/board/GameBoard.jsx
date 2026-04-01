@@ -1,21 +1,160 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { charEmoji } from '../../constants/characters';
-import { getDistance } from '../../game/combat';
+import { getDistance, getPathPreviewTiles, getManholeLinkedTiles } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
-import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay'; 
+import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
+import { BoardPaths } from './BoardPaths';
+import { Tile } from './Tile';
+import { TileTooltip } from '../overlays/TileTooltip'; // ツールチップの読み込み
 
 export const GameBoard = () => {
     const { 
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
-        roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice 
+        roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver
     } = useGameStore();
 
     const cp = players[turn];
-    const [scale, setScale] = useState(0.85);
-    const handleZoom = (delta) => setScale(prev => Math.min(Math.max(0.3, prev + delta), 3.0));
-    const resetZoom = () => setScale(0.85);
+    
+    // Zoom and Pan States
+    const [scale, setScale] = useState(1.0);
+    const [offset, setOffset] = useState({ x: 0, y: 0 });
+    const wrapperRef = useRef(null);
+    const isDragging = useRef(false);
+    const dragStart = useRef({ x: 0, y: 0 });
+    const offsetStart = useRef({ x: 0, y: 0 });
+    const lastTouches = useRef(null);
+
+    const zoomAt = useCallback((px, py, delta) => {
+        setScale(prevScale => {
+            const newScale = Math.min(3.0, Math.max(0.25, prevScale + delta));
+            const ratio = newScale / prevScale;
+            setOffset(prevOffset => ({
+                x: px - ratio * (px - prevOffset.x),
+                y: py - ratio * (py - prevOffset.y)
+            }));
+            return newScale;
+        });
+    }, []);
+
+    const handleZoomBtn = (delta) => {
+        if (!wrapperRef.current) return;
+        const cx = wrapperRef.current.clientWidth / 2;
+        const cy = wrapperRef.current.clientHeight / 2;
+        zoomAt(cx, cy, delta);
+    };
+
+    const resetZoom = () => {
+        if (!wrapperRef.current) return;
+        const board = document.getElementById('game-board');
+        if (!board) return;
+        const bw = board.scrollWidth;
+        const bh = board.scrollHeight;
+        const ww = wrapperRef.current.clientWidth;
+        const wh = wrapperRef.current.clientHeight;
+        if (bw === 0 || bh === 0) return;
+        const fitScale = Math.min(ww / bw, wh / bh, 1.0);
+        setScale(fitScale);
+        setOffset({
+            x: (ww - bw * fitScale) / 2,
+            y: (wh - bh * fitScale) / 2
+        });
+    };
+
+    useEffect(() => {
+        resetZoom();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mapData]);
+
+    useEffect(() => {
+        const wrapper = wrapperRef.current;
+        if (!wrapper) return;
+
+        const handleWheel = (e) => {
+            e.preventDefault();
+            const rect = wrapper.getBoundingClientRect();
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+            const delta = e.deltaY < 0 ? 0.15 : -0.15;
+            zoomAt(px, py, delta);
+        };
+
+        const handleMouseDown = (e) => {
+            if (e.button !== 0) return;
+            isDragging.current = true;
+            dragStart.current = { x: e.clientX, y: e.clientY };
+            setOffset(prev => {
+                offsetStart.current = prev;
+                return prev;
+            });
+            wrapper.classList.add('dragging');
+        };
+
+        const handleMouseMove = (e) => {
+            if (!isDragging.current) return;
+            const dx = e.clientX - dragStart.current.x;
+            const dy = e.clientY - dragStart.current.y;
+            setOffset({
+                x: offsetStart.current.x + dx,
+                y: offsetStart.current.y + dy
+            });
+        };
+
+        const handleMouseUp = (e) => {
+            if (!isDragging.current) return;
+            isDragging.current = false;
+            wrapper.classList.remove('dragging');
+        };
+
+        const handleTouchStart = (e) => {
+            lastTouches.current = e.touches;
+        };
+
+        const handleTouchMove = (e) => {
+            if (!lastTouches.current) return;
+            if (e.touches.length === 1 && lastTouches.current.length === 1) {
+                const dx = e.touches[0].clientX - lastTouches.current[0].clientX;
+                const dy = e.touches[0].clientY - lastTouches.current[0].clientY;
+                setOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+                e.preventDefault();
+            } else if (e.touches.length === 2 && lastTouches.current.length === 2) {
+                const prevDist = Math.hypot(
+                    lastTouches.current[0].clientX - lastTouches.current[1].clientX,
+                    lastTouches.current[0].clientY - lastTouches.current[1].clientY
+                );
+                const newDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                const rect = wrapper.getBoundingClientRect();
+                const cx = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+                const cy = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
+                zoomAt(cx, cy, (newDist - prevDist) * 0.005);
+                e.preventDefault();
+            }
+            lastTouches.current = e.touches;
+        };
+
+        const handleTouchEnd = () => { lastTouches.current = null; };
+
+        wrapper.addEventListener('wheel', handleWheel, { passive: false });
+        wrapper.addEventListener('mousedown', handleMouseDown);
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        wrapper.addEventListener('touchstart', handleTouchStart, { passive: true });
+        wrapper.addEventListener('touchmove', handleTouchMove, { passive: false });
+        wrapper.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+        return () => {
+            wrapper.removeEventListener('wheel', handleWheel);
+            wrapper.removeEventListener('mousedown', handleMouseDown);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            wrapper.removeEventListener('touchstart', handleTouchStart);
+            wrapper.removeEventListener('touchmove', handleTouchMove);
+            wrapper.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, [zoomAt]);
 
     const handleTileClick = (tileId) => {
         if (npcMovePick) {
@@ -36,96 +175,122 @@ export const GameBoard = () => {
                 mapData.forEach(t => { if (getDistance(v.pos, t.id, mapData) <= 3) visible.add(t.id); });
             }
         });
+        if (isBranchPicking) {
+            currentBranchOptions.forEach(id => visible.add(id));
+        }
         return visible;
-    }, [isNight, players, mapData, turn]);
+    }, [isNight, players, mapData, turn, isBranchPicking, currentBranchOptions]);
+
+    const pathPreview = useMemo(() => {
+        const preview = { path1: new Set(), path2: new Set(), path3: new Set(), manholes: new Set() };
+        if (!players || players.length === 0 || gameOver || !cp || cp.isCPU) return preview;
+
+        const pathData = getPathPreviewTiles(cp.pos, mapData);
+        preview.path1 = pathData.depth1;
+        preview.path2 = pathData.depth2;
+        preview.path3 = pathData.depth3;
+
+        const curTile = mapData.find(t => t.id === cp.pos);
+        if (curTile && curTile.type === 'manhole') {
+            preview.manholes = getManholeLinkedTiles(cp.pos, mapData);
+        }
+
+        return preview;
+    }, [players, gameOver, cp, mapData]);
 
     const zoomBtnStyle = {
         width: '32px', height: '32px', borderRadius: '8px', border: '2px solid #8d6e63', 
         background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '16px', fontWeight: 'bold', 
         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-        boxShadow: '2px 2px 4px rgba(0,0,0,0.5)'
+        boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s'
     };
 
+    let maxCol = 0, maxRow = 0;
+    if (mapData && mapData.length > 0) {
+        maxCol = Math.max(...mapData.map(t => t.col));
+        maxRow = Math.max(...mapData.map(t => t.row));
+    }
+
     return (
-        <div id="board-area" className="board-area">
+        <div id="board-area" style={{ flexGrow: 1, overflowX: 'hidden', minWidth: 0, position: 'relative' }}>
             
+            <TileTooltip />
+
             {npcMovePick && (
-                <div style={{ position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(241,196,15,0.95)', color: '#000', padding: '10px 20px', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', zIndex: 1000, border: '3px solid #fff', boxShadow: '0 4px 8px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
-                    🎯 マップをタップして移動先を選択してください
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }}>
+                    🕵️ 移動先マスをタップしてください
+                </div>
+            )}
+            {isBranchPicking && !npcMovePick && (
+                <div id="branch-prompt" style={{ display: 'block' }}>
+                    🛣️ 光っているマスをタップして進む道を選んでください
                 </div>
             )}
 
             <div id="map-env-hud" style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 55, display: 'flex', flexDirection: 'column', gap: '4px', pointerEvents: 'none' }}>
                 <div style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', fontWeight: 'bold', color: '#fdf5e6', lineHeight: 1.6, whiteSpace: 'nowrap' }}>
-                    <span style={{ color: '#f1c40f' }}>R:{roundCount}/{maxRounds}</span>
-                    <span style={{ marginLeft: '6px' }}>{isRainy ? '🌧️雨' : weatherState === 'cloudy' ? '☁️曇' : '☀️晴'}</span>
-                    <span style={{ marginLeft: '6px' }}>{isNight ? '🌙夜' : '☀️昼'}</span>
+                    <span id="hud-round" style={{ color: '#f1c40f' }}>R:{roundCount}/{maxRounds}</span>
+                    <span id="hud-weather" style={{ marginLeft: '6px' }}>{isRainy ? '🌧️雨' : weatherState === 'cloudy' ? '☁️曇' : '☀️晴'}</span>
+                    <span id="hud-daynight" style={{ marginLeft: '6px' }}>{isNight ? '🌙夜' : '☀️昼'}</span>
                     <br/>
-                    <span style={{ color: '#bdc3c7' }}>缶:{canPrice}P</span>
-                    <span style={{ color: '#bdc3c7', marginLeft: '6px' }}>ゴミ:{trashPrice}P</span>
+                    <span style={{ color: '#bdc3c7' }}>缶:<span id="hud-can-price">{canPrice}</span>P</span>
+                    <span style={{ color: '#bdc3c7', marginLeft: '6px' }}>ゴミ:<span id="hud-trash-price">{trashPrice}</span>P</span>
                 </div>
-                <div style={{ display: 'flex', gap: '4px', pointerEvents: 'auto' }}>
-                    <button style={zoomBtnStyle} onClick={() => handleZoom(0.15)} title="ズームイン">＋</button>
-                    <button style={zoomBtnStyle} onClick={() => handleZoom(-0.15)} title="ズームアウト">－</button>
-                    <button style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={resetZoom} title="リセット">⟳</button>
+                <div id="zoom-controls" style={{ display: 'flex', gap: '4px', pointerEvents: 'auto' }}>
+                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(0.15)} title="ズームイン">＋</button>
+                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(-0.15)} title="ズームアウト">－</button>
+                    <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={resetZoom} title="リセット">⟳</button>
                 </div>
             </div>
 
             {cp && (
                 <div id="map-ap-hud" style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 50, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', border: `2px solid ${cp.ap > 0 ? 'rgba(255,220,50,0.5)' : 'rgba(200,80,80,0.5)'}`, borderRadius: '10px', padding: '6px 12px', color: cp.ap > 0 ? '#f1c40f' : '#e74c3c', fontWeight: 'bold', fontSize: '18px', textShadow: '0 0 8px currentColor', pointerEvents: 'none', transition: 'all 0.3s' }}>
-                    ⚡ {cp.ap}
+                    ⚡ <span id="map-ap-display">{cp.ap}</span>
                 </div>
             )}
 
-            <div id="game-board-container" className="game-board-container panel">
-                <div id="game-board-wrapper">
-                    <div id="game-board-inner" style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 'max-content', transition: 'transform 0.2s ease-out' }}>
-                        <div id="game-board">
+            <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px' }}>
+                <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none' }}>
+                    <div id="game-board-inner" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
+                        <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
                             
+                            <BoardPaths />
                             <WeaponArcOverlay />
 
                             {mapData.map(tile => {
                                 const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
                                 const isFog = visibleTiles && !visibleTiles.has(tile.id);
-                                
                                 const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
                                 const isClickable = npcMovePick !== null || isBranchTarget;
+                                
+                                const playersOnTile = players.filter(p => p.pos === tile.id && p.hp > 0);
+                                const isActiveTurnPlayerOnTile = playersOnTile.some(p => p.id === turn);
+
+                                let pathClass = '';
+                                if (pathPreview.path1.has(tile.id)) pathClass = 'tile-path-1';
+                                else if (pathPreview.path2.has(tile.id)) pathClass = 'tile-path-2';
+                                else if (pathPreview.path3.has(tile.id)) pathClass = 'tile-path-3';
+                                else if (pathPreview.manholes.has(tile.id)) pathClass = 'tile-manhole-linked';
 
                                 return (
-                                    <div key={tile.id} id={`tile-${tile.id}`} onClick={() => isClickable && handleTileClick(tile.id)} 
-                                        className={`tile ${tile.type} ${tile.area} ${isFog ? 'night-fog' : ''} ${isClickable ? 'tile-highlight-branch' : ''}`}
-                                        style={{ gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default' }}>
-                                        <div style={{ fontSize: '26px', zIndex: 2 }}>
-                                            {tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : ''}
-                                        </div>
-                                        <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2 }}>{tile.name}</div>
-                                        
-                                        {owner && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px' }}>🚩</div>}
-
-                                        {(tile.fieldCans > 0 || tile.fieldTrash > 0) && !isFog && (
-                                            <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'2px 4px', fontSize:'12px' }}>
-                                                {tile.fieldCans > 0 && <span>🥫{tile.fieldCans}</span>}
-                                                {tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
-                                            </div>
-                                        )}
-
-                                        {!isFog && players.filter(p => p.pos === tile.id && p.hp > 0).map(p => (
-                                            <div key={p.id} className={`player-token pos-${p.id % 4} ${turn === p.id ? 'token-active' : ''}`} style={{ borderColor: p.color, width: '36px', height: '36px' }}>
-                                                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', lineHeight:1 }}>
-                                                    <span style={{ fontSize:'18px' }}>{charEmoji[p.charType]}</span>
-                                                    <span style={{ fontSize:'7px', fontWeight:900, color:p.color, textShadow:'0 0 4px #000' }}>{p.name}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        
-                                        {!isFog && tile.id === truckPos && <div className="truck-token">🚛</div>}
-                                        {!isFog && tile.id === policePos && <div className="npc-token npc-police">👮</div>}
-                                        {!isFog && tile.id === unclePos && <div className="npc-token npc-uncle">🧓</div>}
-                                        {!isFog && tile.id === animalPos && <div className="npc-token npc-animal">🐀</div>}
-                                        {!isFog && tile.id === yakuzaPos && <div className="npc-token npc-yakuza">😎</div>}
-                                        {!isFog && tile.id === loansharkPos && <div className="npc-token npc-loanshark">💀</div>}
-                                        {!isFog && tile.id === friendPos && <div className="npc-token npc-friend">🤝</div>}
-                                    </div>
+                                    <Tile 
+                                        key={tile.id}
+                                        tile={tile}
+                                        owner={owner}
+                                        isFog={isFog}
+                                        isClickable={isClickable}
+                                        onClick={() => handleTileClick(tile.id)}
+                                        playersOnTile={playersOnTile}
+                                        isActiveTurnPlayerOnTile={isActiveTurnPlayerOnTile}
+                                        isTruck={tile.id === truckPos}
+                                        isPolice={tile.id === policePos}
+                                        isUncle={tile.id === unclePos}
+                                        isAnimal={tile.id === animalPos}
+                                        isYakuza={tile.id === yakuzaPos}
+                                        isLoanshark={tile.id === loansharkPos}
+                                        isFriend={tile.id === friendPos}
+                                        pathClass={pathClass}
+                                    />
                                 );
                             })}
                         </div>
