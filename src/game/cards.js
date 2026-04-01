@@ -143,3 +143,17 @@ export const actionDiscardCard = (handIndex) => {
     state.updateCurrentPlayer(() => ({ hand: newHand }));
     logMsg(`🗑️ カードを捨てました。`);
 };
+
+export const actionCancelWeapon = (cardId) => {
+    const state = useGameStore.getState();
+    const cardData = deckData.find(c => c.id === cardId);
+    if (!cardData || cardData.type !== 'weapon') return;
+
+    // 手札の末尾に戻し、消費したAP(2)を回復
+    state.updateCurrentPlayer(p => ({
+        ap: p.ap + 2,
+        hand: [...p.hand, cardId]
+    }));
+    useGameStore.setState({ weaponArcData: null });
+    logMsg(`🔙 武器の使用をキャンセルしました`);
+};

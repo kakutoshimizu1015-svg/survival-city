@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { ClayButton } from '../common/ClayButton';
@@ -17,6 +17,22 @@ export const GameEventOverlays = () => {
     const marks = ["🍒", "🔔", "🍇"];
 
     const isMyTurn = status === 'connected' ? (cp?.userId === myUserId) : true;
+    
+    const { charInfoModal, roundSummary, acquiredCard, territorySelectOptions, mapData, territories, gameResult } = useGameStore();
+    const [confirmEnd, setConfirmEnd] = useState(false);
+
+    // ▼ 追加：優勝文言のリストと、1度だけランダム抽出する処理
+    const victoryPhrases = [
+        "優勝！",
+        "空き缶拾って成り上がり！見事、人生カンストだ！！",
+        "過酷なサバイバル完了！見事、路上卒業（路卒）だ！！",
+        "勝った！勝った！今日の炊き出しは特上ステーキだ！",
+        "段ボールハウス、本日解体！今夜はタワマン最上階だ！"
+    ];
+    const randomVictoryPhrase = useMemo(() => {
+        if (!gameResult) return "";
+        return victoryPhrases[Math.floor(Math.random() * victoryPhrases.length)];
+    }, [gameResult]);
 
     // ▼ 追加：ストーリーイベントの定義（HTML版と同一内容）
     const storyEvents = [
@@ -86,9 +102,8 @@ export const GameEventOverlays = () => {
             useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
             
             const cardData = deckData.find(c => c.id === cardId) || { name: '謎のカード', icon: '🃏', color: '#fff', desc: '詳細不明' };
-            // ▼ 修正: カード獲得演出の発火
             useGameStore.setState({ acquiredCard: cardData });
-            setTimeout(() => useGameStore.setState({ acquiredCard: null }), 2500); // 2.5秒後に消す
+            setTimeout(() => useGameStore.setState({ acquiredCard: null }), 2500); 
             logMsg(`🎁 ${cp.name}は「${cardData.name}」を手に入れた！`);
         }
         
@@ -97,7 +112,6 @@ export const GameEventOverlays = () => {
 
     return (
         <>
-            {/* ▼ 追加：ストーリーイベントの表示 */}
             {storyActive && activeStory && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }}>
                     <div className="modal-box" style={{ background: '#2c3e50', color: 'white', maxWidth: '450px' }}>
@@ -137,14 +151,14 @@ export const GameEventOverlays = () => {
                                 {mgType === 'highlow' && (
                                     <>
                                         <p>基準：<span style={{ fontSize: '36px', color: '#f1c40f' }}>{mgValue}</span></p>
-                                        <p style={{ fontSize: '14px' }}>次の数(0〜13)はHighかLowか？</p> {/* ▼ 追加: ルール説明 */}
+                                        <p style={{ fontSize: '14px' }}>次の数(0〜13)はHighかLowか？</p> 
                                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                                             <button className="mg-btn high" onClick={() => {
-                                                const result = Math.floor(Math.random() * 14); // ▼ 追加: 乱数生成
+                                                const result = Math.floor(Math.random() * 14); 
                                                 handleResult(result >= mgValue, `出目【${result}】${result >= mgValue ? "正解！" : "ハズレ..."}`);
                                             }}>High</button>
                                             <button className="mg-btn low" onClick={() => {
-                                                const result = Math.floor(Math.random() * 14); // ▼ 追加: 乱数生成
+                                                const result = Math.floor(Math.random() * 14); 
                                                 handleResult(result < mgValue, `出目【${result}】${result < mgValue ? "正解！" : "ハズレ..."}`);
                                             }}>Low</button>
                                         </div>
@@ -179,6 +193,62 @@ export const GameEventOverlays = () => {
                             </div>
                         ) : <h2>{mgResult}</h2>}
                     </div>
+                </div>
+            )}
+
+            {gameResult && (
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 9998, background: 'radial-gradient(circle,#f1c40f,#e67e22,#c0392b)', flexDirection: 'column', alignItems: 'center', color: 'white', textAlign: 'center', animation: 'win-bg-anim 2s infinite alternate', cursor: 'pointer' }} onClick={() => setConfirmEnd(true)}>
+                    <div style={{ fontSize: '80px', marginBottom: '15px' }}>🏆</div>
+                    <h1 style={{ fontSize: gameResult.isTeamGame ? '28px' : '26px', textShadow: '2px 2px 10px #000', margin: 0, lineHeight: '1.4' }}>
+                        {gameResult.isTeamGame 
+                            ? (gameResult.sortedTeams[0].color !== 'none' ? `${gameResult.sortedTeams[0].color}チーム` : `${gameResult.sortedTeams[0].members[0].emoji} ${gameResult.sortedTeams[0].members[0].name}`)
+                            : `${gameResult.results[0].emoji} ${gameResult.results[0].name}`}
+                        <br />
+                        <span style={{ fontSize: '32px', color: '#f1c40f' }}>{randomVictoryPhrase}</span>
+                    </h1>
+                    
+                    <div style={{ fontSize: '18px', marginTop: '20px', textAlign: 'left', background: 'rgba(0,0,0,0.3)', padding: '20px', borderRadius: '15px', maxHeight: '50vh', overflowY: 'auto' }}>
+                        {gameResult.isTeamGame ? (
+                            <>
+                                <div style={{ marginBottom:'12px', fontSize:'14px', color:'#f1c40f', borderBottom:'1px dashed #f1c40f', paddingBottom:'6px' }}>🏆 チーム順位</div>
+                                {gameResult.sortedTeams.map((team, i) => (
+                                    <div key={i}>
+                                        <div style={{ margin:'8px 0', fontSize: i===0?20:15 }}>
+                                            {i===0?'🥇':i===1?'🥈':i===2?'🥉':'4️⃣'} {team.color !== 'none' ? `${team.color}チーム` : `${team.members[0].emoji}${team.members[0].name}(ソロ)`}: <b>{team.total}pt</b>
+                                        </div>
+                                        {team.members.map(r => (
+                                            <div key={r.id} style={{ margin:'2px 0 2px 20px', fontSize:'12px', color:'#bdc3c7' }}>
+                                                {r.emoji}{r.name}: {r.totalScore}pt (💰{r.scaledP} 🚩{r.terrValue} ⚔️{r.killBonus} 💀-{r.deathPenalty})
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))}
+                            </>
+                        ) : (
+                            gameResult.results.map((r, i) => (
+                                <div key={i} style={{ margin:'8px 0', fontSize: i===0?22:16 }}>
+                                    {i===0?'🥇':i===1?'🥈':i===2?'🥉':'4️⃣'} <span style={{ color: r.color }}>{r.emoji}{r.name}</span>: <b>{r.totalScore}pt</b><br/>
+                                    <span style={{ fontSize:'11px', color:'#bdc3c7' }}>
+                                        (💰P×2=<b style={{ color:'#f1c40f' }}>{r.scaledP}</b> 🚩{r.terrValue} 資源{r.resourceValue} ⚔️{r.kills}K<span style={{ color:'#2ecc71' }}>+{r.killBonus}</span> 💀{r.deaths}D<span style={{ color:'#e74c3c' }}>-{r.deathPenalty}</span>)
+                                    </span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                    <p style={{ fontSize: '16px', marginTop: '20px' }}>(画面タップで終了確認)</p>
+                </div>
+            )}
+
+            {confirmEnd && (
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 10000 }}>
+                     <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723' }} onClick={e => e.stopPropagation()}>
+                         <h3 style={{ color: '#e74c3c', marginTop: 0 }}>⚠️ ゲーム終了確認</h3>
+                         <p style={{ fontWeight: 'bold' }}>本当にゲームを終えてタイトルに戻りますか？</p>
+                         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                             <button className="btn-clay" onClick={() => { setConfirmEnd(false); useGameStore.getState().resetGame(); }} style={{ flex: 1, background: '#e74c3c', color: '#fff', border: '2px solid #c0392b', padding: '10px' }}>はい</button>
+                             <button className="btn-clay" onClick={() => setConfirmEnd(false)} style={{ flex: 1, background: '#95a5a6', color: '#fff', border: '2px solid #7f8c8d', padding: '10px' }}>いいえ</button>
+                         </div>
+                     </div>
                 </div>
             )}
         </>

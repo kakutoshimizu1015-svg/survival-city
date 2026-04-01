@@ -35,12 +35,34 @@ function App() {
           <div style={{ fontSize: '80px', marginBottom: '20px' }}>🏠</div>
           <div className="title-logo">脱・ホームレス<br/>サバイバルシティ</div>
           <div className="blink-text">画面をタップしてスタート</div>
-          <button className="btn-large" onClick={(e) => { e.stopPropagation(); useGameStore.setState({ tutorialActive: true }); }} style={{ marginTop: '20px', background: '#8e44ad', color: '#f1c40f' }}>📚 チュートリアル</button>
+          
+          {/* ▼ 追加：遊び方・ルールボタン（タップしてもゲームが始まらないよう e.stopPropagation() を付与） */}
+          <button 
+            className="btn-large" 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              useGameStore.setState({ rulesActive: true }); 
+            }} 
+            style={{ marginTop: '10px', background: '#3498db', color: '#fff' }}
+          >
+            📖 遊び方・ルールを見る
+          </button>
+
+          <button 
+            className="btn-large" 
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              useGameStore.setState({ tutorialActive: true }); 
+            }} 
+            style={{ marginTop: '15px', background: '#8e44ad', color: '#f1c40f' }}
+          >
+            📚 チュートリアル
+          </button>
         </div>
       )}
 
       {gamePhase === 'mode_select' && (
-        <div id="mode-select-overlay" style={{ display: 'flex' }}>
+        <div id="mode-select-overlay" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <h2>モード選択</h2>
           <button className="btn-large btn-brown" onClick={() => useGameStore.setState({ gamePhase: 'setup_offline' })}>🎮 オフライン</button>
           <button className="btn-large btn-blue" onClick={() => useGameStore.setState({ gamePhase: 'online_lobby' })}>🌐 オンライン</button>
