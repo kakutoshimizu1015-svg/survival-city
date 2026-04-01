@@ -9,21 +9,27 @@ export const ActionPanel = () => {
     const state = useGameStore();
     const { turn, players, mapData, diceRolled, isBranchPicking, mgActive, storyActive, canPickedThisTurn, territories, animalPos, turnBannerActive } = state;
     const cp = players[turn];
-    const { myUserId, status, isHost } = useNetworkStore();
+    const { myUserId, status } = useNetworkStore();
 
     if (!cp) return null;
     const currentTile = mapData.find(t => t.id === cp.pos) || {};
     const tileType = currentTile.type;
 
-    let isMyTurn = !cp.isCPU;
-    if (status === 'connected') { isMyTurn = cp.isCPU ? isHost : (cp.userId === myUserId); }
+    // ▼ 修正：オンライン・オフラインにおける「自分の操作番か？」の完全なロック判定
+    let isMyTurn = !cp.isCPU; 
+    if (status === 'connected') { 
+        // ネットワーク接続時は、CPUターンは一切ボタン無効（ホストであっても手動操作不可）
+        isMyTurn = !cp.isCPU && cp.userId === myUserId; 
+    }
 
     const isBusy = isBranchPicking || mgActive || storyActive || turnBannerActive;
     const hasAP = (cost) => cp.ap >= cost;
     const othersOnTile = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
 
     const canRoll = isMyTurn && !diceRolled && !isBusy;
-    const canMove = isMyTurn && diceRolled && hasAP(1) && !isBusy;
+    
+    // ▼ 修正：交番などの「cannotMove」をここで拾う
+    const canMove = isMyTurn && diceRolled && hasAP(1) && !cp.cannotMove && !isBusy;
     const isBlockedByAnimal = cp.pos === animalPos;
     
     const canDoCan = isMyTurn && diceRolled && hasAP(1) && tileType === 'can' && canPickedThisTurn < 3 && !isBlockedByAnimal && !isBusy;

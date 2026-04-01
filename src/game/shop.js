@@ -10,8 +10,8 @@ export const generateShopStock = () => {
     if (shopStockTurn !== currentTurnKey) {
         const pool = [0,1,2,3,4,5,6,7,8,9,10,11,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
         const newStock = [];
-        // ▼ 在庫上限を3枚に変更
-        for (let i = 0; i < 3; i++) {
+        // ▼ 修正：在庫上限を6枚に変更
+        for (let i = 0; i < 6; i++) {
             newStock.push(pool[Math.floor(Math.random() * pool.length)]);
         }
         useGameStore.setState({ shopStock: newStock, shopStockTurn: currentTurnKey, shopCart: [] });

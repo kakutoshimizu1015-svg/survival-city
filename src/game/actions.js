@@ -70,6 +70,7 @@ export const executeMove = (targetTileId) => {
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [] });
     logMsg(`🚶 「${tile.name}」に移動。`); playSfx('move');
 
+    // ▼ 修正：交番での足止め処理
     if (tile.type === "koban") {
         state.updateCurrentPlayer(p => ({ ap: 0, cannotMove: true }));
         logMsg(`<span style="color:#e74c3c">🚓 交番！職務質問で足止め！</span>`); playSfx('fail');
@@ -111,16 +112,53 @@ export const executeMove = (targetTileId) => {
 
     checkNpcCollision(cp.id);
 
+    // ▼ 修正：イベントマスのストーリーイベント（30%）判定の追加
     if (tile.type === "event" && !cp.isCPU) {
-        if (Math.random() < 0.3) useGameStore.setState({ storyActive: true });
-        else useGameStore.setState({ mgActive: true, mgType: ["highlow", "boxes", "slot"][Math.floor(Math.random() * 3)], mgValue: Math.floor(Math.random() * 14) });
+        if (Math.random() < 0.3) {
+            useGameStore.setState({ storyActive: true, storyIndex: Math.floor(Math.random() * 4) });
+        } else {
+            useGameStore.setState({ mgActive: true, mgType: ["highlow", "boxes", "slot"][Math.floor(Math.random() * 3)], mgValue: Math.floor(Math.random() * 14) });
+        }
     }
 };
 
 export const actionCan = () => { const s = useGameStore.getState(); s.updateCurrentPlayer(p => ({ ap: p.ap - 1, cans: p.cans + 1 })); useGameStore.setState(st => ({ canPickedThisTurn: st.canPickedThisTurn + 1 })); playSfx('coin'); };
-export const actionTrash = () => { const s = useGameStore.getState(), cp = s.players[s.turn]; s.updateCurrentPlayer(p => ({ ap: p.ap - (p.equip?.shoes ? 1 : 2), trash: p.trash + Math.floor(Math.random() * 6) })); playSfx('coin'); };
 
-// ▼ 修正：バイトアクション時のポップアップ通知と結果表示
+// ▼ 修正：ゴミ山漁りの完全なロジック移植
+export const actionTrash = () => { 
+    const s = useGameStore.getState();
+    const cp = s.players[s.turn]; 
+    const cost = cp.equip?.shoes ? 1 : 2;
+    
+    s.updateCurrentPlayer(p => ({ ap: p.ap - cost }));
+    
+    let gain = Math.floor(Math.random() * 6);
+    if (gain === 0) {
+        if (cp.stealth) {
+            s.updateCurrentPlayer(p => ({ stealth: false }));
+            logMsg(`💨 ステルスで回避！`);
+        } else if (cp.hasID) {
+            s.updateCurrentPlayer(p => ({ hasID: false }));
+            logMsg(`🔵 身分証で警察を回避！`);
+        } else if (cp.charType === 'survivor') {
+            logMsg(`🌿 サバイバーの勘で回避！`);
+        } else {
+            s.updateCurrentPlayer(p => ({ penaltyAP: (p.penaltyAP||0) + 2 }));
+            logMsg(`<span style="color:#e74c3c">👮 ゴミ漁り失敗！警察に見つかり次回AP-2！</span>`);
+            playSfx('fail');
+            s.addEventPopup(cp.id, "👮", "ゴミ漁り失敗", "次回AP-2", "bad");
+            return; 
+        }
+    }
+    
+    let nightBonus = s.isNight ? Math.floor(Math.random() * 3) : 0;
+    gain += nightBonus;
+    s.updateCurrentPlayer(p => ({ trash: p.trash + gain }));
+    logMsg(`🗑️ ゴミ${gain}個見つけた！${nightBonus > 0 ? `(夜ボーナス+${nightBonus})` : ''}`);
+    playSfx('coin');
+    s.addEventPopup(cp.id, "🗑️", `ゴミ${gain}個発見！`, nightBonus > 0 ? `夜+${nightBonus}` : "", "good");
+};
+
 export const actionJob = () => { 
     const s = useGameStore.getState();
     const cp = s.players[s.turn];
@@ -154,5 +192,8 @@ export const actionEndTurn = async () => {
         
         if (state.turn === state.players.length - 1) await processRoundEnd();
         useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false }));
-    } catch (e) { useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false })); }
+    } catch (e) { 
+        console.error("actionEndTurn Error:", e); // エラーを隠蔽せずコンソールに吐き出す
+        useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false })); 
+    }
 };
