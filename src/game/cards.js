@@ -55,9 +55,14 @@ export const actionUseCard = (handIndex, cardId) => {
             if (dice >= 4) {
                 const enemyTerritories = Object.keys(territories).filter(k => territories[k] !== cp.id);
                 if (enemyTerritories.length > 0) {
-                    const targetT = enemyTerritories[Math.floor(Math.random() * enemyTerritories.length)];
-                    useGameStore.setState({ territories: { ...territories, [targetT]: cp.id } });
-                    logMsg(`🚩 領土挑戦(出目${dice})成功！ランダムな敵陣地を1つ奪った！`);
+                    if (cp.isCPU) {
+                        const targetT = enemyTerritories[Math.floor(Math.random() * enemyTerritories.length)];
+                        useGameStore.setState({ territories: { ...territories, [targetT]: cp.id } });
+                        logMsg(`🚩 領土挑戦(出目${dice})成功！ランダムな敵陣地を1つ奪った！`);
+                    } else {
+                        logMsg(`🚩 領土挑戦(出目${dice})成功！奪う陣地を選んでください。`);
+                        useGameStore.setState({ territorySelectOptions: enemyTerritories });
+                    }
                 } else { logMsg(`🚩 奪える領土がありませんでした`); }
             } else { logMsg(`🚩 領土挑戦(出目${dice})失敗...`); }
             break;

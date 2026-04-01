@@ -59,10 +59,16 @@ export const processRoundEnd = async () => {
 
     logMsg(`<span style="color:#2980b9">--- 🌙 ラウンド${newRound}/${state.maxRounds} 開始 ---</span>`);
 
+    let summaryDigest = [];
+
     let weather = Math.random() < 0.2 ? "rainy" : Math.random() < 0.4 ? "cloudy" : "sunny";
     let isNight = Math.floor(newRound / 3) % 2 === 1;
     let canPrice = Math.max(1, Math.floor(Math.random() * 4));
     let trashPrice = Math.max(1, Math.floor(Math.random() * 6));
+
+    summaryDigest.push(weather === "rainy" ? "🌧️ 雨" : weather === "cloudy" ? "☁️ 曇り" : "☀️ 晴れ");
+    summaryDigest.push(isNight ? "🌙 夜になった" : "☀️ 昼になった");
+    summaryDigest.push(`📈 相場変動: 缶${canPrice}P ゴミ${trashPrice}P`);
 
     // 陣地維持費 (3ラウンド毎)
     if (newRound % 3 === 0) {
@@ -72,10 +78,11 @@ export const processRoundEnd = async () => {
             if (owned.length === 0) return;
             let tax = 0;
             owned.forEach(tId => { tax += AREA_TAX[state.mapData.find(x => x.id == tId)?.area || 'slum']; });
-            if (tax === 0) return;
+            if (tax === 0) { summaryDigest.push(`💸 ${p.name}: 維持費 0P`); return; }
             if (p.p >= tax) {
                 useGameStore.getState().updatePlayer(p.id, prev => ({ p: prev.p - tax }));
                 logMsg(`💸 ${p.name}の維持費: -${tax}P`);
+                summaryDigest.push(`💸 ${p.name}: 維持費 -${tax}P`);
             } else {
                 const lostId = owned.sort((a, b) => AREA_TAX[state.mapData.find(x=>x.id==b)?.area] - AREA_TAX[state.mapData.find(x=>x.id==a)?.area])[0];
                 const newTerr = { ...useGameStore.getState().territories };
@@ -83,6 +90,7 @@ export const processRoundEnd = async () => {
                 useGameStore.getState().updatePlayer(p.id, { p: 0 });
                 useGameStore.setState({ territories: newTerr });
                 logMsg(`⚠️ ${p.name}は維持費不足で陣地没収！`);
+                summaryDigest.push(`⚠️ ${p.name}: 維持費不足で陣地没収`);
             }
         });
     }
@@ -179,4 +187,9 @@ export const processRoundEnd = async () => {
     }
 
     useGameStore.setState({ roundCount: newRound, weatherState: weather, isRainy: weather === "rainy", isNight, canPrice, trashPrice, animalPos, unclePos, yakuzaPos, loansharkPos, friendPos, policePos: newPolicePos });
+
+    useGameStore.setState({ roundSummary: summaryDigest });
+    setTimeout(() => {
+        useGameStore.setState({ roundSummary: null });
+    }, summaryDigest.length * 400 + 2500);
 };

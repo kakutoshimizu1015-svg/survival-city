@@ -14,6 +14,12 @@ const initialState = {
     jobResult: null,
     logs: [],
 
+    // ▼ 追加: 未実装UIのためのステート
+    charInfoModal: null,           // キャラ詳細モーダルで表示するプレイヤーID
+    roundSummary: null,            // ラウンド終了サマリーの配列
+    acquiredCard: null,            // カード獲得演出用のカードデータ
+    territorySelectOptions: null,  // 陣地選択UIの選択肢配列
+
     toastMsg: null,
     centerWarning: null,
     tooltipData: null, // 追加：ツールチップの状態管理

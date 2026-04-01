@@ -85,8 +85,10 @@ export const GameEventOverlays = () => {
             const cardId = Math.floor(Math.random() * 38);
             useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
             
-            const cardData = deckData.find(c => c.id === cardId) || { name: '謎のカード', icon: '🃏' };
-            useGameStore.getState().addEventPopup(cp.id, cardData.icon, "カード獲得！", `${cardData.name}を手に入れた`, "card");
+            const cardData = deckData.find(c => c.id === cardId) || { name: '謎のカード', icon: '🃏', color: '#fff', desc: '詳細不明' };
+            // ▼ 修正: カード獲得演出の発火
+            useGameStore.setState({ acquiredCard: cardData });
+            setTimeout(() => useGameStore.setState({ acquiredCard: null }), 2500); // 2.5秒後に消す
             logMsg(`🎁 ${cp.name}は「${cardData.name}」を手に入れた！`);
         }
         
@@ -135,9 +137,16 @@ export const GameEventOverlays = () => {
                                 {mgType === 'highlow' && (
                                     <>
                                         <p>基準：<span style={{ fontSize: '36px', color: '#f1c40f' }}>{mgValue}</span></p>
+                                        <p style={{ fontSize: '14px' }}>次の数(0〜13)はHighかLowか？</p> {/* ▼ 追加: ルール説明 */}
                                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                            <button className="mg-btn high" onClick={() => handleResult((Math.random()*14)>=mgValue, "High/Low判定")}>High</button>
-                                            <button className="mg-btn low" onClick={() => handleResult((Math.random()*14)<mgValue, "High/Low判定")}>Low</button>
+                                            <button className="mg-btn high" onClick={() => {
+                                                const result = Math.floor(Math.random() * 14); // ▼ 追加: 乱数生成
+                                                handleResult(result >= mgValue, `出目【${result}】${result >= mgValue ? "正解！" : "ハズレ..."}`);
+                                            }}>High</button>
+                                            <button className="mg-btn low" onClick={() => {
+                                                const result = Math.floor(Math.random() * 14); // ▼ 追加: 乱数生成
+                                                handleResult(result < mgValue, `出目【${result}】${result < mgValue ? "正解！" : "ハズレ..."}`);
+                                            }}>Low</button>
                                         </div>
                                     </>
                                 )}
