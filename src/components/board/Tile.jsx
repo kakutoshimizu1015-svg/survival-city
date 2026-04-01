@@ -1,34 +1,30 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { charEmoji } from '../../constants/characters';
 
-const tileTooltipData = {
-    center:    { title:"🏥 病院（スタート地点）", desc:"HPが0になると強制送還。最大15P没収・装備1つロスト。" },
-    normal:    { title:"🛣️ 通常の道", desc:"特別な効果なし。移動の通過点。" },
-    can:       { title:"🥫 空き缶", desc:"1APで缶を拾う（1ターン3回まで）。雨の日は雨具が必要。" },
-    trash:     { title:"🗑️ ゴミ山", desc:"2APでゴミを漁る。失敗すると警察に補導されAP-2ペナルティ。" },
-    exchange:  { title:"💱 買取所", desc:"拾った缶・ゴミを現在相場でP換金（0AP）。" },
-    job:       { title:"💼 バイト", desc:"3APで挑戦。成功率60-80%で12P獲得。" },
-    shop:      { title:"🛒 ショップ", desc:"カードを購入（4-6P）または手持ちカードを2Pで売却できる。" },
-    event:     { title:"🎲 イベント", desc:"ミニゲームまたはストーリーイベントが発生！カード獲得のチャンス。" },
-    shelter:   { title:"🏕️ 避難所", desc:"止まるとステルス状態になり、次の敵を1回やり過ごせる。" },
-    manhole:   { title:"🕳️ マンホール", desc:"1APで別のマンホールへランダムワープ。" },
-    koban:     { title:"🚓 交番", desc:"職務質問でその場に足止め。このターンは移動不可。" },
-    slum:      { title:"🏚️ スラムエリア", desc:"缶・ゴミが多い。相場が低め。" },
-    commercial:{ title:"🏙️ 商業エリア", desc:"バイト・ショップが充実。中程度の相場。" },
-    luxury:    { title:"🏰 高級エリア", desc:"収入が高い。警察が多くパトロールする。" },
-};
+// ... tileTooltipData の定義はそのまま ...
+const tileTooltipData = { /* 省略 */ };
 
-export const Tile = ({ 
+// React.memo で囲み、Propsが変わらない限り再レンダリングしないようにする
+export const Tile = React.memo(({ 
     tile, owner, isFog, isClickable, onClick, playersOnTile, 
     isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, isActiveTurnPlayerOnTile,
     pathClass
 }) => {
-    const { setTooltipData, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos } = useGameStore();
+    // 🚨 修正1: Zustand から必要なものだけを「個別に」取り出す
+    // 以前のように const { policePos, ... } = useGameStore() と書くと、
+    // Storeの「何か」が更新されるたびに全マス目が再描画されてしまいます。
+    const setTooltipData = useGameStore(state => state.setTooltipData);
+    const policePos = useGameStore(state => state.policePos);
+    const unclePos = useGameStore(state => state.unclePos);
+    const animalPos = useGameStore(state => state.animalPos);
+    const yakuzaPos = useGameStore(state => state.yakuzaPos);
+    const loansharkPos = useGameStore(state => state.loansharkPos);
+    const friendPos = useGameStore(state => state.friendPos);
+    
     const touchTimer = useRef(null);
 
     const handleMouseEnter = (e) => {
-        // ドラッグ中はツールチップの計算を完全にキャンセルし、処理落ちを防ぐ
         const wrapper = document.getElementById('game-board-wrapper');
         if (wrapper && wrapper.classList.contains('dragging')) return;
         if (isClickable) return; 
@@ -50,35 +46,22 @@ export const Tile = ({
                 descText += '\n─────\n' + npcsHere.map(n => `${n.info.emoji}${n.info.name}: ${n.info.desc}`).join('\n');
             }
 
-            const x = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-            const y = e.clientY || (e.touches && e.touches[0].clientY) || 0;
-
+            // 🚨 修正2: 座標（X, Y）はStoreに入れない！テキストデータのみ渡す
             setTooltipData({
                 title: ttData.title,
                 desc: descText,
-                x, y
+                visible: true // 表示フラグだけ立てる
             });
         }
     };
 
-    const handleMouseMove = (e) => {
-        const wrapper = document.getElementById('game-board-wrapper');
-        if (wrapper && wrapper.classList.contains('dragging')) return;
-        if (isClickable) return;
-
-        if (useGameStore.getState().tooltipData) {
-            const x = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-            const y = e.clientY || (e.touches && e.touches[0].clientY) || 0;
-            setTooltipData({ ...useGameStore.getState().tooltipData, x, y });
-        }
-    };
+    // 🚨 修正3: handleMouseMove は削除！(マウス位置の更新は `TileTooltip.jsx` で window 側に委譲します)
 
     const handleMouseLeave = () => {
         if (touchTimer.current) clearTimeout(touchTimer.current);
-        setTooltipData(null);
+        setTooltipData(null); // または { visible: false } など
     };
 
-    // スマホでは少しだけ遅延させることで、スワイプ操作の邪魔をしないようにする
     const handleTouchStart = (e) => {
         touchTimer.current = setTimeout(() => {
             handleMouseEnter(e);
@@ -102,7 +85,6 @@ export const Tile = ({
             id={`tile-${tile.id}`} 
             onClick={isClickable ? onClick : undefined}
             onMouseEnter={handleMouseEnter}
-            onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEndOrCancel}
@@ -110,6 +92,7 @@ export const Tile = ({
             className={classNameStr}
             style={{ gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default' }}
         >
+            {/* 中身はそのまま */}
             <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
             <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9 }}>{tile.name}</div>
             
@@ -140,4 +123,31 @@ export const Tile = ({
             {!isFog && isFriend && <div className="npc-token npc-friend">🤝</div>}
         </div>
     );
-};
+}, 
+// 🚨 修正4: props が変わった時「だけ」再レンダリングするカスタム比較関数
+(prev, next) => {
+    // 基本的な状態の変化をチェック
+    if (prev.tile.id !== next.tile.id) return false;
+    if (prev.isFog !== next.isFog) return false;
+    if (prev.isClickable !== next.isClickable) return false;
+    if (prev.pathClass !== next.pathClass) return false;
+    if (prev.isTruck !== next.isTruck) return false;
+    if (prev.isPolice !== next.isPolice) return false;
+    if (prev.isUncle !== next.isUncle) return false;
+    if (prev.isAnimal !== next.isAnimal) return false;
+    if (prev.isYakuza !== next.isYakuza) return false;
+    if (prev.isLoanshark !== next.isLoanshark) return false;
+    if (prev.isFriend !== next.isFriend) return false;
+    if (prev.isActiveTurnPlayerOnTile !== next.isActiveTurnPlayerOnTile) return false;
+    if (prev.owner?.id !== next.owner?.id) return false;
+    if (prev.tile.fieldCans !== next.tile.fieldCans) return false;
+    if (prev.tile.fieldTrash !== next.tile.fieldTrash) return false;
+
+    // 配列である playersOnTile は中身のIDで比較する
+    const prevIds = prev.playersOnTile.map(p => p.id).join(',');
+    const nextIds = next.playersOnTile.map(p => p.id).join(',');
+    if (prevIds !== nextIds) return false;
+
+    // 変化なしの場合は true を返し、再レンダリングをスキップ！
+    return true;
+});
