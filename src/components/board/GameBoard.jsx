@@ -56,17 +56,31 @@ export const GameBoard = () => {
         zoomAt(cx, cy, delta);
     };
 
+    // ▼ 修正: 安全装置とモバイル向けパディングを追加した resetZoom
     const resetZoom = useCallback(() => {
         if (!wrapperRef.current) return;
         const board = document.getElementById('game-board');
         if (!board) return;
+        
         const bw = board.scrollWidth;
         const bh = board.scrollHeight;
-        const ww = wrapperRef.current.clientWidth;
-        const wh = wrapperRef.current.clientHeight;
+        let ww = wrapperRef.current.clientWidth;
+        let wh = wrapperRef.current.clientHeight;
+
         if (bw === 0 || bh === 0 || ww === 0 || wh === 0) return;
-        const fitScale = Math.min(ww / bw, wh / bh, 1.0);
+
+        // 【安全対策】万が一ラッパーの高さが異常に大きい（画面を突き抜けている）場合はスマホ高さを基準にする
+        if (wh > window.innerHeight) {
+            wh = window.innerHeight * 0.5;
+        }
+
+        // スマホ画面幅の場合は少し余白を持たせる
+        const paddingRatio = ww <= 768 ? 0.95 : 1.0; 
+
+        const fitScale = Math.min(ww / bw, wh / bh, 1.0) * paddingRatio;
         scale.current = fitScale;
+        
+        // 中央揃えの計算
         offset.current = {
             x: (ww - bw * fitScale) / 2,
             y: (wh - bh * fitScale) / 2
@@ -74,17 +88,25 @@ export const GameBoard = () => {
         applyTransform(true);
     }, [applyTransform]);
 
-    // ▼ マップのマス数を取得
     const mapTileCount = mapData?.length || 0;
 
+    // ▼ 修正: マウント時とリサイズ時に自動フィットを実行
     useEffect(() => {
-        if (mapTileCount === 0) return; // マップが存在しない時は何もしない
+        if (mapTileCount === 0) return; 
         
+        // DOM描画のラグを考慮して少し待ってから実行
         const timer = setTimeout(() => {
             resetZoom();
-        }, 100);
-        return () => clearTimeout(timer);
-    }, [mapTileCount, resetZoom]); // ▼ mapDataの参照ではなくlengthに依存させる
+        }, 150);
+
+        // 画面サイズが変わった時（スマホの縦横回転など）もフィットし直す
+        window.addEventListener('resize', resetZoom);
+
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', resetZoom);
+        };
+    }, [mapTileCount, resetZoom]);
 
     const getTouchCoords = (touches) => {
         return Array.from(touches).map(t => ({ clientX: t.clientX, clientY: t.clientY }));

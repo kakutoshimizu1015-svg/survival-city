@@ -829,9 +829,16 @@ body.night #game-board { background: linear-gradient(to right,#1a1428 0%,#1a1428
     .btn-clay { font-size: 12px !important; padding: 8px !important; text-align: center !important; }
     .btn-end-clay, #action-panel > div:last-child { grid-column: span 2 !important; font-size: 14px !important; padding: 12px !important; }
 
-    /* スマホ時のマップエリアの高さを制限 */
-    #game-board-container { max-height: 50vh !important; overflow: auto !important; }
-    #game-board-wrapper { max-height: none !important; overflow: visible !important; }
+ /* スマホ時のマップエリアの高さを制限 */
+    #game-board-container { 
+        padding: 5px !important; /* スマホ時のコンテナの余白を縮小 */
+    }
+    #game-board-wrapper { 
+        height: 48vh !important;       /* マップ窓枠の高さを画面の約半分に固定 */
+        max-height: 500px !important;  /* 伸びすぎ防止 */
+        overflow: hidden !important;   /* ★JSで操作するため必ず hidden にする */
+        position: relative;
+    }
 
     /* モーダルをスマホにフィットさせる */
     .modal-box { padding: 10px; width: 98%; }
@@ -859,8 +866,7 @@ body.layout-mobile #action-panel { width: 100% !important; display: grid !import
 body.layout-mobile #player-list-panel { width: 100% !important; height: auto !important; overflow-y: visible !important; }
 body.layout-mobile .btn-clay { font-size: 12px !important; padding: 8px !important; text-align: center !important; }
 body.layout-mobile .btn-end-highlight, body.layout-mobile #action-panel > div:last-child { grid-column: span 2 !important; font-size: 14px !important; padding: 12px !important; }
-body.layout-mobile #game-board-container { max-height: 50vh !important; overflow: auto !important; }
-body.layout-mobile #game-board-wrapper { max-height: none !important; overflow: visible !important; }
+
 
 /* body.layout-mobile が指定された場合のスマホ専用制御 */
 body.layout-mobile .top-bar { flex-direction: column !important; gap: 5px !important; }
@@ -883,4 +889,9 @@ body.layout-mobile .btn-end-highlight button, body.layout-mobile #action-panel >
     font-size: 16px !important; 
     padding: 14px 4px !important; 
 }
-body.layout-mobile #game-board-wrapper { height: 100% !important; max-height: none !important; overflow: hidden !important; }
+body.layout-mobile #game-board-wrapper { 
+    height: 48vh !important;      /* スマホ強制モード時も高さを固定 */
+    max-height: 500px !important; 
+    overflow: hidden !important; 
+    position: relative;
+}
