@@ -1,5 +1,10 @@
 import React, { useEffect } from 'react';
 import { useGameStore } from './store/useGameStore';
+
+// ▼ 追加：作成したストアと認証ロジックをインポート
+import { useUserStore } from './store/useUserStore';
+import { loginAnonymously } from './utils/authLogic';
+
 import { GameMain } from './features/GameMain';
 import { SetupOffline } from './features/SetupOffline';
 import { OnlineLobby } from './features/OnlineLobby';
@@ -9,6 +14,17 @@ import { SandboxGuide } from './components/overlays/SandboxGuide';
 
 function App() {
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode } = useGameStore();
+
+  // ▼ 追加：ユーザーのログイン状態とUIDを取得
+  const isLoggedIn = useUserStore((state) => state.isLoggedIn);
+  const uid = useUserStore((state) => state.uid);
+
+  // ▼ 追加：アプリ起動時に1回だけ匿名ログインを実行
+  useEffect(() => {
+    if (!isLoggedIn) {
+      loginAnonymously();
+    }
+  }, [isLoggedIn]);
 
   useEffect(() => {
     // 既存の関連クラスを全てリセットして競合を防ぐ
@@ -26,6 +42,13 @@ function App() {
 
   return (
     <>
+      {/* ▼ 追加：動作確認用（開発中だけ画面左上にUIDを表示。確認できたら消してOKです） */}
+      {isLoggedIn && (
+        <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 9999, fontSize: '10px', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '4px 8px', borderRadius: '4px', pointerEvents: 'none' }}>
+          UID: {uid}
+        </div>
+      )}
+
       {gamePhase !== 'title' && (
         <button id="settings-btn" onClick={() => useGameStore.setState({ settingsActive: true })}>⚙️</button>
       )}
@@ -36,7 +59,6 @@ function App() {
           <div className="title-logo">脱・ホームレス<br/>サバイバルシティ</div>
           <div className="blink-text">画面をタップしてスタート</div>
           
-          {/* ▼ 追加：遊び方・ルールボタン（タップしてもゲームが始まらないよう e.stopPropagation() を付与） */}
           <button 
             className="btn-large" 
             onClick={(e) => { 
