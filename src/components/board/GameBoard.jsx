@@ -3,7 +3,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { charEmoji } from '../../constants/characters';
 import { getDistance } from '../../game/combat';
 import { executeMove } from '../../game/actions';
-import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay'; // ▼ 追加
+import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay'; 
 
 export const GameBoard = () => {
     const { 
@@ -81,7 +81,7 @@ export const GameBoard = () => {
                 <div id="game-board-wrapper">
                     <div id="game-board-inner" style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 'max-content', transition: 'transform 0.2s ease-out' }}>
                         <div id="game-board">
-                            {/* ▼ 追加：SVGをマップ内部で描画するためにここに配置 */}
+                            
                             <WeaponArcOverlay />
 
                             {mapData.map(tile => {
