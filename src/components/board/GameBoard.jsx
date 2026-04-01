@@ -16,36 +16,38 @@ export const GameBoard = () => {
 
     const cp = players[turn];
     
-    // Zoom and Pan States (useRef for performance, manipulating DOM directly)
-    const scaleRef = useRef(1.0);
-    const offsetRef = useRef({ x: 0, y: 0 });
+    // Zoom and Pan States
+    const scale = useRef(1.0);
+    const offset = useRef({ x: 0, y: 0 });
     const wrapperRef = useRef(null);
-    const innerRef = useRef(null); // Direct DOM manipulation target
     const isDragging = useRef(false);
     const dragStart = useRef({ x: 0, y: 0 });
     const offsetStart = useRef({ x: 0, y: 0 });
     const lastTouches = useRef(null);
-    const rafId = useRef(null);
+    const rafRef = useRef(null); // アニメーションフレーム管理用
 
-    const applyTransform = useCallback(() => {
-        if (innerRef.current) {
-            innerRef.current.style.transform = `translate(${offsetRef.current.x}px, ${offsetRef.current.y}px) scale(${scaleRef.current})`;
-        }
+    // DOMを直接書き換え、requestAnimationFrameで極限まで滑らかに同期
+    const applyTransform = useCallback((smooth = false) => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+            const inner = document.getElementById('game-board-inner');
+            if (inner) {
+                inner.style.transition = smooth ? 'transform 0.2s ease-out' : 'none';
+                inner.style.transform = `translate(${offset.current.x}px, ${offset.current.y}px) scale(${scale.current})`;
+            }
+        });
     }, []);
 
     const zoomAt = useCallback((px, py, delta) => {
-        const prevScale = scaleRef.current;
+        const prevScale = scale.current;
         const newScale = Math.min(3.0, Math.max(0.25, prevScale + delta));
         const ratio = newScale / prevScale;
-        
-        offsetRef.current = {
-            x: px - ratio * (px - offsetRef.current.x),
-            y: py - ratio * (py - offsetRef.current.y)
+        offset.current = {
+            x: px - ratio * (px - offset.current.x),
+            y: py - ratio * (py - offset.current.y)
         };
-        scaleRef.current = newScale;
-
-        if (rafId.current) cancelAnimationFrame(rafId.current);
-        rafId.current = requestAnimationFrame(applyTransform);
+        scale.current = newScale;
+        applyTransform(true);
     }, [applyTransform]);
 
     const handleZoomBtn = (delta) => {
@@ -64,22 +66,19 @@ export const GameBoard = () => {
         const ww = wrapperRef.current.clientWidth;
         const wh = wrapperRef.current.clientHeight;
         if (bw === 0 || bh === 0) return;
-        
         const fitScale = Math.min(ww / bw, wh / bh, 1.0);
-        scaleRef.current = fitScale;
-        offsetRef.current = {
+        scale.current = fitScale;
+        offset.current = {
             x: (ww - bw * fitScale) / 2,
             y: (wh - bh * fitScale) / 2
         };
-        
-        if (rafId.current) cancelAnimationFrame(rafId.current);
-        rafId.current = requestAnimationFrame(applyTransform);
+        applyTransform(true);
     }, [applyTransform]);
 
     useEffect(() => {
         resetZoom();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mapData]);
+    }, [mapData, resetZoom]);
 
     useEffect(() => {
         const wrapper = wrapperRef.current;
@@ -96,24 +95,23 @@ export const GameBoard = () => {
 
         const handleMouseDown = (e) => {
             if (e.button !== 0) return;
+            e.preventDefault(); // PCでのネイティブドラッグやテキスト選択を防止
             isDragging.current = true;
             dragStart.current = { x: e.clientX, y: e.clientY };
-            offsetStart.current = { ...offsetRef.current };
+            offsetStart.current = { ...offset.current };
             wrapper.classList.add('dragging');
+            applyTransform(false);
         };
 
         const handleMouseMove = (e) => {
             if (!isDragging.current) return;
             const dx = e.clientX - dragStart.current.x;
             const dy = e.clientY - dragStart.current.y;
-            
-            offsetRef.current = {
+            offset.current = {
                 x: offsetStart.current.x + dx,
                 y: offsetStart.current.y + dy
             };
-            
-            if (rafId.current) cancelAnimationFrame(rafId.current);
-            rafId.current = requestAnimationFrame(applyTransform);
+            applyTransform(false);
         };
 
         const handleMouseUp = () => {
@@ -124,22 +122,18 @@ export const GameBoard = () => {
 
         const handleTouchStart = (e) => {
             lastTouches.current = e.touches;
+            applyTransform(false);
         };
 
         const handleTouchMove = (e) => {
             if (!lastTouches.current) return;
-            
             if (e.touches.length === 1 && lastTouches.current.length === 1) {
-                const dx = e.touches[0].clientX - lastTouches.current[0].clientX;
-                const dy = e.touches[0].clientY - lastTouches.current[0].clientY;
-                
-                offsetRef.current = {
-                    x: offsetRef.current.x + dx,
-                    y: offsetRef.current.y + dy
-                };
-                
-                if (rafId.current) cancelAnimationFrame(rafId.current);
-                rafId.current = requestAnimationFrame(applyTransform);
+                // 感度1.8倍
+                const sensitivity = 1.8;
+                const dx = (e.touches[0].clientX - lastTouches.current[0].clientX) * sensitivity;
+                const dy = (e.touches[0].clientY - lastTouches.current[0].clientY) * sensitivity;
+                offset.current = { x: offset.current.x + dx, y: offset.current.y + dy };
+                applyTransform(false);
                 e.preventDefault();
             } else if (e.touches.length === 2 && lastTouches.current.length === 2) {
                 const prevDist = Math.hypot(
@@ -161,11 +155,12 @@ export const GameBoard = () => {
 
         const handleTouchEnd = () => { lastTouches.current = null; };
 
+        // passive: false を明示してブラウザのスクロール介入を確実に防ぐ
         wrapper.addEventListener('wheel', handleWheel, { passive: false });
         wrapper.addEventListener('mousedown', handleMouseDown);
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-        wrapper.addEventListener('touchstart', handleTouchStart, { passive: true });
+        wrapper.addEventListener('touchstart', handleTouchStart, { passive: false });
         wrapper.addEventListener('touchmove', handleTouchMove, { passive: false });
         wrapper.addEventListener('touchend', handleTouchEnd, { passive: true });
 
@@ -177,7 +172,6 @@ export const GameBoard = () => {
             wrapper.removeEventListener('touchstart', handleTouchStart);
             wrapper.removeEventListener('touchmove', handleTouchMove);
             wrapper.removeEventListener('touchend', handleTouchEnd);
-            if (rafId.current) cancelAnimationFrame(rafId.current);
         };
     }, [zoomAt, applyTransform]);
 
@@ -224,10 +218,11 @@ export const GameBoard = () => {
     }, [players, gameOver, cp, mapData]);
 
     const zoomBtnStyle = {
-        width: '24px', height: '24px', borderRadius: '6px', border: '2px solid #8d6e63', 
+        width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', 
         background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', 
         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-        boxShadow: '1px 1px 3px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s'
+        boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s',
+        padding: 0
     };
 
     let maxCol = 0, maxRow = 0;
@@ -252,7 +247,7 @@ export const GameBoard = () => {
                 </div>
             )}
 
-            <div id="map-env-hud" style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 55, display: 'flex', flexDirection: 'column', gap: '8px', pointerEvents: 'none' }}>
+            <div id="map-env-hud" style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 55, display: 'flex', flexDirection: 'column', pointerEvents: 'none' }}>
                 <div style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', fontWeight: 'bold', color: '#fdf5e6', lineHeight: 1.6, whiteSpace: 'nowrap' }}>
                     <span id="hud-round" style={{ color: '#f1c40f' }}>R:{roundCount}/{maxRounds}</span>
                     <span id="hud-weather" style={{ marginLeft: '6px' }}>{isRainy ? '🌧️雨' : weatherState === 'cloudy' ? '☁️曇' : '☀️晴'}</span>
@@ -261,10 +256,10 @@ export const GameBoard = () => {
                     <span style={{ color: '#bdc3c7' }}>缶:<span id="hud-can-price">{canPrice}</span>P</span>
                     <span style={{ color: '#bdc3c7', marginLeft: '6px' }}>ゴミ:<span id="hud-trash-price">{trashPrice}</span>P</span>
                 </div>
-                <div id="zoom-controls" style={{ display: 'flex', gap: '4px', pointerEvents: 'auto', alignSelf: 'flex-start', marginTop: '2px' }}>
+                <div id="zoom-controls" style={{ display: 'flex', gap: '6px', pointerEvents: 'auto', marginTop: '8px' }}>
                     <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(0.15)} title="ズームイン">＋</button>
                     <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(-0.15)} title="ズームアウト">－</button>
-                    <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '10px' }} onClick={resetZoom} title="リセット">⟳</button>
+                    <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={resetZoom} title="リセット">⟳</button>
                 </div>
             </div>
 
@@ -275,8 +270,15 @@ export const GameBoard = () => {
             )}
 
             <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px' }}>
-                <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none' }}>
-                    <div id="game-board-inner" ref={innerRef} style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
+                <div id="game-board-wrapper" ref={wrapperRef} style={{ 
+                    overflow: 'hidden', 
+                    width: '100%', 
+                    maxHeight: 'calc(100vh - 280px)', 
+                    cursor: 'grab', 
+                    userSelect: 'none',
+                    touchAction: 'none' // ここでブラウザのスクロール介入を完全に遮断
+                }}>
+                    <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
                             
                             <BoardPaths />
