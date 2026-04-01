@@ -11,7 +11,8 @@ export const GameBoard = () => {
     const { 
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
-        roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver
+        roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
+        autoScrollToPlayer
     } = useGameStore();
 
     const cp = players[turn];
@@ -25,6 +26,9 @@ export const GameBoard = () => {
     const lastTouches = useRef(null);
     const isClickPrevented = useRef(false);
     const rafRef = useRef(null);
+
+    // ▼ 追加: 自動スクロール用のターン追跡ref
+    const prevAutoScrollTurn = useRef(-1);
 
     const applyTransform = useCallback((smooth = false) => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -107,6 +111,53 @@ export const GameBoard = () => {
             window.removeEventListener('resize', resetZoom);
         };
     }, [mapTileCount, resetZoom]);
+
+    // ▼ 追加: ターン開始時にプレイヤーのマス位置へ自動パン
+    useEffect(() => {
+        // 条件チェック: 設定OFF、マップ未読み込み、同じターンの重複実行を防止
+        if (!autoScrollToPlayer) return;
+        if (!wrapperRef.current) return;
+        if (!mapData || mapData.length === 0) return;
+        if (!cp) return;
+        if (prevAutoScrollTurn.current === turn) return;
+        if (gameOver) return;
+
+        prevAutoScrollTurn.current = turn;
+
+        // 現在のプレイヤーがいるマスのデータを取得
+        const targetTile = mapData.find(t => t.id === cp.pos);
+        if (!targetTile) return;
+
+        // DOM描画の完了を待ってから実行（ターンバナー表示中の遅延も考慮）
+        const timer = setTimeout(() => {
+            if (!wrapperRef.current) return;
+
+            // CSSの --tile-size を取得（デフォルト60px想定）
+            const computedStyle = getComputedStyle(document.documentElement);
+            const tileSizeStr = computedStyle.getPropertyValue('--tile-size').trim();
+            const tileSize = parseInt(tileSizeStr, 10) || 60;
+            const gap = 20;     // GameBoardのgrid gap
+            const padding = 30; // GameBoardのpadding
+
+            // マスのピクセル座標を計算（グリッドの左上基準）
+            // col, row は1始まりなので -1 する
+            const tilePixelX = padding + (targetTile.col - 1) * (tileSize + gap) + tileSize / 2;
+            const tilePixelY = padding + (targetTile.row - 1) * (tileSize + gap) + tileSize / 2;
+
+            // ラッパーの中央にそのマスが来るようにオフセットを計算
+            const ww = wrapperRef.current.clientWidth;
+            const wh = wrapperRef.current.clientHeight;
+            const currentScale = scale.current;
+
+            offset.current = {
+                x: ww / 2 - tilePixelX * currentScale,
+                y: wh / 2 - tilePixelY * currentScale
+            };
+            applyTransform(true);
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [turn, cp, mapData, autoScrollToPlayer, gameOver, applyTransform]);
 
     const getTouchCoords = (touches) => {
         return Array.from(touches).map(t => ({ clientX: t.clientX, clientY: t.clientY }));

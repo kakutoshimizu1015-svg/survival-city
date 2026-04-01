@@ -3,7 +3,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { ClayButton } from '../common/ClayButton';
 
 export const SettingsAndRules = () => {
-    const { settingsActive, rulesActive, layoutMode, volume, showSkipButton, setGameState, resetGame } = useGameStore();
+    const { settingsActive, rulesActive, layoutMode, volume, showSkipButton, autoScrollToPlayer, setGameState, resetGame } = useGameStore();
     const [confirmOpen, setConfirmOpen] = useState(false);
 
     if (!settingsActive && !rulesActive && !confirmOpen) return null;
@@ -228,6 +228,17 @@ export const SettingsAndRules = () => {
                         <input type="checkbox" checked={showSkipButton} onChange={(e) => setGameState({ showSkipButton: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
                         ⏭️ 強制スキップボタンを表示する（誤タップ注意）
                     </label>
+                </div>
+
+                {/* ▼ 追加: 自動スクロール設定 */}
+                <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                    <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={autoScrollToPlayer} onChange={(e) => setGameState({ autoScrollToPlayer: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
+                        🗺️ ターン開始時にマップを自動スクロール
+                    </label>
+                    <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '4px', marginLeft: '28px' }}>
+                        ONにすると、各プレイヤーのターン開始時にマップがそのプレイヤーの位置へ自動で移動します
+                    </div>
                 </div>
                 
                 <ClayButton onClick={() => setGameState({ rulesActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#3498db' }}>📖 遊び方・ルールを見る</ClayButton>

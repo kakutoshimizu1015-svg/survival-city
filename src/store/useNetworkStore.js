@@ -206,7 +206,12 @@ useGameStore.subscribe((state) => {
         'tooltipData',
         'settingsActive',
         'rulesActive',
-        'tutorialActive'
+        'tutorialActive',
+        // ▼ 追加: ショップUI・レイアウト・自動スクロール設定はローカル専用
+        'shopActive',
+        'shopCart',
+        'layoutMode',
+        'autoScrollToPlayer',
     ];
 
     const pureState = {};

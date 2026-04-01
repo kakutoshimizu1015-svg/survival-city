@@ -25,6 +25,9 @@ const initialState = {
     centerWarning: null,
     tooltipData: null,
 
+    // ▼ 追加: マップ自動スクロール設定（デフォルトON）
+    autoScrollToPlayer: true,
+
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
     mapData: [], territories: {}, isRainy: false, weatherState: 'sunny', isNight: false,
     roundCount: 1, maxRounds: 20, canPrice: 1, trashPrice: 2, destTile: -1,
