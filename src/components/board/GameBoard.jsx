@@ -81,55 +81,57 @@ export const GameBoard = () => {
 
             {/* マップ本体 (スクロール制御) */}
             <div id="game-board-container" className="game-board-container panel">
-                <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 'max-content', transition: 'transform 0.2s ease-out' }}>
-                    <div id="game-board">
-                        {mapData.map(tile => {
-                            const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
-                            const isFog = visibleTiles && !visibleTiles.has(tile.id);
-                            
-                            const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
-                            const isClickable = npcMovePick !== null || isBranchTarget;
+                <div id="game-board-wrapper">
+                    <div id="game-board-inner" style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 'max-content', transition: 'transform 0.2s ease-out' }}>
+                        <div id="game-board">
+                            {mapData.map(tile => {
+                                const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
+                                const isFog = visibleTiles && !visibleTiles.has(tile.id);
+                                
+                                const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
+                                const isClickable = npcMovePick !== null || isBranchTarget;
 
-                            return (
-                                <div key={tile.id} id={`tile-${tile.id}`} onClick={() => isClickable && handleTileClick(tile.id)} 
-                                    className={`tile ${tile.type} ${tile.area} ${isFog ? 'night-fog' : ''} ${isClickable ? 'tile-highlight-branch' : ''}`}
-                                    style={{ gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default' }}>
-                                    <div style={{ fontSize: '26px', zIndex: 2 }}>
-                                        {tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : ''}
-                                    </div>
-                                    <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2 }}>{tile.name}</div>
-                                    
-                                    {owner && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px' }}>🚩</div>}
-
-                                    {(tile.fieldCans > 0 || tile.fieldTrash > 0) && !isFog && (
-                                        <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'2px 4px', fontSize:'12px' }}>
-                                            {tile.fieldCans > 0 && <span>🥫{tile.fieldCans}</span>}
-                                            {tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
+                                return (
+                                    <div key={tile.id} id={`tile-${tile.id}`} onClick={() => isClickable && handleTileClick(tile.id)} 
+                                        className={`tile ${tile.type} ${tile.area} ${isFog ? 'night-fog' : ''} ${isClickable ? 'tile-highlight-branch' : ''}`}
+                                        style={{ gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default' }}>
+                                        <div style={{ fontSize: '26px', zIndex: 2 }}>
+                                            {tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : ''}
                                         </div>
-                                    )}
+                                        <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2 }}>{tile.name}</div>
+                                        
+                                        {owner && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px' }}>🚩</div>}
 
-                                    {!isFog && players.filter(p => p.pos === tile.id && p.hp > 0).map(p => (
-                                        <div key={p.id} className={`player-token pos-${p.id % 4} ${turn === p.id ? 'token-active' : ''}`} style={{ borderColor: p.color, width: '36px', height: '36px' }}>
-                                            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', lineHeight:1 }}>
-                                                <span style={{ fontSize:'18px' }}>{charEmoji[p.charType]}</span>
-                                                <span style={{ fontSize:'7px', fontWeight:900, color:p.color, textShadow:'0 0 4px #000' }}>{p.name}</span>
+                                        {(tile.fieldCans > 0 || tile.fieldTrash > 0) && !isFog && (
+                                            <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'2px 4px', fontSize:'12px' }}>
+                                                {tile.fieldCans > 0 && <span>🥫{tile.fieldCans}</span>}
+                                                {tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
                                             </div>
-                                        </div>
-                                    ))}
-                                    
-                                    {!isFog && tile.id === truckPos && (
-                                        <div className="truck-token">🚛</div>
-                                    )}
+                                        )}
 
-                                    {!isFog && tile.id === policePos && <div className="npc-token npc-police">👮</div>}
-                                    {!isFog && tile.id === unclePos && <div className="npc-token npc-uncle">🧓</div>}
-                                    {!isFog && tile.id === animalPos && <div className="npc-token npc-animal">🐀</div>}
-                                    {!isFog && tile.id === yakuzaPos && <div className="npc-token npc-yakuza">😎</div>}
-                                    {!isFog && tile.id === loansharkPos && <div className="npc-token npc-loanshark">💀</div>}
-                                    {!isFog && tile.id === friendPos && <div className="npc-token npc-friend">🤝</div>}
-                                </div>
-                            );
-                        })}
+                                        {!isFog && players.filter(p => p.pos === tile.id && p.hp > 0).map(p => (
+                                            <div key={p.id} className={`player-token pos-${p.id % 4} ${turn === p.id ? 'token-active' : ''}`} style={{ borderColor: p.color, width: '36px', height: '36px' }}>
+                                                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', lineHeight:1 }}>
+                                                    <span style={{ fontSize:'18px' }}>{charEmoji[p.charType]}</span>
+                                                    <span style={{ fontSize:'7px', fontWeight:900, color:p.color, textShadow:'0 0 4px #000' }}>{p.name}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        
+                                        {!isFog && tile.id === truckPos && (
+                                            <div className="truck-token">🚛</div>
+                                        )}
+
+                                        {!isFog && tile.id === policePos && <div className="npc-token npc-police">👮</div>}
+                                        {!isFog && tile.id === unclePos && <div className="npc-token npc-uncle">🧓</div>}
+                                        {!isFog && tile.id === animalPos && <div className="npc-token npc-animal">🐀</div>}
+                                        {!isFog && tile.id === yakuzaPos && <div className="npc-token npc-yakuza">😎</div>}
+                                        {!isFog && tile.id === loansharkPos && <div className="npc-token npc-loanshark">💀</div>}
+                                        {!isFog && tile.id === friendPos && <div className="npc-token npc-friend">🤝</div>}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -8,6 +8,7 @@ import { HandCards } from '../components/player/HandCards';
 import { ActionPanel } from '../components/player/ActionPanel';
 import { PlayerList } from '../components/player/PlayerList';
 import { GameBoard } from '../components/board/GameBoard';
+import { LogPanel } from '../components/board/LogPanel'; // ログパネルをインポート
 
 import { DiceOverlay } from '../components/overlays/DiceOverlay';
 import { GameEventOverlays } from '../components/overlays/GameEventOverlays';
@@ -64,7 +65,7 @@ export const GameMain = () => {
     }, []);
 
     return (
-        <div id="game-screen" className="game-screen" style={{ display: 'flex', height: '100%' }}>
+        <div id="game-screen" className="game-screen">
             <GameEffectsOverlay />
             <DiceOverlay />
             <GameEventOverlays />
@@ -88,6 +89,9 @@ export const GameMain = () => {
                     <PlayerList />
                 </div>
             </div>
+            
+            {/* ▼ ログパネルを復活 */}
+            <LogPanel />
         </div>
     );
 };

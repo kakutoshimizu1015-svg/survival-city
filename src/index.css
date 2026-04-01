@@ -10,14 +10,12 @@
 }
 * { box-sizing: border-box; }
 
-/* ▼ レイアウト修正：画面全体に収め、スクロールバーを出さない */
-/* ▼ 大元の要素すべてを画面サイズに固定し、画面全体のスクロールを絶対禁止する */
+/* ▼ 修正：画面全体のスクロールロックを解除し、自然なWebレイアウトにする */
 html, body, #root {
     width: 100%;
-    height: 100%;
+    min-height: 100%;
     margin: 0;
     padding: 0;
-    overflow: hidden; 
 }
 
 body { 
@@ -27,6 +25,7 @@ body {
     display: flex; 
     flex-direction: column; 
     align-items: center; 
+    overflow-x: hidden; /* 横スクロールのみ禁止し、縦スクロールは許可 */
     transition: background 0.8s; 
 }
 
@@ -57,28 +56,26 @@ select, .name-input { padding:6px; font-size:14px; border-radius:5px; border:2px
 .panel { background-color: var(--clay-panel); border-radius:15px; padding:15px; box-shadow:var(--clay-shadow-out); border:var(--clay-border); color:#fdf5e6; transition: background-color 0.5s, border-color 0.5s; }
 
 /* ▼ 修正：ゲームスクリーン全体のレイアウト制御 */
-        #game-screen, .game-screen { 
-            display: flex; 
-            flex-direction: column; 
-            width: 100%; 
-            max-width: 1800px; 
-            height: 100%; /* 親要素(#root)に合わせて100%に固定 */
-            padding: 10px; 
-            box-sizing: border-box;
-            overflow: hidden; 
-        }
+#game-screen, .game-screen { 
+    display: flex; 
+    flex-direction: column; 
+    width: 100%; 
+    max-width: 1800px; 
+    min-height: 100vh; /* 固定高さをやめて、コンテンツに合わせて伸びるようにする */
+    padding: 15px; 
+    padding-top: 60px; /* ★重要：左上の設定ボタン（歯車）と被らないように上部余白を追加 */
+    box-sizing: border-box;
+}
 
-        /* ▼ 修正：トップバー（ステータス＆手札） */
-        #top-bar, .top-bar { 
-            display: flex; 
-            width: 100%; 
-            gap: 15px; 
-            margin-bottom: 10px; 
-            align-items: flex-start; 
-            flex-shrink: 0; 
-            max-height: 160px; /* トップバーが画面半分まで間延びするのを強制ブロック */
-            overflow-y: hidden;
-        }
+/* ▼ 修正：トップバー（ステータス＆手札） */
+#top-bar, .top-bar { 
+    display: flex; 
+    width: 100%; 
+    gap: 15px; 
+    margin-bottom: 15px; 
+    align-items: stretch; /* 子要素の高さが揃う自然な配置に戻す */
+    flex-shrink: 0; 
+}
 #left-status-area { display:flex; gap:15px; flex-shrink:0; }
 #weather-panel { width:130px; display:flex; flex-direction:column; justify-content:center; }
 #weather-indicator { background:#3498db; width:100%; padding:6px; border-radius:8px; font-weight:bold; font-size:15px; text-align:center; border:2px solid #2980b9; box-shadow:var(--clay-shadow-in); transition:background 0.3s; }
@@ -105,10 +102,27 @@ select, .name-input { padding:6px; font-size:14px; border-radius:5px; border:2px
 .card-mini-btn:disabled { cursor:not-allowed; opacity:0.5; }
 .card-back-clay { background:repeating-linear-gradient(45deg,#e07a5f,#e07a5f 10px,#c0392b 10px,#c0392b 20px) !important; border-color:#fff !important; justify-content:center; align-items:center; cursor:default; }
 
-/* ▼ レイアウト修正：メインエリア全体とマップの柔軟な伸縮 */
-#main-area { display:flex; width:100%; gap:15px; flex-grow: 1; min-height: 0; overflow: hidden; }
-#board-area { flex-grow:1; display:flex; flex-direction:column; position:relative; min-width:0; min-height:0; overflow:hidden; }
-#game-board-container { flex-grow:1; overflow:auto; position:relative; padding:0; margin:0; }
+/* ▼ 修正：メインエリア（マップと右側メニュー）の配置 */
+#main-area, .main-area { 
+    display: flex; 
+    width: 100%; 
+    gap: 15px; 
+}
+
+/* ▼ 修正：マップエリアのコンテナ制御 */
+#board-area, .board-area { 
+    flex-grow: 1; 
+    overflow-x: auto; 
+    min-width: 0; 
+    position: relative;
+}
+
+#game-board-container, .game-board-container { 
+    width: 100%; 
+    overflow-x: auto; 
+    padding-bottom: 10px; 
+    margin: 0; 
+}
 
 /* ズームコントロール */
 #zoom-controls { position:absolute; top:8px; left:8px; z-index:55; display:flex; flex-direction:column; gap:4px; }
@@ -116,8 +130,13 @@ select, .name-input { padding:6px; font-size:14px; border-radius:5px; border:2px
 .zoom-btn:hover { background:rgba(224,122,95,0.9); }
 .zoom-btn:active { transform:scale(0.92); }
 
-/* ▼ レイアウト修正：マップラッパーはスクロールせず、コンテナ側にスクロールを任せる */
-#game-board-wrapper { overflow:hidden; width:100%; height:100%; max-height:none !important; cursor:grab; user-select:none; }
+#game-board-wrapper { 
+    overflow: hidden; 
+    width: 100%; 
+    max-height: calc(100vh - 280px); /* マップの縦幅が大きくなりすぎないように制限 */
+    cursor: grab; 
+    user-select: none; 
+}
 #game-board-wrapper.dragging { cursor:grabbing; }
 #game-board-inner { transform-origin: top left; transition: transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94); display:inline-block; will-change: transform; }
 #game-board { display:grid; gap:20px; padding:30px; border-radius:15px; border:var(--clay-border); box-shadow:var(--clay-shadow-out); background:linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%); width:max-content; margin:0 auto; position:relative; isolation:isolate; }
@@ -141,35 +160,66 @@ select, .name-input { padding:6px; font-size:14px; border-radius:5px; border:2px
 .destination-mark { position:absolute; bottom:-2px; left:50%; transform:translateX(-50%); font-size:12px; z-index:6; animation:pulse-dest 1s infinite alternate; }
 
 /* ▼ レイアウト修正：モバイル向けレイアウトの見切れ防止・スクロール制御 */
-/* ===== MOBILE LAYOUT ===== */
-body.layout-mobile #top-bar { flex-direction:column; gap:5px; flex-shrink: 0; }
-body.layout-mobile #left-status-area { flex-direction:row; overflow-x:auto; width: 100%; flex-shrink: 0; }
-body.layout-mobile #portrait-active { width:100%; flex-direction:row; flex-wrap:wrap; padding:6px; }
-body.layout-mobile #weather-panel { width:auto; min-width:100px; flex-shrink:0; }
-body.layout-mobile #hand-cards-area { overflow-x:auto; flex-shrink: 0; min-height: 80px; }
-body.layout-mobile #main-area { flex-direction:column; flex-grow: 1; min-height: 0; overflow: hidden; }
-body.layout-mobile #right-side-area { width:100%; flex-direction:row; flex-wrap:wrap; gap:8px; max-height: 35dvh; overflow-y: auto; flex-shrink: 0; }
-body.layout-mobile #action-panel { flex:1; display:grid !important; grid-template-columns:repeat(3,1fr) !important; padding:6px; gap:4px; overflow-y:visible; height: auto; }
-body.layout-mobile #action-panel .btn-clay { flex:1; min-width:auto; font-size:11px; padding:4px; text-align: center; }
-body.layout-mobile .btn-end-clay { grid-column: span 3; }
-body.layout-mobile #player-list-panel { flex:1; min-width:150px; overflow-y:visible; height: auto; }
-body.layout-mobile #game-board-wrapper { height:100%; max-height:none !important; overflow:hidden; }
-body.layout-mobile #log-area { display:none; }
-
-@media (max-width: 700px) {
-    body:not(.layout-pc) #top-bar { flex-direction:column; gap:5px; }
-    body:not(.layout-pc) #left-status-area { flex-direction:row; overflow-x:auto; width: 100%; }
-    body:not(.layout-pc) #portrait-active { width:100%; flex-direction:row; flex-wrap:wrap; padding:6px; }
-    body:not(.layout-pc) #weather-panel { width:auto; min-width:90px; flex-shrink:0; }
-    body:not(.layout-pc) #main-area { flex-direction:column; }
-    body:not(.layout-pc) #right-side-area { width:100%; flex-direction:row; flex-wrap:wrap; gap:6px; max-height: 40dvh; overflow-y: hidden; flex-shrink: 0; }
-    body:not(.layout-pc) #action-panel { flex:1; display:grid !important; grid-template-columns:repeat(3,1fr) !important; padding:6px; gap:4px; overflow-y:auto; height: 100%; }
-    body:not(.layout-pc) #action-panel .btn-clay { flex:1; min-width:auto; font-size:11px; padding:4px; text-align: center; }
-    body:not(.layout-pc) .btn-end-clay { grid-column: span 3; }
-    body:not(.layout-pc) #player-list-panel { flex:1; overflow-y:auto; height: 100%; }
-    body:not(.layout-pc) #game-board-wrapper { height:100%; max-height:none !important; overflow:hidden; }
-    body:not(.layout-pc) #log-area { display:none; }
+/* ==========================================
+   ▼ モバイル用レイアウト (レスポンシブ) ▼
+   ========================================== */
+@media (max-width: 768px) {
+    .game-screen, #game-screen { 
+        padding: 5px; 
+        padding-top: 60px; /* スマホでも設定ボタンと被らないように上部余白 */
+    }
+    
+    .top-bar, #top-bar { flex-direction: column !important; gap: 10px !important; }
+    .left-status-area, #left-status-area { flex-direction: row !important; overflow-x: auto; width: 100%; }
+    #portrait-active { width: 100%; flex-direction: row; flex-wrap: wrap; justify-content: space-around; padding: 5px; }
+    .status-box { width: 30%; font-size: 10px; padding: 2px; }
+    
+    .main-area, #main-area { flex-direction: column !important; gap: 10px !important; }
+    
+    /* スマホ時は右側パネルを横並び（ラップ）に変更し、画面全体のスクロールに任せる */
+    .right-side-area, #right-side-area { 
+        width: 100% !important; 
+        flex-direction: row !important; 
+        flex-wrap: wrap !important;
+        gap: 8px !important; 
+    }
+    
+    #action-panel { 
+        width: 100% !important;
+        display: grid !important; 
+        grid-template-columns: repeat(3, 1fr) !important; 
+        gap: 4px !important; 
+        padding: 6px !important; 
+    }
+    
+    #player-list-panel { 
+        width: 100% !important; 
+    }
+    
+    .btn-clay { font-size: 10px !important; padding: 4px !important; text-align: center !important; }
+    .btn-end-clay, #action-panel > div:last-child { grid-column: span 3 !important; }
+    
+    /* スマホ時のマップエリアの高さを制限して見やすくする */
+    #game-board-wrapper { 
+        max-height: 55vh !important; 
+        overflow: auto !important; 
+    }
+    
+    /* ▼ 修正：ログエリアをスマホでも表示する */
+    #log-area { display: block !important; }
 }
+
+/* body.layout-mobile が明示的に付与された場合の強制スマホレイアウト */
+body.layout-mobile .top-bar, body.layout-mobile #top-bar { flex-direction: column !important; gap: 10px !important; }
+body.layout-mobile .left-status-area, body.layout-mobile #left-status-area { flex-direction: row !important; overflow-x: auto !important; width: 100% !important; }
+body.layout-mobile .main-area, body.layout-mobile #main-area { flex-direction: column !important; gap: 10px !important; }
+body.layout-mobile .right-side-area, body.layout-mobile #right-side-area { width: 100% !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 8px !important; }
+body.layout-mobile #action-panel { width: 100% !important; display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 4px !important; padding: 6px !important; }
+body.layout-mobile #player-list-panel { width: 100% !important; }
+body.layout-mobile .btn-clay { font-size: 10px !important; padding: 4px !important; text-align: center !important; }
+body.layout-mobile .btn-end-highlight, body.layout-mobile #action-panel > div:last-child { grid-column: span 3 !important; }
+body.layout-mobile #game-board-wrapper { max-height: 55vh !important; overflow: auto !important; }
+body.layout-mobile #log-area { display: block !important; }
 /* ===== END MOBILE LAYOUT ===== */
 
 /* Path preview glow */
