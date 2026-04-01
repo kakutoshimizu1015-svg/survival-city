@@ -872,5 +872,15 @@ body.layout-mobile .right-side-area { width: 100% !important; flex-direction: ro
 body.layout-mobile #action-panel { flex: 1 !important; display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 4px !important; overflow-y: auto !important; padding: 6px !important; height: 100% !important; }
 body.layout-mobile #player-list-panel { flex: 1 !important; overflow-y: auto !important; height: 100% !important; }
 body.layout-mobile .btn-clay { font-size: 10px !important; padding: 4px !important; text-align: center !important; }
-body.layout-mobile .btn-end-highlight, body.layout-mobile #action-panel > div:last-child { grid-column: span 3 !important; }
+/* ▼ スマホ時のターンエンドボタンを大きく・押しやすくする修正 ▼ */
+body.layout-mobile .btn-end-highlight, body.layout-mobile #action-panel > div:last-child { 
+    grid-column: span 3 !important; 
+    font-size: 16px !important; 
+    padding: 14px 4px !important; 
+    min-height: 48px !important; 
+}
+body.layout-mobile .btn-end-highlight button, body.layout-mobile #action-panel > div:last-child button {
+    font-size: 16px !important; 
+    padding: 14px 4px !important; 
+}
 body.layout-mobile #game-board-wrapper { height: 100% !important; max-height: none !important; overflow: hidden !important; }

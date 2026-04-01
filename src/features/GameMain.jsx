@@ -47,17 +47,14 @@ export const GameMain = () => {
         }
     }, [turn, players, gameOver, gamePhase, status, isHost, turnBannerActive]);
 
+    // ▼ 修正：ゲームを開いた「最初の1回だけ」画面幅を判定し、以降は自動で切り替えないように変更
     useEffect(() => {
-        const handleResize = () => {
-            if (window.innerWidth <= 768) {
-                document.body.classList.add('layout-mobile');
-            } else {
-                document.body.classList.remove('layout-mobile');
-            }
-        };
-        window.addEventListener('resize', handleResize);
-        handleResize(); 
-        return () => window.removeEventListener('resize', handleResize);
+        if (window.innerWidth <= 768) {
+            document.body.classList.add('layout-mobile');
+        } else {
+            document.body.classList.remove('layout-mobile');
+        }
+        // ※ resize イベントリスナーを削除しました
     }, []);
 
     return (
@@ -65,7 +62,6 @@ export const GameMain = () => {
             <GameEffectsOverlay />
             <DiceOverlay />
             <GameEventOverlays />
-            {/* ▼ 削除：WeaponArcOverlay は GameBoard.jsx 内に移動しました */}
             <EnvironmentOverlay />
             <ShopOverlay />
             <TurnOrderOverlay />
