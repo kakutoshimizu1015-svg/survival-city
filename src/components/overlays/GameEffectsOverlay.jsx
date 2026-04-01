@@ -167,14 +167,11 @@ export const GameEffectsOverlay = () => {
             )}
 
             {roundSummary && (
-                <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(92,74,68,0.98)', border: '6px solid #f1c40f', borderRadius: '15px', padding: '25px 40px', zIndex: 280, display: 'flex', flexDirection: 'column', color: '#fdf5e6', boxShadow: '0 0 40px rgba(0,0,0,0.8)', minWidth: '350px' }}>
+                <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(92,74,68,0.98)', border: '6px solid #f1c40f', borderRadius: '15px', padding: '25px 40px', zIndex: 280, display: 'flex', flexDirection: 'column', color: '#fdf5e6', boxShadow: '0 0 40px rgba(0,0,0,0.8)', minWidth: '350px', overflow: 'hidden' }}>
                     <h2 style={{ margin: '0 0 15px 0', color: '#f1c40f', textAlign: 'center', borderBottom: '2px dashed #f1c40f', paddingBottom: '10px' }}>🌙 ラウンド終了レポート</h2>
-                    {/* ▼ 修正: 中央に寄せつつ、各行は左揃えにして絵文字を揃える */}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', width: 'fit-content', margin: '0 auto' }}>
                         {roundSummary.map((item, i) => (
-                            <div key={i} style={{ fontSize: '16px', fontWeight: 'bold', animation: `slide-down 0.3s forwards ${i * 0.4}s`, opacity: 0, textAlign: 'left' }}>
-                                {item}
-                            </div>
+                            <div key={i} style={{ fontSize: '16px', fontWeight: 'bold', animation: `slide-down 0.3s forwards ${i * 0.4}s`, opacity: 0, textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: item }} />
                         ))}
                     </div>
                 </div>
