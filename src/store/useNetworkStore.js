@@ -3,6 +3,7 @@ import Peer from 'peerjs';
 import { ref, set, get, onDisconnect, remove, onValue, off, update } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useGameStore } from './useGameStore';
+import { processRoundEnd } from '../game/round';
 
 // ネットワーク受信中フラグ（無限ループ防止用）
 let isReceivingNetworkData = false;
@@ -68,11 +69,28 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             }
 
                             useGameStore.setState(data.gameState);
-                            setTimeout(() => { isReceivingNetworkData = false; }, 50);
+                            // ▼ 修正: ガード時間を50ms → 200msに延長（長時間非同期処理中の再broadcast防止）
+                            setTimeout(() => { isReceivingNetworkData = false; }, 200);
                         }
                         getStore().connections.forEach(c => {
                             if (c.peer !== conn.peer && c.open) c.send(data);
                         });
+                    }
+
+                    // ▼ 追加: ゲストからのラウンド終了リクエスト（ホスト側でのみ処理を実行）
+                    if (data.type === 'REQUEST_ROUND_END') {
+                        const gameState = useGameStore.getState();
+                        if (gameState.gamePhase === 'playing' && !gameState.gameOver) {
+                            (async () => {
+                                try {
+                                    await processRoundEnd();
+                                    useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false }));
+                                } catch (e) {
+                                    console.error("Host processRoundEnd error:", e);
+                                    useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false }));
+                                }
+                            })();
+                        }
                     }
                 });
             });
@@ -112,7 +130,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             }
 
                             useGameStore.setState(data.gameState);
-                            setTimeout(() => { isReceivingNetworkData = false; }, 50);
+                            // ▼ 修正: ガード時間を50ms → 200msに延長
+                            setTimeout(() => { isReceivingNetworkData = false; }, 200);
                         }
                     }
                 });
@@ -192,13 +211,21 @@ export const useNetworkStore = create((setStore, getStore) => ({
     }
 }));
 
+// ======================================================================
 // 自動同期エンジン
+// ======================================================================
 useGameStore.subscribe((state) => {
     const netState = useNetworkStore.getState();
     if (netState.status !== 'connected' || isReceivingNetworkData || state.gamePhase !== 'playing') return;
 
+    // ▼ 追加: ゲスト側はラウンド終了処理中の再broadcastを抑止する
+    // ホストが processRoundEnd を実行中に _roundEndInProgress = true を同期してくるので、
+    // ゲストはこのフラグが true の間はbroadcastしない（状態の巻き戻りを防ぐ）
+    if (!netState.isHost && state._roundEndInProgress) return;
+
     // ▼ 同期させない（ローカルのみで保持する）Stateのキーを指定
     const localOnlyKeys = [
+        // --- UIモーダル・ローカル設定系 ---
         'charInfoModal',
         'acquiredCard',
         'toastMsg',
@@ -207,11 +234,22 @@ useGameStore.subscribe((state) => {
         'settingsActive',
         'rulesActive',
         'tutorialActive',
-        // ▼ 追加: ショップUI・レイアウト・自動スクロール設定はローカル専用
         'shopActive',
         'shopCart',
         'layoutMode',
         'autoScrollToPlayer',
+
+        // --- タイマー駆動の演出系 ---
+        // setTimeout で自動的に値が変更されるため、放置すると古い状態で再broadcastが発生する
+        'eventPopups',      // addEventPopup → 2800ms後に自動削除
+        'bloodAnim',        // 2000ms後に自動クリア
+        'turnBanner',       // GameMain.jsx で 1500ms後にクリア
+        'turnBannerActive', // GameMain.jsx で 2500ms後にクリア
+        'jobResult',        // バイト結果のUI表示（ローカル演出）
+
+        // --- 個人設定系（デバイスごとに異なるべき値）---
+        'volume',
+        'showSkipButton',
     ];
 
     const pureState = {};

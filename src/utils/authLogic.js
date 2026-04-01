@@ -1,18 +1,15 @@
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import { useUserStore } from '../store/useUserStore';
-// ※ すでにロビー機能等で使っているFirebase初期化ファイルから app を読み込みます
-// （プロジェクトの構造に合わせてパスは変更してください）
-import { app } from './firebase'; 
+// ▼ 修正：正しいパス（../lib/firebase）に変更
+import { app } from '../lib/firebase'; 
 
 const auth = getAuth(app);
 
 export const loginAnonymously = async () => {
   try {
-    // Firebaseで匿名ログインを実行
     const userCredential = await signInAnonymously(auth);
     const user = userCredential.user;
 
-    // 成功したら、先ほど作ったStoreにUIDを保存して状態を更新
     useUserStore.getState().setUserData({
       uid: user.uid,
       isLoggedIn: true,

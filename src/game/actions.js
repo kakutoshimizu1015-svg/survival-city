@@ -1,4 +1,5 @@
 import { useGameStore, isSameTeam } from '../store/useGameStore';
+import { useNetworkStore } from '../store/useNetworkStore';
 import { checkNpcCollision } from './npc';
 import { processRoundEnd } from './round';
 import { playSfx } from '../utils/audio';
@@ -197,7 +198,23 @@ export const actionEndTurn = async () => {
         state.updateCurrentPlayer(p => ({ ap: 0, stealth: false, _katsuage: 0, equip: newEquip, equipTimer: newTimer, cannotMove: false })); 
         useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null });
         
-        if (state.turn === state.players.length - 1) await processRoundEnd();
+        const isLastPlayer = state.turn === state.players.length - 1;
+
+        // ▼ 追加: オンラインゲスト側はラウンド終了処理をホストに委譲する
+        // 理由: processRoundEnd は10〜15秒の長時間非同期処理であり、
+        // ゲスト側で実行すると同期のフィードバックループ（状態の巻き戻り）が発生するため。
+        if (isLastPlayer) {
+            const netState = useNetworkStore.getState();
+            if (netState.status === 'connected' && !netState.isHost) {
+                // ゲスト: ホストにラウンド終了リクエストを送信し、ターン遷移もホストに任せる
+                if (netState.hostConnection && netState.hostConnection.open) {
+                    netState.hostConnection.send({ type: 'REQUEST_ROUND_END' });
+                }
+                return; // ← ここでreturn。ターン遷移はホスト側の REQUEST_ROUND_END ハンドラが行う
+            }
+            await processRoundEnd();
+        }
+
         useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false }));
     } catch (e) { 
         console.error("actionEndTurn Error:", e); 
