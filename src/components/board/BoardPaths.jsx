@@ -3,7 +3,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { getDistance, getPathPreviewTiles, getManholeLinkedTiles } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
-import { BoardPaths } from './BoardPaths';
+
 import { Tile } from './Tile';
 import { TileTooltip } from '../overlays/TileTooltip';
 
