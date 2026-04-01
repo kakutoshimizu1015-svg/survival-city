@@ -16,7 +16,7 @@ export const GameBoard = () => {
 
     const cp = players[turn];
     
-    // Zoom and Pan States
+    // Zoom and Pan States (Reactの再レンダリングを防ぐため全て useRef で管理)
     const scale = useRef(1.0);
     const offset = useRef({ x: 0, y: 0 });
     const wrapperRef = useRef(null);
@@ -24,18 +24,15 @@ export const GameBoard = () => {
     const dragStart = useRef({ x: 0, y: 0 });
     const offsetStart = useRef({ x: 0, y: 0 });
     const lastTouches = useRef(null);
-    const rafRef = useRef(null); // アニメーションフレーム管理用
+    const isClickPrevented = useRef(false); // ドラッグ後の誤クリック防止用
 
-    // DOMを直接書き換え、requestAnimationFrameで極限まで滑らかに同期
+    // DOMを直接書き換え、オリジナル版と同じCSS transition制御を行う
     const applyTransform = useCallback((smooth = false) => {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => {
-            const inner = document.getElementById('game-board-inner');
-            if (inner) {
-                inner.style.transition = smooth ? 'transform 0.2s ease-out' : 'none';
-                inner.style.transform = `translate(${offset.current.x}px, ${offset.current.y}px) scale(${scale.current})`;
-            }
-        });
+        const inner = document.getElementById('game-board-inner');
+        if (inner) {
+            inner.style.transition = smooth ? 'transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94)' : 'none';
+            inner.style.transform = `translate(${offset.current.x}px, ${offset.current.y}px) scale(${scale.current})`;
+        }
     }, []);
 
     const zoomAt = useCallback((px, py, delta) => {
@@ -80,6 +77,7 @@ export const GameBoard = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mapData, resetZoom]);
 
+    // オリジナル版のスクロールロジックを完全移植したネイティブイベント登録
     useEffect(() => {
         const wrapper = wrapperRef.current;
         if (!wrapper) return;
@@ -95,12 +93,14 @@ export const GameBoard = () => {
 
         const handleMouseDown = (e) => {
             if (e.button !== 0) return;
-            e.preventDefault(); // PCでのネイティブドラッグやテキスト選択を防止
             isDragging.current = true;
             dragStart.current = { x: e.clientX, y: e.clientY };
             offsetStart.current = { ...offset.current };
             wrapper.classList.add('dragging');
-            applyTransform(false);
+            
+            // ドラッグ開始時にtransitionを完全に切る（オリジナル版完全再現）
+            const inner = document.getElementById('game-board-inner');
+            if (inner) inner.style.transition = 'none';
         };
 
         const handleMouseMove = (e) => {
@@ -114,27 +114,40 @@ export const GameBoard = () => {
             applyTransform(false);
         };
 
-        const handleMouseUp = () => {
+        const handleMouseUp = (e) => {
             if (!isDragging.current) return;
             isDragging.current = false;
             wrapper.classList.remove('dragging');
+            
+            // 指を離した瞬間に少し慣性を残す（オリジナル版完全再現）
+            const inner = document.getElementById('game-board-inner');
+            if (inner) inner.style.transition = 'transform 0.12s ease';
+
+            // 5px以上ドラッグしていた場合は、直後のマスクリック判定を無効化する
+            const moved = Math.abs(e.clientX - dragStart.current.x) + Math.abs(e.clientY - dragStart.current.y);
+            if (moved > 5) {
+                isClickPrevented.current = true;
+                setTimeout(() => { isClickPrevented.current = false; }, 50);
+            }
         };
 
         const handleTouchStart = (e) => {
             lastTouches.current = e.touches;
-            applyTransform(false);
+            // スワイプ開始時にtransitionを切る
+            const inner = document.getElementById('game-board-inner');
+            if (inner) inner.style.transition = 'none';
         };
 
         const handleTouchMove = (e) => {
             if (!lastTouches.current) return;
             if (e.touches.length === 1 && lastTouches.current.length === 1) {
-                // 感度1.8倍
+                // スマホの1スクロール移動量を1.8倍にして感度を上げる
                 const sensitivity = 1.8;
                 const dx = (e.touches[0].clientX - lastTouches.current[0].clientX) * sensitivity;
                 const dy = (e.touches[0].clientY - lastTouches.current[0].clientY) * sensitivity;
                 offset.current = { x: offset.current.x + dx, y: offset.current.y + dy };
                 applyTransform(false);
-                e.preventDefault();
+                e.preventDefault(); // ブラウザ標準のスクロールを遮断
             } else if (e.touches.length === 2 && lastTouches.current.length === 2) {
                 const prevDist = Math.hypot(
                     lastTouches.current[0].clientX - lastTouches.current[1].clientX,
@@ -153,14 +166,18 @@ export const GameBoard = () => {
             lastTouches.current = e.touches;
         };
 
-        const handleTouchEnd = () => { lastTouches.current = null; };
+        const handleTouchEnd = () => { 
+            lastTouches.current = null; 
+            // スワイプ終了時に慣性を戻す
+            const inner = document.getElementById('game-board-inner');
+            if (inner) inner.style.transition = 'transform 0.12s ease';
+        };
 
-        // passive: false を明示してブラウザのスクロール介入を確実に防ぐ
         wrapper.addEventListener('wheel', handleWheel, { passive: false });
         wrapper.addEventListener('mousedown', handleMouseDown);
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-        wrapper.addEventListener('touchstart', handleTouchStart, { passive: false });
+        wrapper.addEventListener('touchstart', handleTouchStart, { passive: true });
         wrapper.addEventListener('touchmove', handleTouchMove, { passive: false });
         wrapper.addEventListener('touchend', handleTouchEnd, { passive: true });
 
@@ -176,6 +193,9 @@ export const GameBoard = () => {
     }, [zoomAt, applyTransform]);
 
     const handleTileClick = (tileId) => {
+        // ドラッグ操作による誤クリックを防ぐ
+        if (isClickPrevented.current) return;
+
         if (npcMovePick) {
             const state = useGameStore.getState();
             state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
@@ -276,8 +296,9 @@ export const GameBoard = () => {
                     maxHeight: 'calc(100vh - 280px)', 
                     cursor: 'grab', 
                     userSelect: 'none',
-                    touchAction: 'none' // ここでブラウザのスクロール介入を完全に遮断
+                    touchAction: 'none'
                 }}>
+                    {/* inline style の transition を削除。直接DOM操作（applyTransform）に任せる */}
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
                             
