@@ -8,11 +8,10 @@ import { HandCards } from '../components/player/HandCards';
 import { ActionPanel } from '../components/player/ActionPanel';
 import { PlayerList } from '../components/player/PlayerList';
 import { GameBoard } from '../components/board/GameBoard';
-import { LogPanel } from '../components/board/LogPanel'; // ログパネルをインポート
+import { LogPanel } from '../components/board/LogPanel'; 
 
 import { DiceOverlay } from '../components/overlays/DiceOverlay';
 import { GameEventOverlays } from '../components/overlays/GameEventOverlays';
-import { WeaponArcOverlay } from '../components/overlays/WeaponArcOverlay';
 import { EnvironmentOverlay } from '../components/overlays/EnvironmentOverlay';
 import { ShopOverlay } from '../components/overlays/ShopOverlay';
 import { TurnOrderOverlay } from '../components/overlays/TurnOrderOverlay';
@@ -24,7 +23,6 @@ export const GameMain = () => {
     const { status, isHost } = useNetworkStore();
     const prevTurn = useRef(-1);
 
-    // ターンバナー表示
     useEffect(() => {
         if (gamePhase !== 'playing' || gameOver || !players[turn]) return;
         if (prevTurn.current !== turn) {
@@ -37,7 +35,6 @@ export const GameMain = () => {
         }
     }, [turn, players, gameOver, gamePhase]);
 
-    // CPUの自動ターン進行
     useEffect(() => {
         if (gameOver || gamePhase !== 'playing') return;
         const currentPlayer = players[turn];
@@ -50,7 +47,6 @@ export const GameMain = () => {
         }
     }, [turn, players, gameOver, gamePhase, status, isHost, turnBannerActive]);
 
-    // モバイルレイアウト付与判定
     useEffect(() => {
         const handleResize = () => {
             if (window.innerWidth <= 768) {
@@ -60,7 +56,7 @@ export const GameMain = () => {
             }
         };
         window.addEventListener('resize', handleResize);
-        handleResize(); // 初回
+        handleResize(); 
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
@@ -69,7 +65,7 @@ export const GameMain = () => {
             <GameEffectsOverlay />
             <DiceOverlay />
             <GameEventOverlays />
-            <WeaponArcOverlay />
+            {/* ▼ 削除：WeaponArcOverlay は GameBoard.jsx 内に移動しました */}
             <EnvironmentOverlay />
             <ShopOverlay />
             <TurnOrderOverlay />
@@ -90,7 +86,6 @@ export const GameMain = () => {
                 </div>
             </div>
             
-            {/* ▼ ログパネルを復活 */}
             <LogPanel />
         </div>
     );

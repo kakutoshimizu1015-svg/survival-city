@@ -9,39 +9,20 @@ export const WeaponArcOverlay = () => {
     const [angleDeg, setAngleDeg] = useState(90);
     const [attackerPos, setAttackerPos] = useState({ x: 0, y: 0 });
     const [radius, setRadius] = useState(0);
-
     const panelRef = useRef(null);
 
-    // ▼ 修正：画面上のマスの位置を計算し、スクロールに追従させる
+    // ▼ 修正：getBoundingClientRect() ではなく、マップ内での相対座標(offsetLeft/Top)を取得
     useEffect(() => {
         if (!weaponArcData) return;
-        
-        const updatePos = () => {
-            const tileEl = document.getElementById(`tile-${weaponArcData.attacker.pos}`);
-            if (tileEl) {
-                const rect = tileEl.getBoundingClientRect();
-                setAttackerPos({
-                    x: rect.left + rect.width / 2,
-                    y: rect.top + rect.height / 2
-                });
-                setRadius(rect.width * (weaponArcData.cardData.range + 0.8));
-            }
-        };
-        
-        updatePos();
-        // ▼ コンテナとラッパーの両方のスクロールを監視する
-        const container = document.getElementById('game-board-container');
-        const wrapper = document.getElementById('game-board-wrapper');
-        if (container) container.addEventListener('scroll', updatePos);
-        if (wrapper) wrapper.addEventListener('scroll', updatePos);
-        window.addEventListener('resize', updatePos);
-        
-        return () => {
-            if (container) container.removeEventListener('scroll', updatePos);
-            if (wrapper) wrapper.removeEventListener('scroll', updatePos);
-            window.removeEventListener('resize', updatePos);
-        };
-    }, [weaponArcData, angleDeg]);
+        const tileEl = document.getElementById(`tile-${weaponArcData.attacker.pos}`);
+        if (tileEl) {
+            setAttackerPos({
+                x: tileEl.offsetLeft + tileEl.offsetWidth / 2,
+                y: tileEl.offsetTop + tileEl.offsetHeight / 2
+            });
+            setRadius(tileEl.offsetWidth * (weaponArcData.cardData.range + 0.8));
+        }
+    }, [weaponArcData]);
 
     // パネルをドラッグして移動させる処理
     useEffect(() => {
@@ -49,44 +30,32 @@ export const WeaponArcOverlay = () => {
         if (!el || !weaponArcData) return;
 
         let ox = 0, oy = 0, startX = 0, startY = 0;
-        
         const onDown = (e) => {
             if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
-            
             startX = (e.touches ? e.touches[0].clientX : e.clientX);
             startY = (e.touches ? e.touches[0].clientY : e.clientY);
-            ox = el.offsetLeft; 
-            oy = el.offsetTop;
-            
+            ox = el.offsetLeft; oy = el.offsetTop;
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
             document.addEventListener('touchmove', onMove, { passive: false });
             document.addEventListener('touchend', onUp);
         };
-
         const onMove = (e) => {
             const cx = (e.touches ? e.touches[0].clientX : e.clientX);
             const cy = (e.touches ? e.touches[0].clientY : e.clientY);
             const nx = Math.max(0, Math.min(window.innerWidth  - el.offsetWidth,  ox + cx - startX));
             const ny = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, oy + cy - startY));
-            
-            el.style.left = nx + 'px'; 
-            el.style.top = ny + 'px';
-            el.style.bottom = 'auto'; 
-            el.style.transform = 'none';
+            el.style.left = nx + 'px'; el.style.top = ny + 'px'; el.style.bottom = 'auto'; el.style.transform = 'none';
             if (e.cancelable) e.preventDefault();
         };
-
         const onUp = () => {
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
             document.removeEventListener('touchmove', onMove);
             document.removeEventListener('touchend', onUp);
         };
-
         el.addEventListener('mousedown', onDown);
         el.addEventListener('touchstart', onDown, { passive: false });
-
         return () => {
             el.removeEventListener('mousedown', onDown);
             el.removeEventListener('touchstart', onDown);
@@ -143,7 +112,8 @@ export const WeaponArcOverlay = () => {
 
     return (
         <>
-            <svg width="100vw" height="100vh" style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none', zIndex: 1400 }}>
+            {/* ▼ 修正：SVGを position:absolute にしてマップと一緒にスクロールさせる */}
+            <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1400 }}>
                 {radius > 0 && (
                     <>
                         <path d={pathData} fill="url(#arcGradient)" stroke="rgba(255,80,50,0.95)" strokeWidth="2.5" />
@@ -158,9 +128,8 @@ export const WeaponArcOverlay = () => {
                         {hitTargets.map(target => {
                             const tEl = document.getElementById(`tile-${target.pos}`);
                             if (!tEl) return null;
-                            const tRect = tEl.getBoundingClientRect();
-                            const tx = tRect.left + tRect.width / 2;
-                            const ty = tRect.top + tRect.height / 2;
+                            const tx = tEl.offsetLeft + tEl.offsetWidth / 2;
+                            const ty = tEl.offsetTop + tEl.offsetHeight / 2;
                             return (
                                 <g key={target.id}>
                                     <circle cx={tx} cy={ty} r="22" fill="rgba(231,76,60,0.55)" stroke="#ff3300" strokeWidth="3" />

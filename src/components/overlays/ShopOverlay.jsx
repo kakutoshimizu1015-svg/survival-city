@@ -3,13 +3,12 @@ import { useGameStore } from '../../store/useGameStore';
 import { deckData } from '../../constants/cards';
 import { ClayButton } from '../common/ClayButton';
 import { playSfx } from '../../utils/audio';
-import { generateShopStock } from '../../game/shop'; // ▼ 追加
+import { generateShopStock } from '../../game/shop'; 
 
 export const ShopOverlay = () => {
     const { shopActive, shopStock, shopCart, players, turn, setGameState } = useGameStore();
     const cp = players[turn];
 
-    // ▼ 追加：ショップが開かれたときに在庫を生成/更新する
     useEffect(() => {
         if (shopActive) {
             generateShopStock();
@@ -23,8 +22,15 @@ export const ShopOverlay = () => {
     const slotsUsed = cp.hand.length + shopCart.length;
 
     const addToCart = (cardId, price) => {
-        if (slotsUsed >= cp.maxHand) return;
-        if (remainP < price) return;
+        // ▼ 修正：上限のときは中央警告を表示する
+        if (slotsUsed >= cp.maxHand) {
+            useGameStore.getState().showCenterWarning("手札が上限です！これ以上カートに追加できません");
+            return;
+        }
+        if (remainP < price) {
+            useGameStore.getState().showToast("ポイント不足です！");
+            return;
+        }
         setGameState({ shopCart: [...shopCart, { cardId, price }] });
     };
 
@@ -52,7 +58,8 @@ export const ShopOverlay = () => {
                         const price = (cd.type === 'weapon' ? Math.max(5, cd.dmg / 5) : cd.type === 'equip' ? 6 : 4) - (cp.charType === 'sales' ? 1 : 0);
                         const canAfford = remainP >= price && slotsUsed < cp.maxHand;
                         return (
-                            <ClayButton key={i} disabled={!canAfford} onClick={() => addToCart(cardId, price)} style={{ borderColor: cd.color, textAlign: 'left' }}>
+                            // ▼ 修正：クリック自体は常にできるようにし、エラーチェックを関数の内部で行うため disabled を外す
+                            <ClayButton key={i} onClick={() => addToCart(cardId, price)} style={{ borderColor: cd.color, textAlign: 'left', opacity: canAfford ? 1 : 0.5 }}>
                                 {cd.icon} {cd.name} (<span style={{ color: canAfford ? '#2ecc71' : '#e74c3c' }}>{price}P</span>)<br/>
                                 <span style={{ fontSize: '10px' }}>{cd.desc}</span>
                             </ClayButton>

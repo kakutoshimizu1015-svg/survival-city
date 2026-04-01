@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { charEmoji } from '../../constants/characters';
 import { getDistance } from '../../game/combat';
 import { executeMove } from '../../game/actions';
+import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay'; // ▼ 追加
 
 export const GameBoard = () => {
     const { 
@@ -48,14 +49,12 @@ export const GameBoard = () => {
     return (
         <div id="board-area" className="board-area">
             
-            {/* ▼ ターゲット選択バナー */}
             {npcMovePick && (
                 <div style={{ position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(241,196,15,0.95)', color: '#000', padding: '10px 20px', borderRadius: '8px', textAlign: 'center', fontWeight: 'bold', zIndex: 1000, border: '3px solid #fff', boxShadow: '0 4px 8px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
                     🎯 マップをタップして移動先を選択してください
                 </div>
             )}
 
-            {/* 左上：環境情報HUD & ズームコントロール */}
             <div id="map-env-hud" style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 55, display: 'flex', flexDirection: 'column', gap: '4px', pointerEvents: 'none' }}>
                 <div style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', fontWeight: 'bold', color: '#fdf5e6', lineHeight: 1.6, whiteSpace: 'nowrap' }}>
                     <span style={{ color: '#f1c40f' }}>R:{roundCount}/{maxRounds}</span>
@@ -72,18 +71,19 @@ export const GameBoard = () => {
                 </div>
             </div>
 
-            {/* 右上：残りAP表示 */}
             {cp && (
                 <div id="map-ap-hud" style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 50, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', border: `2px solid ${cp.ap > 0 ? 'rgba(255,220,50,0.5)' : 'rgba(200,80,80,0.5)'}`, borderRadius: '10px', padding: '6px 12px', color: cp.ap > 0 ? '#f1c40f' : '#e74c3c', fontWeight: 'bold', fontSize: '18px', textShadow: '0 0 8px currentColor', pointerEvents: 'none', transition: 'all 0.3s' }}>
                     ⚡ {cp.ap}
                 </div>
             )}
 
-            {/* マップ本体 (スクロール制御) */}
             <div id="game-board-container" className="game-board-container panel">
                 <div id="game-board-wrapper">
                     <div id="game-board-inner" style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 'max-content', transition: 'transform 0.2s ease-out' }}>
                         <div id="game-board">
+                            {/* ▼ 追加：SVGをマップ内部で描画するためにここに配置 */}
+                            <WeaponArcOverlay />
+
                             {mapData.map(tile => {
                                 const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
                                 const isFog = visibleTiles && !visibleTiles.has(tile.id);
@@ -118,10 +118,7 @@ export const GameBoard = () => {
                                             </div>
                                         ))}
                                         
-                                        {!isFog && tile.id === truckPos && (
-                                            <div className="truck-token">🚛</div>
-                                        )}
-
+                                        {!isFog && tile.id === truckPos && <div className="truck-token">🚛</div>}
                                         {!isFog && tile.id === policePos && <div className="npc-token npc-police">👮</div>}
                                         {!isFog && tile.id === unclePos && <div className="npc-token npc-uncle">🧓</div>}
                                         {!isFog && tile.id === animalPos && <div className="npc-token npc-animal">🐀</div>}

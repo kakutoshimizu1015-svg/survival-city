@@ -11,9 +11,12 @@ const initialState = {
     turnBanner: null, turnBannerActive: false, eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,
     npcMovePick: null, 
     
-    // ▼ 追加：バイト結果とログ同期用ステート
     jobResult: null,
     logs: [],
+
+    // ▼ 追加：警告トーストと画面中央の警告用ステート
+    toastMsg: null,
+    centerWarning: null,
 
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
     mapData: [], territories: {}, isRainy: false, weatherState: 'sunny', isNight: false,
@@ -41,10 +44,21 @@ export const useGameStore = create((set, get) => ({
     
     resetGame: () => set(initialState),
     applyNetworkAction: (action) => { console.log("Network action:", action); },
+    
     addEventPopup: (playerId, icon, title, detail = "", type = "neutral") => {
         const id = Date.now() + Math.random();
         set(state => ({ eventPopups: [...state.eventPopups.slice(-2), { id, playerId, icon, title, detail, type }] }));
         setTimeout(() => set(state => ({ eventPopups: state.eventPopups.filter(p => p.id !== id) })), 2800);
+    },
+
+    // ▼ 追加：トーストと中央警告の呼び出しアクション
+    showToast: (msg) => {
+        set({ toastMsg: msg });
+        setTimeout(() => set({ toastMsg: null }), 3000);
+    },
+    showCenterWarning: (msg) => {
+        set({ centerWarning: msg });
+        setTimeout(() => set({ centerWarning: null }), 4000);
     }
 }));
 
