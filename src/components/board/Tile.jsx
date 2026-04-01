@@ -27,8 +27,8 @@ export const Tile = ({
     const { setTooltipData, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos } = useGameStore();
 
     const handleMouseEnter = (e) => {
-        if (isClickable) return; // クリック待機中はツールチップを出さない
-
+        if (isClickable) return; // 分岐選択中などは邪魔になるためツールチップを無効化
+        
         const ttKey = tile.type in tileTooltipData ? tile.type : tile.area;
         const ttData = tileTooltipData[ttKey];
         if (ttData) {
