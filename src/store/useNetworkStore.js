@@ -9,7 +9,12 @@ import { processRoundEnd } from '../game/round';
 let isReceivingNetworkData = false;
 
 export const useNetworkStore = create((setStore, getStore) => ({
-    myUserId: Math.random().toString(36).substring(2, 10),
+    // ▼ 修正: ランダムなIDを削除し、初期値をnullに設定。認証後にセットされます。
+    myUserId: null,
+    
+    // ▼ 追加: 認証完了後にUIDをセットするための関数
+    setMyUserId: (uid) => setStore({ myUserId: uid }),
+
     isHost: false,
     roomId: null,
     peer: null,
