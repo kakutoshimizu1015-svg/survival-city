@@ -27,6 +27,8 @@ export const Tile = ({
     const { setTooltipData, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos } = useGameStore();
 
     const handleMouseEnter = (e) => {
+        if (isClickable) return; // クリック待機中はツールチップを出さない
+
         const ttKey = tile.type in tileTooltipData ? tile.type : tile.area;
         const ttData = tileTooltipData[ttKey];
         if (ttData) {
@@ -56,6 +58,7 @@ export const Tile = ({
     };
 
     const handleMouseMove = (e) => {
+        if (isClickable) return;
         if (useGameStore.getState().tooltipData) {
             const x = e.clientX || (e.touches && e.touches[0].clientX) || 0;
             const y = e.clientY || (e.touches && e.touches[0].clientY) || 0;

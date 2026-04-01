@@ -1,11 +1,11 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { getDistance, getPathPreviewTiles, getManholeLinkedTiles } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { BoardPaths } from './BoardPaths';
 import { Tile } from './Tile';
-import { TileTooltip } from '../overlays/TileTooltip'; // ツールチップの読み込み
+import { TileTooltip } from '../overlays/TileTooltip';
 
 export const GameBoard = () => {
     const { 
@@ -16,26 +16,37 @@ export const GameBoard = () => {
 
     const cp = players[turn];
     
-    // Zoom and Pan States
-    const [scale, setScale] = useState(1.0);
-    const [offset, setOffset] = useState({ x: 0, y: 0 });
+    // Zoom and Pan States (useRef for performance, manipulating DOM directly)
+    const scaleRef = useRef(1.0);
+    const offsetRef = useRef({ x: 0, y: 0 });
     const wrapperRef = useRef(null);
+    const innerRef = useRef(null); // Direct DOM manipulation target
     const isDragging = useRef(false);
     const dragStart = useRef({ x: 0, y: 0 });
     const offsetStart = useRef({ x: 0, y: 0 });
     const lastTouches = useRef(null);
+    const rafId = useRef(null);
+
+    const applyTransform = useCallback(() => {
+        if (innerRef.current) {
+            innerRef.current.style.transform = `translate(${offsetRef.current.x}px, ${offsetRef.current.y}px) scale(${scaleRef.current})`;
+        }
+    }, []);
 
     const zoomAt = useCallback((px, py, delta) => {
-        setScale(prevScale => {
-            const newScale = Math.min(3.0, Math.max(0.25, prevScale + delta));
-            const ratio = newScale / prevScale;
-            setOffset(prevOffset => ({
-                x: px - ratio * (px - prevOffset.x),
-                y: py - ratio * (py - prevOffset.y)
-            }));
-            return newScale;
-        });
-    }, []);
+        const prevScale = scaleRef.current;
+        const newScale = Math.min(3.0, Math.max(0.25, prevScale + delta));
+        const ratio = newScale / prevScale;
+        
+        offsetRef.current = {
+            x: px - ratio * (px - offsetRef.current.x),
+            y: py - ratio * (py - offsetRef.current.y)
+        };
+        scaleRef.current = newScale;
+
+        if (rafId.current) cancelAnimationFrame(rafId.current);
+        rafId.current = requestAnimationFrame(applyTransform);
+    }, [applyTransform]);
 
     const handleZoomBtn = (delta) => {
         if (!wrapperRef.current) return;
@@ -44,7 +55,7 @@ export const GameBoard = () => {
         zoomAt(cx, cy, delta);
     };
 
-    const resetZoom = () => {
+    const resetZoom = useCallback(() => {
         if (!wrapperRef.current) return;
         const board = document.getElementById('game-board');
         if (!board) return;
@@ -53,13 +64,17 @@ export const GameBoard = () => {
         const ww = wrapperRef.current.clientWidth;
         const wh = wrapperRef.current.clientHeight;
         if (bw === 0 || bh === 0) return;
+        
         const fitScale = Math.min(ww / bw, wh / bh, 1.0);
-        setScale(fitScale);
-        setOffset({
+        scaleRef.current = fitScale;
+        offsetRef.current = {
             x: (ww - bw * fitScale) / 2,
             y: (wh - bh * fitScale) / 2
-        });
-    };
+        };
+        
+        if (rafId.current) cancelAnimationFrame(rafId.current);
+        rafId.current = requestAnimationFrame(applyTransform);
+    }, [applyTransform]);
 
     useEffect(() => {
         resetZoom();
@@ -83,10 +98,7 @@ export const GameBoard = () => {
             if (e.button !== 0) return;
             isDragging.current = true;
             dragStart.current = { x: e.clientX, y: e.clientY };
-            setOffset(prev => {
-                offsetStart.current = prev;
-                return prev;
-            });
+            offsetStart.current = { ...offsetRef.current };
             wrapper.classList.add('dragging');
         };
 
@@ -94,13 +106,17 @@ export const GameBoard = () => {
             if (!isDragging.current) return;
             const dx = e.clientX - dragStart.current.x;
             const dy = e.clientY - dragStart.current.y;
-            setOffset({
+            
+            offsetRef.current = {
                 x: offsetStart.current.x + dx,
                 y: offsetStart.current.y + dy
-            });
+            };
+            
+            if (rafId.current) cancelAnimationFrame(rafId.current);
+            rafId.current = requestAnimationFrame(applyTransform);
         };
 
-        const handleMouseUp = (e) => {
+        const handleMouseUp = () => {
             if (!isDragging.current) return;
             isDragging.current = false;
             wrapper.classList.remove('dragging');
@@ -112,10 +128,18 @@ export const GameBoard = () => {
 
         const handleTouchMove = (e) => {
             if (!lastTouches.current) return;
+            
             if (e.touches.length === 1 && lastTouches.current.length === 1) {
                 const dx = e.touches[0].clientX - lastTouches.current[0].clientX;
                 const dy = e.touches[0].clientY - lastTouches.current[0].clientY;
-                setOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+                
+                offsetRef.current = {
+                    x: offsetRef.current.x + dx,
+                    y: offsetRef.current.y + dy
+                };
+                
+                if (rafId.current) cancelAnimationFrame(rafId.current);
+                rafId.current = requestAnimationFrame(applyTransform);
                 e.preventDefault();
             } else if (e.touches.length === 2 && lastTouches.current.length === 2) {
                 const prevDist = Math.hypot(
@@ -153,8 +177,9 @@ export const GameBoard = () => {
             wrapper.removeEventListener('touchstart', handleTouchStart);
             wrapper.removeEventListener('touchmove', handleTouchMove);
             wrapper.removeEventListener('touchend', handleTouchEnd);
+            if (rafId.current) cancelAnimationFrame(rafId.current);
         };
-    }, [zoomAt]);
+    }, [zoomAt, applyTransform]);
 
     const handleTileClick = (tileId) => {
         if (npcMovePick) {
@@ -199,10 +224,10 @@ export const GameBoard = () => {
     }, [players, gameOver, cp, mapData]);
 
     const zoomBtnStyle = {
-        width: '32px', height: '32px', borderRadius: '8px', border: '2px solid #8d6e63', 
-        background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '16px', fontWeight: 'bold', 
+        width: '24px', height: '24px', borderRadius: '6px', border: '2px solid #8d6e63', 
+        background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', 
         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-        boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s'
+        boxShadow: '1px 1px 3px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s'
     };
 
     let maxCol = 0, maxRow = 0;
@@ -227,7 +252,7 @@ export const GameBoard = () => {
                 </div>
             )}
 
-            <div id="map-env-hud" style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 55, display: 'flex', flexDirection: 'column', gap: '4px', pointerEvents: 'none' }}>
+            <div id="map-env-hud" style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 55, display: 'flex', flexDirection: 'column', gap: '8px', pointerEvents: 'none' }}>
                 <div style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', fontWeight: 'bold', color: '#fdf5e6', lineHeight: 1.6, whiteSpace: 'nowrap' }}>
                     <span id="hud-round" style={{ color: '#f1c40f' }}>R:{roundCount}/{maxRounds}</span>
                     <span id="hud-weather" style={{ marginLeft: '6px' }}>{isRainy ? '🌧️雨' : weatherState === 'cloudy' ? '☁️曇' : '☀️晴'}</span>
@@ -236,10 +261,10 @@ export const GameBoard = () => {
                     <span style={{ color: '#bdc3c7' }}>缶:<span id="hud-can-price">{canPrice}</span>P</span>
                     <span style={{ color: '#bdc3c7', marginLeft: '6px' }}>ゴミ:<span id="hud-trash-price">{trashPrice}</span>P</span>
                 </div>
-                <div id="zoom-controls" style={{ display: 'flex', gap: '4px', pointerEvents: 'auto' }}>
+                <div id="zoom-controls" style={{ display: 'flex', gap: '4px', pointerEvents: 'auto', alignSelf: 'flex-start', marginTop: '2px' }}>
                     <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(0.15)} title="ズームイン">＋</button>
                     <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(-0.15)} title="ズームアウト">－</button>
-                    <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={resetZoom} title="リセット">⟳</button>
+                    <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '10px' }} onClick={resetZoom} title="リセット">⟳</button>
                 </div>
             </div>
 
@@ -251,7 +276,7 @@ export const GameBoard = () => {
 
             <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px' }}>
                 <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none' }}>
-                    <div id="game-board-inner" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
+                    <div id="game-board-inner" ref={innerRef} style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
                             
                             <BoardPaths />
