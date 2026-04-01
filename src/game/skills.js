@@ -3,13 +3,11 @@ import { logMsg } from './actions';
 import { dealDamage } from './combat';
 import { getDistance } from '../utils/gameLogic';
 
-// 🏃 アスリート：疾風ダッシュ (3AP / 3マス先へ跳躍)
 export const actionDash = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 3) return;
     
-    // ▼ 修正: 現在地から3マス進んだ先の候補を取得して選択させる
     const reach = new Set();
     const dfs = (id, n) => {
         const t = state.mapData.find(x => x.id === id); 
@@ -36,7 +34,6 @@ export const actionDash = () => {
     }
 };
 
-// 👊 元ヤン：殴る (2AP / 同マス10ダメ)
 export const actionPunch = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
@@ -49,7 +46,6 @@ export const actionPunch = () => {
     logMsg(`👊 ${cp.name}が${target.name}を殴った！10ダメージ！`);
 };
 
-// ⛺ サバイバー：野宿 (2AP / HP15回復)
 export const actionCamp = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
@@ -60,7 +56,6 @@ export const actionCamp = () => {
     logMsg(`⛺ ${cp.name}が野宿した！HPが${healed}回復！`);
 };
 
-// 💼 営業マン：訪問販売 (2AP / 手札1枚を押し付け3P徴収)
 export const actionSalesVisit = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
@@ -76,17 +71,14 @@ export const actionSalesVisit = () => {
     logMsg(`📦 ${cp.name}が${target.name}にカードを押し付け、${fee}Pを徴収した！`);
 };
 
-// 💻 ハッカー：遠隔ハッキング (3AP / その場でショップを開く)
 export const actionHack = () => {
     const state = useGameStore.getState();
     if (state.players[state.turn].ap < 3) return;
     state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
-    // ▼ 修正: ショップの在庫を強制的にリセット（入れ替え）するために shopStockTurn を -1 にする
     useGameStore.setState({ shopStockTurn: -1, shopActive: true });
     logMsg(`💻 遠隔ハッキング！ショップネットワークに侵入した！`);
 };
 
-// 🎸 ミュージシャン：路上ライブ (4AP / 周囲2マスの全員を引き寄せる)
 export const actionConcert = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
@@ -113,7 +105,6 @@ export const actionConcert = () => {
     }
 };
 
-// 🩺 闇医者：闇診療 (2AP / 同マス相手をHP30回復させ5P徴収)
 export const actionDarkCure = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
@@ -129,7 +120,6 @@ export const actionDarkCure = () => {
     logMsg(`🩺 闇診療！${target.name}のHPを${healed}回復させ、治療費${fee}Pを徴収した！`);
 };
 
-// 🎲 ギャンブラー：イカサマ勝負 (2AP / ダイス対決で5P奪取)
 export const actionGamble = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
@@ -155,12 +145,10 @@ export const actionGamble = () => {
     }
 };
 
-// 🕵️ 探偵：情報操作 (3AP / マップ上のマスをタップして警察を移動させる)
 export const actionNpcMove = () => {
     const state = useGameStore.getState();
     if (state.players[state.turn].ap < 3) return;
     
-    // ▼ 修正: マップのクリック待ち状態（ターゲットを「警察」に固定）にする
     useGameStore.setState({ npcMovePick: 'policePos' });
     logMsg(`🕵️ 情報操作！警察を移動させます。マップ上のマスをタップしてください。`);
 };

@@ -14,17 +14,16 @@ const initialState = {
     jobResult: null,
     logs: [],
 
-    // ▼ 追加: 未実装UIのためのステート
-    charInfoModal: null,           // キャラ詳細モーダルで表示するプレイヤーID
-    roundSummary: null,            // ラウンド終了サマリーの配列
-    acquiredCard: null,            // カード獲得演出用のカードデータ
-    territorySelectOptions: null,  // 陣地選択UIの選択肢配列
-    showSkipButton: false,         // スキップボタンの表示・非表示
-    gameResult: null,              // 最終リザルト・ランキングデータ
+    charInfoModal: null,
+    roundSummary: null,
+    acquiredCard: null,
+    territorySelectOptions: null,
+    showSkipButton: false,
+    gameResult: null,
 
     toastMsg: null,
     centerWarning: null,
-    tooltipData: null, // 追加：ツールチップの状態管理
+    tooltipData: null,
 
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
     mapData: [], territories: {}, isRainy: false, weatherState: 'sunny', isNight: false,
@@ -68,7 +67,6 @@ export const useGameStore = create((set, get) => ({
         setTimeout(() => set({ centerWarning: null }), 4000);
     },
     
-    // 追加：ツールチップ更新アクション
     setTooltipData: (data) => set({ tooltipData: data })
 }));
 

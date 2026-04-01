@@ -194,7 +194,6 @@ export const GameEffectsOverlay = () => {
                 </div>
             )}
 
-            {/* ▼ 追加: リザルト（ランキング）画面 */}
             {gameResult && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 9998, background: 'radial-gradient(circle,#f1c40f,#e67e22,#c0392b)', flexDirection: 'column', alignItems: 'center', color: 'white', textAlign: 'center', animation: 'win-bg-anim 2s infinite alternate', cursor: 'pointer' }} onClick={() => { playSfx('click'); setConfirmEnd(true); }}>
                     <div style={{ fontSize: '80px', marginBottom: '20px' }}>🏆</div>
@@ -235,7 +234,6 @@ export const GameEffectsOverlay = () => {
                 </div>
             )}
 
-            {/* ▼ 追加: 終了確認モーダル */}
             {confirmEnd && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 10000 }}>
                      <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723' }} onClick={e => e.stopPropagation()}>

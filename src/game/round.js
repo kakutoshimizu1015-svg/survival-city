@@ -36,7 +36,6 @@ const endGame = () => {
         return { ...p, scaledP, terrValue, resourceValue, killBonus, deathPenalty, totalScore, emoji: charEmoji[p.charType] };
     }).sort((a, b) => b.totalScore - a.totalScore);
     
-    // チーム戦スコア合算
     let isTeamGame = false;
     let sortedTeams = null;
     const hasTeams = state.players.some(p => p.teamColor !== 'none');
@@ -55,7 +54,6 @@ const endGame = () => {
         logMsg(`🏆 優勝は ${results[0].name}！`);
     }
     
-    // ▼ 修正: gameResultステートにリザルト結果を格納してUIに渡す
     useGameStore.setState({ gameResult: { results, isTeamGame, sortedTeams } });
     playSfx('win');
 };
@@ -78,7 +76,6 @@ export const processRoundEnd = async () => {
     summaryDigest.push(isNight ? "🌙 夜になった" : "☀️ 昼になった");
     summaryDigest.push(`📈 相場変動: 缶${canPrice}P ゴミ${trashPrice}P`);
 
-    // 陣地維持費 (3ラウンド毎)
     if (newRound % 3 === 0) {
         const AREA_TAX = { slum: 0, commercial: 1, luxury: 2 };
         state.players.forEach(p => {

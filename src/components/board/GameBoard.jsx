@@ -6,6 +6,7 @@ import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { BoardPaths } from './BoardPaths';
 import { Tile } from './Tile';
 import { TileTooltip } from '../overlays/TileTooltip';
+import { playSfx } from '../../utils/audio';
 
 export const GameBoard = () => {
     const { 
@@ -16,7 +17,6 @@ export const GameBoard = () => {
 
     const cp = players[turn];
     
-    // Zoom and Pan States
     const scale = useRef(1.0);
     const offset = useRef({ x: 0, y: 0 });
     const wrapperRef = useRef(null);
@@ -27,7 +27,6 @@ export const GameBoard = () => {
     const isClickPrevented = useRef(false);
     const rafRef = useRef(null);
 
-    // GPUハードウェアアクセラレーションを有効にするため translate3d を使用
     const applyTransform = useCallback((smooth = false) => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
@@ -66,7 +65,7 @@ export const GameBoard = () => {
         const bh = board.scrollHeight;
         const ww = wrapperRef.current.clientWidth;
         const wh = wrapperRef.current.clientHeight;
-        if (bw === 0 || bh === 0) return;
+        if (bw === 0 || bh === 0 || ww === 0 || wh === 0) return;
         const fitScale = Math.min(ww / bw, wh / bh, 1.0);
         scale.current = fitScale;
         offset.current = {
@@ -77,11 +76,12 @@ export const GameBoard = () => {
     }, [applyTransform]);
 
     useEffect(() => {
-        resetZoom();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        const timer = setTimeout(() => {
+            resetZoom();
+        }, 100);
+        return () => clearTimeout(timer);
     }, [mapData, resetZoom]);
 
-    // TouchListから座標のみを抽出する関数（ブラウザの使い回しバグを回避）
     const getTouchCoords = (touches) => {
         return Array.from(touches).map(t => ({ clientX: t.clientX, clientY: t.clientY }));
     };
@@ -137,7 +137,6 @@ export const GameBoard = () => {
         };
 
         const handleTouchStart = (e) => {
-            // TouchListをクローンしてバグを防ぐ
             lastTouches.current = getTouchCoords(e.touches);
             wrapper.classList.add('dragging');
             const inner = document.getElementById('game-board-inner');
@@ -203,6 +202,7 @@ export const GameBoard = () => {
 
     const handleTileClick = (tileId) => {
         if (isClickPrevented.current) return;
+        playSfx('click');
 
         if (npcMovePick) {
             const state = useGameStore.getState();
@@ -265,8 +265,8 @@ export const GameBoard = () => {
             <TileTooltip />
 
             {npcMovePick && (
-                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }}>
-                    🕵️ 移動先マスをタップしてください
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { playSfx('click'); useGameStore.setState({ npcMovePick: null }); useGameStore.getState().showToast("情報操作をキャンセルしました"); }}>
+                    🕵️ 移動先マスをタップしてください（タップでキャンセル）
                 </div>
             )}
             {isBranchPicking && !npcMovePick && (
@@ -284,17 +284,10 @@ export const GameBoard = () => {
                     <span style={{ color: '#bdc3c7' }}>缶:<span id="hud-can-price">{canPrice}</span>P</span>
                     <span style={{ color: '#bdc3c7', marginLeft: '6px' }}>ゴミ:<span id="hud-trash-price">{trashPrice}</span>P</span>
                 </div>
-                <div id="zoom-controls" style={{ 
-    display: 'flex', 
-    flexDirection: 'row', /* 縦並びを強制的に横並び(row)に上書き */
-    position: 'static',   /* 絶対配置(absolute)を解除し、テキストの下に自然に配置させる */
-    gap: '6px', 
-    pointerEvents: 'auto', 
-    marginTop: '8px' 
-}}>
-                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(0.15)} title="ズームイン">＋</button>
-                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(-0.15)} title="ズームアウト">－</button>
-                    <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={resetZoom} title="リセット">⟳</button>
+                <div id="zoom-controls" style={{ display: 'flex', flexDirection: 'row', position: 'static', gap: '6px', pointerEvents: 'auto', marginTop: '8px' }}>
+                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => { playSfx('click'); handleZoomBtn(0.15); }} title="ズームイン">＋</button>
+                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => { playSfx('click'); handleZoomBtn(-0.15); }} title="ズームアウト">－</button>
+                    <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={() => { playSfx('click'); resetZoom(); }} title="リセット">⟳</button>
                 </div>
             </div>
 

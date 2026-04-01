@@ -225,7 +225,6 @@ export const SettingsAndRules = () => {
                     </div>
                 </div>
 
-                {/* ▼ 追加: スキップボタンの表示切り替え */}
                 <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
                     <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                         <input type="checkbox" checked={showSkipButton} onChange={(e) => { playSfx('click'); setGameState({ showSkipButton: e.target.checked }); }} style={{ marginRight: '10px', width: '18px', height: '18px' }} />

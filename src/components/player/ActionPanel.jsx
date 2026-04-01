@@ -7,6 +7,22 @@ import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOc
 import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove } from '../../game/skills';
 import { playSfx } from '../../utils/audio';
 
+const ActionBtn = ({ action, condition, failMsg, highlight, color, style, children, isMyTurn, isBusy }) => (
+    <ClayButton 
+        onClick={() => {
+            playSfx('click');
+            if (!isMyTurn || isBusy) return;
+            if (!condition) { useGameStore.getState().showToast(failMsg); return; }
+            action();
+        }}
+        highlight={highlight}
+        color={color}
+        style={{ ...style, opacity: condition ? 1 : 0.4, cursor: condition ? 'pointer' : 'not-allowed' }}
+    >
+        {children}
+    </ClayButton>
+);
+
 export const ActionPanel = () => {
     const state = useGameStore();
     const { turn, players, mapData, diceRolled, isBranchPicking, mgActive, storyActive, canPickedThisTurn, territories, animalPos, turnBannerActive, showSkipButton } = state;
@@ -47,17 +63,14 @@ export const ActionPanel = () => {
         let warningTimer;
 
         if (cp.ap === 0) {
-            // 現在使えるカード（武器以外は0AP）があるか？
             const canUseCard = cp.hand.some(cId => {
                 const cd = deckData.find(d => d.id === cId);
                 return cd && cd.type !== 'weapon'; 
             });
 
-            // 何もできない状態なら1.5秒後に自動ターンエンド
             if (!canUseCard && !canDoShop && !canDoExchange && !canDoOccupy) {
                 autoEndTimer = setTimeout(() => actionEndTurn(), 1500);
             } else {
-                // まだ押せるボタンがあるのに放置した場合、30秒後に警告
                 warningTimer = setTimeout(() => {
                     useGameStore.getState().showCenterWarning("ターンエンドしてください🛑");
                 }, 30000);
@@ -70,51 +83,34 @@ export const ActionPanel = () => {
         };
     }, [cp.ap, cp.hand.length, cp.maxHand, diceRolled, isBusy, isMyTurn, tileType, territories, cp.pos, cp.p, cp.cans, cp.trash, isHandOverLimit]);
 
-    // ボタンクリック時の汎用ハンドラー
-    const ActionBtn = ({ action, condition, failMsg, highlight, color, style, children }) => (
-        <ClayButton 
-            onClick={() => {
-                playSfx('click');
-                if (!isMyTurn || isBusy) return;
-                if (!condition) { useGameStore.getState().showToast(failMsg); return; }
-                action();
-            }}
-            highlight={highlight}
-            color={color}
-            style={{ ...style, opacity: condition ? 1 : 0.4, cursor: condition ? 'pointer' : 'not-allowed' }}
-        >
-            {children}
-        </ClayButton>
-    );
-
     return (
         <div id="action-panel" className="panel">
-            <div id="btn-roll"><ActionBtn action={actionRollDice} condition={canRoll} failMsg={diceRolled ? "すでにサイコロを振っています" : "今は振れません"} highlight={canRoll}>🎲 サイコロを振る</ActionBtn></div>
-            <div id="btn-move"><ActionBtn action={actionMove} condition={canMove} failMsg={cp.cannotMove ? "足止めされています！" : !diceRolled ? "サイコロを振ってください" : "APが不足しています"} highlight={canMove}>🚶 移動 (1AP)</ActionBtn></div>
-            <div id="btn-can"><ActionBtn action={actionCan} condition={canDoCan} failMsg={isBlockedByAnimal ? "野良犬がいて拾えません！" : canPickedThisTurn >= 3 ? "1ターンの拾う上限です" : "AP不足か場所が違います"}>🥫 缶拾い (1AP)</ActionBtn></div>
-            <div id="btn-trash"><ActionBtn action={actionTrash} condition={canDoTrash} failMsg={isBlockedByAnimal ? "野良犬がいて漁れません！" : "AP不足か場所が違います"}>🗑️ ゴミ漁り ({cp.equip?.shoes ? 1 : 2}AP)</ActionBtn></div>
-            <div id="btn-occupy"><ActionBtn action={actionOccupy} condition={canDoOccupy} failMsg={cp.p < 3 ? "Pが不足しています" : "このマスは陣地にできません"}>🚩 陣地占領 (3P〜)</ActionBtn></div>
-            <div id="btn-job"><ActionBtn action={actionJob} condition={canDoJob} failMsg="AP不足か場所が違います" style={{borderColor: '#2980b9'}}>💼 バイト (3AP)</ActionBtn></div>
+            <div id="btn-roll"><ActionBtn action={actionRollDice} condition={canRoll} failMsg={diceRolled ? "すでにサイコロを振っています" : "今は振れません"} highlight={canRoll} isMyTurn={isMyTurn} isBusy={isBusy}>🎲 サイコロを振る</ActionBtn></div>
+            <div id="btn-move"><ActionBtn action={actionMove} condition={canMove} failMsg={cp.cannotMove ? "足止めされています！" : !diceRolled ? "サイコロを振ってください" : "APが不足しています"} highlight={canMove} isMyTurn={isMyTurn} isBusy={isBusy}>🚶 移動 (1AP)</ActionBtn></div>
+            <div id="btn-can"><ActionBtn action={actionCan} condition={canDoCan} failMsg={isBlockedByAnimal ? "野良犬がいて拾えません！" : canPickedThisTurn >= 3 ? "1ターンの拾う上限です" : "AP不足か場所が違います"} isMyTurn={isMyTurn} isBusy={isBusy}>🥫 缶拾い (1AP)</ActionBtn></div>
+            <div id="btn-trash"><ActionBtn action={actionTrash} condition={canDoTrash} failMsg={isBlockedByAnimal ? "野良犬がいて漁れません！" : "AP不足か場所が違います"} isMyTurn={isMyTurn} isBusy={isBusy}>🗑️ ゴミ漁り ({cp.equip?.shoes ? 1 : 2}AP)</ActionBtn></div>
+            <div id="btn-occupy"><ActionBtn action={actionOccupy} condition={canDoOccupy} failMsg={cp.p < 3 ? "Pが不足しています" : "このマスは陣地にできません"} isMyTurn={isMyTurn} isBusy={isBusy}>🚩 陣地占領 (3P〜)</ActionBtn></div>
+            <div id="btn-job"><ActionBtn action={actionJob} condition={canDoJob} failMsg="AP不足か場所が違います" style={{borderColor: '#2980b9'}} isMyTurn={isMyTurn} isBusy={isBusy}>💼 バイト (3AP)</ActionBtn></div>
             
-            {tileType === 'exchange' && <ActionBtn action={actionExchange} condition={canDoExchange} failMsg="換金するものがありません" style={{borderColor: '#d4a017'}}>💱 換金 (0AP)</ActionBtn>}
-            {tileType === 'manhole' && <ActionBtn action={actionManhole} condition={isMyTurn && diceRolled && hasAP(1) && !isBusy} failMsg="AP不足です" style={{borderColor: '#2c3e50'}}>🕳️ ワープ (1AP)</ActionBtn>}
-            {tileType === 'shop' && <ActionBtn action={() => { playSfx('click'); useGameStore.setState({ shopActive: true }); }} condition={canDoShop} failMsg="今は開けません" style={{borderColor: '#8e44ad'}}>🛒 ショップ</ActionBtn>}
+            {tileType === 'exchange' && <ActionBtn action={actionExchange} condition={canDoExchange} failMsg="換金するものがありません" style={{borderColor: '#d4a017'}} isMyTurn={isMyTurn} isBusy={isBusy}>💱 換金 (0AP)</ActionBtn>}
+            {tileType === 'manhole' && <ActionBtn action={actionManhole} condition={isMyTurn && diceRolled && hasAP(1) && !isBusy} failMsg="AP不足です" style={{borderColor: '#2c3e50'}} isMyTurn={isMyTurn} isBusy={isBusy}>🕳️ ワープ (1AP)</ActionBtn>}
+            {tileType === 'shop' && <ActionBtn action={() => { playSfx('click'); useGameStore.setState({ shopActive: true }); }} condition={canDoShop} failMsg="今は開けません" style={{borderColor: '#8e44ad'}} isMyTurn={isMyTurn} isBusy={isBusy}>🛒 ショップ</ActionBtn>}
 
-            <div id="btn-dash">{cp.charType === 'athlete' && <ActionBtn action={actionDash} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" color="green">💨 疾風ダッシュ (3AP)</ActionBtn>}</div>
-            {cp.charType === 'yankee' && othersOnTile.length > 0 && <ActionBtn action={actionPunch} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="red">👊 殴る (2AP)</ActionBtn>}
-            {cp.charType === 'survivor' && <ActionBtn action={actionCamp} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="green">⛺ 野宿 (2AP)</ActionBtn>}
-            {cp.charType === 'sales' && othersOnTile.length > 0 && <ActionBtn action={actionSalesVisit} condition={hasAP(2) && cp.hand.length > 0 && isMyTurn && !isBusy} failMsg="AP不足か手札がありません" style={{borderColor:'#f39c12'}}>📦 訪問販売 (2AP)</ActionBtn>}
-            {cp.charType === 'hacker' && <ActionBtn action={actionHack} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" color="blue">💻 ハッキング (3AP)</ActionBtn>}
-            {cp.charType === 'musician' && <ActionBtn action={actionConcert} condition={hasAP(4) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#9b59b6'}}>🎸 路上ライブ (4AP)</ActionBtn>}
-            {cp.charType === 'doctor' && othersOnTile.length > 0 && <ActionBtn action={actionDarkCure} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="red">🩺 闇診療 (2AP)</ActionBtn>}
-            {cp.charType === 'gambler' && othersOnTile.length > 0 && <ActionBtn action={actionGamble} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#f1c40f'}}>🎲 イカサマ勝負 (2AP)</ActionBtn>}
-            {cp.charType === 'detective' && <ActionBtn action={actionNpcMove} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#95a5a6'}}>🕵️ 情報操作 (3AP)</ActionBtn>}
+            <div id="btn-dash">{cp.charType === 'athlete' && <ActionBtn action={actionDash} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" color="green" isMyTurn={isMyTurn} isBusy={isBusy}>💨 疾風ダッシュ (3AP)</ActionBtn>}</div>
+            {cp.charType === 'yankee' && othersOnTile.length > 0 && <ActionBtn action={actionPunch} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="red" isMyTurn={isMyTurn} isBusy={isBusy}>👊 殴る (2AP)</ActionBtn>}
+            {cp.charType === 'survivor' && <ActionBtn action={actionCamp} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="green" isMyTurn={isMyTurn} isBusy={isBusy}>⛺ 野宿 (2AP)</ActionBtn>}
+            {cp.charType === 'sales' && othersOnTile.length > 0 && <ActionBtn action={actionSalesVisit} condition={hasAP(2) && cp.hand.length > 0 && isMyTurn && !isBusy} failMsg="AP不足か手札がありません" style={{borderColor:'#f39c12'}} isMyTurn={isMyTurn} isBusy={isBusy}>📦 訪問販売 (2AP)</ActionBtn>}
+            {cp.charType === 'hacker' && <ActionBtn action={actionHack} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" color="blue" isMyTurn={isMyTurn} isBusy={isBusy}>💻 ハッキング (3AP)</ActionBtn>}
+            {cp.charType === 'musician' && <ActionBtn action={actionConcert} condition={hasAP(4) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#9b59b6'}} isMyTurn={isMyTurn} isBusy={isBusy}>🎸 路上ライブ (4AP)</ActionBtn>}
+            {cp.charType === 'doctor' && othersOnTile.length > 0 && <ActionBtn action={actionDarkCure} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="red" isMyTurn={isMyTurn} isBusy={isBusy}>🩺 闇診療 (2AP)</ActionBtn>}
+            {cp.charType === 'gambler' && othersOnTile.length > 0 && <ActionBtn action={actionGamble} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#f1c40f'}} isMyTurn={isMyTurn} isBusy={isBusy}>🎲 イカサマ勝負 (2AP)</ActionBtn>}
+            {cp.charType === 'detective' && <ActionBtn action={actionNpcMove} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#95a5a6'}} isMyTurn={isMyTurn} isBusy={isBusy}>🕵️ 情報操作 (3AP)</ActionBtn>}
 
             <div style={{ flexGrow: 1, minHeight: '5px' }}></div>
             
             <div style={{ display: 'flex', gap: '5px' }}>
                 <div id="btn-end" style={{ flex: 1 }}>
-                    <ActionBtn action={actionEndTurn} condition={canEndTurn} failMsg={isHandOverLimit ? "手札が上限です！カードを捨ててください" : "今は終了できません"} color="red" className={(canEndTurn && cp.ap === 0 && !isHandOverLimit) ? "btn-end-highlight" : ""}>🛑 ターン終了</ActionBtn>
+                    <ActionBtn action={actionEndTurn} condition={canEndTurn} failMsg={isHandOverLimit ? "手札が上限です！カードを捨ててください" : "今は終了できません"} color="red" className={(canEndTurn && cp.ap === 0 && !isHandOverLimit) ? "btn-end-highlight" : ""} isMyTurn={isMyTurn} isBusy={isBusy}>🛑 ターン終了</ActionBtn>
                 </div>
                 {isMyTurn && showSkipButton && (
                     <button onClick={() => { playSfx('click'); useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false, turnBannerActive: false }); actionEndTurn(); }} style={{ background: '#34495e', color: '#fff', border: 'none', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }} title="エラーで動けなくなった場合に強制的にターンを終了します">
