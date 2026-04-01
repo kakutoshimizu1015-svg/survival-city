@@ -1,28 +1,28 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { ClayButton } from '../common/ClayButton';
+import { playSfx } from '../../utils/audio';
 
 export const SettingsAndRules = () => {
-    const { settingsActive, rulesActive, layoutMode, volume, setGameState, resetGame } = useGameStore();
+    const { settingsActive, rulesActive, layoutMode, volume, showSkipButton, setGameState, resetGame } = useGameStore();
     const [confirmOpen, setConfirmOpen] = useState(false);
 
     if (!settingsActive && !rulesActive && !confirmOpen) return null;
 
     const handleReturnTitle = () => {
+        playSfx('click');
         resetGame();
         setConfirmOpen(false);
     };
 
-    // 遊び方・ルール画面
     if (rulesActive) {
         return (
-            <div className="modal-overlay" style={{ display: 'flex', zIndex: 25000 }} onClick={() => setGameState({ rulesActive: false })}>
+            <div className="modal-overlay" style={{ display: 'flex', zIndex: 25000 }} onClick={() => { playSfx('click'); setGameState({ rulesActive: false }); }}>
                 <div className="modal-box" style={{ maxWidth: '660px', width: '95%', background: '#fdf5e6', color: '#3e2723' }} onClick={(e) => e.stopPropagation()}>
                     <h2 style={{ marginTop: 0, textAlign: 'center', color: '#c0392b' }}>📖 遊び方・ルール</h2>
                     
                     <div style={{ textAlign: 'left', padding: '10px', maxHeight: '70vh', overflowY: 'auto', border: '2px solid #8d6e63', borderRadius: '8px', background: '#fff' }}>
                         
-                        {/* 目的 */}
                         <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(0,0,0,0.1)' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#c0392b', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🏆 ゲームの目的</h3>
                             <p style={{ fontSize: '14px', lineHeight: '1.5', margin: '5px 0', color: '#333' }}>
@@ -31,7 +31,6 @@ export const SettingsAndRules = () => {
                             </p>
                         </div>
 
-                        {/* ターンの流れ */}
                         <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(0,0,0,0.1)' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#c0392b', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🎮 ターンの流れ</h3>
                             <ul style={{ margin: '5px 0', paddingLeft: '20px', fontSize: '14px', lineHeight: '1.5', color: '#333' }}>
@@ -42,7 +41,6 @@ export const SettingsAndRules = () => {
                             </ul>
                         </div>
 
-                        {/* ステータス */}
                         <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(0,0,0,0.1)' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#c0392b', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>📊 ステータス</h3>
                             <ul style={{ margin: '5px 0', paddingLeft: '20px', fontSize: '14px', lineHeight: '1.5', color: '#333' }}>
@@ -53,7 +51,6 @@ export const SettingsAndRules = () => {
                             </ul>
                         </div>
 
-                        {/* キャラクター */}
                         <div style={{ background: '#f0fff4', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #2ecc71' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#27ae60', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🎭 キャラクター一覧（全9種）</h3>
                             <p style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>各キャラは <b>パッシブ（自動発動）</b> と <b>アクションスキル（AP消費）</b> を1つずつ持ちます。<br/>キャラアイコンをクリックすると詳細を確認できます。</p>
@@ -70,7 +67,6 @@ export const SettingsAndRules = () => {
                             </ul>
                         </div>
 
-                        {/* マスの種類 */}
                         <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(0,0,0,0.1)' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#c0392b', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🗺️ マスの種類と効果</h3>
                             <ul style={{ fontSize: '13px', lineHeight: '1.6', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
@@ -91,7 +87,6 @@ export const SettingsAndRules = () => {
                             </ul>
                         </div>
 
-                        {/* NPC */}
                         <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #e74c3c' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#e74c3c', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>⚠️ NPC（敵）と危険なイベント</h3>
                             <p style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>「身代わり人形」を装備していると1回だけ無効化可能。探偵の【情報操作】でNPCを移動させることもできます。</p>
@@ -106,7 +101,6 @@ export const SettingsAndRules = () => {
                             </ul>
                         </div>
 
-                        {/* 全カード */}
                         <div style={{ background: '#fffaf0', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #8e44ad' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#8e44ad', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🃏 全カード一覧と効果</h3>
                             <p style={{ fontSize: '12px', color: '#555', marginBottom: '10px' }}>カードはターン中に <b>2AP</b> で使用可能。手札上限は <b>7枚</b>（リュック+2、ハッカー+2）。ショップで購入またはイベントマスで獲得できます。</p>
@@ -175,7 +169,6 @@ export const SettingsAndRules = () => {
                             </ul>
                         </div>
 
-                        {/* 天候・昼夜 */}
                         <div style={{ background: '#f0f8ff', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #3498db' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#2980b9', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🌤️ 天候・昼夜・特殊イベント</h3>
                             <ul style={{ fontSize: '13px', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
@@ -189,13 +182,12 @@ export const SettingsAndRules = () => {
                         </div>
 
                     </div>
-                    <ClayButton onClick={() => setGameState({ rulesActive: false })} style={{ width: '100%', marginTop: '10px', background: '#95a5a6' }}>✖ 閉じる</ClayButton>
+                    <ClayButton onClick={() => { playSfx('click'); setGameState({ rulesActive: false }); }} style={{ width: '100%', marginTop: '10px', background: '#95a5a6' }}>✖ 閉じる</ClayButton>
                 </div>
             </div>
         );
     }
 
-    // タイトルに戻る確認モーダル
     if (confirmOpen) {
         return (
             <div className="modal-overlay" style={{ display: 'flex', zIndex: 30000 }}>
@@ -204,42 +196,49 @@ export const SettingsAndRules = () => {
                     <p style={{ fontWeight: 'bold' }}>現在のゲームは破棄されます。<br/>タイトルに戻りますか？</p>
                     <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                         <ClayButton onClick={handleReturnTitle} style={{ flex: 1, background: '#e74c3c' }}>はい</ClayButton>
-                        <ClayButton onClick={() => setConfirmOpen(false)} style={{ flex: 1, background: '#95a5a6' }}>いいえ</ClayButton>
+                        <ClayButton onClick={() => { playSfx('click'); setConfirmOpen(false); }} style={{ flex: 1, background: '#95a5a6' }}>いいえ</ClayButton>
                     </div>
                 </div>
             </div>
         );
     }
 
-    // 設定メニュー
     return (
-        <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={() => setGameState({ settingsActive: false })}>
+        <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={() => { playSfx('click'); setGameState({ settingsActive: false }); }}>
             <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723' }} onClick={(e) => e.stopPropagation()}>
                 <h2 style={{ marginTop: 0 }}>⚙️ メニュー</h2>
                 
                 <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
                     <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>🔊 音量: {Math.round(volume * 100)}%</label>
-                    <input type="range" min="0" max="2" step="0.1" value={volume} onChange={(e) => setGameState({ volume: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                    <input type="range" min="0" max="2" step="0.1" value={volume} onChange={(e) => { playSfx('click'); setGameState({ volume: parseFloat(e.target.value) }); }} style={{ width: '100%' }} />
                 </div>
                 
                 <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
                     <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>📱 レイアウト切替</div>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        <ClayButton onClick={() => setGameState({ layoutMode: 'auto' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#2ecc71', opacity: layoutMode === 'auto' ? 1 : 0.5 }}>🔄 自動</ClayButton>
-                        <ClayButton onClick={() => setGameState({ layoutMode: 'pc' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#3498db', opacity: layoutMode === 'pc' ? 1 : 0.5 }}>🖥️ PC</ClayButton>
-                        <ClayButton onClick={() => setGameState({ layoutMode: 'sp' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#8e44ad', opacity: layoutMode === 'sp' ? 1 : 0.5 }}>📱 スマホ</ClayButton>
+                        <ClayButton onClick={() => { playSfx('click'); setGameState({ layoutMode: 'auto' }); }} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#2ecc71', opacity: layoutMode === 'auto' ? 1 : 0.5 }}>🔄 自動</ClayButton>
+                        <ClayButton onClick={() => { playSfx('click'); setGameState({ layoutMode: 'pc' }); }} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#3498db', opacity: layoutMode === 'pc' ? 1 : 0.5 }}>🖥️ PC</ClayButton>
+                        <ClayButton onClick={() => { playSfx('click'); setGameState({ layoutMode: 'sp' }); }} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#8e44ad', opacity: layoutMode === 'sp' ? 1 : 0.5 }}>📱 スマホ</ClayButton>
                     </div>
                     <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '6px', textAlign: 'center' }}>
                         現在: {layoutMode === 'auto' ? '自動（画面幅で切替）' : layoutMode === 'pc' ? 'PCレイアウト固定' : 'スマホレイアウト固定'}
                     </div>
                 </div>
+
+                {/* ▼ 追加: スキップボタンの表示切り替え */}
+                <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                    <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={showSkipButton} onChange={(e) => { playSfx('click'); setGameState({ showSkipButton: e.target.checked }); }} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
+                        ⏭️ 強制スキップボタンを表示する（誤タップ注意）
+                    </label>
+                </div>
                 
-                <ClayButton onClick={() => setGameState({ rulesActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#3498db' }}>📖 遊び方・ルールを見る</ClayButton>
-                <ClayButton onClick={() => setGameState({ tutorialActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#8e44ad', color: '#f1c40f' }}>📚 チュートリアル</ClayButton>
+                <ClayButton onClick={() => { playSfx('click'); setGameState({ rulesActive: true, settingsActive: false }); }} style={{ width: '100%', marginBottom: '10px', background: '#3498db' }}>📖 遊び方・ルールを見る</ClayButton>
+                <ClayButton onClick={() => { playSfx('click'); setGameState({ tutorialActive: true, settingsActive: false }); }} style={{ width: '100%', marginBottom: '10px', background: '#8e44ad', color: '#f1c40f' }}>📚 チュートリアル</ClayButton>
                 
-                <ClayButton onClick={() => setConfirmOpen(true)} style={{ width: '100%', marginBottom: '15px', background: '#e74c3c' }}>🏠 タイトルに戻る</ClayButton>
+                <ClayButton onClick={() => { playSfx('click'); setConfirmOpen(true); }} style={{ width: '100%', marginBottom: '15px', background: '#e74c3c' }}>🏠 タイトルに戻る</ClayButton>
                 
-                <ClayButton onClick={() => setGameState({ settingsActive: false })} style={{ width: '100%', background: '#95a5a6' }}>✖ 閉じる</ClayButton>
+                <ClayButton onClick={() => { playSfx('click'); setGameState({ settingsActive: false }); }} style={{ width: '100%', background: '#95a5a6' }}>✖ 閉じる</ClayButton>
             </div>
         </div>
     );

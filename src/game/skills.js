@@ -6,15 +6,34 @@ import { getDistance } from '../utils/gameLogic';
 // 🏃 アスリート：疾風ダッシュ (3AP / 3マス先へ跳躍)
 export const actionDash = () => {
     const state = useGameStore.getState();
-    if (state.players[state.turn].ap < 3) return;
-    
-    // ※今回は簡易的に「現在地から3マス進んだ先の候補」を取得せず、ランダムな隣接マスのさらに先へ飛ぶ簡易実装にしています
     const cp = state.players[state.turn];
-    const currentTile = state.mapData.find(t => t.id === cp.pos);
-    const nextTileId = currentTile.next[0]; // 1つ先のマス
+    if (cp.ap < 3) return;
     
-    state.updateCurrentPlayer(p => ({ ap: p.ap - 3, pos: nextTileId }));
-    logMsg(`💨 疾風ダッシュ！3マス先へ跳躍！（※現在は簡易ジャンプ）`);
+    // ▼ 修正: 現在地から3マス進んだ先の候補を取得して選択させる
+    const reach = new Set();
+    const dfs = (id, n) => {
+        const t = state.mapData.find(x => x.id === id); 
+        if (!t) return;
+        t.next.filter(nx => nx !== state.constructionPos).forEach(nx => {
+            if (n === 1) reach.add(nx); else dfs(nx, n - 1);
+        });
+    };
+    dfs(cp.pos, 3);
+    const targets = [...reach];
+    
+    if (targets.length === 0) {
+        useGameStore.getState().showToast("3マス先に進める場所がありません");
+        return;
+    }
+    
+    state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
+    if (targets.length === 1) {
+        state.updateCurrentPlayer(p => ({ pos: targets[0] }));
+        logMsg(`💨 疾風ダッシュ！3マス先へ跳躍！`);
+    } else {
+        useGameStore.setState({ isBranchPicking: true, currentBranchOptions: targets });
+        logMsg(`💨 疾風ダッシュ！着地点を選んでください`);
+    }
 };
 
 // 👊 元ヤン：殴る (2AP / 同マス10ダメ)
@@ -62,7 +81,8 @@ export const actionHack = () => {
     const state = useGameStore.getState();
     if (state.players[state.turn].ap < 3) return;
     state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
-    useGameStore.setState({ shopActive: true });
+    // ▼ 修正: ショップの在庫を強制的にリセット（入れ替え）するために shopStockTurn を -1 にする
+    useGameStore.setState({ shopStockTurn: -1, shopActive: true });
     logMsg(`💻 遠隔ハッキング！ショップネットワークに侵入した！`);
 };
 
@@ -135,10 +155,12 @@ export const actionGamble = () => {
     }
 };
 
-// 🕵️ 探偵：情報操作 (3AP / ※今回は未実装・ログのみ)
+// 🕵️ 探偵：情報操作 (3AP / マップ上のマスをタップして警察を移動させる)
 export const actionNpcMove = () => {
     const state = useGameStore.getState();
     if (state.players[state.turn].ap < 3) return;
-    state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
-    logMsg(`🕵️ 情報操作！NPCの配置を操作した！（※UI未実装）`);
+    
+    // ▼ 修正: マップのクリック待ち状態（ターゲットを「警察」に固定）にする
+    useGameStore.setState({ npcMovePick: 'policePos' });
+    logMsg(`🕵️ 情報操作！警察を移動させます。マップ上のマスをタップしてください。`);
 };

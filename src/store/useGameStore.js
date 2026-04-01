@@ -19,6 +19,8 @@ const initialState = {
     roundSummary: null,            // ラウンド終了サマリーの配列
     acquiredCard: null,            // カード獲得演出用のカードデータ
     territorySelectOptions: null,  // 陣地選択UIの選択肢配列
+    showSkipButton: false,         // スキップボタンの表示・非表示
+    gameResult: null,              // 最終リザルト・ランキングデータ
 
     toastMsg: null,
     centerWarning: null,

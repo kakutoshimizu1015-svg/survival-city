@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
@@ -11,15 +11,14 @@ export const GameEffectsOverlay = () => {
     const { myUserId, status } = useNetworkStore();
     const cp = players[turn];
     
-    // ▼ 追加: ストアからステートを取得
-    const { charInfoModal, roundSummary, acquiredCard, territorySelectOptions, mapData, territories } = useGameStore();
+    const { charInfoModal, roundSummary, acquiredCard, territorySelectOptions, mapData, territories, gameResult } = useGameStore();
 
-    // キャラ詳細モーダル用のデータ準備
+    const [confirmEnd, setConfirmEnd] = useState(false);
+
     const targetPlayer = charInfoModal !== null ? players.find(p => p.id === charInfoModal) : null;
     const detail = targetPlayer ? charDetailData[targetPlayer.charType] : null;
     const cInfo = targetPlayer ? charInfo[targetPlayer.charType] : null;
 
-    // 自分のターンかどうかの判定（カード捨てプロンプト用）
     const isMyTurn = status === 'connected' ? (cp?.userId === myUserId) : !cp?.isCPU;
     const isHandOverLimit = cp && cp.hand.length > cp.maxHand;
 
@@ -33,23 +32,21 @@ export const GameEffectsOverlay = () => {
                 @keyframes blood-splash { 0%{transform:scale(0.1); opacity:0;} 50%{transform:scale(1.5); opacity:1;} 100%{transform:scale(1); opacity:0.8;} }
                 @keyframes slide-down { 0%{transform:translate(-50%, -20px); opacity:0;} 100%{transform:translate(-50%, 0); opacity:1;} }
                 @keyframes pop-in { 0%{transform:translate(-50%, -50%) scale(0.8); opacity:0;} 100%{transform:translate(-50%, -50%) scale(1); opacity:1;} }
+                @keyframes win-bg-anim { 0%{filter:hue-rotate(0deg);} 100%{filter:hue-rotate(360deg);} }
             `}</style>
 
-            {/* ▼ 修正：トーストメッセージ（AP不足など） */}
             {toastMsg && (
                 <div style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(231,76,60,0.95)', color: 'white', padding: '15px 30px', borderRadius: '10px', zIndex: 10010, fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', fontSize: '16px', border: '2px solid #fff', animation: 'slide-down 0.3s forwards' }}>
                     ⚠️ {toastMsg}
                 </div>
             )}
 
-            {/* ▼ 修正：画面中央の警告メッセージ（ショップ満杯、30秒放置など） */}
             {centerWarning && (
                 <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(241,196,15,0.95)', color: '#c0392b', padding: '20px 40px', borderRadius: '15px', zIndex: 10005, fontWeight: 'bold', boxShadow: '0 0 40px rgba(241,196,15,0.8)', fontSize: '24px', border: '4px dashed #c0392b', animation: 'pop-in 0.3s forwards', textAlign: 'center', whiteSpace: 'nowrap' }}>
                     {centerWarning}
                 </div>
             )}
 
-            {/* ▼ 修正：手札上限オーバー時のカード捨てプロンプト */}
             {isHandOverLimit && isMyTurn && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 9999 }}>
                     <div className="modal-box" style={{ border: '4px solid #e74c3c' }}>
@@ -61,11 +58,11 @@ export const GameEffectsOverlay = () => {
                                 if (!cd) return null;
                                 return (
                                     <button key={idx} onClick={() => {
+                                        playSfx('click');
                                         useGameStore.getState().updateCurrentPlayer(p => {
                                             const h = [...p.hand]; h.splice(idx, 1); return { hand: h };
                                         });
                                         logMsg(`🗑️ 手札整理：「${cd.name}」を捨てた。`);
-                                        playSfx('coin');
                                     }} style={{ padding: '8px 12px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer', border: `2px solid ${cd.color}`, background: '#fff', fontWeight: 'bold', boxShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
                                         {cd.icon} {cd.name} を捨てる
                                     </button>
@@ -76,7 +73,6 @@ export const GameEffectsOverlay = () => {
                 </div>
             )}
 
-            {/* ターンバナー */}
             {turnBanner && (
                 <div style={{ position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(0,0,0,0.6)', zIndex:300, display:'flex', justifyContent:'center', alignItems:'center', pointerEvents:'none', animation:'banner-anim 1.5s forwards' }}>
                     <div style={{ fontSize:'50px', fontWeight:'bold', padding:'20px 50px', color:'#fff', background:'rgba(44,62,80,0.95)', borderRadius:'20px', border:`8px solid ${turnBanner.color}`, textAlign:'center', textShadow:`0 0 20px ${turnBanner.color}, 2px 2px 4px rgba(0,0,0,0.8)` }}>
@@ -85,7 +81,6 @@ export const GameEffectsOverlay = () => {
                 </div>
             )}
 
-            {/* イベントポップアップ */}
             <div style={{ position:'fixed', bottom:'18%', left:'50%', transform:'translateX(-50%)', zIndex:9500, pointerEvents:'none', display:'flex', flexDirection:'column', alignItems:'center', gap:'5px' }}>
                 {eventPopups.map(p => {
                     const player = players.find(pl => pl.id === p.playerId);
@@ -103,7 +98,6 @@ export const GameEffectsOverlay = () => {
                 })}
             </div>
 
-            {/* 災害予兆 */}
             {disasterWarning && (
                 <div style={{ position:'fixed', top:0, left:0, width:'100%', height:'100%', zIndex:9999, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', pointerEvents:'none', animation:'warningBg 3.5s forwards' }}>
                     <div style={{ textAlign:'center', padding:'30px 40px', border:'3px solid #e74c3c', borderRadius:'16px', background:'rgba(20,0,0,0.92)', animation:'warningPulse 0.4s ease-in-out infinite alternate' }}>
@@ -114,7 +108,6 @@ export const GameEffectsOverlay = () => {
                 </div>
             )}
 
-            {/* 血しぶき */}
             {bloodAnim && (
                 <div style={{ position:'fixed', top:0, left:0, width:'100%', height:'100%', zIndex:9000, pointerEvents:'none', display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', backgroundColor:'rgba(150,0,0,0.4)' }}>
                     <div style={{ fontSize:'120px', animation:'blood-splash 0.5s forwards' }}>🩸</div>
@@ -122,9 +115,8 @@ export const GameEffectsOverlay = () => {
                 </div>
             )}
 
-            {/* ▼ 追加: キャラ詳細モーダル */}
             {targetPlayer && detail && cInfo && (
-                <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={(e) => { if(e.target === e.currentTarget) useGameStore.setState({ charInfoModal: null }); }}>
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={(e) => { if(e.target === e.currentTarget) { playSfx('click'); useGameStore.setState({ charInfoModal: null }); } }}>
                     <div className="modal-box" style={{ maxWidth: '420px', background: '#1a1a2e', color: '#fdf5e6', border: `3px solid ${targetPlayer.color}`, padding: 0, overflow: 'hidden' }}>
                         <div style={{ padding: '18px 20px 14px', display: 'flex', alignItems: 'center', gap: '12px', background: `linear-gradient(135deg,${targetPlayer.color}22 0%,rgba(26,26,46,0.95) 100%)`, borderBottom: `2px solid ${targetPlayer.color}44` }}>
                             <div style={{ fontSize: '52px', lineHeight: 1 }}>{charEmoji[targetPlayer.charType]}</div>
@@ -132,7 +124,7 @@ export const GameEffectsOverlay = () => {
                                 <div style={{ fontSize: '19px', fontWeight: 900, color: '#f1c40f' }}>{cInfo.name}</div>
                                 <div style={{ fontSize: '12px', color: '#bdc3c7', marginTop: '3px', fontStyle: 'italic' }}>{detail.tagline}</div>
                             </div>
-                            <button onClick={() => useGameStore.setState({ charInfoModal: null })} style={{ background: 'none', border: 'none', color: '#bdc3c7', fontSize: '22px', cursor: 'pointer' }}>✕</button>
+                            <button onClick={() => { playSfx('click'); useGameStore.setState({ charInfoModal: null }); }} style={{ background: 'none', border: 'none', color: '#bdc3c7', fontSize: '22px', cursor: 'pointer' }}>✕</button>
                         </div>
                         <div style={{ padding: '14px 18px' }}>
                             <div style={{ background: 'rgba(46,204,113,0.12)', border: '2px solid #2ecc71', borderRadius: '10px', padding: '11px 13px', marginBottom: '9px', textAlign: 'left' }}>
@@ -150,7 +142,6 @@ export const GameEffectsOverlay = () => {
                 </div>
             )}
 
-            {/* ▼ 追加: ラウンドサマリー */}
             {roundSummary && (
                 <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(92,74,68,0.98)', border: '6px solid #f1c40f', borderRadius: '15px', padding: '25px 40px', zIndex: 280, display: 'flex', flexDirection: 'column', color: '#fdf5e6', boxShadow: '0 0 40px rgba(0,0,0,0.8)', minWidth: '350px' }}>
                     <h2 style={{ margin: '0 0 15px 0', color: '#f1c40f', textAlign: 'center', borderBottom: '2px dashed #f1c40f', paddingBottom: '10px' }}>🌙 ラウンド終了レポート</h2>
@@ -164,7 +155,6 @@ export const GameEffectsOverlay = () => {
                 </div>
             )}
 
-            {/* ▼ 追加: カード獲得演出 */}
             {acquiredCard && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 5000, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
                     <div style={{ background: '#5c4a44', border: '8px solid #f1c40f', borderRadius: '20px', padding: '40px', color: '#fff', boxShadow: '0 0 50px rgba(241,196,15,0.8)', animation: 'card-get-anim 2.5s forwards' }}>
@@ -177,7 +167,6 @@ export const GameEffectsOverlay = () => {
                 </div>
             )}
 
-            {/* ▼ 追加: 陣地選択UI */}
             {territorySelectOptions && territorySelectOptions.length > 0 && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 10002 }}>
                     <div className="modal-box" style={{ maxWidth: '500px' }}>
@@ -189,6 +178,7 @@ export const GameEffectsOverlay = () => {
                                 const owner = players.find(p => p.id == ownerId);
                                 return (
                                     <button key={tId} onClick={() => {
+                                        playSfx('click');
                                         useGameStore.setState(s => ({ territories: { ...s.territories, [tId]: cp.id }, territorySelectOptions: null }));
                                         logMsg(`🚩 マス${tId}「${tile?.name}」を奪取！（${owner?.name}から）`);
                                         useGameStore.getState().addEventPopup(cp.id, "🚩", "陣地奪取！", `${tile?.name}を乗っ取った`, "good");
@@ -199,8 +189,63 @@ export const GameEffectsOverlay = () => {
                                 );
                             })}
                         </div>
-                        <button className="btn-large" style={{ width: '100%', marginTop: '15px', background: '#7f8c8d', borderColor: '#2c3e50' }} onClick={() => useGameStore.setState({ territorySelectOptions: null })}>キャンセル</button>
+                        <button className="btn-large" style={{ width: '100%', marginTop: '15px', background: '#7f8c8d', borderColor: '#2c3e50' }} onClick={() => { playSfx('click'); useGameStore.setState({ territorySelectOptions: null }); }}>キャンセル</button>
                     </div>
+                </div>
+            )}
+
+            {/* ▼ 追加: リザルト（ランキング）画面 */}
+            {gameResult && (
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 9998, background: 'radial-gradient(circle,#f1c40f,#e67e22,#c0392b)', flexDirection: 'column', alignItems: 'center', color: 'white', textAlign: 'center', animation: 'win-bg-anim 2s infinite alternate', cursor: 'pointer' }} onClick={() => { playSfx('click'); setConfirmEnd(true); }}>
+                    <div style={{ fontSize: '80px', marginBottom: '20px' }}>🏆</div>
+                    <h1 style={{ fontSize: '36px', textShadow: '2px 2px 10px #000', margin: 0 }}>
+                        {gameResult.isTeamGame 
+                            ? (gameResult.sortedTeams[0].color !== 'none' ? `${gameResult.sortedTeams[0].color}チーム 優勝！` : `${gameResult.sortedTeams[0].members[0].emoji} ${gameResult.sortedTeams[0].members[0].name} 優勝！`)
+                            : `${gameResult.results[0].emoji} ${gameResult.results[0].name} 優勝！`}
+                    </h1>
+                    <div style={{ fontSize: '18px', marginTop: '20px', textAlign: 'left', background: 'rgba(0,0,0,0.3)', padding: '20px', borderRadius: '15px', maxHeight: '50vh', overflowY: 'auto' }}>
+                        {gameResult.isTeamGame ? (
+                            <>
+                                <div style={{ marginBottom:'12px', fontSize:'14px', color:'#f1c40f', borderBottom:'1px dashed #f1c40f', paddingBottom:'6px' }}>🏆 チーム順位</div>
+                                {gameResult.sortedTeams.map((team, i) => (
+                                    <div key={i}>
+                                        <div style={{ margin:'8px 0', fontSize: i===0?20:15 }}>
+                                            {i===0?'🥇':i===1?'🥈':i===2?'🥉':'4️⃣'} {team.color !== 'none' ? `${team.color}チーム` : `${team.members[0].emoji}${team.members[0].name}(ソロ)`}: <b>{team.total}pt</b>
+                                        </div>
+                                        {team.members.map(r => (
+                                            <div key={r.id} style={{ margin:'2px 0 2px 20px', fontSize:'12px', color:'#bdc3c7' }}>
+                                                {r.emoji}{r.name}: {r.totalScore}pt (💰{r.scaledP} 🚩{r.terrValue} ⚔️{r.killBonus} 💀-{r.deathPenalty})
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))}
+                            </>
+                        ) : (
+                            gameResult.results.map((r, i) => (
+                                <div key={i} style={{ margin:'8px 0', fontSize: i===0?22:16 }}>
+                                    {i===0?'🥇':i===1?'🥈':i===2?'🥉':'4️⃣'} <span style={{ color: r.color }}>{r.emoji}{r.name}</span>: <b>{r.totalScore}pt</b><br/>
+                                    <span style={{ fontSize:'11px', color:'#bdc3c7' }}>
+                                        (💰P×2=<b style={{ color:'#f1c40f' }}>{r.scaledP}</b> 🚩{r.terrValue} 資源{r.resourceValue} ⚔️{r.kills}K<span style={{ color:'#2ecc71' }}>+{r.killBonus}</span> 💀{r.deaths}D<span style={{ color:'#e74c3c' }}>-{r.deathPenalty}</span>)
+                                    </span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                    <p style={{ fontSize: '16px', marginTop: '20px' }}>(画面タップで終了確認)</p>
+                </div>
+            )}
+
+            {/* ▼ 追加: 終了確認モーダル */}
+            {confirmEnd && (
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 10000 }}>
+                     <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723' }} onClick={e => e.stopPropagation()}>
+                         <h3 style={{ color: '#e74c3c', marginTop: 0 }}>⚠️ ゲーム終了確認</h3>
+                         <p style={{ fontWeight: 'bold' }}>本当にゲームを終えてタイトルに戻りますか？</p>
+                         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                             <button className="btn-clay" onClick={() => { playSfx('click'); setConfirmEnd(false); useGameStore.getState().resetGame(); }} style={{ flex: 1, background: '#e74c3c', color: '#fff', border: '2px solid #c0392b', padding: '10px' }}>はい</button>
+                             <button className="btn-clay" onClick={() => { playSfx('click'); setConfirmEnd(false); }} style={{ flex: 1, background: '#95a5a6', color: '#fff', border: '2px solid #7f8c8d', padding: '10px' }}>いいえ</button>
+                         </div>
+                     </div>
                 </div>
             )}
         </>

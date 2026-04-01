@@ -34,6 +34,7 @@ export const playSfx = (type) => {
         else if (type === 'death') { o.type = 'sawtooth'; o.frequency.value = 300; baseGain = 0.15; o.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.8); g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8); o.start(); o.stop(audioCtx.currentTime + 0.8); }
         else if (type === 'win') { o.type = 'sine'; o.frequency.value = 523; baseGain = 0.15; g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5); o.start(); o.stop(audioCtx.currentTime + 0.5); }
         else if (type === 'card') { o.type = 'triangle'; o.frequency.value = 1047; baseGain = 0.1; g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2); o.start(); o.stop(audioCtx.currentTime + 0.2); }
+        else if (type === 'click') { o.type = 'sine'; o.frequency.value = 800; baseGain = 0.05; g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05); o.start(); o.stop(audioCtx.currentTime + 0.05); }
         
         g.gain.value = baseGain * volume;
     } catch(e) { console.error("SFX Error", e); }

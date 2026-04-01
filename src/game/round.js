@@ -30,13 +30,18 @@ const endGame = () => {
         });
         let resourceValue = p.cans * state.canPrice + p.trash * state.trashPrice;
         let scaledP = Math.round(p.p * 2.0);
-        let totalScore = scaledP + terrValue + resourceValue + (p.kills || 0) * 3 - (p.deaths || 0) * 5;
-        return { ...p, scaledP, terrValue, totalScore, emoji: charEmoji[p.charType] };
+        let killBonus = (p.kills || 0) * 3;
+        let deathPenalty = (p.deaths || 0) * 5;
+        let totalScore = scaledP + terrValue + resourceValue + killBonus - deathPenalty;
+        return { ...p, scaledP, terrValue, resourceValue, killBonus, deathPenalty, totalScore, emoji: charEmoji[p.charType] };
     }).sort((a, b) => b.totalScore - a.totalScore);
     
     // チーム戦スコア合算
+    let isTeamGame = false;
+    let sortedTeams = null;
     const hasTeams = state.players.some(p => p.teamColor !== 'none');
     if (hasTeams) {
+        isTeamGame = true;
         const teamScores = {};
         results.forEach(r => {
             const tk = r.teamColor !== 'none' ? r.teamColor : `_solo_${r.id}`;
@@ -44,11 +49,14 @@ const endGame = () => {
             teamScores[tk].total += r.totalScore;
             teamScores[tk].members.push(r);
         });
-        const sortedTeams = Object.values(teamScores).sort((a, b) => b.total - a.total);
+        sortedTeams = Object.values(teamScores).sort((a, b) => b.total - a.total);
         logMsg(`🏆 優勝は ${sortedTeams[0].color !== 'none' ? sortedTeams[0].color+'チーム' : sortedTeams[0].members[0].name}！`);
     } else {
         logMsg(`🏆 優勝は ${results[0].name}！`);
     }
+    
+    // ▼ 修正: gameResultステートにリザルト結果を格納してUIに渡す
+    useGameStore.setState({ gameResult: { results, isTeamGame, sortedTeams } });
     playSfx('win');
 };
 
@@ -102,7 +110,6 @@ export const processRoundEnd = async () => {
     let loansharkPos = md[Math.floor(Math.random() * md.length)].id;
     let friendPos = md[Math.floor(Math.random() * md.length)].id;
 
-    // ▼ ごみ収集車 ホラー演出＆1マスずつの移動アニメーション
     logMsg(`<span style="color:#c0392b">🛻 ごみ収集車が暴走！</span>`);
     useGameStore.setState({ horrorMode: true }); 
     playSfx('hit'); 
@@ -112,42 +119,37 @@ export const processRoundEnd = async () => {
     let truckMove = getDestRandom(state.truckPos, truckRoll, md);
     
     const hitPlayers = [];
-    // ▼ 収集車のスタート地点にいるプレイヤーも巻き込むようにパスを統合
     const allTruckPath = [state.truckPos, ...truckMove.hitList];
 
     for (let stepId of allTruckPath) {
         useGameStore.setState({ truckPos: stepId });
         
         useGameStore.getState().players.forEach(p => {
-            // CPU(NPC)を含め、このマスにいる全プレイヤーを判定
             if (p.hp > 0 && p.pos === stepId && !hitPlayers.includes(p.id)) {
-                hitPlayers.push(p.id); // 一度判定した人はリストに入れて重複ヒットを防ぐ
+                hitPlayers.push(p.id);
 
                 if (p.equip?.doll) {
                     useGameStore.getState().updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll:false} }));
                     logMsg(`🎎 身代わり人形が${p.name}を守った！`);
                     useGameStore.getState().addEventPopup(p.id, "🎎", "回避", "身代わり人形が守った", "good");
                 } else if (Math.random() < 0.55) {
-                    // ▼ 血しぶき・ダメージ演出
                     useGameStore.setState({ bloodAnim: p.name });
-                    setTimeout(() => useGameStore.setState({ bloodAnim: null }), 2000); // 2秒間表示して消す
+                    setTimeout(() => useGameStore.setState({ bloodAnim: null }), 2000);
                     dealDamage(p.id, 50, "収集車");
                     useGameStore.getState().addEventPopup(p.id, "💥", "轢かれた！", "収集車に轢かれた", "damage");
                 } else {
-                    // ▼ 轢かれたが回避できた時のポップアップを追加
                     logMsg(`💨 ${p.name}は収集車をギリギリ回避！`);
                     useGameStore.getState().addEventPopup(p.id, "💨", "回避！", "収集車をギリギリかわした", "good");
                 }
             }
         });
         
-        await sleep(300); // 1マスずつ進むアニメーションの表現
+        await sleep(300);
     }
 
     await sleep(800);
     useGameStore.setState({ horrorMode: false });
 
-    // 警察パトロール（偶数ラウンド）
     let newPolicePos = state.policePos;
     if (newRound % 2 === 0) {
         logMsg(`🚓 警察パトロール！`);
@@ -165,7 +167,6 @@ export const processRoundEnd = async () => {
         });
     }
 
-    // ▼ 次の収集車のエリア予兆を生成して表示
     const nextPreviewRoll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1;
     const nextMove = getDestRandom(truckMove.finalPos, nextPreviewRoll, md);
     const areaCounts = {};
@@ -180,7 +181,6 @@ export const processRoundEnd = async () => {
         const warningMsg = `次の収集車は「${areaNames[dangerArea] || dangerArea}」を中心に暴走するらしい…`;
         
         useGameStore.setState({ disasterWarning: warningMsg });
-        // 3.5秒後に予兆表示を自動で消す
         setTimeout(() => {
             useGameStore.setState({ disasterWarning: null });
         }, 3500);
