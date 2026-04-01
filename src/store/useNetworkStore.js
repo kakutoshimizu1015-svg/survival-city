@@ -183,8 +183,13 @@ useGameStore.subscribe((state) => {
     // オフライン時、または受信データを反映中の場合は送信しない
     if (netState.status !== 'connected' || isReceivingNetworkData || state.gamePhase !== 'playing') return;
 
-    // 通信に必要な純粋なデータだけを抽出
-    const { setGameState, updatePlayer, updateCurrentPlayer, resetGame, applyNetworkAction, ...pureState } = state;
+    // ▼ 修正箇所：関数を自動的にすべて除外して純粋なデータ（JSON）だけを抽出する
+    const pureState = {};
+    for (const key in state) {
+        if (typeof state[key] !== 'function') {
+            pureState[key] = state[key];
+        }
+    }
     
     const data = { type: 'GAME_SYNC', gameState: pureState, lastUpdater: netState.myUserId };
     
