@@ -44,6 +44,8 @@ export const GameEffectsOverlay = () => {
                 @keyframes slide-down { 0%{transform:translate(-50%, -20px); opacity:0;} 100%{transform:translate(-50%, 0); opacity:1;} }
                 @keyframes pop-in { 0%{transform:translate(-50%, -50%) scale(0.8); opacity:0;} 100%{transform:translate(-50%, -50%) scale(1); opacity:1;} }
                 @keyframes win-bg-anim { 0%{filter:hue-rotate(0deg);} 100%{filter:hue-rotate(360deg);} }
+                /* ▼ 追加: レポートの行が左にズレないための専用アニメーション */
+                @keyframes fade-in-right { 0%{transform:translateX(-20px); opacity:0;} 100%{transform:translateX(0); opacity:1;} }
             `}</style>
 
             {toastMsg && (
@@ -171,7 +173,8 @@ export const GameEffectsOverlay = () => {
                     <h2 style={{ margin: '0 0 15px 0', color: '#f1c40f', textAlign: 'center', borderBottom: '2px dashed #f1c40f', paddingBottom: '10px' }}>🌙 ラウンド終了レポート</h2>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', width: 'fit-content', margin: '0 auto' }}>
                         {roundSummary.map((item, i) => (
-                            <div key={i} style={{ fontSize: '16px', fontWeight: 'bold', animation: `slide-down 0.3s forwards ${i * 0.4}s`, opacity: 0, textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: item }} />
+                            {/* ▼ 修正: slide-down ではなく fade-in-right を使用 */}
+                            <div key={i} style={{ fontSize: '16px', fontWeight: 'bold', animation: `fade-in-right 0.3s forwards ${i * 0.4}s`, opacity: 0, textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: item }} />
                         ))}
                     </div>
                 </div>
