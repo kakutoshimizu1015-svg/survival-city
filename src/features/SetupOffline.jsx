@@ -1,14 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { charInfo } from '../constants/characters';
 import { genSmallMap, genMediumMap, genLargeMap } from '../constants/maps';
 import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatterPlayerPositions } from '../utils/mapRandomizer';
+// ▼ 追加: ユーザー情報の取得と保存関数
+import { useUserStore } from '../store/useUserStore';
+import { savePlayerName } from '../utils/userLogic';
 
-const TEAM_COLORS = { none: { label:'ソロ', color:'transparent', icon:'⚪' }, red: { label:'赤', color:'#e74c3c', icon:'🔴' }, blue: { label:'青', color:'#3498db', icon:'🔵' }, green: { label:'緑', color:'#2ecc71', icon:'🟢' }, yellow: { label:'黄', color:'#f1c40f', icon:'🟡' } };
+const TEAM_COLORS = { none: { label:'ソロ', color:'transparent', icon:'⚪' }, red: { label:'赤', color:'#e74c3c', icon:'🔴' }, blue: { label:'青', color:'#3498db', icon:'🟢' }, yellow: { label:'黄', color:'#f1c40f', icon:'🟡' } };
 
 export const SetupOffline = () => {
     const setGameState = useGameStore(state => state.setGameState);
-    const [players, setPlayers] = useState([{ id: 0, name: 'P1', charType: 'athlete', isCPU: false, teamColor: 'none' }, { id: 1, name: 'CPU1', charType: 'sales', isCPU: true, teamColor: 'none' }]);
+    
+    // ▼ 追加: グローバルなプレイヤー名を初期値として取得
+    const globalPlayerName = useUserStore(state => state.playerName);
+    
+    // ▼ 修正: P1の名前初期値をglobalPlayerNameにする
+    const [players, setPlayers] = useState([
+        { id: 0, name: globalPlayerName || 'P1', charType: 'athlete', isCPU: false, teamColor: 'none' }, 
+        { id: 1, name: 'CPU1', charType: 'sales', isCPU: true, teamColor: 'none' }
+    ]);
+    
     const [mapSize, setMapSize] = useState('medium'); 
     const [maxRounds, setMaxRounds] = useState(20);
     const [skipTurnDice, setSkipTurnDice] = useState(false);
@@ -21,14 +33,33 @@ export const SetupOffline = () => {
 
     const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e91e8c'];
 
+    // ▼ 追加: globalPlayerNameが遅れてロードされた場合にP1の名前を更新
+    useEffect(() => {
+        if (globalPlayerName) {
+            setPlayers(prev => prev.map(p => p.id === 0 ? { ...p, name: globalPlayerName } : p));
+        }
+    }, [globalPlayerName]);
+
     const addPlayer = (isCPU) => {
         if (players.length >= 8) return;
         setPlayers([...players, { id: players.length, name: isCPU ? `CPU${players.length + 1}` : `P${players.length + 1}`, charType: 'survivor', isCPU, teamColor: 'none' }]);
     };
-    const updatePlayer = (id, key, value) => setPlayers(players.map(p => p.id === id ? { ...p, [key]: value } : p));
-    const removePlayer = (id) => { if (players.length > 2) setPlayers(players.filter(p => p.id !== id).map((p, idx) => ({ ...p, id: idx }))); };
+    
+    const updatePlayer = (id, key, value) => {
+        setPlayers(players.map(p => p.id === id ? { ...p, [key]: value } : p));
+    };
 
-    const handleStart = () => {
+    const removePlayer = (id) => { 
+        if (players.length > 2) setPlayers(players.filter(p => p.id !== id).map((p, idx) => ({ ...p, id: idx }))); 
+    };
+
+    const handleStart = async () => {
+        // ▼ 追加: ゲーム開始時にP1の名前をFirebaseにセーブする
+        const p1Name = players.find(p => p.id === 0)?.name;
+        if (p1Name && p1Name.trim() !== '') {
+            await savePlayerName(p1Name);
+        }
+
         let mapData = mapSize === 'small' ? genSmallMap() : mapSize === 'medium' ? genMediumMap() : genLargeMap();
         if (rmapTileType) mapData = randomizeTileTypes(mapData);
         if (rmapLayout) mapData = randomizeTileLayout(mapData);
@@ -54,7 +85,6 @@ export const SetupOffline = () => {
         let turnOrderData = null;
         let turnOrderActive = false;
 
-        // ▼ 順番決めダイスのロジック
         if (!skipTurnDice) {
             const diceValues = finalPlayers.map(() => ({ d1: Math.floor(Math.random() * 6) + 1, d2: Math.floor(Math.random() * 6) + 1 }));
             const preRollData = finalPlayers.map((p, idx) => ({ idx, total: diceValues[idx].d1 + diceValues[idx].d2 }));
@@ -64,7 +94,6 @@ export const SetupOffline = () => {
             turnOrderData = { players: finalPlayers, diceValues, sortedOrder };
             turnOrderActive = true;
         } else {
-            // スキップ時は即座にシャッフルして適用
             finalPlayers = finalPlayers.sort(() => Math.random() - 0.5).map((p, idx) => ({ ...p, id: idx, color: colors[idx % 8] }));
         }
 
@@ -73,32 +102,56 @@ export const SetupOffline = () => {
         
         setGameState({
             mapData, players: finalPlayers, turn: 0, roundCount: 1, maxRounds, diceRolled: false, gameOver: false, gamePhase: 'playing',
-            turnOrderActive, turnOrderData, // ▼ ストアに送信
+            turnOrderActive, turnOrderData,
             truckPos: Math.floor(maxId * 0.4), policePos: Math.floor(maxId * 0.8), unclePos: Math.floor(maxId * 0.2), 
             animalPos: canTrashTiles.length > 0 ? canTrashTiles[Math.floor(Math.random() * canTrashTiles.length)].id : Math.floor(maxId * 0.3), 
             yakuzaPos: Math.floor(maxId * 0.5), loansharkPos: Math.floor(maxId * 0.6), friendPos: Math.floor(maxId * 0.15)
         });
     };
 
-    // UI部分は前回と同じため省略せずそのまま（前回のSetupOfflineUIを維持）
     return (
         <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px', color: '#fdf5e6', width: '100vw', overflowY: 'auto' }}>
             <h2 style={{ fontSize: '32px', textShadow: '2px 2px 4px #000', margin: '10px 0' }}>🏠 ゲーム設定</h2>
-            {/* --- (UI部分は前回と全く同じため省略せずに描画します) --- */}
+            
             <div className="panel" style={{ width: '90%', maxWidth: '800px', marginBottom: '15px', padding: '20px' }}>
                 <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '5px', margin: '0 0 10px 0', color: '#5c4a44' }}>👥 プレイヤー設定 ({players.length}/8人)</h3>
+                
                 {players.map((p, idx) => (
                     <div key={p.id} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', background: 'rgba(92, 74, 68, 0.1)', padding: '8px', borderRadius: '8px', flexWrap: 'wrap' }}>
                         <div style={{ width: '16px', height: '16px', backgroundColor: colors[idx % colors.length], borderRadius: '50%' }}></div>
-                        <input type="text" value={p.name} onChange={e => updatePlayer(p.id, 'name', e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ccc', width: '90px' }} />
-                        <select value={p.isCPU ? 'cpu' : 'human'} onChange={e => updatePlayer(p.id, 'isCPU', e.target.value === 'cpu')} style={{ padding: '6px', borderRadius: '4px' }}><option value="human">人間</option><option value="cpu">CPU</option></select>
-                        <select value={p.charType} onChange={e => updatePlayer(p.id, 'charType', e.target.value)} style={{ padding: '6px', borderRadius: '4px', maxWidth: '140px' }}>{Object.entries(charInfo).map(([key, info]) => <option key={key} value={key}>{info.name}</option>)}</select>
-                        <select value={p.teamColor} onChange={e => updatePlayer(p.id, 'teamColor', e.target.value)} style={{ padding: '6px', borderRadius: '4px' }}>{Object.entries(TEAM_COLORS).map(([key, t]) => <option key={key} value={key}>{t.icon} {t.label}</option>)}</select>
+                        
+                        {/* ▼ 修正: P1の名前を入力した時、ローカルステート(players)を更新 */}
+                        <input 
+                            type="text" 
+                            value={p.name} 
+                            onChange={e => updatePlayer(p.id, 'name', e.target.value)} 
+                            style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ccc', width: '90px' }} 
+                            maxLength={10}
+                        />
+                        
+                        <select value={p.isCPU ? 'cpu' : 'human'} onChange={e => updatePlayer(p.id, 'isCPU', e.target.value === 'cpu')} style={{ padding: '6px', borderRadius: '4px' }}>
+                            <option value="human">人間</option>
+                            <option value="cpu">CPU</option>
+                        </select>
+                        
+                        <select value={p.charType} onChange={e => updatePlayer(p.id, 'charType', e.target.value)} style={{ padding: '6px', borderRadius: '4px', maxWidth: '140px' }}>
+                            {Object.entries(charInfo).map(([key, info]) => <option key={key} value={key}>{info.name}</option>)}
+                        </select>
+                        
+                        <select value={p.teamColor} onChange={e => updatePlayer(p.id, 'teamColor', e.target.value)} style={{ padding: '6px', borderRadius: '4px' }}>
+                            {Object.entries(TEAM_COLORS).map(([key, t]) => <option key={key} value={key}>{t.icon} {t.label}</option>)}
+                        </select>
+                        
                         {players.length > 2 && <button onClick={() => removePlayer(p.id)} style={{ background: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>✕</button>}
                     </div>
                 ))}
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}><button onClick={() => addPlayer(false)} className="btn-clay btn-green" style={{ padding: '8px 12px' }}>＋ 人間</button><button onClick={() => addPlayer(true)} className="btn-clay btn-blue" style={{ padding: '8px 12px' }}>＋ CPU</button></div>
+                
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
+                    <button onClick={() => addPlayer(false)} className="btn-clay btn-green" style={{ padding: '8px 12px' }}>＋ 人間</button>
+                    <button onClick={() => addPlayer(true)} className="btn-clay btn-blue" style={{ padding: '8px 12px' }}>＋ CPU</button>
+                </div>
             </div>
+            
             <div className="panel" style={{ width: '90%', maxWidth: '800px', marginBottom: '20px', padding: '20px', background: '#8d6e63', borderColor: '#4a3b32' }}>
                 <h3 style={{ margin: '0 0 15px 0', color: '#fdf5e6' }}>🗺️ ゲームルール設定</h3>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', marginBottom: '15px' }}>
@@ -124,7 +177,11 @@ export const SetupOffline = () => {
                     <button onClick={() => setCharAssignMode('random')} className="btn-clay" style={{ background: charAssignMode === 'random' ? '#8e44ad' : '', opacity: charAssignMode === 'random' ? 1 : 0.6, color: 'white', padding: '8px 12px' }}>🎲 全員ランダム</button>
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '40px' }}><button className="btn-large" style={{ background: '#7f8c8d' }} onClick={() => setGameState({ gamePhase: 'mode_select' })}>◀ 戻る</button><button className="btn-large btn-brown" onClick={handleStart} style={{ padding: '15px 40px', fontSize: '20px' }}>🎲 ゲームを開始する</button></div>
+            
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '40px' }}>
+                <button className="btn-large" style={{ background: '#7f8c8d' }} onClick={() => setGameState({ gamePhase: 'mode_select' })}>◀ 戻る</button>
+                <button className="btn-large btn-brown" onClick={handleStart} style={{ padding: '15px 40px', fontSize: '20px' }}>🎲 ゲームを開始する</button>
+            </div>
         </div>
     );
 };

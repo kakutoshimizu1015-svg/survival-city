@@ -3,6 +3,9 @@ import { logMsg } from './actions';
 import { dealDamage } from './combat';
 import { playSfx } from '../utils/audio';
 import { charEmoji } from '../constants/characters';
+// ▼ 追加: userLogic と useNetworkStore をインポート
+import { recordWin } from '../utils/userLogic';
+import { useNetworkStore } from '../store/useNetworkStore';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -39,6 +42,7 @@ const endGame = () => {
     let isTeamGame = false;
     let sortedTeams = null;
     const hasTeams = state.players.some(p => p.teamColor !== 'none');
+    
     if (hasTeams) {
         isTeamGame = true;
         const teamScores = {};
@@ -50,8 +54,37 @@ const endGame = () => {
         });
         sortedTeams = Object.values(teamScores).sort((a, b) => b.total - a.total);
         logMsg(`🏆 優勝は ${sortedTeams[0].color !== 'none' ? sortedTeams[0].color+'チーム' : sortedTeams[0].members[0].name}！`);
+        
+        // ▼ 追加: チーム戦の戦績セーブ処理
+        // 自プレイヤーが優勝チームに含まれているかチェック
+        const myUserId = useNetworkStore.getState().myUserId;
+        const myPlayer = state.players.find(p => p.userId === myUserId); // オンライン時はuserIdがある想定
+        
+        // オフライン・オンライン兼用の判定（オンライン時はuserId一致、オフライン時はid=0を自分とみなす）
+        const isMe = (p) => (myUserId && p.userId === myUserId) || (!myUserId && p.id === 0);
+        
+        const winningTeamMembers = sortedTeams[0].members;
+        const amIWinner = winningTeamMembers.some(p => isMe(p));
+        
+        if (amIWinner) {
+             const myResult = winningTeamMembers.find(p => isMe(p));
+             if(myResult) {
+                 recordWin(myResult.totalScore);
+                 console.log(`[戦績セーブ] チーム優勝！ 獲得P: ${myResult.totalScore}`);
+             }
+        }
+
     } else {
         logMsg(`🏆 優勝は ${results[0].name}！`);
+        
+        // ▼ 追加: ソロ戦の戦績セーブ処理
+        const myUserId = useNetworkStore.getState().myUserId;
+        const isMe = (p) => (myUserId && p.userId === myUserId) || (!myUserId && p.id === 0);
+        
+        if (isMe(results[0])) {
+            recordWin(results[0].totalScore);
+            console.log(`[戦績セーブ] 優勝！ 獲得P: ${results[0].totalScore}`);
+        }
     }
     
     useGameStore.setState({ gameResult: { results, isTeamGame, sortedTeams } });
@@ -59,9 +92,6 @@ const endGame = () => {
 };
 
 export const processRoundEnd = async () => {
-    // ▼ 追加: ラウンド終了処理中フラグをON
-    // このフラグはゲストに同期され、ゲスト側の自動同期エンジンが
-    // 古い状態を再broadcastしてしまうのを防ぐ
     useGameStore.setState({ _roundEndInProgress: true });
 
     try {
@@ -113,13 +143,11 @@ export const processRoundEnd = async () => {
         let loansharkPos = md[Math.floor(Math.random() * md.length)].id;
         let friendPos = md[Math.floor(Math.random() * md.length)].id;
 
-        // --- ① ラウンドサマリーの表示と待機 ---
         useGameStore.setState({ roundSummary: summaryDigest });
         await sleep(summaryDigest.length * 400 + 2500);
         useGameStore.setState({ roundSummary: null });
         await sleep(300);
 
-        // --- ② ごみ収集車 ホラー演出 ---
         logMsg(`<span style="color:#c0392b">🛻 ごみ収集車が暴走！</span>`);
         useGameStore.setState({ horrorMode: true }); 
         playSfx('hit'); 
@@ -160,7 +188,6 @@ export const processRoundEnd = async () => {
         await sleep(800);
         useGameStore.setState({ horrorMode: false });
 
-        // --- ③ 警察パトロール ---
         let newPolicePos = state.policePos;
         if (newRound % 2 === 0) {
             logMsg(`🚓 警察パトロール！`);
@@ -178,7 +205,6 @@ export const processRoundEnd = async () => {
             });
         }
 
-        // --- ④ 次の収集車のエリア予兆表示 ---
         const nextPreviewRoll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1;
         const nextMove = getDestRandom(truckMove.finalPos, nextPreviewRoll, md);
         const areaCounts = {};
@@ -198,11 +224,9 @@ export const processRoundEnd = async () => {
             await sleep(300);
         }
 
-        // --- ⑤ ラウンド状態の最終更新 ---
         useGameStore.setState({ roundCount: newRound, weatherState: weather, isRainy: weather === "rainy", isNight, canPrice, trashPrice, animalPos, unclePos, yakuzaPos, loansharkPos, friendPos, policePos: newPolicePos });
 
     } finally {
-        // ▼ 追加: 正常終了でもエラーでも必ずフラグを解除する
         useGameStore.setState({ _roundEndInProgress: false });
     }
 };
