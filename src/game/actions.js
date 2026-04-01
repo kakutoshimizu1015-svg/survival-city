@@ -5,9 +5,8 @@ import { playSfx } from '../utils/audio';
 import { getDistance } from './combat';
 
 export const logMsg = (htmlMsg) => { 
-    // ▼ Stateにログを追加 (オンライン同期用)
     useGameStore.setState(state => {
-        const newLogs = [...(state.logs || []), htmlMsg].slice(-50); // 最大50件保持
+        const newLogs = [...(state.logs || []), htmlMsg].slice(-50); 
         return { logs: newLogs };
     });
 
@@ -70,7 +69,17 @@ export const executeMove = (targetTileId) => {
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [] });
     logMsg(`🚶 「${tile.name}」に移動。`); playSfx('move');
 
-    // ▼ 修正：交番での足止め処理
+    // ▼ 修正：病院マスでの回復処理を追加
+    if (tile.type === "center") {
+        const healAmount = Math.min(30, 100 - cp.hp);
+        if (healAmount > 0) {
+            state.updateCurrentPlayer(p => ({ hp: p.hp + healAmount }));
+            logMsg(`🏥 病院に立ち寄り！HP+${healAmount}無料回復！`);
+            playSfx('success');
+            state.addEventPopup(cp.id, "🏥", "病院で無料回復！", `HP+${healAmount}回復`, "good");
+        }
+    }
+
     if (tile.type === "koban") {
         state.updateCurrentPlayer(p => ({ ap: 0, cannotMove: true }));
         logMsg(`<span style="color:#e74c3c">🚓 交番！職務質問で足止め！</span>`); playSfx('fail');
@@ -112,7 +121,6 @@ export const executeMove = (targetTileId) => {
 
     checkNpcCollision(cp.id);
 
-    // ▼ 修正：イベントマスのストーリーイベント（30%）判定の追加
     if (tile.type === "event" && !cp.isCPU) {
         if (Math.random() < 0.3) {
             useGameStore.setState({ storyActive: true, storyIndex: Math.floor(Math.random() * 4) });
@@ -124,7 +132,6 @@ export const executeMove = (targetTileId) => {
 
 export const actionCan = () => { const s = useGameStore.getState(); s.updateCurrentPlayer(p => ({ ap: p.ap - 1, cans: p.cans + 1 })); useGameStore.setState(st => ({ canPickedThisTurn: st.canPickedThisTurn + 1 })); playSfx('coin'); };
 
-// ▼ 修正：ゴミ山漁りの完全なロジック移植
 export const actionTrash = () => { 
     const s = useGameStore.getState();
     const cp = s.players[s.turn]; 
@@ -193,7 +200,7 @@ export const actionEndTurn = async () => {
         if (state.turn === state.players.length - 1) await processRoundEnd();
         useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false }));
     } catch (e) { 
-        console.error("actionEndTurn Error:", e); // エラーを隠蔽せずコンソールに吐き出す
+        console.error("actionEndTurn Error:", e); 
         useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false })); 
     }
 };

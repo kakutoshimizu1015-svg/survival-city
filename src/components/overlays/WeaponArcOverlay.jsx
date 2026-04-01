@@ -10,10 +10,9 @@ export const WeaponArcOverlay = () => {
     const [attackerPos, setAttackerPos] = useState({ x: 0, y: 0 });
     const [radius, setRadius] = useState(0);
 
-    // ▼ 追加：ドラッグ操作用の参照（Ref）
     const panelRef = useRef(null);
 
-    // 画面上のマス（タイル）の位置を計算して、弧の中心を合わせる処理
+    // ▼ 修正：画面上のマスの位置を計算し、スクロールに追従させる
     useEffect(() => {
         if (!weaponArcData) return;
         
@@ -30,17 +29,21 @@ export const WeaponArcOverlay = () => {
         };
         
         updatePos();
+        // ▼ コンテナとラッパーの両方のスクロールを監視する
+        const container = document.getElementById('game-board-container');
         const wrapper = document.getElementById('game-board-wrapper');
+        if (container) container.addEventListener('scroll', updatePos);
         if (wrapper) wrapper.addEventListener('scroll', updatePos);
         window.addEventListener('resize', updatePos);
         
         return () => {
+            if (container) container.removeEventListener('scroll', updatePos);
             if (wrapper) wrapper.removeEventListener('scroll', updatePos);
             window.removeEventListener('resize', updatePos);
         };
     }, [weaponArcData, angleDeg]);
 
-    // ▼ 追加：パネルをドラッグして移動させる処理
+    // パネルをドラッグして移動させる処理
     useEffect(() => {
         const el = panelRef.current;
         if (!el || !weaponArcData) return;
@@ -48,7 +51,6 @@ export const WeaponArcOverlay = () => {
         let ox = 0, oy = 0, startX = 0, startY = 0;
         
         const onDown = (e) => {
-            // スライダーやボタンを触ったときはドラッグしない
             if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
             
             startX = (e.touches ? e.touches[0].clientX : e.clientX);
@@ -68,7 +70,6 @@ export const WeaponArcOverlay = () => {
             const nx = Math.max(0, Math.min(window.innerWidth  - el.offsetWidth,  ox + cx - startX));
             const ny = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, oy + cy - startY));
             
-            // パネルの位置を更新
             el.style.left = nx + 'px'; 
             el.style.top = ny + 'px';
             el.style.bottom = 'auto'; 
@@ -101,7 +102,6 @@ export const WeaponArcOverlay = () => {
 
     const spreadDeg = 75; 
     
-    // 当たり判定の計算
     const hitTargets = targets.filter(target => {
         const targetTile = mapData.find(t => t.id === target.pos);
         if (!targetTile) return false;
@@ -143,7 +143,6 @@ export const WeaponArcOverlay = () => {
 
     return (
         <>
-            {/* 扇形を描画するレイヤー */}
             <svg width="100vw" height="100vh" style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none', zIndex: 1400 }}>
                 {radius > 0 && (
                     <>
@@ -180,7 +179,6 @@ export const WeaponArcOverlay = () => {
                 )}
             </svg>
 
-            {/* ▼ 変更：ref={panelRef} と cursor: 'move' を追加 */}
             <div ref={panelRef} style={{
                 position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
                 background: 'rgba(20,20,30,0.95)', border: '3px solid #e74c3c', borderRadius: '16px',
