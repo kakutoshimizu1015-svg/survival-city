@@ -284,7 +284,14 @@ export const GameBoard = () => {
                     <span style={{ color: '#bdc3c7' }}>缶:<span id="hud-can-price">{canPrice}</span>P</span>
                     <span style={{ color: '#bdc3c7', marginLeft: '6px' }}>ゴミ:<span id="hud-trash-price">{trashPrice}</span>P</span>
                 </div>
-                <div id="zoom-controls" style={{ display: 'flex', gap: '6px', pointerEvents: 'auto', marginTop: '8px' }}>
+                <div id="zoom-controls" style={{ 
+    display: 'flex', 
+    flexDirection: 'row', /* 縦並びを強制的に横並び(row)に上書き */
+    position: 'static',   /* 絶対配置(absolute)を解除し、テキストの下に自然に配置させる */
+    gap: '6px', 
+    pointerEvents: 'auto', 
+    marginTop: '8px' 
+}}>
                     <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(0.15)} title="ズームイン">＋</button>
                     <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(-0.15)} title="ズームアウト">－</button>
                     <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={resetZoom} title="リセット">⟳</button>
