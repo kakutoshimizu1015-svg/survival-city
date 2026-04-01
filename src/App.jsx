@@ -1,9 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGameStore } from './store/useGameStore';
-
-// ▼ 追加：作成したストアと認証ロジックをインポート
 import { useUserStore } from './store/useUserStore';
 import { loginAnonymously } from './utils/authLogic';
+import { savePlayerName } from './utils/userLogic';
 
 import { GameMain } from './features/GameMain';
 import { SetupOffline } from './features/SetupOffline';
@@ -14,17 +13,24 @@ import { SandboxGuide } from './components/overlays/SandboxGuide';
 
 function App() {
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode } = useGameStore();
+  
+  // ▼ 追加：ユーザーの永続データを取得
+  const { isLoggedIn, uid, playerName, wins, totalEarnedP } = useUserStore();
+  const [localName, setLocalName] = useState(playerName);
 
-  // ▼ 追加：ユーザーのログイン状態とUIDを取得
-  const isLoggedIn = useUserStore((state) => state.isLoggedIn);
-  const uid = useUserStore((state) => state.uid);
-
-  // ▼ 追加：アプリ起動時に1回だけ匿名ログインを実行
+  // アプリ起動時に1回だけ匿名ログインを実行
   useEffect(() => {
     if (!isLoggedIn) {
       loginAnonymously();
     }
   }, [isLoggedIn]);
+
+  // DBから名前がロードされたらローカルの入力欄に反映
+  useEffect(() => {
+    if (playerName) {
+      setLocalName(playerName);
+    }
+  }, [playerName]);
 
   useEffect(() => {
     // 既存の関連クラスを全てリセットして競合を防ぐ
@@ -40,12 +46,26 @@ function App() {
     if (horrorMode) document.body.classList.add('horror-mode');
   }, [layoutMode, weatherState, isNight, horrorMode]);
 
+  // ▼ 追加：名前入力欄からフォーカスが外れた（Blur）時にセーブを実行
+  const handleNameBlur = () => {
+    if (localName && localName.trim() !== '' && localName !== playerName) {
+      savePlayerName(localName);
+    }
+  };
+
   return (
     <>
-      {/* ▼ 追加：動作確認用（開発中だけ画面左上にUIDを表示。確認できたら消してOKです） */}
-      {isLoggedIn && (
-        <div style={{ position: 'absolute', top: 5, left: 5, zIndex: 9999, fontSize: '10px', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '4px 8px', borderRadius: '4px', pointerEvents: 'none' }}>
-          UID: {uid}
+      {/* ▼ 追加：最上部のステータスバー（タイトル・モード選択時のみ表示） */}
+      {(gamePhase === 'title' || gamePhase === 'mode_select') && isLoggedIn && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '45px',
+          background: 'rgba(0,0,0,0.8)', color: '#f1c40f', display: 'flex',
+          justifyContent: 'center', alignItems: 'center', gap: '30px',
+          zIndex: 1000, fontSize: '16px', fontWeight: 'bold', borderBottom: '2px solid #8d6e63',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
+        }}>
+          <span>🏆 優勝: {wins} 回</span>
+          <span>💰 累計: {totalEarnedP} P</span>
         </div>
       )}
 
@@ -55,7 +75,8 @@ function App() {
 
       {gamePhase === 'title' && (
         <div id="title-screen-overlay" onClick={() => useGameStore.setState({ gamePhase: 'mode_select' })}>
-          <div style={{ fontSize: '80px', marginBottom: '20px' }}>🏠</div>
+          {/* ヘッダーの分だけ余白を空ける */}
+          <div style={{ fontSize: '80px', marginBottom: '20px', marginTop: '40px' }}>🏠</div>
           <div className="title-logo">脱・ホームレス<br/>サバイバルシティ</div>
           <div className="blink-text">画面をタップしてスタート</div>
           
@@ -85,6 +106,22 @@ function App() {
 
       {gamePhase === 'mode_select' && (
         <div id="mode-select-overlay" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          
+          {/* ▼ 追加：名前設定セクション */}
+          <div className="panel" style={{ marginTop: '30px', marginBottom: '40px', padding: '20px', background: 'rgba(92, 74, 68, 0.95)', textAlign: 'center', borderRadius: '12px', border: '2px solid #8d6e63', boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
+            <div style={{ color: '#fdf5e6', marginBottom: '10px', fontSize: '16px', fontWeight: 'bold' }}>👤 プレイヤー名を設定</div>
+            <input 
+              type="text" 
+              value={localName} 
+              onChange={(e) => setLocalName(e.target.value)}
+              onBlur={handleNameBlur}
+              placeholder="名前を入力..."
+              style={{ padding: '12px', borderRadius: '8px', border: 'none', textAlign: 'center', width: '220px', fontSize: '20px', fontWeight: 'bold', color: '#333' }}
+              maxLength={10}
+            />
+            <div style={{ fontSize: '12px', color: '#bdc3c7', marginTop: '8px' }}>※入力後、枠外をタップで自動保存</div>
+          </div>
+
           <h2>モード選択</h2>
           <button className="btn-large btn-brown" onClick={() => useGameStore.setState({ gamePhase: 'setup_offline' })}>🎮 オフライン</button>
           <button className="btn-large btn-blue" onClick={() => useGameStore.setState({ gamePhase: 'online_lobby' })}>🌐 オンライン</button>

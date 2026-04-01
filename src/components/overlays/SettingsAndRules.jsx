@@ -1,16 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { ClayButton } from '../common/ClayButton';
+// ▼ 追加：ユーザー情報の取得と保存関数
+import { useUserStore } from '../../store/useUserStore';
+import { savePlayerName } from '../../utils/userLogic';
 
 export const SettingsAndRules = () => {
     const { settingsActive, rulesActive, layoutMode, volume, showSkipButton, autoScrollToPlayer, setGameState, resetGame } = useGameStore();
     const [confirmOpen, setConfirmOpen] = useState(false);
+
+    // ▼ 追加：ユーザー情報とタブ管理のステート
+    const { playerName, wins, totalEarnedP } = useUserStore();
+    const [activeTab, setActiveTab] = useState('player'); // 'player' または 'settings'
+    const [editingName, setEditingName] = useState(playerName);
+
+    // ▼ 追加：ストアの名前が変更されたらローカルステートにも反映
+    useEffect(() => {
+        if (playerName) {
+            setEditingName(playerName);
+        }
+    }, [playerName]);
 
     if (!settingsActive && !rulesActive && !confirmOpen) return null;
 
     const handleReturnTitle = () => {
         resetGame();
         setConfirmOpen(false);
+    };
+
+    // ▼ 追加：名前の保存処理
+    const handleNameUpdate = () => {
+        if (editingName && editingName.trim() !== '' && editingName !== playerName) {
+            savePlayerName(editingName);
+        }
     };
 
     if (rulesActive) {
@@ -203,44 +225,95 @@ export const SettingsAndRules = () => {
 
     return (
         <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={() => setGameState({ settingsActive: false })}>
-            <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723' }} onClick={(e) => e.stopPropagation()}>
-                <h2 style={{ marginTop: 0 }}>⚙️ メニュー</h2>
+            <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723', padding: '15px' }} onClick={(e) => e.stopPropagation()}>
                 
-                <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
-                    <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>🔊 音量: {Math.round(volume * 100)}%</label>
-                    <input type="range" min="0" max="2" step="0.1" value={volume} onChange={(e) => setGameState({ volume: parseFloat(e.target.value) })} style={{ width: '100%' }} />
-                </div>
-                
-                <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
-                    <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>📱 レイアウト切替</div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <ClayButton onClick={() => setGameState({ layoutMode: 'auto' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#2ecc71', opacity: layoutMode === 'auto' ? 1 : 0.5 }}>🔄 自動</ClayButton>
-                        <ClayButton onClick={() => setGameState({ layoutMode: 'pc' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#3498db', opacity: layoutMode === 'pc' ? 1 : 0.5 }}>🖥️ PC</ClayButton>
-                        <ClayButton onClick={() => setGameState({ layoutMode: 'sp' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#8e44ad', opacity: layoutMode === 'sp' ? 1 : 0.5 }}>📱 スマホ</ClayButton>
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '6px', textAlign: 'center' }}>
-                        現在: {layoutMode === 'auto' ? '自動（画面幅で切替）' : layoutMode === 'pc' ? 'PCレイアウト固定' : 'スマホレイアウト固定'}
-                    </div>
+                {/* ▼ 追加：タブ切り替えUI */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', borderBottom: '2px solid #8d6e63', paddingBottom: '10px' }}>
+                    <ClayButton 
+                        onClick={() => setActiveTab('player')} 
+                        style={{ flex: 1, padding: '10px', background: activeTab === 'player' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'player' ? 1 : 0.7 }}
+                    >
+                        👤 プレイヤー
+                    </ClayButton>
+                    <ClayButton 
+                        onClick={() => setActiveTab('settings')} 
+                        style={{ flex: 1, padding: '10px', background: activeTab === 'settings' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'settings' ? 1 : 0.7 }}
+                    >
+                        ⚙️ 設定
+                    </ClayButton>
                 </div>
 
-                <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
-                    <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={showSkipButton} onChange={(e) => setGameState({ showSkipButton: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
-                        ⏭️ 強制スキップボタンを表示する（誤タップ注意）
-                    </label>
-                </div>
+                {/* ▼ 追加：プレイヤータブのコンテンツ */}
+                {activeTab === 'player' && (
+                    <div style={{ textAlign: 'center', background: '#5c4a44', color: '#fdf5e6', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+                        <h3 style={{ marginTop: 0, color: '#fdf5e6', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '10px' }}>プレイヤープロフィール</h3>
+                        
+                        <div style={{ marginBottom: '20px' }}>
+                            <div style={{ fontSize: '14px', color: '#bdc3c7', marginBottom: '5px' }}>プレイヤー名</div>
+                            <input
+                                type="text"
+                                value={editingName}
+                                onChange={(e) => setEditingName(e.target.value)}
+                                onBlur={handleNameUpdate}
+                                maxLength={10}
+                                style={{ fontSize: '20px', fontWeight: 'bold', padding: '10px', textAlign: 'center', width: '80%', borderRadius: '6px', border: 'none' }}
+                            />
+                            <div style={{ fontSize: '11px', color: '#95a5a6', marginTop: '5px' }}>変更後、枠外をタップで保存</div>
+                        </div>
 
-                {/* ▼ 追加: 自動スクロール設定 */}
-                <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
-                    <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={autoScrollToPlayer} onChange={(e) => setGameState({ autoScrollToPlayer: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
-                        🗺️ ターン開始時にマップを自動スクロール
-                    </label>
-                    <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '4px', marginLeft: '28px' }}>
-                        ONにすると、各プレイヤーのターン開始時にマップがそのプレイヤーの位置へ自動で移動します
+                        <div style={{ display: 'flex', justifyContent: 'space-around', background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '8px' }}>
+                            <div>
+                                <div style={{ fontSize: '13px', color: '#bdc3c7' }}>🏆 優勝回数</div>
+                                <div style={{ fontSize: '26px', fontWeight: 'bold', color: '#f1c40f' }}>{wins} <span style={{fontSize: '14px', color: '#fdf5e6'}}>回</span></div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '13px', color: '#bdc3c7' }}>💰 累計稼いだP</div>
+                                <div style={{ fontSize: '26px', fontWeight: 'bold', color: '#f1c40f' }}>{totalEarnedP} <span style={{fontSize: '14px', color: '#fdf5e6'}}>P</span></div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                )}
+
+                {/* ▼ 既存の設定内容（設定タブの時だけ表示） */}
+                {activeTab === 'settings' && (
+                    <>
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>🔊 音量: {Math.round(volume * 100)}%</label>
+                            <input type="range" min="0" max="2" step="0.1" value={volume} onChange={(e) => setGameState({ volume: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                        </div>
+                        
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                            <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>📱 レイアウト切替</div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <ClayButton onClick={() => setGameState({ layoutMode: 'auto' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#2ecc71', opacity: layoutMode === 'auto' ? 1 : 0.5 }}>🔄 自動</ClayButton>
+                                <ClayButton onClick={() => setGameState({ layoutMode: 'pc' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#3498db', opacity: layoutMode === 'pc' ? 1 : 0.5 }}>🖥️ PC</ClayButton>
+                                <ClayButton onClick={() => setGameState({ layoutMode: 'sp' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#8e44ad', opacity: layoutMode === 'sp' ? 1 : 0.5 }}>📱 スマホ</ClayButton>
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '6px', textAlign: 'center' }}>
+                                現在: {layoutMode === 'auto' ? '自動（画面幅で切替）' : layoutMode === 'pc' ? 'PCレイアウト固定' : 'スマホレイアウト固定'}
+                            </div>
+                        </div>
+
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                            <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={showSkipButton} onChange={(e) => setGameState({ showSkipButton: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
+                                ⏭️ 強制スキップボタンを表示する（誤タップ注意）
+                            </label>
+                        </div>
+
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                            <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={autoScrollToPlayer} onChange={(e) => setGameState({ autoScrollToPlayer: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
+                                🗺️ ターン開始時にマップを自動スクロール
+                            </label>
+                            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '4px', marginLeft: '28px' }}>
+                                ONにすると、各プレイヤーのターン開始時にマップがそのプレイヤーの位置へ自動で移動します
+                            </div>
+                        </div>
+                    </>
+                )}
                 
+                {/* 共通のナビゲーションボタン群 */}
                 <ClayButton onClick={() => setGameState({ rulesActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#3498db' }}>📖 遊び方・ルールを見る</ClayButton>
                 <ClayButton onClick={() => setGameState({ tutorialActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#8e44ad', color: '#f1c40f' }}>📚 チュートリアル</ClayButton>
                 
