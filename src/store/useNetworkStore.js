@@ -4,7 +4,7 @@ import { ref, set, get, onDisconnect, remove, onValue, off, update } from 'fireb
 import { db } from '../lib/firebase';
 import { useGameStore } from './useGameStore';
 
-// ▼ ネットワーク受信中フラグ（無限ループ防止用）
+// ネットワーク受信中フラグ（無限ループ防止用）
 let isReceivingNetworkData = false;
 
 export const useNetworkStore = create((setStore, getStore) => ({
@@ -57,9 +57,16 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         getStore().broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
                     }
                     if (data.type === 'GAME_SYNC') {
-                        // ゲストからのアクション（同期データ）を受信し、他ゲストへ中継
                         if (data.lastUpdater !== getStore().myUserId) {
                             isReceivingNetworkData = true;
+                            
+                            // ▼ ログのDOM同期処理
+                            const logger = document.getElementById("log");
+                            if (logger && data.gameState.logs) {
+                                logger.innerHTML = data.gameState.logs.map(msg => `<div>> ${msg}</div>`).join('');
+                                logger.scrollTop = logger.scrollHeight;
+                            }
+
                             useGameStore.setState(data.gameState);
                             setTimeout(() => { isReceivingNetworkData = false; }, 50);
                         }
@@ -96,6 +103,14 @@ export const useNetworkStore = create((setStore, getStore) => ({
                     if (data.type === 'GAME_SYNC') {
                         if (data.lastUpdater !== getStore().myUserId) {
                             isReceivingNetworkData = true;
+                            
+                            // ▼ ログのDOM同期処理
+                            const logger = document.getElementById("log");
+                            if (logger && data.gameState.logs) {
+                                logger.innerHTML = data.gameState.logs.map(msg => `<div>> ${msg}</div>`).join('');
+                                logger.scrollTop = logger.scrollHeight;
+                            }
+
                             useGameStore.setState(data.gameState);
                             setTimeout(() => { isReceivingNetworkData = false; }, 50);
                         }
@@ -177,13 +192,11 @@ export const useNetworkStore = create((setStore, getStore) => ({
     }
 }));
 
-// ▼ 究極の自動同期エンジン：ゲームの状態が変わったら自動的に全員へ送信
+// 自動同期エンジン
 useGameStore.subscribe((state) => {
     const netState = useNetworkStore.getState();
-    // オフライン時、または受信データを反映中の場合は送信しない
     if (netState.status !== 'connected' || isReceivingNetworkData || state.gamePhase !== 'playing') return;
 
-    // ▼ 修正箇所：関数を自動的にすべて除外して純粋なデータ（JSON）だけを抽出する
     const pureState = {};
     for (const key in state) {
         if (typeof state[key] !== 'function') {

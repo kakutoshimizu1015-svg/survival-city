@@ -1,12 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { deckData } from '../../constants/cards';
 import { ClayButton } from '../common/ClayButton';
 import { playSfx } from '../../utils/audio';
+import { generateShopStock } from '../../game/shop'; // ▼ 追加
 
 export const ShopOverlay = () => {
     const { shopActive, shopStock, shopCart, players, turn, setGameState } = useGameStore();
     const cp = players[turn];
+
+    // ▼ 追加：ショップが開かれたときに在庫を生成/更新する
+    useEffect(() => {
+        if (shopActive) {
+            generateShopStock();
+        }
+    }, [shopActive]);
 
     if (!shopActive || !cp) return null;
 

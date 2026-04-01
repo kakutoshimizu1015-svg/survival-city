@@ -4,7 +4,21 @@ import { processRoundEnd } from './round';
 import { playSfx } from '../utils/audio';
 import { getDistance } from './combat';
 
-export const logMsg = (htmlMsg) => { const logger = document.getElementById("log"); if (logger) { const div = document.createElement("div"); div.innerHTML = `> ${htmlMsg}`; logger.appendChild(div); logger.scrollTop = logger.scrollHeight; } };
+export const logMsg = (htmlMsg) => { 
+    // ▼ Stateにログを追加 (オンライン同期用)
+    useGameStore.setState(state => {
+        const newLogs = [...(state.logs || []), htmlMsg].slice(-50); // 最大50件保持
+        return { logs: newLogs };
+    });
+
+    const logger = document.getElementById("log"); 
+    if (logger) { 
+        const div = document.createElement("div"); 
+        div.innerHTML = `> ${htmlMsg}`; 
+        logger.appendChild(div); 
+        logger.scrollTop = logger.scrollHeight; 
+    } 
+};
 
 export const actionRollDice = async (isCpuCall = false) => {
     const state = useGameStore.getState();
@@ -56,7 +70,6 @@ export const executeMove = (targetTileId) => {
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [] });
     logMsg(`🚶 「${tile.name}」に移動。`); playSfx('move');
 
-    // ▼ 追加：交番マスの処理
     if (tile.type === "koban") {
         state.updateCurrentPlayer(p => ({ ap: 0, cannotMove: true }));
         logMsg(`<span style="color:#e74c3c">🚓 交番！職務質問で足止め！</span>`); playSfx('fail');
@@ -106,7 +119,23 @@ export const executeMove = (targetTileId) => {
 
 export const actionCan = () => { const s = useGameStore.getState(); s.updateCurrentPlayer(p => ({ ap: p.ap - 1, cans: p.cans + 1 })); useGameStore.setState(st => ({ canPickedThisTurn: st.canPickedThisTurn + 1 })); playSfx('coin'); };
 export const actionTrash = () => { const s = useGameStore.getState(), cp = s.players[s.turn]; s.updateCurrentPlayer(p => ({ ap: p.ap - (p.equip?.shoes ? 1 : 2), trash: p.trash + Math.floor(Math.random() * 6) })); playSfx('coin'); };
-export const actionJob = () => { const s = useGameStore.getState(), cp = s.players[s.turn], win = Math.random() < (cp.charType === "sales" ? 0.8 : 0.6); s.updateCurrentPlayer(p => ({ ap: p.ap - 3, p: p.p + (win ? 12 : 0) })); if(win) playSfx('success'); else playSfx('fail'); };
+
+// ▼ 修正：バイトアクション時のポップアップ通知と結果表示
+export const actionJob = () => { 
+    const s = useGameStore.getState();
+    const cp = s.players[s.turn];
+    const win = Math.random() < (cp.charType === "sales" ? 0.8 : 0.6); 
+    
+    s.updateCurrentPlayer(p => ({ ap: p.ap - 3, p: p.p + (win ? 12 : 0) })); 
+    if (win) playSfx('success'); else playSfx('fail'); 
+
+    const msg = win ? `💼 バイト成功！12P獲得！` : `💼 バイト失敗...`;
+    logMsg(msg);
+    s.addEventPopup(cp.id, win ? "💼" : "😞", win ? "バイト成功！" : "バイト失敗...", win ? "+12P獲得" : "次回がんばろう", win ? "good" : "bad");
+
+    useGameStore.setState({ jobResult: { active: true, isSuccess: win, points: win ? 12 : 0 } });
+};
+
 export const actionOccupy = () => { const s = useGameStore.getState(), cp = s.players[s.turn], cost = s.territories[cp.pos] !== undefined ? 5 : 3; if (cp.p >= cost) { s.updateCurrentPlayer(p => ({ p: p.p - cost })); useGameStore.setState(st => ({ territories: { ...st.territories, [cp.pos]: cp.id } })); playSfx('success'); } };
 export const actionExchange = () => { const s = useGameStore.getState(), cp = s.players[s.turn], tot = cp.cans * s.canPrice + cp.trash * s.trashPrice; s.updateCurrentPlayer(p => ({ p: p.p + tot, cans: 0, trash: 0 })); playSfx('coin'); };
 export const actionManhole = () => { const s = useGameStore.getState(), cp = s.players[s.turn], mh = s.mapData.filter(t => t.type === "manhole" && t.id !== cp.pos); if (mh.length > 0) { s.updateCurrentPlayer(p => ({ ap: p.ap - 1, pos: mh[Math.floor(Math.random() * mh.length)].id })); playSfx('move'); checkNpcCollision(cp.id); } };
@@ -120,7 +149,6 @@ export const actionEndTurn = async () => {
         if (newEquip.bicycle) { newTimer.bicycle = (newTimer.bicycle || 5) - 1; if (newTimer.bicycle <= 0) { newEquip.bicycle = false; logMsg(`🚲 自転車が壊れた！`); } }
         if (newEquip.cart) { newTimer.cart = (newTimer.cart || 5) - 1; if (newTimer.cart <= 0) { newEquip.cart = false; logMsg(`🛒 リヤカーが壊れた！`); } }
 
-        // ▼ 行動不能フラグ(cannotMove)もリセットする
         state.updateCurrentPlayer(p => ({ ap: 0, stealth: false, _katsuage: 0, equip: newEquip, equipTimer: newTimer, cannotMove: false })); 
         useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null });
         

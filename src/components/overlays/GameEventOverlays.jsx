@@ -3,16 +3,15 @@ import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { ClayButton } from '../common/ClayButton';
 import { logMsg } from '../../game/actions';
-import { deckData } from '../../constants/cards'; // 追加：カード情報取得用
+import { deckData } from '../../constants/cards'; 
 
 export const GameEventOverlays = () => {
-    const { mgActive, mgType, mgValue, mgResult, storyActive, players, turn } = useGameStore();
+    const { mgActive, mgType, mgValue, mgResult, storyActive, players, turn, jobResult } = useGameStore();
     const { myUserId, status } = useNetworkStore();
     const cp = players[turn];
 
     const [slotReels, setSlotReels] = useState([0, 0, 0]);
     const [slotStopped, setSlotStopped] = useState([false, false, false]);
-    // ★ 最新の絵柄を確実に判定するためのRef
     const slotReelsRef = useRef([0, 0, 0]);
     const marks = ["🍒", "🔔", "🍇"];
 
@@ -27,13 +26,13 @@ export const GameEventOverlays = () => {
         }
     }, [mgActive, mgResult]);
 
-    // ★ スロットを回すアニメーション
+    // スロットを回すアニメーション
     useEffect(() => {
         if (mgActive && mgType === 'slot' && !mgResult) {
             const interval = setInterval(() => {
                 setSlotReels(prev => {
                     const next = prev.map((r, i) => slotStopped[i] ? r : Math.floor(Math.random() * 3));
-                    slotReelsRef.current = next; // 常に最新の絵柄をRefに保存
+                    slotReelsRef.current = next; 
                     return next;
                 });
             }, 100);
@@ -50,20 +49,29 @@ export const GameEventOverlays = () => {
             const cardId = Math.floor(Math.random() * 38);
             useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
             
-            // ▼ イベントでゲットしたカードをポップアップ等で表示する処理を追加
             const cardData = deckData.find(c => c.id === cardId) || { name: '謎のカード', icon: '🃏' };
             useGameStore.getState().addEventPopup(cp.id, cardData.icon, "カード獲得！", `${cardData.name}を手に入れた`, "card");
             logMsg(`🎁 ${cp.name}は「${cardData.name}」を手に入れた！`);
         }
         
-        // ★ 失敗しても必ず mgResult を null に戻してフリーズを回避
         setTimeout(() => useGameStore.setState({ mgActive: false, mgResult: null }), 2000);
     };
 
-    if (!mgActive && !storyActive) return null;
-
     return (
         <>
+            {/* ▼ バイト結果のポップアップ表示 */}
+            {jobResult?.active && (
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }} onClick={() => useGameStore.setState({ jobResult: null })}>
+                    <div className="modal-box" style={{ background: jobResult.isSuccess ? '#f1c40f' : '#2c3e50', color: jobResult.isSuccess ? '#333' : 'white', borderColor: jobResult.isSuccess ? '#f39c12' : '#1a252f' }}>
+                        <div style={{ fontSize: '60px' }}>{jobResult.isSuccess ? '💼🎉' : '😭'}</div>
+                        <h2 style={{ marginTop: '10px' }}>{jobResult.isSuccess ? 'バイト大成功！' : 'バイト失敗...'}</h2>
+                        <p style={{ fontWeight: 'bold', fontSize: '18px' }}>{jobResult.isSuccess ? `${jobResult.points}P獲得！` : '報酬なし。'}</p>
+                        <p style={{ fontSize: '12px', color: '#bdc3c7', marginTop: '20px' }}>(タップして戻る)</p>
+                    </div>
+                </div>
+            )}
+
+            {/* ミニゲーム表示 */}
             {mgActive && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }}>
                     <div className="modal-box" style={{ background: '#2c3e50', color: 'white' }}>
@@ -93,7 +101,6 @@ export const GameEventOverlays = () => {
                                                     const ns = [...slotStopped]; 
                                                     ns[i] = true; 
                                                     setSlotStopped(ns);
-                                                    // 全て止まったら、最新の絵柄（Ref）を元に判定
                                                     if(ns.every(s => s)) {
                                                         setTimeout(() => {
                                                             const finalReels = slotReelsRef.current;

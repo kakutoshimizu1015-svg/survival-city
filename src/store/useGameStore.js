@@ -10,6 +10,10 @@ const initialState = {
     layoutMode: 'auto', volume: 1.0, tutorialStep: 0, sandboxActive: false, sandboxScenario: -1, sandboxStep: 0,
     turnBanner: null, turnBannerActive: false, eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,
     npcMovePick: null, 
+    
+    // ▼ 追加：バイト結果とログ同期用ステート
+    jobResult: null,
+    logs: [],
 
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
     mapData: [], territories: {}, isRainy: false, weatherState: 'sunny', isNight: false,
@@ -21,7 +25,6 @@ export const useGameStore = create((set, get) => ({
     ...initialState,
     setGameState: (newState) => set((state) => ({ ...state, ...newState })),
     
-    // ▼ ここを改良：関数だけでなく、オブジェクト({hp: 100}など)を直接渡してもエラーにならないようにしました！
     updatePlayer: (id, updater) => set((state) => ({
         players: state.players.map(p => p.id === id ? { 
             ...p, 
