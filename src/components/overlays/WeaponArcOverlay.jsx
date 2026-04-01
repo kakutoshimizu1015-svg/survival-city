@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom'; // ▼ 画面最前面にUIを引き出すために追加
 import { useGameStore } from '../../store/useGameStore';
 import { dealDamage } from '../../game/combat';
 import { logMsg } from '../../game/actions';
@@ -9,53 +10,78 @@ export const WeaponArcOverlay = () => {
     const [angleDeg, setAngleDeg] = useState(90);
     const [attackerPos, setAttackerPos] = useState({ x: 0, y: 0 });
     const [radius, setRadius] = useState(0);
+
     const panelRef = useRef(null);
 
-    // ▼ 修正：getBoundingClientRect() ではなく、マップ内での相対座標(offsetLeft/Top)を取得
+    // マップ上のマスの相対位置を計算し、SVGの描画位置をぴったり追従させる
     useEffect(() => {
         if (!weaponArcData) return;
-        const tileEl = document.getElementById(`tile-${weaponArcData.attacker.pos}`);
-        if (tileEl) {
-            setAttackerPos({
-                x: tileEl.offsetLeft + tileEl.offsetWidth / 2,
-                y: tileEl.offsetTop + tileEl.offsetHeight / 2
-            });
-            setRadius(tileEl.offsetWidth * (weaponArcData.cardData.range + 0.8));
-        }
+        
+        const updatePos = () => {
+            const tileEl = document.getElementById(`tile-${weaponArcData.attacker.pos}`);
+            if (tileEl) {
+                setAttackerPos({
+                    x: tileEl.offsetLeft + tileEl.offsetWidth / 2,
+                    y: tileEl.offsetTop + tileEl.offsetHeight / 2
+                });
+                setRadius(tileEl.offsetWidth * (weaponArcData.cardData.range + 0.8));
+            }
+        };
+        
+        updatePos();
+        window.addEventListener('resize', updatePos);
+        return () => window.removeEventListener('resize', updatePos);
     }, [weaponArcData]);
 
-    // パネルをドラッグして移動させる処理
+    // ▼ 修正：パネルをドラッグして移動させる処理（画面全体に対する座標計算）
     useEffect(() => {
         const el = panelRef.current;
         if (!el || !weaponArcData) return;
 
         let ox = 0, oy = 0, startX = 0, startY = 0;
+        
         const onDown = (e) => {
             if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+            
             startX = (e.touches ? e.touches[0].clientX : e.clientX);
             startY = (e.touches ? e.touches[0].clientY : e.clientY);
-            ox = el.offsetLeft; oy = el.offsetTop;
+            
+            // transform適用前の正確な画面上の座標を取得
+            const rect = el.getBoundingClientRect();
+            ox = rect.left; 
+            oy = rect.top;
+            
             document.addEventListener('mousemove', onMove);
             document.addEventListener('mouseup', onUp);
             document.addEventListener('touchmove', onMove, { passive: false });
             document.addEventListener('touchend', onUp);
         };
+
         const onMove = (e) => {
             const cx = (e.touches ? e.touches[0].clientX : e.clientX);
             const cy = (e.touches ? e.touches[0].clientY : e.clientY);
             const nx = Math.max(0, Math.min(window.innerWidth  - el.offsetWidth,  ox + cx - startX));
             const ny = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, oy + cy - startY));
-            el.style.left = nx + 'px'; el.style.top = ny + 'px'; el.style.bottom = 'auto'; el.style.transform = 'none';
+            
+            el.style.left = nx + 'px'; 
+            el.style.top = ny + 'px';
+            el.style.bottom = 'auto'; 
+            el.style.right = 'auto';
+            el.style.transform = 'none'; // ドラック時に中央固定のtransformを解除
+            
             if (e.cancelable) e.preventDefault();
         };
+
         const onUp = () => {
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
             document.removeEventListener('touchmove', onMove);
             document.removeEventListener('touchend', onUp);
         };
+
         el.addEventListener('mousedown', onDown);
         el.addEventListener('touchstart', onDown, { passive: false });
+
         return () => {
             el.removeEventListener('mousedown', onDown);
             el.removeEventListener('touchstart', onDown);
@@ -110,9 +136,41 @@ export const WeaponArcOverlay = () => {
     const y2 = attackerPos.y + radius * Math.sin(endRad);
     const pathData = `M ${attackerPos.x} ${attackerPos.y} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`;
 
+    // ▼ 操作パネルのUI定義（後でPortalを使って画面中央に出す）
+    const panelContent = (
+        <div ref={panelRef} style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            background: 'rgba(20,20,30,0.95)', border: '3px solid #e74c3c', borderRadius: '16px',
+            padding: '14px 24px', zIndex: 9999, color: '#fdf5e6', textAlign: 'center', width: '300px',
+            boxShadow: '0 0 40px rgba(231,76,60,0.6)', cursor: 'move' 
+        }}>
+            <div style={{ color: '#e74c3c', fontWeight: 'bold', fontSize: '18px', marginBottom: '10px', pointerEvents: 'none' }}>
+                ⚔️ {cardData.name} (射程{cardData.range})
+            </div>
+            
+            <input 
+                type="range" min="-180" max="180" value={angleDeg} 
+                onChange={e => setAngleDeg(Number(e.target.value))} 
+                style={{ width: '100%', accentColor: '#e74c3c', marginBottom: '10px', cursor: 'pointer' }}
+            />
+            <div style={{ fontSize: '12px', color: '#bdc3c7', marginBottom: '15px', pointerEvents: 'none' }}>
+                スライダーで方向を調整（枠をドラッグで移動）
+            </div>
+
+            <div style={{ fontSize: '13px', color: '#f1c40f', marginBottom: '15px', minHeight: '20px', pointerEvents: 'none', fontWeight: 'bold' }}>
+                {hitTargets.length > 0 ? `🎯 射程内: ${hitTargets.map(t => t.name).join(', ')}` : '射程内に対象なし'}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+                <button className="btn-large" style={{ background: '#e74c3c', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} onClick={fireWeapon}>💥 攻撃！</button>
+                <button className="btn-large" style={{ background: '#7f8c8d', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} onClick={() => useGameStore.setState({ weaponArcData: null })}>✕ ｷｬンｾﾙ</button>
+            </div>
+        </div>
+    );
+
     return (
         <>
-            {/* ▼ 修正：SVGを position:absolute にしてマップと一緒にスクロールさせる */}
+            {/* SVG部分はマップ内部に絶対配置してピッタリくっつける */}
             <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1400 }}>
                 {radius > 0 && (
                     <>
@@ -148,32 +206,8 @@ export const WeaponArcOverlay = () => {
                 )}
             </svg>
 
-            <div ref={panelRef} style={{
-                position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-                background: 'rgba(20,20,30,0.95)', border: '3px solid #e74c3c', borderRadius: '16px',
-                padding: '14px 24px', zIndex: 1500, color: '#fdf5e6', textAlign: 'center', width: '300px',
-                boxShadow: '0 0 30px rgba(231,76,60,0.5)', cursor: 'move' 
-            }}>
-                <div style={{ color: '#e74c3c', fontWeight: 'bold', fontSize: '18px', marginBottom: '10px', pointerEvents: 'none' }}>
-                    ⚔️ {cardData.name} (射程{cardData.range})
-                </div>
-                
-                <input 
-                    type="range" min="-180" max="180" value={angleDeg} 
-                    onChange={e => setAngleDeg(Number(e.target.value))} 
-                    style={{ width: '100%', accentColor: '#e74c3c', marginBottom: '10px' }}
-                />
-                <div style={{ fontSize: '12px', color: '#bdc3c7', marginBottom: '15px', pointerEvents: 'none' }}>スライダーで撃つ方向を調整（枠をドラッグで移動）</div>
-
-                <div style={{ fontSize: '13px', color: '#f1c40f', marginBottom: '15px', minHeight: '20px', pointerEvents: 'none' }}>
-                    {hitTargets.length > 0 ? `🎯 射程内: ${hitTargets.map(t => t.name).join(', ')}` : '射程内に対象なし'}
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <button className="btn-large" style={{ background: '#e74c3c', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} onClick={fireWeapon}>💥 攻撃！</button>
-                    <button className="btn-large" style={{ background: '#7f8c8d', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} onClick={() => useGameStore.setState({ weaponArcData: null })}>✕ キャンセル</button>
-                </div>
-            </div>
+            {/* ▼ パネル部分をマップコンテナから脱出させ、ブラウザの body 直下に描画する */}
+            {createPortal(panelContent, document.body)}
         </>
     );
 };
