@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'; // ▼ 画面最前面にUIを引き�
 import { useGameStore } from '../../store/useGameStore';
 import { dealDamage } from '../../game/combat';
 import { logMsg } from '../../game/actions';
+import { actionCancelWeapon } from '../../game/cards'; // ▼ 追加：キャンセル処理の関数をインポート
 
 export const WeaponArcOverlay = () => {
     const weaponArcData = useGameStore(state => state.weaponArcData);
@@ -163,7 +164,15 @@ export const WeaponArcOverlay = () => {
 
             <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="btn-large" style={{ background: '#e74c3c', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} onClick={fireWeapon}>💥 攻撃！</button>
-                <button className="btn-large" style={{ background: '#7f8c8d', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} onClick={() => useGameStore.setState({ weaponArcData: null })}>✕ ｷｬンｾﾙ</button>
+                
+                {/* ▼ 修正：actionCancelWeapon を呼び出すように変更 */}
+                <button 
+                    className="btn-large" 
+                    style={{ background: '#7f8c8d', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} 
+                    onClick={() => actionCancelWeapon(cardData.id)}
+                >
+                    ✕ ｷｬンｾﾙ
+                </button>
             </div>
         </div>
     );
