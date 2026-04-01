@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { charEmoji } from '../../constants/characters';
 
@@ -25,9 +25,13 @@ export const Tile = ({
     pathClass
 }) => {
     const { setTooltipData, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos } = useGameStore();
+    const touchTimer = useRef(null);
 
     const handleMouseEnter = (e) => {
-        if (isClickable) return; // 分岐選択中などは邪魔になるためツールチップを無効化
+        // ドラッグ中はツールチップの計算を完全にキャンセルし、処理落ちを防ぐ
+        const wrapper = document.getElementById('game-board-wrapper');
+        if (wrapper && wrapper.classList.contains('dragging')) return;
+        if (isClickable) return; 
         
         const ttKey = tile.type in tileTooltipData ? tile.type : tile.area;
         const ttData = tileTooltipData[ttKey];
@@ -58,7 +62,10 @@ export const Tile = ({
     };
 
     const handleMouseMove = (e) => {
+        const wrapper = document.getElementById('game-board-wrapper');
+        if (wrapper && wrapper.classList.contains('dragging')) return;
         if (isClickable) return;
+
         if (useGameStore.getState().tooltipData) {
             const x = e.clientX || (e.touches && e.touches[0].clientX) || 0;
             const y = e.clientY || (e.touches && e.touches[0].clientY) || 0;
@@ -67,7 +74,20 @@ export const Tile = ({
     };
 
     const handleMouseLeave = () => {
+        if (touchTimer.current) clearTimeout(touchTimer.current);
         setTooltipData(null);
+    };
+
+    // スマホでは少しだけ遅延させることで、スワイプ操作の邪魔をしないようにする
+    const handleTouchStart = (e) => {
+        touchTimer.current = setTimeout(() => {
+            handleMouseEnter(e);
+        }, 150);
+    };
+
+    const handleTouchEndOrCancel = () => {
+        if (touchTimer.current) clearTimeout(touchTimer.current);
+        setTimeout(handleMouseLeave, 300);
     };
 
     let classNameStr = `tile ${tile.type} ${tile.area}`;
@@ -84,8 +104,9 @@ export const Tile = ({
             onMouseEnter={handleMouseEnter}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
-            onTouchStart={handleMouseEnter}
-            onTouchEnd={() => setTimeout(handleMouseLeave, 1800)}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEndOrCancel}
+            onTouchCancel={handleTouchEndOrCancel}
             className={classNameStr}
             style={{ gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default' }}
         >
