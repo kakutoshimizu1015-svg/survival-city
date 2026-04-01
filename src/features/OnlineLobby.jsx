@@ -4,6 +4,8 @@ import { useGameStore } from '../store/useGameStore';
 import { genSmallMap, genMediumMap, genLargeMap } from '../constants/maps';
 import { charEmoji, charInfo } from '../constants/characters';
 import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatterPlayerPositions } from '../utils/mapRandomizer';
+// ▼ 追加：ユーザー情報の取得用
+import { useUserStore } from '../store/useUserStore';
 
 const TEAM_COLORS = { 
     none: { label:'ソロ', color:'transparent', icon:'⚪' }, 
@@ -14,7 +16,10 @@ const TEAM_COLORS = {
 };
 
 export const OnlineLobby = () => {
-    const [playerName, setPlayerName] = useState('Player' + Math.floor(Math.random() * 1000));
+    // ▼ 修正：useUserStore から名前を取得し、ローカルの初期値にする
+    const globalPlayerName = useUserStore(state => state.playerName);
+    const [playerName, setPlayerName] = useState(globalPlayerName || 'Player' + Math.floor(Math.random() * 1000));
+    
     const [roomInput, setRoomInput] = useState('');
     
     // ホスト設定用
@@ -31,10 +36,17 @@ export const OnlineLobby = () => {
     const { 
         createRoom, joinRoom, leaveRoom, status, roomId, lobbyPlayers, isHost, broadcast, 
         activeRooms, subscribeToRooms, unsubscribeFromRooms, updateRoomStatus,
-        myUserId, updateMyInfo, addCpu, updateCpu, removeCpu, randomizeTeams, clearTeams // 追加したStore機能群
+        myUserId, updateMyInfo, addCpu, updateCpu, removeCpu, randomizeTeams, clearTeams
     } = useNetworkStore();
     
     const setGameState = useGameStore(state => state.setGameState);
+
+    // ▼ 追加：グローバルな名前が非同期でロードされた場合にローカルステートを更新
+    useEffect(() => {
+        if (globalPlayerName) {
+            setPlayerName(globalPlayerName);
+        }
+    }, [globalPlayerName]);
 
     useEffect(() => {
         subscribeToRooms();
@@ -143,7 +155,8 @@ export const OnlineLobby = () => {
                 <div className="panel" style={{ width: '100%', maxWidth: '650px', marginBottom: '20px' }}>
                     <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px', color: '#fdf5e6', marginTop: 0 }}>🎭 自分の設定を変更する</h3>
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <label style={{ fontWeight: 'bold' }}>名前: <input type="text" value={myInfo.name || ''} onChange={e => updateMyInfo({ name: e.target.value })} style={{ padding: '8px', borderRadius: '4px', width: '100px' }} /></label>
+                        {/* ▼ 名前変更を無効化（名前の変更はモード選択画面で行うため） */}
+                        <label style={{ fontWeight: 'bold' }}>名前: <input type="text" value={myInfo.name || ''} readOnly style={{ padding: '8px', borderRadius: '4px', width: '100px', background: '#d7ccc8', color: '#5c4a44', cursor: 'not-allowed' }} title="名前の変更はモード選択画面で行ってください" /></label>
                         <label style={{ fontWeight: 'bold' }}>キャラ: 
                             <select value={myInfo.charType || 'athlete'} onChange={e => updateMyInfo({ charType: e.target.value })} style={{ padding: '8px', borderRadius: '4px', marginLeft: '5px' }}>
                                 {Object.entries(charInfo).map(([k, info]) => <option key={k} value={k}>{info.name}</option>)}
@@ -198,13 +211,23 @@ export const OnlineLobby = () => {
         );
     }
 
-    // --- (部屋を作る/探す画面は前回のまま変更なし) ---
+    // --- 部屋を作る/探す画面 ---
     return (
         <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px', color: '#fdf5e6', width: '100vw' }}>
             <h2 style={{ fontSize: '32px' }}>🌐 オンライン対戦</h2>
             <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <div className="panel" style={{ width: '350px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div><label>プレイヤー名:</label><input type="text" value={playerName} onChange={e => setPlayerName(e.target.value)} style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '4px' }} /></div>
+                    {/* ▼ 名前入力は App.jsx で行うため ReadOnly（表示のみ）に変更 */}
+                    <div>
+                        <label>プレイヤー名:</label>
+                        <input 
+                            type="text" 
+                            value={playerName} 
+                            readOnly
+                            title="名前の変更はモード選択画面で行ってください"
+                            style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '4px', background: '#d7ccc8', color: '#5c4a44', cursor: 'not-allowed' }} 
+                        />
+                    </div>
                     <hr style={{ borderColor: '#5c4a44' }} />
                     <button className="btn-large btn-green" onClick={handleCreate} disabled={status === 'connecting'}>👑 部屋を新しく作る</button>
                     <div style={{ textAlign: 'center', margin: '5px 0' }}>または手動で入力</div>
