@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { charEmoji } from '../../constants/characters';
+import { CharImage } from '../common/CharImage';
 
 export const TurnOrderOverlay = () => {
     const { turnOrderActive, turnOrderData, setGameState } = useGameStore();
@@ -11,7 +11,7 @@ export const TurnOrderOverlay = () => {
 
         let isMounted = true;
         const runAnim = async () => {
-            const { players, diceValues, sortedOrder } = turnOrderData;
+            const { players, diceValues } = turnOrderData;
             const rolls = players.map(p => ({ d1: '?', d2: '?', total: '—', rolling: false, done: false }));
             setAnimState({ step: -1, currentRolls: rolls, showResult: false });
 
@@ -57,18 +57,12 @@ export const TurnOrderOverlay = () => {
         const { players, sortedOrder } = turnOrderData;
         const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#e67e22', '#9b59b6', '#1abc9c', '#e91e8c'];
         
-        // ソートされた順番で新しいプレイヤー配列を作成
         const newPlayers = sortedOrder.map((origIdx, newIdx) => {
             const p = players[origIdx];
             return { ...p, id: newIdx, color: colors[newIdx % 8] };
         });
 
-        setGameState({
-            players: newPlayers,
-            turn: 0,
-            turnOrderActive: false,
-            turnOrderData: null
-        });
+        setGameState({ players: newPlayers, turn: 0, turnOrderActive: false, turnOrderData: null });
     };
 
     const { players, sortedOrder } = turnOrderData;
@@ -95,9 +89,11 @@ export const TurnOrderOverlay = () => {
                                 boxShadow: isWinner ? '0 0 15px rgba(241,196,15,0.8)' : 'none'
                             }}>
                                 <div style={{ fontSize: '20px', minWidth: '28px', textAlign: 'center' }}>{animState.showResult ? rankIcons[rank] : '—'}</div>
-                                <div style={{ width: '36px', height: '36px', borderRadius: '8px', border: `3px solid ${p.color}`, display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '22px', background: '#8d7b68', flexShrink: 0 }}>
-                                    {charEmoji[p.charType] || '🏃'}
+                                
+                                <div style={{ width: '40px', height: '40px', borderRadius: '8px', border: `3px solid ${p.color}`, display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#8d7b68', flexShrink: 0, overflow: 'hidden' }}>
+                                    <CharImage charType={p.charType} size={36} />
                                 </div>
+
                                 <div style={{ flex: 1, fontWeight: 'bold', color: p.color, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {p.name} {p.isCPU && <span style={{color:'#bdc3c7', fontSize:'11px'}}>(CPU)</span>}
                                 </div>
@@ -112,9 +108,7 @@ export const TurnOrderOverlay = () => {
                 </div>
 
                 {animState.showResult ? (
-                    <button className="btn-large btn-blue" style={{ width: '100%', marginTop: '20px' }} onClick={handleClose}>
-                        タップしてゲーム開始！
-                    </button>
+                    <button className="btn-large btn-blue" style={{ width: '100%', marginTop: '20px' }} onClick={handleClose}>タップしてゲーム開始！</button>
                 ) : (
                     <div style={{ textAlign: 'center', marginTop: '15px', color: '#bdc3c7', fontWeight: 'bold' }}>
                         {animState.step === -1 ? 'まもなくダイスロールが始まります...' : '順番を決定中...'}

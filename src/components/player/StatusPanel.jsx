@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { charEmoji, charInfo } from '../../constants/characters';
+import { charInfo } from '../../constants/characters';
+import { CharImage } from '../common/CharImage';
 
 export const StatusPanel = () => {
     const turn = useGameStore(state => state.turn);
@@ -9,11 +10,9 @@ export const StatusPanel = () => {
 
     if (!currentPlayer) return null;
 
-    const emoji = charEmoji[currentPlayer.charType] || '🏃';
     const cInfo = charInfo[currentPlayer.charType];
     const hpPercent = Math.max(0, Math.min(100, currentPlayer.hp));
 
-    // HPバーの色を計算
     const hpColor = hpPercent > 50 ? 'linear-gradient(90deg,#2ecc71,#27ae60)' 
                   : hpPercent > 20 ? 'linear-gradient(90deg,#f39c12,#e67e22)' 
                   : 'linear-gradient(90deg,#e74c3c,#c0392b)';
@@ -29,8 +28,9 @@ export const StatusPanel = () => {
                 </div>
             </div>
 
-            <div className="avatar-large" style={{ borderColor: currentPlayer.color }}>
-                {emoji}
+            {/* アバター部分をCharImageに差し替え */}
+            <div className="avatar-large" style={{ borderColor: currentPlayer.color, overflow: 'hidden', padding: 0 }}>
+                <CharImage charType={currentPlayer.charType} size={68} />
             </div>
 
             <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#f1c40f', marginBottom: '5px', textAlign: 'center' }}>
@@ -61,7 +61,6 @@ export const StatusPanel = () => {
                 </div>
             </div>
 
-            {/* ▼ 追加: 装備アイテムの表示（ステルスと身分証を追加） */}
             <div style={{ width: '100%', marginTop: '5px' }}>
                 <div style={{ fontSize: '10px', borderBottom: '1px solid #8d6e63', color: '#bdc3c7' }}>装備アイテム</div>
                 <div id="items-indicator" style={{ display: 'flex', gap: '5px', justifyContent: 'center', marginTop: '5px', background: '#3e2f2a', padding: '5px', borderRadius: '8px', width: '100%', flexWrap: 'wrap' }}>

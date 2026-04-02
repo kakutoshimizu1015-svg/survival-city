@@ -1,5 +1,5 @@
 import React from 'react';
-import { charImages } from '../../constants/characters';
+import { charEmoji, charImages } from '../../constants/characters';
 
 const CHAR_COLORS = {
   athlete:'#e74c3c', sales:'#3498db', survivor:'#2ecc71', yankee:'#e67e22',
@@ -8,7 +8,7 @@ const CHAR_COLORS = {
 
 export const CharacterIcon = ({ charKey, emoji, name, isSelected, isHovered, onClick, onHover, onLeave }) => {
   const color = CHAR_COLORS[charKey] || '#aaa';
-  const isImage = charImages[charKey] !== undefined;
+  const isImage = charImages && charImages[charKey] !== undefined;
 
   return (
     <button
@@ -17,35 +17,29 @@ export const CharacterIcon = ({ charKey, emoji, name, isSelected, isHovered, onC
       onMouseLeave={() => onLeave()}
       onTouchStart={() => onHover(charKey)}
       style={{
-        width: 88, height: 100, borderRadius: 10, border: 'none', cursor: 'pointer',
-        background: isSelected
-          ? `linear-gradient(145deg, ${color}33, ${color}11)`
-          : isHovered
-          ? 'rgba(253,245,230,0.06)'
-          : 'rgba(253,245,230,0.03)',
-        position: 'relative', 
-        transition: 'all 0.18s ease',
+        width: 90, height: 110, borderRadius: 10, border: 'none', cursor: 'pointer',
+        background: isSelected ? `linear-gradient(145deg, ${color}33, ${color}11)` : isHovered ? 'rgba(253,245,230,0.06)' : 'rgba(253,245,230,0.03)',
+        position: 'relative', transition: 'all 0.18s ease',
         outline: isSelected ? `2px solid ${color}` : isHovered ? `1px solid ${color}88` : '1px solid rgba(141,110,99,0.25)',
         boxShadow: isSelected ? `0 0 20px ${color}33, inset 0 0 15px ${color}11` : 'none',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
         transform: isHovered ? 'scale(1.08)' : isSelected ? 'scale(1.03)' : 'scale(1)',
         zIndex: isHovered ? 5 : 1,
       }}
     >
       <span style={{
-        fontSize: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        filter: isSelected ? `drop-shadow(0 0 6px ${color})` : 'none',
-        transition: 'filter 0.2s', width: 40, height: 40
+        fontSize: 38, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        filter: isSelected && !isImage ? `drop-shadow(0 0 6px ${color})` : 'none',
+        transition: 'filter 0.2s', width: 64, height: 64
       }}>
         {isImage ? (
-          <img src={charImages[charKey].front} alt={name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          <img src={charImages[charKey].front} alt={name} style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated', filter: isSelected ? `drop-shadow(0 0 8px ${color})` : 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
         ) : (
-          emoji
+          emoji || charEmoji[charKey]
         )}
       </span>
       <span style={{
-        fontSize: 11, fontWeight: 700, 
-        color: isSelected ? color : '#b0a090',
+        fontSize: 12, fontWeight: 700, color: isSelected ? color : '#b0a090',
         fontFamily: "'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif",
         transition: 'color 0.2s', letterSpacing: 1,
       }}>
@@ -53,11 +47,7 @@ export const CharacterIcon = ({ charKey, emoji, name, isSelected, isHovered, onC
       </span>
 
       {isSelected && (
-        <div style={{
-          position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)',
-          width: 22, height: 3, borderRadius: 2, background: color,
-          boxShadow: `0 0 8px ${color}`,
-        }} />
+        <div style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 22, height: 3, borderRadius: 2, background: color, boxShadow: `0 0 8px ${color}` }} />
       )}
     </button>
   );

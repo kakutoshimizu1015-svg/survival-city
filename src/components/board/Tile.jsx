@@ -21,8 +21,7 @@ export const tileTooltipData = {
 
 export const Tile = React.memo(({ 
     tile, owner, isFog, isClickable, onClick, 
-    isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend,
-    pathClass
+    isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass
 }) => {
     const setTooltipData = useGameStore(state => state.setTooltipData);
     const policePos = useGameStore(state => state.policePos);
@@ -56,11 +55,7 @@ export const Tile = React.memo(({
                 descText += '\n─────\n' + npcsHere.map(n => `${n.info.emoji}${n.info.name}: ${n.info.desc}`).join('\n');
             }
 
-            setTooltipData({
-                title: ttData.title,
-                desc: descText,
-                visible: true
-            });
+            setTooltipData({ title: ttData.title, desc: descText, visible: true });
         }
     };
 
@@ -70,9 +65,7 @@ export const Tile = React.memo(({
     };
 
     const handleTouchStart = (e) => {
-        touchTimer.current = setTimeout(() => {
-            handleMouseEnter(e);
-        }, 150);
+        touchTimer.current = setTimeout(() => { handleMouseEnter(e); }, 150);
     };
 
     const handleTouchEndOrCancel = () => {
@@ -86,7 +79,6 @@ export const Tile = React.memo(({
     if (pathClass) classNameStr += ` ${pathClass}`;
 
     const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
-
     const isJinchi = owner !== null && owner !== undefined;
 
     return (
@@ -99,26 +91,15 @@ export const Tile = React.memo(({
             onTouchEnd={handleTouchEndOrCancel}
             onTouchCancel={handleTouchEndOrCancel}
             className={classNameStr}
-            style={{ 
-                gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default',
-                position: 'relative'
-            }}
+            style={{ gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default', position: 'relative' }}
         >
             {isJinchi && !isFog && (
                 <img 
                     src={jinchiBuilding} 
                     alt="陣地" 
                     style={{
-                        position: 'absolute',
-                        bottom: '20%',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: '140%',
-                        height: 'auto',
-                        pointerEvents: 'none',
-                        zIndex: 1,
-                        opacity: 0.9,
-                        imageRendering: 'pixelated'
+                        position: 'absolute', bottom: '20%', left: '50%', transform: 'translateX(-50%)',
+                        width: '140%', height: 'auto', pointerEvents: 'none', zIndex: 1, opacity: 0.9, imageRendering: 'pixelated'
                     }}
                 />
             )}
@@ -134,6 +115,8 @@ export const Tile = React.memo(({
                     {tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
                 </div>
             )}
+            
+            {/* 古い駒（playersOnTile）は削除し、PlayerTokenに任せます */}
             
             {!isFog && isTruck && <div className="truck-token" style={{zIndex: 5}}>🚛</div>}
             {!isFog && isPolice && <div className="npc-token npc-police" style={{zIndex: 5}}>👮</div>}
@@ -160,6 +143,5 @@ export const Tile = React.memo(({
     if (prev.owner?.id !== next.owner?.id) return false;
     if (prev.tile.fieldCans !== next.tile.fieldCans) return false;
     if (prev.tile.fieldTrash !== next.tile.fieldTrash) return false;
-
     return true;
 });

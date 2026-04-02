@@ -17,7 +17,6 @@ export const GameBoard = () => {
     } = useGameStore();
 
     const cp = players[turn];
-    
     const scale = useRef(1.0);
     const offset = useRef({ x: 0, y: 0 });
     const wrapperRef = useRef(null);
@@ -27,7 +26,6 @@ export const GameBoard = () => {
     const lastTouches = useRef(null);
     const isClickPrevented = useRef(false);
     const rafRef = useRef(null);
-
     const prevAutoScrollTurn = useRef(-1);
 
     const applyTransform = useCallback((smooth = false) => {
@@ -45,19 +43,14 @@ export const GameBoard = () => {
         const prevScale = scale.current;
         const newScale = Math.min(3.0, Math.max(0.25, prevScale + delta));
         const ratio = newScale / prevScale;
-        offset.current = {
-            x: px - ratio * (px - offset.current.x),
-            y: py - ratio * (py - offset.current.y)
-        };
+        offset.current = { x: px - ratio * (px - offset.current.x), y: py - ratio * (py - offset.current.y) };
         scale.current = newScale;
         applyTransform(true);
     }, [applyTransform]);
 
     const handleZoomBtn = (delta) => {
         if (!wrapperRef.current) return;
-        const cx = wrapperRef.current.clientWidth / 2;
-        const cy = wrapperRef.current.clientHeight / 2;
-        zoomAt(cx, cy, delta);
+        zoomAt(wrapperRef.current.clientWidth / 2, wrapperRef.current.clientHeight / 2, delta);
     };
 
     const resetZoom = useCallback(() => {
@@ -71,20 +64,12 @@ export const GameBoard = () => {
         let wh = wrapperRef.current.clientHeight;
 
         if (bw === 0 || bh === 0 || ww === 0 || wh === 0) return;
-
-        if (wh > window.innerHeight) {
-            wh = window.innerHeight * 0.5;
-        }
+        if (wh > window.innerHeight) wh = window.innerHeight * 0.5;
 
         const paddingRatio = ww <= 768 ? 0.95 : 1.0; 
-
         const fitScale = Math.min(ww / bw, wh / bh, 1.0) * paddingRatio;
         scale.current = fitScale;
-        
-        offset.current = {
-            x: (ww - bw * fitScale) / 2,
-            y: (wh - bh * fitScale) / 2
-        };
+        offset.current = { x: (ww - bw * fitScale) / 2, y: (wh - bh * fitScale) / 2 };
         applyTransform(true);
     }, [applyTransform]);
 
@@ -92,35 +77,19 @@ export const GameBoard = () => {
 
     useEffect(() => {
         if (mapTileCount === 0) return; 
-        
-        const timer = setTimeout(() => {
-            resetZoom();
-        }, 150);
-
+        const timer = setTimeout(() => { resetZoom(); }, 150);
         window.addEventListener('resize', resetZoom);
-
-        return () => {
-            clearTimeout(timer);
-            window.removeEventListener('resize', resetZoom);
-        };
+        return () => { clearTimeout(timer); window.removeEventListener('resize', resetZoom); };
     }, [mapTileCount, resetZoom]);
 
     useEffect(() => {
-        if (!autoScrollToPlayer) return;
-        if (!wrapperRef.current) return;
-        if (!mapData || mapData.length === 0) return;
-        if (!cp) return;
-        if (prevAutoScrollTurn.current === turn) return;
-        if (gameOver) return;
-
+        if (!autoScrollToPlayer || !wrapperRef.current || !mapData || mapData.length === 0 || !cp || prevAutoScrollTurn.current === turn || gameOver) return;
         prevAutoScrollTurn.current = turn;
-
         const targetTile = mapData.find(t => t.id === cp.pos);
         if (!targetTile) return;
 
         const timer = setTimeout(() => {
             if (!wrapperRef.current) return;
-
             const computedStyle = getComputedStyle(document.documentElement);
             const tileSizeStr = computedStyle.getPropertyValue('--tile-size').trim();
             const tileSize = parseInt(tileSizeStr, 10) || 60;
@@ -132,21 +101,14 @@ export const GameBoard = () => {
 
             const ww = wrapperRef.current.clientWidth;
             const wh = wrapperRef.current.clientHeight;
-            const currentScale = scale.current;
-
-            offset.current = {
-                x: ww / 2 - tilePixelX * currentScale,
-                y: wh / 2 - tilePixelY * currentScale
-            };
+            offset.current = { x: ww / 2 - tilePixelX * scale.current, y: wh / 2 - tilePixelY * scale.current };
             applyTransform(true);
         }, 300);
 
         return () => clearTimeout(timer);
     }, [turn, cp, mapData, autoScrollToPlayer, gameOver, applyTransform]);
 
-    const getTouchCoords = (touches) => {
-        return Array.from(touches).map(t => ({ clientX: t.clientX, clientY: t.clientY }));
-    };
+    const getTouchCoords = (touches) => Array.from(touches).map(t => ({ clientX: t.clientX, clientY: t.clientY }));
 
     useEffect(() => {
         const wrapper = wrapperRef.current;
@@ -155,10 +117,7 @@ export const GameBoard = () => {
         const handleWheel = (e) => {
             e.preventDefault();
             const rect = wrapper.getBoundingClientRect();
-            const px = e.clientX - rect.left;
-            const py = e.clientY - rect.top;
-            const delta = e.deltaY < 0 ? 0.15 : -0.15;
-            zoomAt(px, py, delta);
+            zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 0.15 : -0.15);
         };
 
         const handleMouseDown = (e) => {
@@ -174,12 +133,7 @@ export const GameBoard = () => {
 
         const handleMouseMove = (e) => {
             if (!isDragging.current) return;
-            const dx = e.clientX - dragStart.current.x;
-            const dy = e.clientY - dragStart.current.y;
-            offset.current = {
-                x: offsetStart.current.x + dx,
-                y: offsetStart.current.y + dy
-            };
+            offset.current = { x: offsetStart.current.x + (e.clientX - dragStart.current.x), y: offsetStart.current.y + (e.clientY - dragStart.current.y) };
             applyTransform(false);
         };
 
@@ -187,10 +141,8 @@ export const GameBoard = () => {
             if (!isDragging.current) return;
             isDragging.current = false;
             wrapper.classList.remove('dragging');
-            
             const inner = document.getElementById('game-board-inner');
             if (inner) inner.style.transition = 'transform 0.12s ease';
-
             const moved = Math.abs(e.clientX - dragStart.current.x) + Math.abs(e.clientY - dragStart.current.y);
             if (moved > 5) {
                 isClickPrevented.current = true;
@@ -211,24 +163,14 @@ export const GameBoard = () => {
 
             if (currentTouches.length === 1 && lastTouches.current.length === 1) {
                 const sensitivity = 1.8;
-                const dx = (currentTouches[0].clientX - lastTouches.current[0].clientX) * sensitivity;
-                const dy = (currentTouches[0].clientY - lastTouches.current[0].clientY) * sensitivity;
-                offset.current = { x: offset.current.x + dx, y: offset.current.y + dy };
+                offset.current = { x: offset.current.x + (currentTouches[0].clientX - lastTouches.current[0].clientX) * sensitivity, y: offset.current.y + (currentTouches[0].clientY - lastTouches.current[0].clientY) * sensitivity };
                 applyTransform(false);
                 if (e.cancelable) e.preventDefault();
             } else if (currentTouches.length === 2 && lastTouches.current.length === 2) {
-                const prevDist = Math.hypot(
-                    lastTouches.current[0].clientX - lastTouches.current[1].clientX,
-                    lastTouches.current[0].clientY - lastTouches.current[1].clientY
-                );
-                const newDist = Math.hypot(
-                    currentTouches[0].clientX - currentTouches[1].clientX,
-                    currentTouches[0].clientY - currentTouches[1].clientY
-                );
+                const prevDist = Math.hypot(lastTouches.current[0].clientX - lastTouches.current[1].clientX, lastTouches.current[0].clientY - lastTouches.current[1].clientY);
+                const newDist = Math.hypot(currentTouches[0].clientX - currentTouches[1].clientX, currentTouches[0].clientY - currentTouches[1].clientY);
                 const rect = wrapper.getBoundingClientRect();
-                const cx = ((currentTouches[0].clientX + currentTouches[1].clientX) / 2) - rect.left;
-                const cy = ((currentTouches[0].clientY + currentTouches[1].clientY) / 2) - rect.top;
-                zoomAt(cx, cy, (newDist - prevDist) * 0.005);
+                zoomAt(((currentTouches[0].clientX + currentTouches[1].clientX) / 2) - rect.left, ((currentTouches[0].clientY + currentTouches[1].clientY) / 2) - rect.top, (newDist - prevDist) * 0.005);
                 if (e.cancelable) e.preventDefault();
             }
             lastTouches.current = currentTouches;
@@ -264,7 +206,6 @@ export const GameBoard = () => {
 
     const handleTileClick = (tileId) => {
         if (isClickPrevented.current) return;
-
         if (npcMovePick) {
             const state = useGameStore.getState();
             state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
@@ -279,41 +220,23 @@ export const GameBoard = () => {
         const visible = new Set();
         const viewers = players.filter(p => !p.isCPU || p.id === turn);
         viewers.forEach(v => {
-            if (v.hp > 0) {
-                mapData.forEach(t => { if (getDistance(v.pos, t.id, mapData) <= 3) visible.add(t.id); });
-            }
+            if (v.hp > 0) { mapData.forEach(t => { if (getDistance(v.pos, t.id, mapData) <= 3) visible.add(t.id); }); }
         });
-        if (isBranchPicking) {
-            currentBranchOptions.forEach(id => visible.add(id));
-        }
+        if (isBranchPicking) currentBranchOptions.forEach(id => visible.add(id));
         return visible;
     }, [isNight, players, mapData, turn, isBranchPicking, currentBranchOptions]);
 
     const pathPreview = useMemo(() => {
         const preview = { path1: new Set(), path2: new Set(), path3: new Set(), manholes: new Set() };
         if (!players || players.length === 0 || gameOver || !cp || cp.isCPU) return preview;
-
         const pathData = getPathPreviewTiles(cp.pos, mapData);
-        preview.path1 = pathData.depth1;
-        preview.path2 = pathData.depth2;
-        preview.path3 = pathData.depth3;
-
+        preview.path1 = pathData.depth1; preview.path2 = pathData.depth2; preview.path3 = pathData.depth3;
         const curTile = mapData.find(t => t.id === cp.pos);
-        if (curTile && curTile.type === 'manhole') {
-            preview.manholes = getManholeLinkedTiles(cp.pos, mapData);
-        }
-
+        if (curTile && curTile.type === 'manhole') preview.manholes = getManholeLinkedTiles(cp.pos, mapData);
         return preview;
     }, [players, gameOver, cp, mapData]);
 
-    const zoomBtnStyle = {
-        width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', 
-        background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', 
-        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-        boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s',
-        padding: 0
-    };
-
+    const zoomBtnStyle = { width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s', padding: 0 };
     let maxCol = 0, maxRow = 0;
     if (mapData && mapData.length > 0) {
         maxCol = Math.max(...mapData.map(t => t.col));
@@ -322,26 +245,21 @@ export const GameBoard = () => {
 
     return (
         <div id="board-area" style={{ flexGrow: 1, overflowX: 'hidden', minWidth: 0, position: 'relative' }}>
-            
             <TileTooltip />
-
             {npcMovePick && (
                 <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ npcMovePick: null }); useGameStore.getState().showToast("情報操作をキャンセルしました"); }}>
                     🕵️ 移動先マスをタップしてください（タップでキャンセル）
                 </div>
             )}
             {isBranchPicking && !npcMovePick && (
-                <div id="branch-prompt" style={{ display: 'block' }}>
-                    🛣️ 光っているマスをタップして進む道を選んでください
-                </div>
+                <div id="branch-prompt" style={{ display: 'block' }}>🛣️ 光っているマスをタップして進む道を選んでください</div>
             )}
 
             <div id="map-env-hud" style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 55, display: 'flex', flexDirection: 'column', pointerEvents: 'none' }}>
                 <div style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', fontWeight: 'bold', color: '#fdf5e6', lineHeight: 1.6, whiteSpace: 'nowrap' }}>
                     <span id="hud-round" style={{ color: '#f1c40f' }}>R:{roundCount}/{maxRounds}</span>
                     <span id="hud-weather" style={{ marginLeft: '6px' }}>{isRainy ? '🌧️雨' : weatherState === 'cloudy' ? '☁️曇' : '☀️晴'}</span>
-                    <span id="hud-daynight" style={{ marginLeft: '6px' }}>{isNight ? '🌙夜' : '☀️昼'}</span>
-                    <br/>
+                    <span id="hud-daynight" style={{ marginLeft: '6px' }}>{isNight ? '🌙夜' : '☀️昼'}</span><br/>
                     <span style={{ color: '#bdc3c7' }}>缶:<span id="hud-can-price">{canPrice}</span>P</span>
                     <span style={{ color: '#bdc3c7', marginLeft: '6px' }}>ゴミ:<span id="hud-trash-price">{trashPrice}</span>P</span>
                 </div>
@@ -359,14 +277,7 @@ export const GameBoard = () => {
             )}
 
             <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px' }}>
-                <div id="game-board-wrapper" ref={wrapperRef} style={{ 
-                    overflow: 'hidden', 
-                    width: '100%', 
-                    maxHeight: 'calc(100vh - 280px)', 
-                    cursor: 'grab', 
-                    userSelect: 'none',
-                    touchAction: 'none'
-                }}>
+                <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none' }}>
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
                             
@@ -387,20 +298,8 @@ export const GameBoard = () => {
 
                                 return (
                                     <Tile 
-                                        key={tile.id}
-                                        tile={tile}
-                                        owner={owner}
-                                        isFog={isFog}
-                                        isClickable={isClickable}
-                                        onClick={() => handleTileClick(tile.id)}
-                                        isTruck={tile.id === truckPos}
-                                        isPolice={tile.id === policePos}
-                                        isUncle={tile.id === unclePos}
-                                        isAnimal={tile.id === animalPos}
-                                        isYakuza={tile.id === yakuzaPos}
-                                        isLoanshark={tile.id === loansharkPos}
-                                        isFriend={tile.id === friendPos}
-                                        pathClass={pathClass}
+                                        key={tile.id} tile={tile} owner={owner} isFog={isFog} isClickable={isClickable} onClick={() => handleTileClick(tile.id)}
+                                        isTruck={tile.id === truckPos} isPolice={tile.id === policePos} isUncle={tile.id === unclePos} isAnimal={tile.id === animalPos} isYakuza={tile.id === yakuzaPos} isLoanshark={tile.id === loansharkPos} isFriend={tile.id === friendPos} pathClass={pathClass}
                                     />
                                 );
                             })}

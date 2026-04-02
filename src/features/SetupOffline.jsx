@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { charInfo, charEmoji } from '../constants/characters';
+import { charInfo } from '../constants/characters';
 import { genSmallMap, genMediumMap, genLargeMap } from '../constants/maps';
 import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatterPlayerPositions } from '../utils/mapRandomizer';
 import { useUserStore } from '../store/useUserStore';
 import { savePlayerName } from '../utils/userLogic';
 import { CharacterSelect } from './CharacterSelect';
+import { CharImage } from '../components/common/CharImage'; // 新規コンポーネントをインポート
 
 const TEAM_COLORS = { none: { label:'ソロ', color:'transparent', icon:'⚪' }, red: { label:'赤', color:'#e74c3c', icon:'🔴' }, blue: { label:'青', color:'#3498db', icon:'🟢' }, yellow: { label:'黄', color:'#f1c40f', icon:'🟡' } };
 
@@ -28,7 +29,6 @@ export const SetupOffline = () => {
     const [rmapScatter, setRmapScatter] = useState(false);
     const [charAssignMode, setCharAssignMode] = useState('choose'); 
     
-    // ▼ 追加: キャラ選択モーダルのターゲットID
     const [charSelectTarget, setCharSelectTarget] = useState(null);
 
     const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e91e8c'];
@@ -65,7 +65,6 @@ export const SetupOffline = () => {
         let finalPlayers = [...players];
         const allChars = Object.keys(charInfo);
         
-        // ▼ 変更: ランダム生成時は全キャラから完全ランダム(重複許可)で割り当てる
         if (charAssignMode === 'random') { 
             finalPlayers.forEach(p => p.charType = allChars[Math.floor(Math.random() * allChars.length)]); 
         } else if (charAssignMode === 'cpu_random') { 
@@ -104,7 +103,6 @@ export const SetupOffline = () => {
         const maxId = mapData.length - 1;
         const canTrashTiles = mapData.filter(t => t.type === 'can' || t.type === 'trash');
         
-        // ▼ 変更: 直接 playing フェーズへ
         setGameState({
             mapData, players: finalPlayers, turn: 0, roundCount: 1, maxRounds, diceRolled: false, gameOver: false, gamePhase: 'playing',
             turnOrderActive, turnOrderData,
@@ -138,7 +136,6 @@ export const SetupOffline = () => {
                             <option value="cpu">CPU</option>
                         </select>
                         
-                        {/* ▼ 変更: キャラクター変更ボタンを表示 */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '90px', justifyContent: 'center' }}>
                             {charAssignMode === 'random' ? (
                                 <span style={{ fontSize: '12px', color: '#b0a090' }}>🎲 ランダム</span>
@@ -146,7 +143,7 @@ export const SetupOffline = () => {
                                 <span style={{ fontSize: '12px', color: '#b0a090' }}>🤖 ランダム</span>
                             ) : (
                                 <>
-                                    <span style={{ fontSize: '20px' }}>{charEmoji[p.charType] || '❓'}</span>
+                                    <CharImage charType={p.charType} size={30} />
                                     <button onClick={() => setCharSelectTarget(p.id)} className="btn-clay" style={{ padding: '4px 8px', fontSize: '12px', background: '#3498db' }}>変更</button>
                                 </>
                             )}
@@ -197,7 +194,6 @@ export const SetupOffline = () => {
                 <button className="btn-large btn-brown" onClick={handleStart} style={{ padding: '15px 40px', fontSize: '20px' }}>🎲 ゲームを開始する</button>
             </div>
 
-            {/* キャラクター選択モーダル */}
             <CharacterSelect 
                 isOpen={charSelectTarget !== null}
                 onClose={() => setCharSelectTarget(null)}
