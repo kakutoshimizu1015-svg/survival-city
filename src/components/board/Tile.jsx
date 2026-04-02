@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import jinchiBuildingImg from '../../assets/images/map/jinchi_building.jpg';
+import jinchiBuildingImg from '../../assets/images/map/jinchi_building.png';
 
 const tileTooltipData = {
     center:    { title:"🏥 病院（スタート地点）", desc:"HPが0になると強制送還。最大15P没収・装備1つロスト。" },

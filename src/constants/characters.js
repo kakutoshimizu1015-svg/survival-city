@@ -1,6 +1,5 @@
-// プロジェクトに合わせて適切なパス・画像ファイルを用意してください
-import homelessFront from '../assets/images/characters/homeless_front.jpg';
-import homelessBack from '../assets/images/characters/homeless_back.jpg';
+import homelessFront from '../assets/images/characters/homeless_front.png';
+import homelessBack from '../assets/images/characters/homeless_back.png';
 
 export const charEmoji = { athlete:'🏃', sales:'💼', survivor:'🌿', yankee:'👊', hacker:'💻', musician:'🎸', doctor:'🩺', gambler:'🎲', detective:'🕵️' };
 

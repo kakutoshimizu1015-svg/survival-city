@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 
 // ▼ アセット画像（パスは実際のプロジェクトに合わせてください）
-import survivorFront from '../../assets/images/characters/homeless_front.jpg';
-import survivorBack from '../../assets/images/characters/homeless_back.jpg';
+import survivorFront from '../../assets/images/characters/homeless_front.png';
+import survivorBack from '../../assets/images/characters/homeless_back.png';
 
 // マップのグリッド計算用の定数（GameBoard.jsxのスタイルに合わせています）
 const TILE_SIZE = 60;
