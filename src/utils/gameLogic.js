@@ -57,12 +57,10 @@ export function getManholeLinkedTiles(currentPos, mapData) {
     return linked;
 }
 
-// --- 2.5D 疑似3D用 共通計算ロジック (統合) ---
-// z値 (0=手前, 7.2=奥) に基づき、スケーリング倍率 (0.35〜1.0) を算出
-export const getDepthScale = (z) => Math.max(0.35, 1 - z * 0.09);
-// z値に基づき、タイルの幅 (20px〜60px) を算出
-export const getTileW = (z) => Math.max(20, 60 - z * 5);
-// z値に基づき、タイルの高さ (11px〜32px) を算出
-export const getTileH = (z) => Math.max(11, 32 - z * 2.8);
-// z値に基づき、タイルの側面の厚み (3px〜12px) を算出
-export const getSideH = (z) => Math.max(3, 12 - z * 1.2);
+// --- 疑似3D（遠近感）用スケール計算 ---
+// 奥の行（rowが小さい）ほど小さく、手前の行ほど大きく(最大1.0)する
+export const getDepthScale = (row, maxRow) => {
+    if (!maxRow || maxRow === 0) return 1;
+    // 0.45(一番奥) 〜 1.0(一番手前) の間でスケールを決定
+    return Math.max(0.45, 0.45 + (row / maxRow) * 0.55);
+};

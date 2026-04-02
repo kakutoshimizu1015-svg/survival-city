@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useEffect, useCallback, useState } from 'react';
+import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { getDistance, getPathPreviewTiles, getManholeLinkedTiles, getTileW, getTileH } from '../../utils/gameLogic';
+import { getDistance, getPathPreviewTiles, getManholeLinkedTiles } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { BoardPaths } from './BoardPaths';
@@ -17,68 +17,197 @@ export const GameBoard = () => {
     } = useGameStore();
 
     const cp = players[turn];
-    // カメラ制御用のステート (プレビュー版のロジック)
-    const [cam, setCam] = useState({ x: 0, y: 0, zoom: 1 });
+    const scale = useRef(1.0);
+    const offset = useRef({ x: 0, y: 0 });
     const wrapperRef = useRef(null);
     const isDragging = useRef(false);
-    const dragStart = useRef({ x: 0, y: 0, cx: 0, cy: 0 });
+    const dragStart = useRef({ x: 0, y: 0 });
+    const offsetStart = useRef({ x: 0, y: 0 });
+    const lastTouches = useRef(null);
+    const isClickPrevented = useRef(false);
+    const rafRef = useRef(null);
     const prevAutoScrollTurn = useRef(-1);
 
-    // カメラ制御（ドラッグ、ズーム、リセット）の実装
-    const onPointerDown = useCallback((e) => {
-        // TileTooltipやHUD、NPC選択時はドラッグ不可
-        if (e.target.closest("button") || e.target.closest(".tile")) return;
-        isDragging.current = true;
-        dragStart.current = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y };
-        e.currentTarget.setPointerCapture(e.pointerId);
-    }, [cam]);
-
-    const onPointerMove = useCallback((e) => {
-        if (!isDragging.current) return;
-        const dx = (e.clientX - dragStart.current.x) / cam.zoom;
-        const dy = (e.clientY - dragStart.current.y) / cam.zoom;
-        setCam(c => ({ ...c, x: dragStart.current.cx + dx, y: dragStart.current.cy + dy }));
-    }, [cam.zoom]);
-
-    const onPointerUp = useCallback(() => { isDragging.current = false; }, []);
-
-    const onWheel = useCallback((e) => {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.92 : 1.08; // ズーム倍率
-        setCam(c => ({ ...c, zoom: Math.min(3, Math.max(0.25, c.zoom * delta)) }));
+    const applyTransform = useCallback((smooth = false) => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+            const inner = document.getElementById('game-board-inner');
+            if (inner) {
+                inner.style.transition = smooth ? 'transform 0.45s cubic-bezier(0.25,0.46,0.45,0.94)' : 'none';
+                inner.style.transform = `translate3d(${offset.current.x}px, ${offset.current.y}px, 0) scale(${scale.current})`;
+            }
+        });
     }, []);
 
-    const handleZoomBtn = (delta) => setCam(c => ({ ...c, zoom: Math.min(3, Math.max(0.25, c.zoom + delta)) }));
-    const resetZoom = useCallback(() => setCam({ x: 0, y: 0, zoom: 1 }), []);
+    const zoomAt = useCallback((px, py, delta) => {
+        const prevScale = scale.current;
+        const newScale = Math.min(3.0, Math.max(0.25, prevScale + delta));
+        const ratio = newScale / prevScale;
+        offset.current = { x: px - ratio * (px - offset.current.x), y: py - ratio * (py - offset.current.y) };
+        scale.current = newScale;
+        applyTransform(true);
+    }, [applyTransform]);
+
+    const handleZoomBtn = (delta) => {
+        if (!wrapperRef.current) return;
+        zoomAt(wrapperRef.current.clientWidth / 2, wrapperRef.current.clientHeight / 2, delta);
+    };
+
+    const resetZoom = useCallback(() => {
+        if (!wrapperRef.current) return;
+        const board = document.getElementById('game-board');
+        if (!board) return;
+        
+        const bw = board.scrollWidth;
+        const bh = board.scrollHeight;
+        let ww = wrapperRef.current.clientWidth;
+        let wh = wrapperRef.current.clientHeight;
+
+        if (bw === 0 || bh === 0 || ww === 0 || wh === 0) return;
+        if (wh > window.innerHeight) wh = window.innerHeight * 0.5;
+
+        const paddingRatio = ww <= 768 ? 0.95 : 1.0; 
+        const fitScale = Math.min(ww / bw, wh / bh, 1.0) * paddingRatio;
+        scale.current = fitScale;
+        offset.current = { x: (ww - bw * fitScale) / 2, y: (wh - bh * fitScale) / 2 };
+        applyTransform(true);
+    }, [applyTransform]);
 
     const mapTileCount = mapData?.length || 0;
 
-    // マップ読み込み時の自動初期配置 (resetZoom)
     useEffect(() => {
         if (mapTileCount === 0) return; 
         const timer = setTimeout(() => { resetZoom(); }, 150);
-        return () => clearTimeout(timer);
+        window.addEventListener('resize', resetZoom);
+        return () => { clearTimeout(timer); window.removeEventListener('resize', resetZoom); };
     }, [mapTileCount, resetZoom]);
 
-    // プレイヤーターン時のオートスクロールの実装 (viewBox操作へ移行)
     useEffect(() => {
-        if (!autoScrollToPlayer || !mapData || mapData.length === 0 || !cp || prevAutoScrollTurn.current === turn || gameOver) return;
+        if (!autoScrollToPlayer || !wrapperRef.current || !mapData || mapData.length === 0 || !cp || prevAutoScrollTurn.current === turn || gameOver) return;
         prevAutoScrollTurn.current = turn;
         const targetTile = mapData.find(t => t.id === cp.pos);
         if (!targetTile) return;
 
         const timer = setTimeout(() => {
-            const tw = getTileW(targetTile.z);
-            const th = getTileH(targetTile.z);
-            // 画面中心へカメラを移動する計算
-            setCam(c => ({ ...c, x: -(targetTile.x + tw/2) + 310, y: -(targetTile.y + th/2) + 250 }));
+            if (!wrapperRef.current) return;
+            const computedStyle = getComputedStyle(document.documentElement);
+            const tileSizeStr = computedStyle.getPropertyValue('--tile-size').trim();
+            const tileSize = parseInt(tileSizeStr, 10) || 60;
+            const gap = 20;     
+            const padding = 30; 
+
+            const tilePixelX = padding + (targetTile.col - 1) * (tileSize + gap) + tileSize / 2;
+            const tilePixelY = padding + (targetTile.row - 1) * (tileSize + gap) + tileSize / 2;
+
+            const ww = wrapperRef.current.clientWidth;
+            const wh = wrapperRef.current.clientHeight;
+            offset.current = { x: ww / 2 - tilePixelX * scale.current, y: wh / 2 - tilePixelY * scale.current };
+            applyTransform(true);
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [turn, cp, mapData, autoScrollToPlayer, gameOver]);
+    }, [turn, cp, mapData, autoScrollToPlayer, gameOver, applyTransform]);
+
+    const getTouchCoords = (touches) => Array.from(touches).map(t => ({ clientX: t.clientX, clientY: t.clientY }));
+
+    useEffect(() => {
+        const wrapper = wrapperRef.current;
+        if (!wrapper) return;
+
+        // イベントはReactのプロパティからではなく、すべてこのuseEffect内でネイティブにバインドします。
+        // passive: false にすることで preventDefault エラーを回避します。
+        const handleWheel = (e) => {
+            e.preventDefault();
+            const rect = wrapper.getBoundingClientRect();
+            zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 0.15 : -0.15);
+        };
+
+        const handleMouseDown = (e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            isDragging.current = true;
+            dragStart.current = { x: e.clientX, y: e.clientY };
+            offsetStart.current = { ...offset.current };
+            wrapper.classList.add('dragging');
+            const inner = document.getElementById('game-board-inner');
+            if (inner) inner.style.transition = 'none';
+        };
+
+        const handleMouseMove = (e) => {
+            if (!isDragging.current) return;
+            offset.current = { x: offsetStart.current.x + (e.clientX - dragStart.current.x), y: offsetStart.current.y + (e.clientY - dragStart.current.y) };
+            applyTransform(false);
+        };
+
+        const handleMouseUp = (e) => {
+            if (!isDragging.current) return;
+            isDragging.current = false;
+            wrapper.classList.remove('dragging');
+            const inner = document.getElementById('game-board-inner');
+            if (inner) inner.style.transition = 'transform 0.12s ease';
+            const moved = Math.abs(e.clientX - dragStart.current.x) + Math.abs(e.clientY - dragStart.current.y);
+            if (moved > 5) {
+                isClickPrevented.current = true;
+                setTimeout(() => { isClickPrevented.current = false; }, 50);
+            }
+        };
+
+        const handleTouchStart = (e) => {
+            lastTouches.current = getTouchCoords(e.touches);
+            wrapper.classList.add('dragging');
+            const inner = document.getElementById('game-board-inner');
+            if (inner) inner.style.transition = 'none';
+        };
+
+        const handleTouchMove = (e) => {
+            if (!lastTouches.current) return;
+            const currentTouches = getTouchCoords(e.touches);
+
+            if (currentTouches.length === 1 && lastTouches.current.length === 1) {
+                const sensitivity = 1.8;
+                offset.current = { x: offset.current.x + (currentTouches[0].clientX - lastTouches.current[0].clientX) * sensitivity, y: offset.current.y + (currentTouches[0].clientY - lastTouches.current[0].clientY) * sensitivity };
+                applyTransform(false);
+                if (e.cancelable) e.preventDefault();
+            } else if (currentTouches.length === 2 && lastTouches.current.length === 2) {
+                const prevDist = Math.hypot(lastTouches.current[0].clientX - lastTouches.current[1].clientX, lastTouches.current[0].clientY - lastTouches.current[1].clientY);
+                const newDist = Math.hypot(currentTouches[0].clientX - currentTouches[1].clientX, currentTouches[0].clientY - currentTouches[1].clientY);
+                const rect = wrapper.getBoundingClientRect();
+                zoomAt(((currentTouches[0].clientX + currentTouches[1].clientX) / 2) - rect.left, ((currentTouches[0].clientY + currentTouches[1].clientY) / 2) - rect.top, (newDist - prevDist) * 0.005);
+                if (e.cancelable) e.preventDefault();
+            }
+            lastTouches.current = currentTouches;
+        };
+
+        const handleTouchEnd = () => {
+            lastTouches.current = null;
+            wrapper.classList.remove('dragging');
+            const inner = document.getElementById('game-board-inner');
+            if (inner) inner.style.transition = 'transform 0.12s ease';
+        };
+
+        wrapper.addEventListener('wheel', handleWheel, { passive: false });
+        wrapper.addEventListener('mousedown', handleMouseDown);
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        wrapper.addEventListener('touchstart', handleTouchStart, { passive: false });
+        wrapper.addEventListener('touchmove', handleTouchMove, { passive: false });
+        wrapper.addEventListener('touchend', handleTouchEnd, { passive: true });
+        wrapper.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+
+        return () => {
+            wrapper.removeEventListener('wheel', handleWheel);
+            wrapper.removeEventListener('mousedown', handleMouseDown);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            wrapper.removeEventListener('touchstart', handleTouchStart);
+            wrapper.removeEventListener('touchmove', handleTouchMove);
+            wrapper.removeEventListener('touchend', handleTouchEnd);
+            wrapper.removeEventListener('touchcancel', handleTouchEnd);
+        };
+    }, [zoomAt, applyTransform]);
 
     const handleTileClick = (tileId) => {
-        if (isDragging.current) return;
+        if (isClickPrevented.current) return;
         if (npcMovePick) {
             const state = useGameStore.getState();
             state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
@@ -110,17 +239,24 @@ export const GameBoard = () => {
     }, [players, gameOver, cp, mapData]);
 
     const zoomBtnStyle = { width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s', padding: 0 };
-    
-    // ViewBoxの計算 (プレビュー版のロジック復元、310,250はSVGの中心)
-    const vw = wrapperRef.current ? wrapperRef.current.clientWidth / cam.zoom : 620 / cam.zoom;
-    const vh = wrapperRef.current ? wrapperRef.current.clientHeight / cam.zoom : 500 / cam.zoom;
-    const vx = (wrapperRef.current ? wrapperRef.current.clientWidth / 2 : 310) - vw / 2 - cam.x;
-    const vy = (wrapperRef.current ? wrapperRef.current.clientHeight / 2 : 250) - vh / 2 - cam.y;
+    let maxCol = 0, maxRow = 0;
+    if (mapData && mapData.length > 0) {
+        maxCol = Math.max(...mapData.map(t => t.col));
+        maxRow = Math.max(...mapData.map(t => t.row));
+    }
 
     return (
         <div id="board-area" style={{ flexGrow: 1, overflowX: 'hidden', minWidth: 0, position: 'relative' }}>
             <TileTooltip />
-            
+            {npcMovePick && (
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ npcMovePick: null }); useGameStore.getState().showToast("情報操作をキャンセルしました"); }}>
+                    🕵️ 移動先マスをタップしてください（タップでキャンセル）
+                </div>
+            )}
+            {isBranchPicking && !npcMovePick && (
+                <div id="branch-prompt" style={{ display: 'block' }}>🛣️ 光っているマスをタップして進む道を選んでください</div>
+            )}
+
             <div id="map-env-hud" style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 55, display: 'flex', flexDirection: 'column', pointerEvents: 'none' }}>
                 <div style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', fontWeight: 'bold', color: '#fdf5e6', lineHeight: 1.6, whiteSpace: 'nowrap' }}>
                     <span id="hud-round" style={{ color: '#f1c40f' }}>R:{roundCount}/{maxRounds}</span>
@@ -142,74 +278,54 @@ export const GameBoard = () => {
                 </div>
             )}
 
-            <div id="game-board-container" ref={wrapperRef} className="panel" style={{ width: '100%', paddingBottom: '10px', height: 'calc(100vh - 280px)', background: "linear-gradient(180deg, #1a0e2e 0%, #1a2a1e 35%, #1a1a2e 100%)", position: "relative", overflow: "hidden", touchAction: "none" }}>
-                {/* 星空背景エフェクト */}
-                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}>
-                    {[...Array(40)].map((_, i) => (
-                        <div key={i} style={{ position: "absolute", left: `${(i * 31 + 11) % 100}%`, top: `${(i * 19 + 3) % 30}%`, width: i % 5 === 0 ? 3 : 1.5, height: i % 5 === 0 ? 3 : 1.5, borderRadius: "50%", background: `rgba(255,255,${200 + (i % 55)},${0.15 + (i % 4) * 0.1})`, animation: `twinkle ${1.8 + (i % 4) * 0.7}s ease-in-out infinite ${i * 0.2}s` }} />
-                    ))}
-                </div>
+            <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px', position: 'relative' }}>
                 
-                {/* 完全SVGキャンバス移行 */}
-                <svg 
-                    id="game-board-svg" 
-                    viewBox={`${vx} ${vy} ${vw} ${vh}`} 
-                    style={{ width: "100%", height: "100%", display: "block", position: "relative", zIndex: 1, cursor: isDragging.current ? "grabbing" : "grab" }}
-                    onPointerDown={onPointerDown}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={onPointerUp}
-                    onPointerCancel={onPointerUp} // キャンセル時もUpと同じ処理
-                    onWheel={onWheel}
-                >
-                    <BoardPaths />
-                    <WeaponArcOverlay />
+                {/* 手前を覆う白い霧のオーバーレイ（背景の邪魔をしない） */}
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 100%)',
+                    pointerEvents: 'none', zIndex: 10, borderRadius: '8px 8px 0 0'
+                }} />
 
-                    {/* タイル描画（Y座標ソートで奥から手前へ） */}
-                    {[...mapData].sort((a, b) => a.y - b.y).map(tile => {
-                        const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
-                        const isFog = visibleTiles && !visibleTiles.has(tile.id);
-                        const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
-                        const isClickable = npcMovePick !== null || isBranchTarget;
+                <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none' }}>
+                    <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
-                        let pathClass = '';
-                        if (pathPreview.path1.has(tile.id)) pathClass = 'tile-path-1';
-                        else if (pathPreview.path2.has(tile.id)) pathClass = 'tile-path-2';
-                        else if (pathPreview.path3.has(tile.id)) pathClass = 'tile-path-3';
-                        else if (pathPreview.manholes.has(tile.id)) pathClass = 'tile-manhole-linked';
+                        {/* 元のCSS Grid と 3色の背景グラデーションを完全復元 */}
+                        <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
+                            
+                            <BoardPaths />
+                            <WeaponArcOverlay />
 
-                        return (
-                            <Tile 
-                                key={tile.id} tile={tile} owner={owner} isFog={isFog} isClickable={isClickable} onClick={() => handleTileClick(tile.id)}
-                                isTruck={tile.id === truckPos} isPolice={tile.id === policePos} isUncle={tile.id === unclePos} isAnimal={tile.id === animalPos} isYakuza={tile.id === yakuzaPos} isLoanshark={tile.id === loansharkPos} isFriend={tile.id === friendPos} pathClass={pathClass}
-                            />
-                        );
-                    })}
+                            {mapData.map(tile => {
+                                const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
+                                const isFog = visibleTiles && !visibleTiles.has(tile.id);
+                                const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
+                                const isClickable = npcMovePick !== null || isBranchTarget;
+                                
+                                let pathClass = '';
+                                if (pathPreview.path1.has(tile.id)) pathClass = 'tile-path-1';
+                                else if (pathPreview.path2.has(tile.id)) pathClass = 'tile-path-2';
+                                else if (pathPreview.path3.has(tile.id)) pathClass = 'tile-path-3';
+                                else if (pathPreview.manholes.has(tile.id)) pathClass = 'tile-manhole-linked';
 
-                    {/* プレイヤー駒描画（絶対座標(SVG)に対応） */}
-                    {players.filter(p => p.hp > 0).map(p => {
-                        const isFog = visibleTiles && !visibleTiles.has(p.pos);
-                        if (isFog) return null;
-                        return <PlayerToken key={p.id} player={p} mapData={mapData} isActiveTurn={p.id === turn} />;
-                    })}
+                                return (
+                                    <Tile 
+                                        key={tile.id} tile={tile} owner={owner} isFog={isFog} isClickable={isClickable} onClick={() => handleTileClick(tile.id)} maxRow={maxRow}
+                                        isTruck={tile.id === truckPos} isPolice={tile.id === policePos} isUncle={tile.id === unclePos} isAnimal={tile.id === animalPos} isYakuza={tile.id === yakuzaPos} isLoanshark={tile.id === loansharkPos} isFriend={tile.id === friendPos} pathClass={pathClass}
+                                    />
+                                );
+                            })}
 
-                    {/* 霧グラデーション (Defsで定義し、最前面を覆うように配置) */}
-                    <defs>
-                        <linearGradient id="depthFog" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="rgba(230,230,230,0.85)"/>
-                            <stop offset="30%" stopColor="rgba(230,230,230,0.55)"/>
-                            <stop offset="60%" stopColor="rgba(230,230,230,0.1)"/>
-                            <stop offset="100%" stopColor="rgba(230,230,230,0)"/>
-                        </linearGradient>
-                    </defs>
-                    <rect 
-                        x={vx} y={vy} 
-                        width={vw} height={vh * 0.45} // 上部45%を覆う
-                        fill="url(#depthFog)" 
-                        style={{ pointerEvents: "none" }}
-                    />
-                </svg>
+                            {/* プレイヤーの独立アニメーション描画 */}
+                            {players.filter(p => p.hp > 0).map(p => {
+                                const isFog = visibleTiles && !visibleTiles.has(p.pos);
+                                if (isFog) return null;
+                                return <PlayerToken key={p.id} player={p} mapData={mapData} isActiveTurn={p.id === turn} maxRow={maxRow} />;
+                            })}
+                        </div>
+                    </div>
+                </div>
             </div>
-            <style>{`@keyframes twinkle { 0%,100% { opacity: 0.15; } 50% { opacity: 0.7; } }`}</style>
         </div>
     );
 };

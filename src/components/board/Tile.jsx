@@ -1,15 +1,30 @@
 import React, { useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { tileTooltipData, TILE_COLORS } from '../../constants/maps';
-import { getDepthScale, getTileW, getTileH, getSideH } from '../../utils/gameLogic';
+import { getDepthScale } from '../../utils/gameLogic';
 import jinchiBuilding from '../../assets/images/jinchi_building.png';
 
+export const tileTooltipData = {
+    center:    { title:"🏥 病院（スタート地点）", desc:"HPが0になると強制送還。最大15P没収・装備1つロスト。" },
+    normal:    { title:"🛣️ 通常の道", desc:"特別な効果なし。移動の通過点。" },
+    can:       { title:"🥫 空き缶", desc:"1APで缶を拾う（1ターン3回まで）。雨の日は雨具が必要。" },
+    trash:     { title:"🗑️ ゴミ山", desc:"2APでゴミを漁る。失敗すると警察に補導されAP-2ペナルティ。" },
+    exchange:  { title:"💱 買取所", desc:"拾った缶・ゴミを現在相場でP換金（0AP）。" },
+    job:       { title:"💼 バイト", desc:"3APで挑戦。成功率60-80%で12P獲得。" },
+    shop:      { title:"🛒 ショップ", desc:"カードを購入（4-6P）または手持ちカードを2Pで売却できる。" },
+    event:     { title:"🎲 イベント", desc:"ミニゲームまたはストーリーイベントが発生！カード獲得のチャンス。" },
+    shelter:   { title:"🏕️ 避難所", desc:"止まるとステルス状態になり、次の敵を1回やり過ごせる。" },
+    manhole:   { title:"🕳️ マンホール", desc:"1APで別のマンホールへランダムワープ。" },
+    koban:     { title:"🚓 交番", desc:"職務質問でその場に足止め。このターンは移動不可。" },
+    slum:      { title:"🏚️ スラムエリア", desc:"缶・ゴミが多い。相場が低め。" },
+    commercial:{ title:"🏙️ 商業エリア", desc:"バイト・ショップが充実。中程度の相場。" },
+    luxury:    { title:"🏰 高級エリア", desc:"収入が高い。警察が多くパトロールする。" },
+};
+
 export const Tile = React.memo(({ 
-    tile, owner, isFog, isClickable, onClick, 
+    tile, owner, isFog, isClickable, onClick, maxRow,
     isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass
 }) => {
     const setTooltipData = useGameStore(state => state.setTooltipData);
-    // Zustandフックを分割呼び出しして無駄な再レンダリングを防止
     const policePos = useGameStore(state => state.policePos);
     const unclePos = useGameStore(state => state.unclePos);
     const animalPos = useGameStore(state => state.animalPos);
@@ -20,6 +35,8 @@ export const Tile = React.memo(({
     const touchTimer = useRef(null);
 
     const handleMouseEnter = (e) => {
+        const wrapper = document.getElementById('game-board-wrapper');
+        if (wrapper && wrapper.classList.contains('dragging')) return;
         if (isClickable) return; 
         
         const ttKey = tile.type in tileTooltipData ? tile.type : tile.area;
@@ -57,141 +74,79 @@ export const Tile = React.memo(({
         setTimeout(handleMouseLeave, 300);
     };
 
-    const { x, y, z = 0 } = tile;
-    // TILE_COLORSから立体マス用の色を取得、デフォルトはnormal
-    const colors = TILE_COLORS[tile.type] || TILE_COLORS["normal"];
-    
-    // z値に基づくスケーリング計算
-    const tw = getTileW(z);
-    const th = getTileH(z);
-    const sh = getSideH(z);
-    const ds = getDepthScale(z); // 奥行きスケール (0.35〜1.0)
+    let classNameStr = `tile ${tile.type} ${tile.area}`;
+    if (isFog) classNameStr += ' night-fog';
+    if (isClickable) classNameStr += ' tile-highlight-branch';
+    if (pathClass) classNameStr += ` ${pathClass}`;
 
-    // スラムエリアの「道(normal)」には常に建物を建てる
+    const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
+    
     const hasBuilding = tile.area === 'slum' && tile.type === 'normal';
     const isJinchi = owner !== null && owner !== undefined;
 
-    // 陣地化された場合はプレイヤーカラーで発光させる
     const buildingFilter = isJinchi 
         ? `drop-shadow(0 0 8px ${owner.color}) drop-shadow(0 0 16px ${owner.color})` 
         : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))';
 
-    const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
-    
-    // ds(スケール)を文字サイズやアイコンサイズに適用する
-    const fontSize = Math.max(5, 10 * ds);
-    const iconSize = Math.max(10, 20 * ds);
+    // 遠近法のスケール計算
+    const ds = getDepthScale(tile.row, maxRow);
 
-    // HTML Grid廃止、SVGベースの立体描画へ移行
     return (
-        <g 
+        <div 
             id={`tile-${tile.id}`} 
-            opacity={isFog ? 0.2 : Math.max(0.4, 0.65 + ds * 0.35)}
             onClick={isClickable ? onClick : undefined}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEndOrCancel}
             onTouchCancel={handleTouchEndOrCancel}
-            style={{ cursor: isClickable ? 'pointer' : 'default' }}
+            className={classNameStr}
+            style={{ 
+                gridColumn: tile.col, 
+                gridRow: tile.row, 
+                cursor: isClickable ? 'pointer' : 'default', 
+                position: 'relative',
+                // スケールをかけて奥のマスを小さくし、透明度を少し下げる（遠近表現）
+                transform: `scale(${ds})`,
+                transformOrigin: 'center center',
+                opacity: isFog ? 0.2 : Math.max(0.4, ds + 0.1),
+                zIndex: tile.row // 手前（row大）ほど上に重なるように
+            }}
         >
-            {/* タイル影（上面と同じサイズを上面の下に描画） */}
-            <ellipse cx={x + tw/2} cy={y + th + sh + 3 * ds} rx={tw * 0.4} ry={3 * ds} fill="rgba(0,0,0,0.18)" />
-
-            {/* 立体的な側面 (上面の下に描画) */}
-            <path d={`M${x},${y + th} L${x},${y + th + sh} Q${x + tw/2},${y + th + sh + 2.5 * ds} ${x + tw},${y + th + sh} L${x + tw},${y + th} Z`} fill={colors.side} />
-
-            {/* 立体的な上面 (最前面に描画) */}
-            <rect x={x} y={y} width={tw} height={th} rx={3 * ds} fill={colors.top} stroke={isClickable ? "#ffe066" : `rgba(255,255,255,${0.08 + ds * 0.1})`} strokeWidth={isClickable ? 2.5 * ds : 0.6} />
-
-            {/* 陣地建物（ペーパーマリオ風、上面の中央下部に立てる） */}
             {hasBuilding && !isFog && (
-                <image 
-                    href={jinchiBuilding} 
-                    x={x + tw/2 - tw * 0.7} // タイルの中央に合わせる
-                    y={y - tw * 0.9}       // タイルの上面の中央下部に立てる
-                    width={tw * 1.4}       // タイルの幅に合わせて拡大
-                    height={tw * 1.4}
-                    opacity={0.95} 
-                    style={{ filter: buildingFilter, imageRendering: 'pixelated' }} 
+                <img 
+                    src={jinchiBuilding} 
+                    alt="建物" 
+                    style={{
+                        position: 'absolute', bottom: '20%', left: '50%', transform: 'translateX(-50%)',
+                        width: '140%', height: 'auto', pointerEvents: 'none', zIndex: 1, opacity: 0.95, 
+                        imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
+                        filter: buildingFilter,
+                        transition: 'filter 0.3s ease'
+                    }}
                 />
             )}
 
-            {/* ハイライト */}
-            <line x1={x + 2 * ds} y1={y + 1} x2={x + tw - 2 * ds} y2={y + 1} stroke={colors.hi} strokeWidth={ds} strokeLinecap="round" opacity={0.5} />
+            <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
+            <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9 }}>{tile.name}</div>
+            
+            {isJinchi && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px', zIndex: 3 }}>🚩</div>}
 
-            {/* アイコンとラベル（建物がない場合のみ表示） */}
-            {!hasBuilding && (
-                <>
-                    <text 
-                        x={x + tw/2} 
-                        y={y + th * 0.55} 
-                        textAnchor="middle" 
-                        fontSize={iconSize} 
-                        pointerEvents="none"
-                    >
-                        {iconStr}
-                    </text>
-                    <text 
-                        x={x + tw/2} 
-                        y={y + th * 0.85} 
-                        textAnchor="middle" 
-                        fill={`rgba(255,255,255,${0.5 + ds * 0.4})`} 
-                        fontSize={fontSize} 
-                        fontFamily="'DotGothic16', monospace" 
-                        fontWeight="bold" 
-                        pointerEvents="none"
-                    >
-                        {tile.name}
-                    </text>
-                </>
-            )}
-
-            {/* オーナーフラグ */}
-            {isJinchi && (
-                <circle cx={x + tw - 4 * ds} cy={y + 4 * ds} r={4 * ds} fill={owner.color} />
-            )}
-
-            {/* フィールドの缶・ゴミ表示（ds倍率を文字サイズに適用） */}
             {(tile.fieldCans > 0 || tile.fieldTrash > 0) && !isFog && (
-                <text 
-                    x={x + tw/2} 
-                    y={y - 5 * ds} 
-                    textAnchor="middle" 
-                    fontSize={fontSize + 2} 
-                    fill="#fff" 
-                    pointerEvents="none" 
-                    style={{ textShadow: "1px 1px 2px #000" }}
-                >
-                    {tile.fieldCans > 0 ? `🥫${tile.fieldCans}` : ''} {tile.fieldTrash > 0 ? `🗑️${tile.fieldTrash}` : ''}
-                </text>
+                <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'2px 4px', fontSize:'12px' }}>
+                    {tile.fieldCans > 0 && <span>🥫{tile.fieldCans}</span>}
+                    {tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
+                </div>
             )}
-
-            {/* NPCトークン（ds倍率を文字サイズとY座標に適用） */}
-            {!isFog && (
-                <text 
-                    x={x + tw/2} 
-                    y={y - 10 * ds} 
-                    textAnchor="middle" 
-                    fontSize={iconSize * 1.2} 
-                    pointerEvents="none"
-                >
-                    {isTruck ? '🚛' : isPolice ? '👮' : isUncle ? '🧓' : isAnimal ? '🐀' : isYakuza ? '😎' : isLoanshark ? '💀' : isFriend ? '🤝' : ''}
-                </text>
-            )}
-
-            {/* パスプレビューのハイライト */}
-            {pathClass && (
-                <rect 
-                    x={x} y={y} 
-                    width={tw} height={th} 
-                    rx={3 * ds} 
-                    fill="none" 
-                    stroke="rgba(255, 255, 255, 0.5)" 
-                    strokeWidth={2 * ds} 
-                />
-            )}
-        </g>
+            
+            {!isFog && isTruck && <div className="truck-token" style={{zIndex: 5}}>🚛</div>}
+            {!isFog && isPolice && <div className="npc-token npc-police" style={{zIndex: 5}}>👮</div>}
+            {!isFog && isUncle && <div className="npc-token npc-uncle" style={{zIndex: 5}}>🧓</div>}
+            {!isFog && isAnimal && <div className="npc-token npc-animal" style={{zIndex: 5}}>🐀</div>}
+            {!isFog && isYakuza && <div className="npc-token npc-yakuza" style={{zIndex: 5}}>😎</div>}
+            {!isFog && isLoanshark && <div className="npc-token npc-loanshark" style={{zIndex: 5}}>💀</div>}
+            {!isFog && isFriend && <div className="npc-token npc-friend" style={{zIndex: 5}}>🤝</div>}
+        </div>
     );
 }, 
 (prev, next) => {
@@ -209,5 +164,6 @@ export const Tile = React.memo(({
     if (prev.owner?.id !== next.owner?.id) return false;
     if (prev.tile.fieldCans !== next.tile.fieldCans) return false;
     if (prev.tile.fieldTrash !== next.tile.fieldTrash) return false;
+    if (prev.maxRow !== next.maxRow) return false;
     return true;
 });

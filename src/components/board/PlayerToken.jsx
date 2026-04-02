@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { charEmoji, charImages } from '../../constants/characters';
 import { useUserStore } from '../../store/useUserStore';
+import { getDepthScale } from '../../utils/gameLogic';
 
-export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
+export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const isImage = charImages && charImages[player.charType] !== undefined;
     const showSmoke = useUserStore(state => state.showSmoke);
 
@@ -22,10 +23,12 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
     const idleRafRef = useRef(null);
     const prevPosRef = useRef(player.pos);
 
-    // ▼ 修正: 影の位置を少し上に調整（マスの中心寄りにする）
     const FOOT_Y = 5; 
     const currentTile = mapData.find(t => t.id === player.pos) || mapData[0];
     const zIndexBase = 50 + currentTile.row * 10;
+    
+    // 遠近法スケールの取得
+    const ds = getDepthScale(currentTile.row, maxRow);
 
     // 土埃のクリーンアップ
     useEffect(() => {
@@ -197,7 +200,10 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
             position: 'relative',
             width: '100%', height: '100%',
             zIndex: zIndexBase,
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            // ▼ ここでスケール（遠近法）を適用
+            transform: `scale(${ds})`,
+            transformOrigin: 'center center'
         }}>
             <style>{`
                 @keyframes tokenDustAnim {
@@ -262,7 +268,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                         )}
                     </div>
 
-                    {/* ▼ 修正: 名前ラベルを画像の下端（top: 100%）からぶら下げる */}
                     <div style={{
                         position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
                         marginTop: 2, fontSize: 13, fontWeight: 900, color: player.color,
