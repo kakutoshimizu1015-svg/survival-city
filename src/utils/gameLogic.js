@@ -60,7 +60,7 @@ export function getManholeLinkedTiles(currentPos, mapData) {
 // --- 疑似3D（遠近感）用スケール計算 ---
 // 奥の行（rowが小さい）ほど小さく、手前の行ほど大きく(最大2.0)する
 export const getDepthScale = (row, maxRow) => {
-    if (!maxRow || maxRow === 0) return 1.45;
+    if (!maxRow || maxRow === 0) return 1;
     // 奥行き感を強めるため、一番奥を0.3に設定 (以前は0.45)
-    return Math.max(0.45, 0.45 + (row / maxRow) * 1.0);
+    return Math.max(0.35, 0.35 + (row / maxRow) * 0.65);
 };

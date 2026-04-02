@@ -11,7 +11,7 @@ const TOKEN_CONFIG = {
     scaleMultiplier: 1.15,
     
     // キャラクター画像（スキン）を使用している場合のサイズ (px)
-    imageSize: 140,
+    imageSize: 125,
     
     // 絵文字を使用している場合の背景の丸い枠のサイズ (px)
     emojiBgSize: 64,
@@ -20,7 +20,7 @@ const TOKEN_CONFIG = {
     emojiFontSize: 34,
     
     // 駒の下に表示されるプレイヤー名のフォントサイズ (px)
-    nameFontSize: 16
+    nameFontSize: 12
 };
 // =========================================================
 
