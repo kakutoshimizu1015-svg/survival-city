@@ -14,7 +14,7 @@ import { SandboxGuide } from './components/overlays/SandboxGuide';
 function App() {
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode } = useGameStore();
   
-  // ▼ 追加：ユーザーの永続データを取得
+  // ▼ ユーザーの永続データを取得
   const { isLoggedIn, uid, playerName, wins, totalEarnedP } = useUserStore();
   const [localName, setLocalName] = useState(playerName);
 
@@ -46,7 +46,7 @@ function App() {
     if (horrorMode) document.body.classList.add('horror-mode');
   }, [layoutMode, weatherState, isNight, horrorMode]);
 
-  // ▼ 追加：名前入力欄からフォーカスが外れた（Blur）時にセーブを実行
+  // 名前入力欄からフォーカスが外れた（Blur）時にセーブを実行
   const handleNameBlur = () => {
     if (localName && localName.trim() !== '' && localName !== playerName) {
       savePlayerName(localName);
@@ -55,13 +55,13 @@ function App() {
 
   return (
     <>
-      {/* ▼ 追加：最上部のステータスバー（タイトル・モード選択時のみ表示） */}
+      {/* ▼ 修正：zIndex を 99999 に変更し、確実に最前面に表示されるようにしました */}
       {(gamePhase === 'title' || gamePhase === 'mode_select') && isLoggedIn && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '45px',
-          background: 'rgba(0,0,0,0.8)', color: '#f1c40f', display: 'flex',
+          background: 'rgba(0,0,0,0.85)', color: '#f1c40f', display: 'flex',
           justifyContent: 'center', alignItems: 'center', gap: '30px',
-          zIndex: 1000, fontSize: '16px', fontWeight: 'bold', borderBottom: '2px solid #8d6e63',
+          zIndex: 99999, fontSize: '16px', fontWeight: 'bold', borderBottom: '2px solid #8d6e63',
           boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
         }}>
           <span>🏆 優勝: {wins} 回</span>
@@ -75,8 +75,8 @@ function App() {
 
       {gamePhase === 'title' && (
         <div id="title-screen-overlay" onClick={() => useGameStore.setState({ gamePhase: 'mode_select' })}>
-          {/* ヘッダーの分だけ余白を空ける */}
-          <div style={{ fontSize: '80px', marginBottom: '20px', marginTop: '40px' }}>🏠</div>
+          {/* ヘッダーの分だけ余白を空けるため marginTop を増加 */}
+          <div style={{ fontSize: '80px', marginBottom: '20px', marginTop: '60px' }}>🏠</div>
           <div className="title-logo">脱・ホームレス<br/>サバイバルシティ</div>
           <div className="blink-text">画面をタップしてスタート</div>
           
@@ -107,8 +107,7 @@ function App() {
       {gamePhase === 'mode_select' && (
         <div id="mode-select-overlay" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           
-          {/* ▼ 追加：名前設定セクション */}
-          <div className="panel" style={{ marginTop: '30px', marginBottom: '40px', padding: '20px', background: 'rgba(92, 74, 68, 0.95)', textAlign: 'center', borderRadius: '12px', border: '2px solid #8d6e63', boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
+          <div className="panel" style={{ marginTop: '40px', marginBottom: '40px', padding: '20px', background: 'rgba(92, 74, 68, 0.95)', textAlign: 'center', borderRadius: '12px', border: '2px solid #8d6e63', boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
             <div style={{ color: '#fdf5e6', marginBottom: '10px', fontSize: '16px', fontWeight: 'bold' }}>👤 プレイヤー名を設定</div>
             <input 
               type="text" 
@@ -132,7 +131,6 @@ function App() {
       {gamePhase === 'online_lobby' && <OnlineLobby />}
       {gamePhase === 'playing' && <GameMain />}
 
-      {/* 共通のポップアップ画面群 */}
       <SettingsAndRules />
       <TutorialOverlay />
       <SandboxGuide />

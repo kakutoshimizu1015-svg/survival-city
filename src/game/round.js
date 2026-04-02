@@ -3,9 +3,10 @@ import { logMsg } from './actions';
 import { dealDamage } from './combat';
 import { playSfx } from '../utils/audio';
 import { charEmoji } from '../constants/characters';
-// ▼ 追加: userLogic と useNetworkStore をインポート
 import { recordWin } from '../utils/userLogic';
 import { useNetworkStore } from '../store/useNetworkStore';
+// ▼ 追加：名前で自分を判定するためにインポート
+import { useUserStore } from '../store/useUserStore';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -43,6 +44,21 @@ const endGame = () => {
     let sortedTeams = null;
     const hasTeams = state.players.some(p => p.teamColor !== 'none');
     
+    // ▼ 修正: IDシャッフル対策。オンラインとオフラインで確実な自分判定を行う
+    const netState = useNetworkStore.getState();
+    const isOnline = netState.status === 'connected';
+    
+    const isMe = (p) => {
+        if (isOnline) {
+            // オンライン時はネットワークのIDと一致するか確認
+            return p.userId === netState.myUserId;
+        } else {
+            // オフライン時はIDがシャッフルされるため、CPU以外かつ「自分の名前」と一致するかで判定
+            const myName = useUserStore.getState().playerName;
+            return !p.isCPU && p.name === myName;
+        }
+    };
+
     if (hasTeams) {
         isTeamGame = true;
         const teamScores = {};
@@ -54,14 +70,6 @@ const endGame = () => {
         });
         sortedTeams = Object.values(teamScores).sort((a, b) => b.total - a.total);
         logMsg(`🏆 優勝は ${sortedTeams[0].color !== 'none' ? sortedTeams[0].color+'チーム' : sortedTeams[0].members[0].name}！`);
-        
-        // ▼ 追加: チーム戦の戦績セーブ処理
-        // 自プレイヤーが優勝チームに含まれているかチェック
-        const myUserId = useNetworkStore.getState().myUserId;
-        const myPlayer = state.players.find(p => p.userId === myUserId); // オンライン時はuserIdがある想定
-        
-        // オフライン・オンライン兼用の判定（オンライン時はuserId一致、オフライン時はid=0を自分とみなす）
-        const isMe = (p) => (myUserId && p.userId === myUserId) || (!myUserId && p.id === 0);
         
         const winningTeamMembers = sortedTeams[0].members;
         const amIWinner = winningTeamMembers.some(p => isMe(p));
@@ -76,10 +84,6 @@ const endGame = () => {
 
     } else {
         logMsg(`🏆 優勝は ${results[0].name}！`);
-        
-        // ▼ 追加: ソロ戦の戦績セーブ処理
-        const myUserId = useNetworkStore.getState().myUserId;
-        const isMe = (p) => (myUserId && p.userId === myUserId) || (!myUserId && p.id === 0);
         
         if (isMe(results[0])) {
             recordWin(results[0].totalScore);
