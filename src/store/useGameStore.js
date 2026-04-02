@@ -2,7 +2,8 @@ import { create } from 'zustand';
 
 const initialState = {
     // ▼ 画面遷移フェーズ
-    // 'title' | 'mode_select' | 'setup_offline' | 'online_lobby' | 'playing'
+    // 'title' | 'mode_select' | 'setup_offline' | 'online_lobby' | 'char_select' | 'playing'
+    //                                                                ^^^^^^^^^^^^^^^^ 追加
     gamePhase: 'title', diceAnim: { active: false, d1: 1, d2: 1, text: '' },
     turnOrderActive: false, turnOrderData: null, gameOver: false, 
     isBranchPicking: false, currentBranchOptions: [],

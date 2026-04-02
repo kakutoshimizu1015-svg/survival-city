@@ -5,28 +5,33 @@ const CHAR_COLORS = {
   hacker:'#9b59b6', musician:'#f1c40f', doctor:'#1abc9c', gambler:'#e91e8c', detective:'#6c5ce7',
 };
 
-export const CharacterIcon = ({ charKey, emoji, name, isSelected, isHovered, onClick, onHover, onLeave }) => {
+export const CharacterIcon = ({ charKey, emoji, name, isSelected, isHovered, isLocked, lockedByLabel, onClick, onHover, onLeave }) => {
   const color = CHAR_COLORS[charKey] || '#aaa';
+  const disabled = isLocked;
 
   return (
     <button
-      onClick={() => onClick(charKey)}
+      onClick={() => !disabled && onClick(charKey)}
       onMouseEnter={() => onHover(charKey)}
       onMouseLeave={() => onLeave()}
       onTouchStart={() => onHover(charKey)}
       style={{
-        width: 88, height: 100, borderRadius: 10, border: 'none', cursor: 'pointer',
+        width: 88, height: 100, borderRadius: 10, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
         background: isSelected
           ? `linear-gradient(145deg, ${color}33, ${color}11)`
+          : disabled
+          ? 'rgba(30,25,20,0.6)'
           : isHovered
           ? 'rgba(253,245,230,0.06)'
           : 'rgba(253,245,230,0.03)',
         position: 'relative', 
         transition: 'all 0.18s ease',
-        outline: isSelected ? `2px solid ${color}` : isHovered ? `1px solid ${color}88` : '1px solid rgba(141,110,99,0.25)',
+        outline: isSelected ? `2px solid ${color}` : isHovered && !disabled ? `1px solid ${color}88` : '1px solid rgba(141,110,99,0.25)',
         boxShadow: isSelected ? `0 0 20px ${color}33, inset 0 0 15px ${color}11` : 'none',
+        opacity: disabled ? 0.35 : 1,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
-        transform: isHovered ? 'scale(1.08)' : isSelected ? 'scale(1.03)' : 'scale(1)',
+        filter: disabled ? 'grayscale(0.7)' : 'none',
+        transform: isHovered && !disabled ? 'scale(1.08)' : isSelected ? 'scale(1.03)' : 'scale(1)',
         zIndex: isHovered ? 5 : 1,
       }}
     >
@@ -46,8 +51,19 @@ export const CharacterIcon = ({ charKey, emoji, name, isSelected, isHovered, onC
         {name}
       </span>
 
+      {/* ロック済みバッジ */}
+      {disabled && lockedByLabel && (
+        <div style={{
+          position: 'absolute', top: 3, right: 3, fontSize: 9, fontWeight: 700,
+          background: 'rgba(0,0,0,0.7)', color: '#f1c40f', borderRadius: 4, 
+          padding: '1px 5px', fontFamily: "'M PLUS Rounded 1c', sans-serif",
+        }}>
+          {lockedByLabel}
+        </div>
+      )}
+
       {/* 選択中インジケーター */}
-      {isSelected && (
+      {isSelected && !disabled && (
         <div style={{
           position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)',
           width: 22, height: 3, borderRadius: 2, background: color,

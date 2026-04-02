@@ -9,8 +9,10 @@ import { processRoundEnd } from '../game/round';
 let isReceivingNetworkData = false;
 
 export const useNetworkStore = create((setStore, getStore) => ({
+    // ▼ 修正: ランダムなIDを削除し、初期値をnullに設定。認証後にセットされます。
     myUserId: null,
     
+    // ▼ 追加: 認証完了後にUIDをセットするための関数
     setMyUserId: (uid) => setStore({ myUserId: uid }),
 
     isHost: false,
@@ -42,7 +44,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
             const roomRef = ref(db, `rooms/${roomCode}`);
             await set(roomRef, { hostPeerId: id, createdAt: Date.now(), hostName: playerName, status: 'waiting' });
             onDisconnect(roomRef).remove(); 
-            setStore({ peer, status: 'connected', lobbyPlayers: [{ userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none', isHost: true, isCPU: false }] });
+            setStore({ peer, status: 'connected', lobbyPlayers: [{ userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none', isHost: true, isCPU: false, charLocked: false }] });
+            //                                                                                                                                                                          ^^^^^^^^^^^^^^^^ 追加
         });
 
         peer.on('connection', (conn) => {
@@ -50,7 +53,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
                 setStore(state => ({ connections: [...state.connections, conn] }));
                 conn.on('data', (data) => {
                     if (data.type === 'JOIN') {
-                        const newPlayer = { ...data.user, isHost: false, isCPU: false };
+                        const newPlayer = { ...data.user, isHost: false, isCPU: false, charLocked: false };
+                        //                                                             ^^^^^^^^^^^^^^^^ 追加
                         const updatedPlayers = [...getStore().lobbyPlayers, newPlayer];
                         setStore({ lobbyPlayers: updatedPlayers });
                         getStore().broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
@@ -64,6 +68,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         if (data.lastUpdater !== getStore().myUserId) {
                             isReceivingNetworkData = true;
                             
+                            // ▼ ログのDOM同期処理
                             const logger = document.getElementById("log");
                             if (logger && data.gameState.logs) {
                                 logger.innerHTML = data.gameState.logs.map(msg => `<div>> ${msg}</div>`).join('');
@@ -71,6 +76,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             }
 
                             useGameStore.setState(data.gameState);
+                            // ▼ 修正: ガード時間を50ms → 200msに延長（長時間非同期処理中の再broadcast防止）
                             setTimeout(() => { isReceivingNetworkData = false; }, 200);
                         }
                         getStore().connections.forEach(c => {
@@ -78,6 +84,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         });
                     }
 
+                    // ▼ 追加: ゲストからのラウンド終了リクエスト（ホスト側でのみ処理を実行）
                     if (data.type === 'REQUEST_ROUND_END') {
                         const gameState = useGameStore.getState();
                         if (gameState.gamePhase === 'playing' && !gameState.gameOver) {
@@ -92,6 +99,12 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             })();
                         }
                     }
+
+                    // ▼▼▼ 追加: キャラ選択画面でのロック状態同期 ▼▼▼
+                    // ゲストがキャラを決定した際、updateMyInfo経由で LOBBY_CHANGE として送信されるため、
+                    // 上記の LOBBY_CHANGE ハンドラが charType と charLocked を自動的に反映する。
+                    // 追加のハンドラは不要（既存の仕組みで動作する）。
+                    // ▲▲▲ 追加ここまで ▲▲▲
                 });
             });
             conn.on('close', () => {
@@ -114,20 +127,22 @@ export const useNetworkStore = create((setStore, getStore) => ({
             const conn = peer.connect(snapshot.val().hostPeerId);
             conn.on('open', () => {
                 setStore({ peer, hostConnection: conn, status: 'connected' });
-                conn.send({ type: 'JOIN', user: { userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none' } }); 
-                
+                conn.send({ type: 'JOIN', user: { userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none', charLocked: false } }); 
+                //                                                                                                                        ^^^^^^^^^^^^^^^^ 追加
                 conn.on('data', (data) => {
                     if (data.type === 'LOBBY_UPDATE') setStore({ lobbyPlayers: data.players });
 
-                    // ゲーム開始時は直接playingへ
+                    // ▼▼▼ 変更: GAME_START の遷移先を 'char_select' に変更 ▼▼▼
                     if (data.type === 'GAME_START') {
-                        useGameStore.setState({ ...data.gameState, gamePhase: 'playing' });
+                        useGameStore.setState({ ...data.gameState, gamePhase: 'char_select' });
                     }
+                    // ▲▲▲ 変更ここまで（元: gamePhase: 'playing'）▲▲▲
 
                     if (data.type === 'GAME_SYNC') {
                         if (data.lastUpdater !== getStore().myUserId) {
                             isReceivingNetworkData = true;
                             
+                            // ▼ ログのDOM同期処理
                             const logger = document.getElementById("log");
                             if (logger && data.gameState.logs) {
                                 logger.innerHTML = data.gameState.logs.map(msg => `<div>> ${msg}</div>`).join('');
@@ -135,6 +150,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             }
 
                             useGameStore.setState(data.gameState);
+                            // ▼ 修正: ガード時間を50ms → 200msに延長
                             setTimeout(() => { isReceivingNetworkData = false; }, 200);
                         }
                     }
@@ -161,7 +177,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
     addCpu: () => {
         const state = getStore();
         if (!state.isHost || state.lobbyPlayers.length >= 8) return;
-        const newCpu = { userId: 'cpu-' + Math.random().toString(36).substring(2, 8), name: `CPU${state.lobbyPlayers.length + 1}`, charType: 'survivor', teamColor: 'none', isHost: false, isCPU: true };
+        const newCpu = { userId: 'cpu-' + Math.random().toString(36).substring(2, 8), name: `CPU${state.lobbyPlayers.length + 1}`, charType: 'survivor', teamColor: 'none', isHost: false, isCPU: true, charLocked: false };
+        //                                                                                                                                                                                                   ^^^^^^^^^^^^^^^^ 追加
         const updatedPlayers = [...state.lobbyPlayers, newCpu];
         setStore({ lobbyPlayers: updatedPlayers });
         state.broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
@@ -202,6 +219,14 @@ export const useNetworkStore = create((setStore, getStore) => ({
         state.broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
     },
 
+    // ▼▼▼ 追加: キャラ選択完了後にロック状態をリセットする関数 ▼▼▼
+    resetCharLocks: () => {
+        const state = getStore();
+        const updatedPlayers = state.lobbyPlayers.map(p => ({ ...p, charLocked: false }));
+        setStore({ lobbyPlayers: updatedPlayers });
+    },
+    // ▲▲▲ 追加ここまで ▲▲▲
+
     updateRoomStatus: async (newStatus) => {
         const { roomId, isHost } = getStore();
         if (isHost && roomId) await update(ref(db, `rooms/${roomId}`), { status: newStatus });
@@ -222,13 +247,35 @@ useGameStore.subscribe((state) => {
     const netState = useNetworkStore.getState();
     if (netState.status !== 'connected' || isReceivingNetworkData || state.gamePhase !== 'playing') return;
 
+    // ▼ 追加: ゲスト側はラウンド終了処理中の再broadcastを抑止する
     if (!netState.isHost && state._roundEndInProgress) return;
 
+    // ▼ 同期させない（ローカルのみで保持する）Stateのキーを指定
     const localOnlyKeys = [
-        'charInfoModal', 'acquiredCard', 'toastMsg', 'centerWarning', 'tooltipData',
-        'settingsActive', 'rulesActive', 'tutorialActive', 'shopActive', 'shopCart',
-        'layoutMode', 'autoScrollToPlayer', 'eventPopups', 'bloodAnim', 'turnBanner',
-        'turnBannerActive', 'jobResult', 'volume', 'showSkipButton',
+        // --- UIモーダル・ローカル設定系 ---
+        'charInfoModal',
+        'acquiredCard',
+        'toastMsg',
+        'centerWarning',
+        'tooltipData',
+        'settingsActive',
+        'rulesActive',
+        'tutorialActive',
+        'shopActive',
+        'shopCart',
+        'layoutMode',
+        'autoScrollToPlayer',
+
+        // --- タイマー駆動の演出系 ---
+        'eventPopups',
+        'bloodAnim',
+        'turnBanner',
+        'turnBannerActive',
+        'jobResult',
+
+        // --- 個人設定系 ---
+        'volume',
+        'showSkipButton',
     ];
 
     const pureState = {};
