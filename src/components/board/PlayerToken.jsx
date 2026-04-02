@@ -28,7 +28,13 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const zIndexBase = 50 + currentTile.row * 10;
     
     // 遠近法スケールの取得
-    const ds = getDepthScale(currentTile.row, maxRow);
+    const baseScale = getDepthScale(currentTile.row, maxRow);
+    // 駒を全体的に大きく見せるため、スケールに1.15倍を掛ける
+    const ds = baseScale * 1.15;
+
+    // 駒の基本サイズを拡大
+    const tokenWidth = isImage ? 110 : 64;
+    const tokenHeight = isImage ? 110 : 64;
 
     // 土埃のクリーンアップ
     useEffect(() => {
@@ -199,11 +205,11 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
             gridRow: currentTile.row,
             position: 'relative',
             width: '100%', height: '100%',
-            zIndex: zIndexBase,
+            zIndex: zIndexBase + 10,
             pointerEvents: 'none',
-            // ▼ ここでスケール（遠近法）を適用
+            // 遠近法スケールの適用
             transform: `scale(${ds})`,
-            transformOrigin: 'center center'
+            transformOrigin: 'bottom center'
         }}>
             <style>{`
                 @keyframes tokenDustAnim {
@@ -239,7 +245,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                     zIndex: zIndexBase, display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none'
                 }}>
                     <div ref={scaleRef} style={{
-                        width: isImage ? 80 : 44, height: isImage ? 80 : 44,
+                        width: tokenWidth, height: tokenHeight, // 拡大したサイズを適用
                         position: 'relative', transformOrigin: 'bottom center',
                         background: isImage ? 'transparent' : 'rgba(0,0,0,0.6)',
                         border: isImage ? 'none' : `3px solid ${isActiveTurn ? '#ffe066' : player.color}`,
@@ -264,13 +270,13 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                                     }} />
                             </>
                         ) : (
-                            <span ref={emojiRef} style={{ fontSize: 26, transform: `scaleX(${facingRef.current})` }}>{charEmoji[player.charType]}</span>
+                            <span ref={emojiRef} style={{ fontSize: 34, transform: `scaleX(${facingRef.current})` }}>{charEmoji[player.charType]}</span>
                         )}
                     </div>
 
                     <div style={{
                         position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-                        marginTop: 2, fontSize: 13, fontWeight: 900, color: player.color,
+                        marginTop: 2, fontSize: 16, fontWeight: 900, color: player.color, // 文字サイズも調整
                         textShadow: '1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000',
                         whiteSpace: 'nowrap'
                     }}>

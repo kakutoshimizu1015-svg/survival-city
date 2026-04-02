@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useUserStore } from '../../store/useUserStore';
 import { getDistance, getPathPreviewTiles, getManholeLinkedTiles } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
@@ -15,6 +16,9 @@ export const GameBoard = () => {
         roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
         autoScrollToPlayer
     } = useGameStore();
+
+    // ユーザー設定から煙エフェクト（フォグ）の表示設定を取得
+    const showSmoke = useUserStore(state => state.showSmoke);
 
     const cp = players[turn];
     const scale = useRef(1.0);
@@ -114,8 +118,6 @@ export const GameBoard = () => {
         const wrapper = wrapperRef.current;
         if (!wrapper) return;
 
-        // イベントはReactのプロパティからではなく、すべてこのuseEffect内でネイティブにバインドします。
-        // passive: false にすることで preventDefault エラーを回避します。
         const handleWheel = (e) => {
             e.preventDefault();
             const rect = wrapper.getBoundingClientRect();
@@ -280,17 +282,18 @@ export const GameBoard = () => {
 
             <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px', position: 'relative' }}>
                 
-                {/* 手前を覆う白い霧のオーバーレイ（背景の邪魔をしない） */}
-                <div style={{
-                    position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
-                    background: 'linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 100%)',
-                    pointerEvents: 'none', zIndex: 10, borderRadius: '8px 8px 0 0'
-                }} />
+                {/* 奥行きを演出する霧のオーバーレイ（showSmoke設定に連動） */}
+                {showSmoke && (
+                    <div style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
+                        background: 'linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 100%)',
+                        pointerEvents: 'none', zIndex: 10, borderRadius: '8px 8px 0 0'
+                    }} />
+                )}
 
                 <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none' }}>
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
-                        {/* 元のCSS Grid と 3色の背景グラデーションを完全復元 */}
                         <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
                             
                             <BoardPaths />
@@ -316,7 +319,6 @@ export const GameBoard = () => {
                                 );
                             })}
 
-                            {/* プレイヤーの独立アニメーション描画 */}
                             {players.filter(p => p.hp > 0).map(p => {
                                 const isFog = visibleTiles && !visibleTiles.has(p.pos);
                                 if (isFog) return null;

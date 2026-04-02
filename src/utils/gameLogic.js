@@ -61,6 +61,6 @@ export function getManholeLinkedTiles(currentPos, mapData) {
 // 奥の行（rowが小さい）ほど小さく、手前の行ほど大きく(最大1.0)する
 export const getDepthScale = (row, maxRow) => {
     if (!maxRow || maxRow === 0) return 1;
-    // 0.45(一番奥) 〜 1.0(一番手前) の間でスケールを決定
-    return Math.max(0.45, 0.45 + (row / maxRow) * 0.55);
+    // 奥行き感を強めるため、一番奥を0.3に設定 (以前は0.45)
+    return Math.max(0.3, 0.3 + (row / maxRow) * 0.7);
 };
