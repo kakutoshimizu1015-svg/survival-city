@@ -1,21 +1,21 @@
 import React, { useMemo } from 'react';
-// ▼ 修正1: ClayButton は名前付きインポート ({}) に変更
+// ClayButtonのインポート形式でエラーが出る場合は、
+// import ClayButton from '../components/common/ClayButton'; に変更してください。
 import { ClayButton } from '../components/common/ClayButton';
 import { useGameStore } from '../store/useGameStore';
 import { charEmoji, charInfo } from '../constants/characters';
 import { CharacterGrid } from '../components/charselect/CharacterGrid';
-// ▼ 修正2: CharacterPreview はデフォルトインポート ({}なし) に変更
-import CharacterPreview from '../components/charselect/CharacterPreview';
+import { CharacterPreview } from '../components/charselect/CharacterPreview';
 
 export const CharacterSelect = () => {
+    // ▼ 安全対策: players が空でもクラッシュしないようにする
     const players = useGameStore(state => state.players) || [];
     const setGameState = useGameStore(state => state.setGameState);
     
     const [selectingPlayerIndex, setSelectingPlayerIndex] = React.useState(0);
-    const [playerChoices, setPlayerChoices] = React.useState({}); // {playerId: charType}
+    const [playerChoices, setPlayerChoices] = React.useState({}); 
     const [hoveredChar, setHoveredChar] = React.useState(null);
 
-    // 安全対策: charEmojiが空の場合のフォールバック
     const charTypes = useMemo(() => {
         const keys = Object.keys(charEmoji || {});
         return keys.length > 0 ? keys : ['survivor'];
@@ -33,10 +33,10 @@ export const CharacterSelect = () => {
         if (selectingPlayerIndex < players.length - 1) {
             setSelectingPlayerIndex(prev => prev + 1);
         } else {
-            // 全員選択完了
+            // ▼ 安全対策: map実行時のクラッシュを防止
             const finalPlayers = players.map(p => ({
                 ...p,
-                charType: playerChoices[p.id] || charType // 最後の人の選択を反映
+                charType: playerChoices[p.id] || charType 
             }));
             setGameState({ players: finalPlayers, gamePhase: 'playing' });
             useGameStore.getState().addEventPopup(0, "✅", "ゲーム開始！", "キャラクターの選択が完了しました", "good");
@@ -53,12 +53,10 @@ export const CharacterSelect = () => {
             </div>
 
             <div style={{ display: 'flex', flexGrow: 1, gap: '20px', minHeight: 0 }}>
-                {/* プレビューパネル */}
                 <div style={{ flex: 1.2, height: '100%' }}>
                     <CharacterPreview charType={hoveredChar || playerChoices[selectingPlayer?.id] || charTypes[0]} />
                 </div>
                 
-                {/* グリッドパネル（CharacterGridコンポーネントに委譲） */}
                 <div style={{ flex: 1, height: '100%' }}>
                     <CharacterGrid 
                         charTypes={charTypes}

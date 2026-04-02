@@ -1,15 +1,15 @@
 import React from 'react';
 
-export const CharacterIcon = ({ charType, name, emoji, status, onClick }) => {
+export const CharacterIcon = ({ charType, name, emoji, status, onClick, onMouseEnter, onMouseLeave }) => {
     let baseStyle = {
         position: 'relative', width: '100%', height: '100%',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: '0', // 余白を削って最大化
         cursor: status === 'disabled' ? 'not-allowed' : 'pointer',
         transition: 'all 0.2s ease',
         boxSizing: 'border-box',
         background: '#fdf5e6',
         borderRadius: '12px',
+        padding: '8px'
     };
 
     if (status === 'hover') {
@@ -25,15 +25,13 @@ export const CharacterIcon = ({ charType, name, emoji, status, onClick }) => {
     }
 
     return (
-        <div style={baseStyle} onClick={onClick}>
-            {/* アイコンを限界まで大きく */}
-            <div style={{ fontSize: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexGrow: 1 }}>
+        <div style={baseStyle} onClick={onClick} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+            <div style={{ fontSize: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexGrow: 1 }}>
                 {emoji}
             </div>
             
-            {/* 名前を少し小さめにして下に配置 */}
             <div style={{
-                position: 'absolute', bottom: '4px', left: '0', width: '100%',
+                position: 'absolute', bottom: '8px', left: '0', width: '100%',
                 fontSize: '12px', fontWeight: 'bold', color: '#5d4037', textAlign: 'center',
                 textShadow: '1px 1px 0 rgba(255,255,255,0.8)',
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -41,10 +39,10 @@ export const CharacterIcon = ({ charType, name, emoji, status, onClick }) => {
             }}>{name}</div>
 
             {status === 'selected' && (
-                <div style={{ position: 'absolute', top: '4px', right: '4px', fontSize: '20px' }}>✅</div>
+                <div style={{ position: 'absolute', top: '8px', right: '8px', fontSize: '20px' }}>✅</div>
             )}
             {status === 'disabled' && (
-                <div style={{ position: 'absolute', top: '4px', right: '4px', fontSize: '20px' }}>🔒</div>
+                <div style={{ position: 'absolute', top: '8px', right: '8px', fontSize: '20px' }}>🔒</div>
             )}
         </div>
     );
