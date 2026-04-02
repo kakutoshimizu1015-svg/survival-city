@@ -56,3 +56,9 @@ export function getManholeLinkedTiles(currentPos, mapData) {
     });
     return linked;
 }
+
+// --- 2.5D 疑似3D用 共通計算ロジック ---
+export const getDepthScale = (z) => Math.max(0.35, 1 - z * 0.09);
+export const getTileW = (z) => Math.max(20, 60 - z * 5);
+export const getTileH = (z) => Math.max(11, 32 - z * 2.8);
+export const getSideH = (z) => Math.max(3, 12 - z * 1.2);
