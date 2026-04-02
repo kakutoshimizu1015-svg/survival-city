@@ -1,3 +1,7 @@
+export const charImages = {
+    survivor: { front: '/survivor_front.png', back: '/survivor_back.png' }
+};
+
 export const charEmoji = { athlete:'🏃', sales:'💼', survivor:'🌿', yankee:'👊', hacker:'💻', musician:'🎸', doctor:'🩺', gambler:'🎲', detective:'🕵️' };
 
 export const charInfo = {

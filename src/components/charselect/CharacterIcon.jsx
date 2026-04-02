@@ -1,4 +1,5 @@
 import React from 'react';
+import { charImages } from '../../constants/characters';
 
 const CHAR_COLORS = {
   athlete:'#e74c3c', sales:'#3498db', survivor:'#2ecc71', yankee:'#e67e22',
@@ -7,6 +8,7 @@ const CHAR_COLORS = {
 
 export const CharacterIcon = ({ charKey, emoji, name, isSelected, isHovered, onClick, onHover, onLeave }) => {
   const color = CHAR_COLORS[charKey] || '#aaa';
+  const isImage = charImages[charKey] !== undefined;
 
   return (
     <button
@@ -31,11 +33,15 @@ export const CharacterIcon = ({ charKey, emoji, name, isSelected, isHovered, onC
       }}
     >
       <span style={{
-        fontSize: 34, display: 'block', 
+        fontSize: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
         filter: isSelected ? `drop-shadow(0 0 6px ${color})` : 'none',
-        transition: 'filter 0.2s',
+        transition: 'filter 0.2s', width: 40, height: 40
       }}>
-        {emoji}
+        {isImage ? (
+          <img src={charImages[charKey].front} alt={name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        ) : (
+          emoji
+        )}
       </span>
       <span style={{
         fontSize: 11, fontWeight: 700, 
@@ -46,7 +52,6 @@ export const CharacterIcon = ({ charKey, emoji, name, isSelected, isHovered, onC
         {name}
       </span>
 
-      {/* 選択中インジケーター */}
       {isSelected && (
         <div style={{
           position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)',

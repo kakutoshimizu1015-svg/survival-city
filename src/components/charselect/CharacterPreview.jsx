@@ -1,5 +1,6 @@
 import React from 'react';
 import { SkinSelector } from './SkinSelector';
+import { charImages } from '../../constants/characters';
 
 const CHAR_COLORS = {
   athlete:'#e74c3c', sales:'#3498db', survivor:'#2ecc71', yankee:'#e67e22',
@@ -24,6 +25,7 @@ export const CharacterPreview = ({ character, show }) => {
   }
 
   const color = CHAR_COLORS[character.key] || '#aaa';
+  const isImage = charImages[character.key] !== undefined;
 
   return (
     <div style={{
@@ -33,13 +35,11 @@ export const CharacterPreview = ({ character, show }) => {
       position: 'relative', overflow: 'hidden',
       animation: show ? 'charPreviewSlide 0.3s ease both' : 'none',
     }}>
-      {/* 右端アクセントバー */}
       <div style={{
         position: 'absolute', top: 0, right: 0, width: 3, height: '100%',
         background: `linear-gradient(180deg, ${color}, transparent)`,
       }} />
 
-      {/* キャラ名 + 絵文字 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
         <div style={{
           width: 72, height: 72, borderRadius: 14,
@@ -47,9 +47,13 @@ export const CharacterPreview = ({ character, show }) => {
           border: `2px solid ${color}44`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 40, boxShadow: `0 0 20px ${color}22`,
-          flexShrink: 0,
+          flexShrink: 0, overflow: 'hidden'
         }}>
-          {character.emoji}
+          {isImage ? (
+            <img src={charImages[character.key].front} alt={character.name} style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
+          ) : (
+            character.emoji
+          )}
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{
@@ -67,23 +71,16 @@ export const CharacterPreview = ({ character, show }) => {
         </div>
       </div>
 
-      {/* パッシブスキル */}
       <div style={{
         background: `linear-gradient(135deg, ${color}11, transparent)`,
         borderRadius: 8, padding: 12, marginBottom: 10,
         border: `1px solid ${color}22`,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-          <span style={{
-            fontSize: 9, color, fontWeight: 700, letterSpacing: 2,
-            fontFamily: "'M PLUS Rounded 1c', sans-serif",
-          }}>
+          <span style={{ fontSize: 9, color, fontWeight: 700, letterSpacing: 2, fontFamily: "'M PLUS Rounded 1c', sans-serif" }}>
             ▸ パッシブ
           </span>
-          <span style={{
-            fontSize: 8, color: '#f1c40f', background: 'rgba(241,196,15,0.15)',
-            padding: '1px 6px', borderRadius: 3, fontWeight: 700,
-          }}>
+          <span style={{ fontSize: 8, color: '#f1c40f', background: 'rgba(241,196,15,0.15)', padding: '1px 6px', borderRadius: 3, fontWeight: 700 }}>
             常時発動
           </span>
         </div>
@@ -95,17 +92,13 @@ export const CharacterPreview = ({ character, show }) => {
         </div>
       </div>
 
-      {/* アクティブスキル */}
       <div style={{
         background: 'rgba(253,245,230,0.03)',
         borderRadius: 8, padding: 12, marginBottom: 10,
         border: '1px solid rgba(141,110,99,0.2)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-          <span style={{
-            fontSize: 9, color: '#8d6e63', fontWeight: 700, letterSpacing: 2,
-            fontFamily: "'M PLUS Rounded 1c', sans-serif",
-          }}>
+          <span style={{ fontSize: 9, color: '#8d6e63', fontWeight: 700, letterSpacing: 2, fontFamily: "'M PLUS Rounded 1c', sans-serif" }}>
             ▸ アクティブスキル
           </span>
         </div>
@@ -117,7 +110,6 @@ export const CharacterPreview = ({ character, show }) => {
         </div>
       </div>
 
-      {/* スキン */}
       <SkinSelector charKey={character.key} color={color} />
     </div>
   );
