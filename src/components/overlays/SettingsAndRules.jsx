@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { ClayButton } from '../common/ClayButton';
-// ▼ 追加：ユーザー情報の取得と保存関数
 import { useUserStore } from '../../store/useUserStore';
 import { savePlayerName } from '../../utils/userLogic';
 
@@ -9,12 +8,11 @@ export const SettingsAndRules = () => {
     const { settingsActive, rulesActive, layoutMode, volume, showSkipButton, autoScrollToPlayer, setGameState, resetGame } = useGameStore();
     const [confirmOpen, setConfirmOpen] = useState(false);
 
-    // ▼ 追加：ユーザー情報とタブ管理のステート
-    const { playerName, wins, totalEarnedP } = useUserStore();
+    // ▼ 追加：showSmoke と setShowSmoke を useUserStore から取得
+    const { playerName, wins, totalEarnedP, showSmoke, setShowSmoke } = useUserStore();
     const [activeTab, setActiveTab] = useState('player'); // 'player' または 'settings'
     const [editingName, setEditingName] = useState(playerName);
 
-    // ▼ 追加：ストアの名前が変更されたらローカルステートにも反映
     useEffect(() => {
         if (playerName) {
             setEditingName(playerName);
@@ -28,7 +26,6 @@ export const SettingsAndRules = () => {
         setConfirmOpen(false);
     };
 
-    // ▼ 追加：名前の保存処理
     const handleNameUpdate = () => {
         if (editingName && editingName.trim() !== '' && editingName !== playerName) {
             savePlayerName(editingName);
@@ -227,7 +224,6 @@ export const SettingsAndRules = () => {
         <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={() => setGameState({ settingsActive: false })}>
             <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723', padding: '15px' }} onClick={(e) => e.stopPropagation()}>
                 
-                {/* ▼ 追加：タブ切り替えUI */}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', borderBottom: '2px solid #8d6e63', paddingBottom: '10px' }}>
                     <ClayButton 
                         onClick={() => setActiveTab('player')} 
@@ -243,7 +239,6 @@ export const SettingsAndRules = () => {
                     </ClayButton>
                 </div>
 
-                {/* ▼ 追加：プレイヤータブのコンテンツ */}
                 {activeTab === 'player' && (
                     <div style={{ textAlign: 'center', background: '#5c4a44', color: '#fdf5e6', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
                         <h3 style={{ marginTop: 0, color: '#fdf5e6', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '10px' }}>プレイヤープロフィール</h3>
@@ -274,7 +269,6 @@ export const SettingsAndRules = () => {
                     </div>
                 )}
 
-                {/* ▼ 既存の設定内容（設定タブの時だけ表示） */}
                 {activeTab === 'settings' && (
                     <>
                         <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
@@ -310,10 +304,20 @@ export const SettingsAndRules = () => {
                                 ONにすると、各プレイヤーのターン開始時にマップがそのプレイヤーの位置へ自動で移動します
                             </div>
                         </div>
+
+                        {/* ▼ 追加：煙（土埃）エフェクトの表示設定（端末保存） */}
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                            <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={showSmoke} onChange={(e) => setShowSmoke(e.target.checked)} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
+                                💨 煙（土埃）エフェクトを表示する
+                            </label>
+                            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '4px', marginLeft: '28px' }}>
+                                ONにするとプレイヤー移動時に煙が出ます。動作が重い場合はOFFにしてください。
+                            </div>
+                        </div>
                     </>
                 )}
                 
-                {/* 共通のナビゲーションボタン群 */}
                 <ClayButton onClick={() => setGameState({ rulesActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#3498db' }}>📖 遊び方・ルールを見る</ClayButton>
                 <ClayButton onClick={() => setGameState({ tutorialActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#8e44ad', color: '#f1c40f' }}>📚 チュートリアル</ClayButton>
                 

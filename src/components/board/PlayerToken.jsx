@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { charEmoji, charImages } from '../../constants/characters';
+import { useUserStore } from '../../store/useUserStore';
 
 export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
     const isImage = charImages && charImages[player.charType] !== undefined;
+    
+    // ▼ 追加：ユーザーの端末から設定を読み込む
+    const showSmoke = useUserStore(state => state.showSmoke);
 
-    // 平面移動(x, y)とジャンプ高さ(jump)を管理するオフセット
     const [offset, setOffset] = useState({ x: 0, y: 0, jump: 0 });
     const [facing, setFacing] = useState(1); // 1 = 右向き, -1 = 左向き
     const [isMoving, setIsMoving] = useState(false);
@@ -34,7 +37,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
         }
     }, [dustTrail]);
 
-    // ペーパーマリオ風の回転アニメーション
+    // ▼ 修正：ペーパーマリオ風の完全回転（2π）アニメーション
     const triggerSpin = useCallback((newFacing) => {
         return new Promise((resolve) => {
             if (isSpinning || !isImage) {
@@ -44,18 +47,21 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
             }
             setIsSpinning(true);
             const startTime = performance.now();
-            const spinDur = 550;
+            const spinDur = 550; // パタッという回転感のためのタメ時間
 
             const animateSpin = (now) => {
                 const t = Math.min((now - startTime) / spinDur, 1);
+                // カスタムイージング: 前後はゆっくり、中間は速く
                 const eased = t < 0.3
                     ? (t / 0.3) * (t / 0.3) * 0.3
                     : t > 0.7
                     ? 0.7 + (1 - ((1 - t) / 0.3) * ((1 - t) / 0.3)) * 0.3
                     : 0.3 + (t - 0.3) / 0.4 * 0.4;
 
+                // 2πのフル回転
                 setSpinAngle(eased * Math.PI * 2);
 
+                // 回転の半分のタイミングで新しい向きをセット
                 if (t >= 0.5 && facing !== newFacing) {
                     setFacing(newFacing);
                 }
@@ -73,7 +79,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
         });
     }, [isSpinning, facing, isImage]);
 
-    // ジャンプ・移動アニメーション（相対座標方式）
+    // ジャンプ・移動アニメーション
     useEffect(() => {
         if (prevPosRef.current === player.pos) return;
         const startTile = mapData.find(t => t.id === prevPosRef.current);
@@ -84,10 +90,9 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
             return;
         }
 
-        // 新しいマス(endTile)を基準とした、古いマス(startTile)の相対開始座標
         const sx = (startTile.col - endTile.col) * 80;
         const sy = (startTile.row - endTile.row) * 80;
-        const ex = 0; // 最終的には(0,0)に着地し、マスの中央と完全に一致する
+        const ex = 0;
         const ey = 0;
 
         const dx = endTile.col - startTile.col;
@@ -96,7 +101,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
         else if (dx < 0) newFacing = 1; // 左へ移動
 
         const runAnimation = async () => {
-            // 方向転換が必要なら先にスピンする
+            // ▼ 修正：ここで回転が終わるまで完全に待機する！
             if (newFacing !== facing && isImage) {
                 await triggerSpin(newFacing);
             } else {
@@ -107,7 +112,9 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
             const dur = 350;
             const startTime = performance.now();
 
-            setDustTrail(t => [...t.slice(-5), { x: sx, y: sy, id: Date.now() }]);
+            if (showSmoke) {
+                setDustTrail(t => [...t.slice(-5), { x: sx, y: sy, id: Date.now() }]);
+            }
 
             const animateMove = (now) => {
                 const t = Math.min((now - startTime) / dur, 1);
@@ -116,12 +123,9 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                 const jumpArc = -4 * (t - 0.5) * (t - 0.5) + 1;
                 const jumpHeight = 44 + Math.abs(ey - sy) * 0.4 + Math.abs(ex - sx) * 0.15;
 
-                const currentX = sx + (ex - sx) * eased;
-                const currentY = sy + (ey - sy) * eased;
-
                 setOffset({
-                    x: currentX,
-                    y: currentY,
+                    x: sx + (ex - sx) * eased,
+                    y: sy + (ey - sy) * eased,
                     jump: jumpArc * jumpHeight
                 });
 
@@ -130,11 +134,13 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                 } else {
                     setOffset({ x: ex, y: ey, jump: 0 });
                     setIsMoving(false);
-                    // 着地時の土埃
-                    setDustTrail(t => [...t.slice(-4),
-                        { x: ex - 12, y: ey, id: Date.now() },
-                        { x: ex + 12, y: ey, id: Date.now() + 1 }
-                    ]);
+                    // 着地時の土埃（設定ON時のみ）
+                    if (showSmoke) {
+                        setDustTrail(t => [...t.slice(-4),
+                            { x: ex - 12, y: ey, id: Date.now() },
+                            { x: ex + 12, y: ey, id: Date.now() + 1 }
+                        ]);
+                    }
                     prevPosRef.current = player.pos;
                 }
             };
@@ -147,24 +153,25 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
             if (animRef.current) cancelAnimationFrame(animRef.current);
             if (spinRef.current) cancelAnimationFrame(spinRef.current);
         };
-    }, [player.pos, mapData, facing, isImage, triggerSpin]);
+    }, [player.pos, mapData, facing, isImage, triggerSpin, showSmoke]);
 
-    // 描画用の状態計算
+    // ▼ 修正：cos(spinAngle) を用いて紙の薄さを完全再現
     const spinWidth = isSpinning ? Math.max(0.02, Math.abs(Math.cos(spinAngle))) : 1;
+    // 半回転〜1回転半の間は裏面画像を表示
     const showBack = isSpinning && spinAngle > Math.PI * 0.45 && spinAngle < Math.PI * 1.55;
+    // ▼ 修正：回転中のホップ（浮き上がり）を追加
     const spinHop = isSpinning ? Math.sin(spinAngle) * -12 : 0;
+    
     const idleBob = Math.sin(idlePhase * 0.06) * -3;
     const tilt = isMoving ? Math.sin(Date.now() * 0.015) * 6 : 0;
 
     const currentTile = mapData.find(t => t.id === player.pos) || mapData[0];
     const zIndexBase = 50 + currentTile.row * 10;
-
-    // マスの中央を基準とした時の、足元（影の描画位置）のYオフセット
     const FOOT_Y = 15;
 
     return (
         <div style={{
-            gridColumn: currentTile.col, // ★ここでCSS Gridのマスに直接配置（絶対にズレない）
+            gridColumn: currentTile.col,
             gridRow: currentTile.row,
             position: 'relative',
             width: '100%', height: '100%',
@@ -178,7 +185,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                 }
             `}</style>
 
-            {/* 平面移動(x, y)を担うコンテナ */}
             <div style={{
                 position: 'absolute',
                 left: '50%', top: '50%',
@@ -186,8 +192,8 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                 display: 'flex', flexDirection: 'column', alignItems: 'center'
             }}>
                 
-                {/* 土埃エフェクト */}
-                {dustTrail.map(d => (
+                {/* 煙エフェクト（条件付き描画） */}
+                {showSmoke && dustTrail.map(d => (
                     <div key={d.id} style={{
                         position: 'absolute', 
                         left: `calc(50% + ${d.x - offset.x}px)`, 
@@ -199,7 +205,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                     }} />
                 ))}
 
-                {/* 落ち影（FOOT_Yに配置） */}
+                {/* 落ち影 */}
                 <div style={{
                     position: 'absolute',
                     left: '50%', top: FOOT_Y,
@@ -210,18 +216,20 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                     zIndex: zIndexBase - 1, pointerEvents: 'none'
                 }} />
 
-                {/* キャラクター本体（FOOT_Yを基準に下端をピッタリ合わせる） */}
+                {/* キャラクター本体 */}
                 <div style={{
                     position: 'absolute',
                     left: '50%',
+                    // ▼ 修正：回転中のホップ（spinHop）を加算
                     top: `calc(${FOOT_Y}px - ${offset.jump}px + ${isMoving ? 0 : idleBob}px + ${spinHop}px)`,
-                    transform: 'translate(-50%, -100%)', // 足元(bottom)を中心に固定
+                    transform: 'translate(-50%, -100%)',
                     zIndex: zIndexBase,
                     display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none'
                 }}>
                     <div style={{
                         width: isImage ? 80 : 44, height: isImage ? 80 : 44,
                         position: 'relative',
+                        // ▼ 修正：cosで計算した spinWidth を適用し、ペーパーマリオ風の幅を再現
                         transform: `scaleX(${spinWidth}) rotate(${tilt}deg)`,
                         transformOrigin: 'bottom center',
                         background: isImage ? 'transparent' : 'rgba(0,0,0,0.6)',
@@ -236,7 +244,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                                     position: 'absolute', 
                                     width: '100%', height: '100%', 
                                     objectFit: 'contain', 
-                                    bottom: 0, // ★底辺の余白を0にすることで浮き上がりを完全に解消
+                                    bottom: 0, 
                                     imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
                                     transform: `scaleX(${facing})`, 
                                     filter: isActiveTurn ? 'drop-shadow(0 0 8px #ffe066)' : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))'
@@ -246,7 +254,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                         )}
                     </div>
 
-                    {/* プレイヤー名ラベル */}
                     <div style={{
                         marginTop: 2, fontSize: 12, fontWeight: 900, color: player.color,
                         textShadow: '1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000',
