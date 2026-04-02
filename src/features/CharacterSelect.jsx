@@ -1,163 +1,77 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { charEmoji, charInfo, charDetailData } from '../constants/characters';
+import React, { useMemo } from 'react';
+import ClayButton from '../components/common/ClayButton';
+import { useGameStore } from '../store/useGameStore';
+import { charEmoji, charInfo } from '../constants/characters';
 import { CharacterGrid } from '../components/charselect/CharacterGrid';
 import { CharacterPreview } from '../components/charselect/CharacterPreview';
 
-/* ──────────────────────────────────────────────
-   定数データをマージして統一的なキャラクターリストを生成
-   ────────────────────────────────────────────── */
-const CHAR_KEYS = Object.keys(charInfo);
+export const CharacterSelect = () => {
+    const players = useGameStore(state => state.players) || [];
+    const setGameState = useGameStore(state => state.setGameState);
+    
+    const [selectingPlayerIndex, setSelectingPlayerIndex] = React.useState(0);
+    const [playerChoices, setPlayerChoices] = React.useState({}); // {playerId: charType}
+    const [hoveredChar, setHoveredChar] = React.useState(null);
 
-const mergeCharacterData = () =>
-  CHAR_KEYS.map(key => ({
-    key,
-    emoji: charEmoji[key] || '❓',
-    name: charInfo[key]?.name || key,
-    desc: charInfo[key]?.desc || '',
-    tagline: charDetailData[key]?.tagline || '',
-    passive: charDetailData[key]?.passive || { name: '', desc: '' },
-    action: charDetailData[key]?.action || { name: '', desc: '' },
-  }));
+    // 安全対策: charEmojiが空の場合のフォールバック
+    const charTypes = useMemo(() => {
+        const keys = Object.keys(charEmoji || {});
+        return keys.length > 0 ? keys : ['survivor'];
+    }, []);
 
-const CHAR_COLORS = {
-  athlete:'#e74c3c', sales:'#3498db', survivor:'#2ecc71', yankee:'#e67e22',
-  hacker:'#9b59b6', musician:'#f1c40f', doctor:'#1abc9c', gambler:'#e91e8c', detective:'#6c5ce7',
+    const selectingPlayer = useMemo(() => players[selectingPlayerIndex] || {}, [players, selectingPlayerIndex]);
+
+    const handleCharClick = (charType) => {
+        const disabled = Object.values(playerChoices).includes(charType);
+        if (disabled) return;
+        
+        setPlayerChoices(prev => ({ ...prev, [selectingPlayer.id]: charType }));
+        useGameStore.getState().showToast(`${selectingPlayer.name || 'プレイヤー'} が ${charInfo[charType]?.name || 'キャラクター'} を選択しました`);
+
+        if (selectingPlayerIndex < players.length - 1) {
+            setSelectingPlayerIndex(prev => prev + 1);
+        } else {
+            // 全員選択完了
+            const finalPlayers = players.map(p => ({
+                ...p,
+                charType: playerChoices[p.id] || charType // 最後の人の選択を反映
+            }));
+            setGameState({ players: finalPlayers, gamePhase: 'playing' });
+            useGameStore.getState().addEventPopup(0, "✅", "ゲーム開始！", "キャラクターの選択が完了しました", "good");
+        }
+    };
+
+    return (
+        <div id="screen-char-select" style={{ position: 'fixed', inset: '0', background: 'linear-gradient(to right, #b0b0b0, #f0c830, #f8f8f8)', display: 'flex', flexDirection: 'column', padding: '24px', boxSizing: 'border-box', overflow: 'hidden' }}>
+            <div style={{ background: 'rgba(62,47,42,0.95)', padding: '10px 20px', borderRadius: '10px', color: '#fdf5e6', border: '3px solid #fdf5e6', textAlign: 'center', marginBottom: '16px', boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
+                <h1 style={{ fontSize: '22px', color: '#f1c40f', textShadow: '2px 2px 0 rgba(0,0,0,0.4)', margin: '0 0 6px 0' }}>SURVIVOR SELECT</h1>
+                <p style={{ fontSize: '13px', margin: 0, fontWeight: 'bold' }}>
+                    <span style={{ color: selectingPlayer?.color || '#fff' }}>{selectingPlayer?.name || 'プレイヤー'}</span> のキャラクターを選択してください。
+                </p>
+            </div>
+
+            <div style={{ display: 'flex', flexGrow: 1, gap: '20px', minHeight: 0 }}>
+                {/* プレビューパネル */}
+                <div style={{ flex: 1.2, height: '100%' }}>
+                    <CharacterPreview charType={hoveredChar || playerChoices[selectingPlayer?.id] || charTypes[0]} />
+                </div>
+                
+                {/* グリッドパネル（CharacterGridコンポーネントに委譲） */}
+                <div style={{ flex: 1, height: '100%' }}>
+                    <CharacterGrid 
+                        charTypes={charTypes}
+                        playerChoices={playerChoices}
+                        selectingPlayer={selectingPlayer}
+                        hoveredChar={hoveredChar}
+                        onCharClick={handleCharClick}
+                        onHoverChar={setHoveredChar}
+                    />
+                </div>
+            </div>
+            
+            <ClayButton style={{ position: 'absolute', bottom: '24px', right: '24px' }} onClick={() => setGameState({ gamePhase: 'mode_select' })}>タイトルへ戻る</ClayButton>
+        </div>
+    );
 };
 
-/* ──────────────────────────────────────────────
-   メインコンポーネント（独立したポップアップモーダル）
-   ────────────────────────────────────────────── */
-export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, targetName }) => {
-  const characters = useMemo(() => mergeCharacterData(), []);
-  
-  // UI状態
-  const [hoveredKey, setHoveredKey] = useState(null);
-  const [selectedKey, setSelectedKey] = useState(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const prevKey = useRef(null);
-
-  // モーダルが開かれたら初期キャラをセット
-  useEffect(() => {
-    if (isOpen) {
-        setSelectedKey(initialCharKey || 'athlete');
-        setHoveredKey(null);
-    }
-  }, [isOpen, initialCharKey]);
-
-  /* ──── キャラ選択時のプレビュー切替アニメーション ──── */
-  useEffect(() => {
-    if (selectedKey && selectedKey !== prevKey.current) {
-      setShowPreview(false);
-      const t = setTimeout(() => setShowPreview(true), 40);
-      prevKey.current = selectedKey;
-      return () => clearTimeout(t);
-    }
-    if (selectedKey) setShowPreview(true);
-  }, [selectedKey]);
-
-  /* ──── 表示するキャラデータ（ホバー優先 → 選択中） ──── */
-  const previewChar = useMemo(() => {
-    const key = hoveredKey ?? selectedKey;
-    return characters.find(c => c.key === key) || null;
-  }, [hoveredKey, selectedKey, characters]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 100000,
-      background: 'linear-gradient(180deg, #1a1410 0%, #2c221a 40%, #1a1410 100%)',
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      fontFamily: "'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif",
-      color: '#fdf5e6', overflow: 'auto',
-    }}>
-      <style>{`
-        @keyframes charPreviewSlide { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeInUp { from { transform: translateY(15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        @keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
-      `}</style>
-
-      {/* 背景エフェクト */}
-      <div style={{
-        position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.04,
-        backgroundImage: 'linear-gradient(rgba(253,245,230,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(253,245,230,0.3) 1px, transparent 1px)',
-        backgroundSize: '36px 36px',
-      }} />
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 50 }}>
-        <div style={{ width: '100%', height: 1, background: 'linear-gradient(90deg, transparent, rgba(253,245,230,0.03), transparent)', animation: 'scanline 6s linear infinite' }} />
-      </div>
-
-      {/* ──── ヘッダー ──── */}
-      <div style={{ textAlign: 'center', padding: '24px 0 8px', position: 'relative', zIndex: 2, width: '100%' }}>
-        <h1 style={{
-          fontSize: 26, fontWeight: 900, letterSpacing: 6, margin: 0,
-          color: '#f1c40f',
-          textShadow: '0 0 20px rgba(241,196,15,0.3), 0 2px 4px rgba(0,0,0,0.5)',
-        }}>
-          キャラクター選択
-        </h1>
-      </div>
-
-      {/* ──── 現在のプレイヤー表示 ──── */}
-      <div style={{
-        background: 'rgba(241,196,15,0.1)', border: '1px solid rgba(241,196,15,0.25)',
-        borderRadius: 8, padding: '8px 24px', marginBottom: 12,
-        fontSize: 14, fontWeight: 700, color: '#f1c40f',
-        animation: 'fadeInUp 0.3s ease',
-      }}>
-        🎮 {targetName} のキャラクターを選択
-      </div>
-
-      {/* ──── メインレイアウト ──── */}
-      <div style={{
-        display: 'flex', maxWidth: 880, width: '100%', padding: '0 16px', gap: 20,
-        flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start',
-        position: 'relative', zIndex: 2,
-      }}>
-        {/* グリッド */}
-        <CharacterGrid
-          characters={characters}
-          selectedKey={selectedKey}
-          hoveredKey={hoveredKey}
-          onSelect={setSelectedKey}
-          onHover={setHoveredKey}
-          onLeave={() => setHoveredKey(null)}
-        />
-
-        {/* プレビュー */}
-        <CharacterPreview character={previewChar} show={showPreview} />
-      </div>
-
-      {/* ──── 下部ボタンエリア ──── */}
-      <div style={{
-        display: 'flex', gap: 15, marginTop: 30, marginBottom: 24, flexWrap: 'wrap', justifyContent: 'center',
-        position: 'relative', zIndex: 2,
-      }}>
-        <button
-          onClick={onClose}
-          style={{
-            padding: '12px 28px', borderRadius: 8, border: '1px solid rgba(141,110,99,0.4)',
-            background: 'rgba(92,74,68,0.5)', color: '#b0a090', fontSize: 16, fontWeight: 700,
-            cursor: 'pointer', transition: 'all 0.2s', fontFamily: "'M PLUS Rounded 1c', sans-serif",
-          }}
-        >
-          ✖ キャンセル
-        </button>
-
-        <button
-          onClick={() => onConfirm(selectedKey)}
-          style={{
-            padding: '12px 40px', borderRadius: 8, border: 'none',
-            background: `linear-gradient(135deg, ${CHAR_COLORS[selectedKey] || '#f1c40f'}, ${CHAR_COLORS[selectedKey] ? CHAR_COLORS[selectedKey] + 'cc' : '#e67e22'})`,
-            color: '#1a1410', fontSize: 18, fontWeight: 900, cursor: 'pointer',
-            fontFamily: "'M PLUS Rounded 1c', sans-serif", letterSpacing: 3,
-            boxShadow: `0 4px 15px ${CHAR_COLORS[selectedKey] || '#f1c40f'}44`,
-            transition: 'all 0.2s',
-          }}
-        >
-          ✓ 決定する
-        </button>
-      </div>
-    </div>
-  );
-};
+export default CharacterSelect;

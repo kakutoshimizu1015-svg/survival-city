@@ -1,27 +1,32 @@
 import React from 'react';
+import { charEmoji, charInfo } from '../../constants/characters';
 import { CharacterIcon } from './CharacterIcon';
 
-export const CharacterGrid = ({ characters, selectedKey, hoveredKey, onSelect, onHover, onLeave }) => {
-  return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
-      padding: 14, borderRadius: 12,
-      background: 'rgba(92,74,68,0.3)', border: '1px solid rgba(141,110,99,0.3)',
-      boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.3)',
-    }}>
-      {characters.map((char) => (
-        <CharacterIcon
-          key={char.key}
-          charKey={char.key}
-          emoji={char.emoji}
-          name={char.name}
-          isSelected={selectedKey === char.key}
-          isHovered={hoveredKey === char.key}
-          onClick={onSelect}
-          onHover={onHover}
-          onLeave={onLeave}
-        />
-      ))}
-    </div>
-  );
+export const CharacterGrid = ({ charTypes, playerChoices, selectingPlayer, hoveredChar, onCharClick, onHoverChar }) => {
+    return (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(3, 1fr)', gap: '10px', height: '100%' }}>
+            {charTypes.map(charType => {
+                const isSelectedByCurrent = playerChoices[selectingPlayer?.id] === charType;
+                const isDisabled = Object.values(playerChoices).includes(charType) && !isSelectedByCurrent;
+                const isHovered = hoveredChar === charType;
+                
+                let status = isDisabled ? 'disabled' : isSelectedByCurrent ? 'selected' : isHovered ? 'hover' : 'idle';
+                
+                return (
+                    <CharacterIcon
+                        key={charType}
+                        charType={charType}
+                        name={charInfo[charType]?.name || '???'}
+                        emoji={charEmoji[charType]}
+                        status={status}
+                        onClick={() => onCharClick(charType)}
+                        onMouseEnter={() => onHoverChar(charType)}
+                        onMouseLeave={() => onHoverChar(null)}
+                    />
+                );
+            })}
+        </div>
+    );
 };
+
+export default CharacterGrid;

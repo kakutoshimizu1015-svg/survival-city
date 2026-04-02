@@ -1,44 +1,53 @@
-import React, { useMemo } from 'react';
-import { charEmoji, charInfo, charDetailData } from '../../constants/characters';
-// ▼ 修正: 波括弧 {} をつけて名前付きインポートに変更しました
-import { SkinSelector } from './SkinSelector';
+import React from 'react';
 
-export const CharacterPreview = ({ charType }) => {
-    const detail = useMemo(() => charDetailData[charType], [charType]);
-    const name = useMemo(() => charInfo[charType].name, [charType]);
-    const emoji = useMemo(() => charEmoji[charType], [charType]);
+export const CharacterIcon = ({ charType, name, emoji, status, onClick, onMouseEnter, onMouseLeave }) => {
+    let baseStyle = {
+        position: 'relative', width: '100%', height: '100%',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '0', // 余白を削って最大化
+        cursor: status === 'disabled' ? 'not-allowed' : 'pointer',
+        transition: 'all 0.2s ease',
+        boxSizing: 'border-box',
+        background: '#fdf5e6',
+        borderRadius: '12px',
+    };
+
+    if (status === 'hover') {
+        baseStyle = { ...baseStyle, border: '6px solid #f1c40f', background: '#fff9e6' };
+    } else if (status === 'selected') {
+        baseStyle = { ...baseStyle, border: '6px solid #e74c3c', background: '#ffebeb' };
+    } else {
+        baseStyle = { ...baseStyle, border: '4px solid #8d6e63' };
+    }
+
+    if (status === 'disabled') {
+        baseStyle = { ...baseStyle, opacity: 0.5 };
+    }
 
     return (
-        <div style={{ width: '100%', height: '100%', background: '#fffdf5', border: '6px solid #8d6e63', borderRadius: '15px', padding: '16px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', gap: '16px', paddingBottom: '16px', borderBottom: '2px solid #e0d5c1' }}>
-                
-                {/* プレビューのアイコンを特大化 */}
-                <div style={{ fontSize: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {emoji}
-                </div>
-                
-                <div>
-                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#3e2f2a', textShadow: '2px 2px 0 rgba(0,0,0,0.1)' }}>{name}</div>
-                    <div style={{ fontSize: '14px', fontStyle: 'italic', color: '#8d6e63' }}>{detail.tagline}</div>
-                </div>
+        <div style={baseStyle} onClick={onClick} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+            {/* アイコンを限界まで大きく */}
+            <div style={{ fontSize: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexGrow: 1 }}>
+                {emoji}
             </div>
+            
+            {/* 名前を少し小さめにして下に配置 */}
+            <div style={{
+                position: 'absolute', bottom: '4px', left: '0', width: '100%',
+                fontSize: '12px', fontWeight: 'bold', color: '#5d4037', textAlign: 'center',
+                textShadow: '1px 1px 0 rgba(255,255,255,0.8)',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                padding: '0 4px', boxSizing: 'border-box'
+            }}>{name}</div>
 
-            <div style={{ flexGrow: 1, color: '#5d4037', fontSize: '13px', lineHeight: 1.6, overflow: 'auto' }}>
-                <div style={{ marginBottom: '14px' }}>
-                    <div style={{ fontWeight: 'bold', color: '#d35400', fontSize: '15px' }}>{detail.passive.name}</div>
-                    <div style={{ background: '#f5eeda', padding: '8px 12px', borderRadius: '8px', marginTop: '4px' }}>{detail.passive.desc}</div>
-                </div>
-                <div>
-                    <div style={{ fontWeight: 'bold', color: '#c0392b', fontSize: '15px' }}>{detail.action.name}</div>
-                    <div style={{ background: '#f5eeda', padding: '8px 12px', borderRadius: '8px', marginTop: '4px' }}>{detail.action.desc}</div>
-                </div>
-            </div>
-
-            <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '2px solid #e0d5c1' }}>
-                <SkinSelector />
-            </div>
+            {status === 'selected' && (
+                <div style={{ position: 'absolute', top: '4px', right: '4px', fontSize: '20px' }}>✅</div>
+            )}
+            {status === 'disabled' && (
+                <div style={{ position: 'absolute', top: '4px', right: '4px', fontSize: '20px' }}>🔒</div>
+            )}
         </div>
     );
 };
 
-export default CharacterPreview;
+export default CharacterIcon;

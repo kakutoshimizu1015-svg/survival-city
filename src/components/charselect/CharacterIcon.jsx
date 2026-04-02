@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const CharacterIcon = ({ charType, name, emoji, status, onClick }) => {
+export const CharacterIcon = ({ charType, name, emoji, status, onClick, onMouseEnter, onMouseLeave }) => {
     let baseStyle = {
         position: 'relative', width: '100%', height: '100%',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -25,7 +25,7 @@ export const CharacterIcon = ({ charType, name, emoji, status, onClick }) => {
     }
 
     return (
-        <div style={baseStyle} onClick={onClick}>
+        <div style={baseStyle} onClick={onClick} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
             {/* アイコンを限界まで大きく */}
             <div style={{ fontSize: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexGrow: 1 }}>
                 {emoji}
