@@ -1,24 +1,12 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { getTileW, getTileH } from '../../utils/gameLogic';
 
 export const BoardPaths = () => {
+    // オブジェクトの全体デストラクトを避け、個別に関数呼び出しして無限ループを防ぐ
     const mapData = useGameStore(state => state.mapData);
 
     if (!mapData || mapData.length === 0) return null;
-
-    const TILE = 80;
-    const GAP = 20;
-    const PAD = 30;
-    const STEP = TILE + GAP;
-    const R = TILE / 2;
-
-    const maxCol = Math.max(...mapData.map(t => t.col));
-    const maxRow = Math.max(...mapData.map(t => t.row));
-    const W = (maxCol - 1) * STEP + TILE + PAD * 2;
-    const H = (maxRow - 1) * STEP + TILE + PAD * 2;
-
-    const tcx = (t) => (t.col - 1) * STEP + R + PAD;
-    const tcy = (t) => (t.row - 1) * STEP + R + PAD;
 
     const labelDefs = [
         { label: 'スラム', xFrac: 0.15, fill: 'rgba(30,30,30,0.32)' },
@@ -26,23 +14,14 @@ export const BoardPaths = () => {
         { label: '高級住宅街', xFrac: 0.84, fill: 'rgba(40,40,70,0.32)' },
     ];
 
+    // マップ全体の幅と高さを計算 (絶対座標形式へ移行)
+    const maxX = Math.max(...mapData.map(t => t.x));
+    const maxRow = Math.max(...mapData.map(t => t.row));
+    const W = maxX + 200;
+    const H = maxRow * 80 + 200; // col/rowに基づくサイズではなく絶対座標
+
     return (
-        <svg
-            id="board-path-svg"
-            viewBox={`0 0 ${W} ${H}`}
-            width={W}
-            height={H}
-            style={{
-                pointerEvents: 'none',
-                display: 'block',
-                overflow: 'visible',
-                background: 'none',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                zIndex: 2
-            }}
-        >
+        <g id="board-path-group" style={{ pointerEvents: 'none' }}>
             <defs>
                 <marker
                     id="arr-bk"
@@ -57,11 +36,12 @@ export const BoardPaths = () => {
                 </marker>
             </defs>
 
+            {/* 背景のエリア文字（絶対座標に対応、Wを基準に配置） */}
             {labelDefs.map((def, idx) => (
                 <text
                     key={`label-${idx}`}
                     x={W * def.xFrac}
-                    y={H * 0.5}
+                    y={H * 0.5} // 中央に配置
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fontSize="64"
@@ -75,16 +55,22 @@ export const BoardPaths = () => {
                 </text>
             ))}
 
+            {/* マスとマスを繋ぐ矢印（Z軸スケール計算による遠近法に対応） */}
             {mapData.map(tile => {
-                const fx = tcx(tile);
-                const fy = tcy(tile);
+                const tw1 = getTileW(tile.z);
+                const th1 = getTileH(tile.z);
+                const fx = tile.x + tw1 / 2; // tile1の中央X座標
+                const fy = tile.y + th1 / 2; // tile1の中央Y座標
 
                 return tile.next.map(nextId => {
                     const nextTile = mapData.find(t => t.id === nextId);
                     if (!nextTile) return null;
 
-                    const tx = tcx(nextTile);
-                    const ty = tcy(nextTile);
+                    const tw2 = getTileW(nextTile.z);
+                    const th2 = getTileH(nextTile.z);
+                    const tx = nextTile.x + tw2 / 2; // nextTileの中央X座標
+                    const ty = nextTile.y + th2 / 2; // nextTileの中央Y座標
+                    
                     const dx = tx - fx;
                     const dy = ty - fy;
                     const len = Math.sqrt(dx * dx + dy * dy);
@@ -93,11 +79,13 @@ export const BoardPaths = () => {
 
                     const ux = dx / len;
                     const uy = dy / len;
+                    const avgZ = (tile.z + nextTile.z) / 2;
 
-                    const x1 = fx + ux * (R + 4);
-                    const y1 = fy + uy * (R + 4);
-                    const x2 = tx - ux * (R + 8);
-                    const y2 = ty - uy * (R + 8);
+                    // タイルの立体的な端から端へ矢印を引くための、dsを考慮したサイズ調整
+                    const x1 = fx + ux * (tw1/2 + 4);
+                    const y1 = fy + uy * (th1/2 + 4);
+                    const x2 = tx - ux * (tw2/2 + 8);
+                    const y2 = ty - uy * (th2/2 + 8);
 
                     return (
                         <line
@@ -106,14 +94,16 @@ export const BoardPaths = () => {
                             y1={y1}
                             x2={x2}
                             y2={y2}
-                            stroke="rgba(0,0,0,0.50)"
-                            strokeWidth="5"
+                            // 立体マス用に遠近法（奥ほど細く薄く）を適用
+                            stroke={`rgba(0,0,0,${Math.max(0.1, 0.5 - avgZ * 0.05)})`} 
+                            strokeWidth={Math.max(2, 5 - avgZ * 0.4)} 
+                            strokeDasharray={`${4 - avgZ * 0.3},${3 - avgZ * 0.2}`} 
                             strokeLinecap="round"
                             markerEnd="url(#arr-bk)"
                         />
                     );
                 });
             })}
-        </svg>
+        </g>
     );
 };
