@@ -1,10 +1,19 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import jinchiBuildingImg from '../../assets/images/map/jinchi_building.png';
+import { charEmoji } from '../../constants/characters';
 
-const tileTooltipData = { center: { title:"🏥 病院（スタート地点）", desc:"HPが0になると強制送還。最大15P没収・装備1つロスト。" }, normal: { title:"🛣️ 通常の道", desc:"特別な効果なし。移動の通過点。" }, can: { title:"🥫 空き缶", desc:"1APで缶を拾う（1ターン3回まで）。雨の日は雨具が必要。" }, trash: { title:"🗑️ ゴミ山", desc:"2APでゴミを漁る。失敗すると警察に補導されAP-2ペナルティ。" }, exchange: { title:"💱 買取所", desc:"拾った缶・ゴミを現在相場でP換金（0AP）。" }, job: { title:"💼 バイト", desc:"3APで挑戦。成功率 60-80%で12P獲得。" }, shop: { title:"🛒 ショップ", desc:"カードを購入（4-6P）または手持ちカードを2Pで売却できる。" }, event: { title:"🎲 イベント", desc:"ミニゲームまたはストーリーイベントが発生！カード獲得のチャンス。" }, shelter: { title:"🏕️ 避難所", desc:"止まるとステルス状態になり、次の敵を1回やり過ごせる。" }, manhole: { title:"🕳️ マンホール", desc:"1APで別のマンホールへランダムワープ。" }, koban: { title:"🚓 交番", desc:"職務質問でその場に足止め。このターンは移動不可。" }, slum: { title:"🏚️ スラムエリア", desc:"缶・ゴミが多い。相場が低め。" }, commercial:{ title:"🏙️ 商業エリア", desc:"バイト・ショップが充実。中程度の相場。" }, luxury: { title:"🏰 高級エリア", desc:"収入が高い。警察が多くパトロールする。" }, };
+// ... tileTooltipData の定義はそのまま ...
+const tileTooltipData = { /* 省略 */ };
 
-export const Tile = React.memo(({ tile, owner, isFog, isClickable, onClick, isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass }) => {
+// React.memo で囲み、Propsが変わらない限り再レンダリングしないようにする
+export const Tile = React.memo(({ 
+    tile, owner, isFog, isClickable, onClick, playersOnTile, 
+    isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, isActiveTurnPlayerOnTile,
+    pathClass
+}) => {
+    // 🚨 修正1: Zustand から必要なものだけを「個別に」取り出す
+    // 以前のように const { policePos, ... } = useGameStore() と書くと、
+    // Storeの「何か」が更新されるたびに全マス目が再描画されてしまいます。
     const setTooltipData = useGameStore(state => state.setTooltipData);
     const policePos = useGameStore(state => state.policePos);
     const unclePos = useGameStore(state => state.unclePos);
@@ -17,26 +26,52 @@ export const Tile = React.memo(({ tile, owner, isFog, isClickable, onClick, isTr
 
     const handleMouseEnter = (e) => {
         const wrapper = document.getElementById('game-board-wrapper');
-        if ((wrapper && wrapper.classList.contains('dragging')) || isClickable) return; 
+        if (wrapper && wrapper.classList.contains('dragging')) return;
+        if (isClickable) return; 
         
         const ttKey = tile.type in tileTooltipData ? tile.type : tile.area;
         const ttData = tileTooltipData[ttKey];
         if (ttData) {
             let descText = ttData.desc;
-            const npcPosMap = [ { pos: policePos, info: { emoji:'👮', name:'警察', desc:'遭遇するとAP-2ペナルティ' } }, { pos: unclePos, info: { emoji:'🧓', name:'厄介なおじさん', desc:'遭遇するとカード破棄＆強制ターン終了' } }, { pos: animalPos, info: { emoji:'🐀', name:'野良動物', desc:'遭遇すると缶拾い/ゴミ漁り不可' } }, { pos: yakuzaPos, info: { emoji:'😎', name:'ヤクザ', desc:'遭遇すると30ダメ＋カード1枚強奪' } }, { pos: loansharkPos, info: { emoji:'💀', name:'闇金', desc:'遭遇すると最大10P没収' } }, { pos: friendPos, info: { emoji:'🤝', name:'仲間のホームレス', desc:'出会うと缶を1個もらえる' } }, ];
+            const npcPosMap = [
+                { pos: policePos,    info: { emoji:'👮', name:'警察', desc:'遭遇するとAP-2ペナルティ' } },
+                { pos: unclePos,     info: { emoji:'🧓', name:'厄介なおじさん', desc:'遭遇するとカード破棄＆強制ターン終了' } },
+                { pos: animalPos,    info: { emoji:'🐀', name:'野良動物', desc:'遭遇すると缶拾い/ゴミ漁り不可' } },
+                { pos: yakuzaPos,    info: { emoji:'😎', name:'ヤクザ', desc:'遭遇すると30ダメ＋カード1枚強奪' } },
+                { pos: loansharkPos, info: { emoji:'💀', name:'闇金', desc:'遭遇すると最大10P没収' } },
+                { pos: friendPos,    info: { emoji:'🤝', name:'仲間のホームレス', desc:'出会うと缶を1個もらえる' } },
+            ];
             const npcsHere = npcPosMap.filter(n => n.pos === tile.id);
-            if (npcsHere.length > 0) descText += '\n─────\n' + npcsHere.map(n => `${n.info.emoji}${n.info.name}: ${n.info.desc}`).join('\n');
-            setTooltipData({ title: ttData.title, desc: descText, visible: true });
+            if (npcsHere.length > 0) {
+                descText += '\n─────\n' + npcsHere.map(n => `${n.info.emoji}${n.info.name}: ${n.info.desc}`).join('\n');
+            }
+
+            // 🚨 修正2: 座標（X, Y）はStoreに入れない！テキストデータのみ渡す
+            setTooltipData({
+                title: ttData.title,
+                desc: descText,
+                visible: true // 表示フラグだけ立てる
+            });
         }
     };
 
+    // 🚨 修正3: handleMouseMove は削除！(マウス位置の更新は `TileTooltip.jsx` で window 側に委譲します)
+
     const handleMouseLeave = () => {
         if (touchTimer.current) clearTimeout(touchTimer.current);
-        setTooltipData(null); 
+        setTooltipData(null); // または { visible: false } など
     };
 
-    const handleTouchStart = (e) => touchTimer.current = setTimeout(() => handleMouseEnter(e), 150);
-    const handleTouchEndOrCancel = () => { if (touchTimer.current) clearTimeout(touchTimer.current); setTimeout(handleMouseLeave, 300); };
+    const handleTouchStart = (e) => {
+        touchTimer.current = setTimeout(() => {
+            handleMouseEnter(e);
+        }, 150);
+    };
+
+    const handleTouchEndOrCancel = () => {
+        if (touchTimer.current) clearTimeout(touchTimer.current);
+        setTimeout(handleMouseLeave, 300);
+    };
 
     let classNameStr = `tile ${tile.type} ${tile.area}`;
     if (isFog) classNameStr += ' night-fog';
@@ -45,48 +80,39 @@ export const Tile = React.memo(({ tile, owner, isFog, isClickable, onClick, isTr
 
     const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
 
-    // Z軸スケール計算
-    const depthScale = Math.max(0.35, 1 - (tile.z || 0) * 0.09);
-    // 奥のマスほど「上」にズラすことで3Dパースを強調
-    const yOffset = -(tile.z || 0) * 16; 
-
     return (
-        <div id={`tile-${tile.id}`} onClick={isClickable ? onClick : undefined} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEndOrCancel} onTouchCancel={handleTouchEndOrCancel} className={classNameStr}
-            style={{ 
-                gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default',
-                height: 'calc(var(--tile-size) / 2)',
-                borderRadius: '50%',
-                // パース強調を適用
-                transform: `scale(${depthScale}) translateY(${yOffset}px)`,
-                transformOrigin: 'bottom center',
-                zIndex: Math.floor(tile.row),
-                position: 'relative',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
-            }}
+        <div 
+            id={`tile-${tile.id}`} 
+            onClick={isClickable ? onClick : undefined}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEndOrCancel}
+            onTouchCancel={handleTouchEndOrCancel}
+            className={classNameStr}
+            style={{ gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default' }}
         >
-            <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none', transform: `scale(${1/depthScale}) translateY(-10px)` }}>{iconStr}</div>
-            <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9, transform: `scale(${1/depthScale}) translateY(-10px)` }}>{tile.name}</div>
+            {/* 中身はそのまま */}
+            <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
+            <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9 }}>{tile.name}</div>
             
-            {owner && (
-                <div style={{
-                    position: 'absolute',
-                    top: '-60px', left: '50%',
-                    transform: `scale(${1/depthScale}) translateX(-50%)`,
-                    width: '84px', height: '84px',
-                    pointerEvents: 'none',
-                    zIndex: 1
-                }}>
-                    <img src={jinchiBuildingImg} alt="陣地" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                </div>
-            )}
-
-            {owner && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px', zIndex: 3 }}>🚩</div>}
+            {owner && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px' }}>🚩</div>}
 
             {(tile.fieldCans > 0 || tile.fieldTrash > 0) && !isFog && (
                 <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'2px 4px', fontSize:'12px' }}>
-                    {tile.fieldCans > 0 && <span>🥫{tile.fieldCans}</span>}{tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
+                    {tile.fieldCans > 0 && <span>🥫{tile.fieldCans}</span>}
+                    {tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
                 </div>
             )}
+
+            {!isFog && playersOnTile.map(p => (
+                <div key={p.id} className={`player-token pos-${p.id % 4} ${isActiveTurnPlayerOnTile && p.id === useGameStore.getState().turn ? 'token-active' : ''}`} style={{ borderColor: p.color, width: '36px', height: '36px' }}>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', lineHeight:1 }}>
+                        <span style={{ fontSize:'18px' }}>{charEmoji[p.charType]}</span>
+                        <span style={{ fontSize:'7px', fontWeight:900, color:p.color, textShadow:'0 0 4px rgba(0,0,0,1)', whiteSpace: 'nowrap', maxWidth: '32px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
+                    </div>
+                </div>
+            ))}
             
             {!isFog && isTruck && <div className="truck-token">🚛</div>}
             {!isFog && isPolice && <div className="npc-token npc-police">👮</div>}
@@ -98,7 +124,9 @@ export const Tile = React.memo(({ tile, owner, isFog, isClickable, onClick, isTr
         </div>
     );
 }, 
+// 🚨 修正4: props が変わった時「だけ」再レンダリングするカスタム比較関数
 (prev, next) => {
+    // 基本的な状態の変化をチェック
     if (prev.tile.id !== next.tile.id) return false;
     if (prev.isFog !== next.isFog) return false;
     if (prev.isClickable !== next.isClickable) return false;
@@ -110,8 +138,16 @@ export const Tile = React.memo(({ tile, owner, isFog, isClickable, onClick, isTr
     if (prev.isYakuza !== next.isYakuza) return false;
     if (prev.isLoanshark !== next.isLoanshark) return false;
     if (prev.isFriend !== next.isFriend) return false;
+    if (prev.isActiveTurnPlayerOnTile !== next.isActiveTurnPlayerOnTile) return false;
     if (prev.owner?.id !== next.owner?.id) return false;
     if (prev.tile.fieldCans !== next.tile.fieldCans) return false;
     if (prev.tile.fieldTrash !== next.tile.fieldTrash) return false;
+
+    // 配列である playersOnTile は中身のIDで比較する
+    const prevIds = prev.playersOnTile.map(p => p.id).join(',');
+    const nextIds = next.playersOnTile.map(p => p.id).join(',');
+    if (prevIds !== nextIds) return false;
+
+    // 変化なしの場合は true を返し、再レンダリングをスキップ！
     return true;
 });

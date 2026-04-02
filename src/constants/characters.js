@@ -1,31 +1,4 @@
-import React from 'react';
-import homelessFront from '../assets/images/characters/homeless_front.png';
-import homelessBack from '../assets/images/characters/homeless_back.png';
-
-// JSXを使わずに純粋なJSの関数でReact要素（画像）を作成し、ビルドエラーを回避
-const survivorIcon = React.createElement('img', {
-    src: homelessFront,
-    alt: '🌿',
-    style: { width: '1em', height: '1em', objectFit: 'contain', verticalAlign: 'middle', borderRadius: '4px' }
-});
-
-export const charEmoji = { 
-    athlete: '🏃', 
-    sales: '💼', 
-    survivor: survivorIcon, // サバイバーのみ画像化
-    yankee: '👊', 
-    hacker: '💻', 
-    musician: '🎸', 
-    doctor: '🩺', 
-    gambler: '🎲', 
-    detective: '🕵️' 
-};
-
-// ▼ 追加: キャラクターの前後画像データ（サバイバーのみ定義、他はnull）
-export const charTokenImages = {
-    survivor: { front: homelessFront, back: homelessBack },
-    athlete: null, sales: null, yankee: null, hacker: null, musician: null, doctor: null, gambler: null, detective: null
-};
+export const charEmoji = { athlete:'🏃', sales:'💼', survivor:'🌿', yankee:'👊', hacker:'💻', musician:'🎸', doctor:'🩺', gambler:'🎲', detective:'🕵️' };
 
 export const charInfo = {
     athlete:  { name:'元アスリート',           desc:'【健脚】移動常1AP・雨無効 / 【疾風ダッシュ】3AP:3マス先へ跳躍' },
@@ -47,7 +20,7 @@ export const charDetailData = {
     hacker:   { tagline:'情報の海を泳ぐ、孤高のデジタル浮浪者', passive:{name:'【クラウドストレージ】',desc:'手札の上限が+2枚（デフォルト9枚）。リュック装備と重複可能。'}, action:{name:'【遠隔ハッキング】 (3AP)',desc:'どこにいてもショップの品揃えを強制入替えし、その場で1枚購入できる。他プレイヤーが狙うカードを潰すことも可。'} },
     musician: { tagline:'路上ライブで人々を引き寄せる、カリスマ流浪のアーティスト', passive:{name:'【投げ銭】',desc:'他のプレイヤーが自分と同じマスまたは隣接マスに止まる/通過するたびに、銀行から3Pを自動獲得。'}, action:{name:'【路上ライブ】 (4AP)',desc:'周囲2マス以内の全プレイヤーを自分のマスに強制引き寄せ。ヤクザ横や元ヤンのカツアゲコンボなどに応用可。'} },
     doctor:   { tagline:'闇の診療所を開く、危うい善意の医者', passive:{name:'【自己治癒】',desc:'毎ターン開始時に自動でHP5を回復。長期戦で確実に真価を発揮する持久型パッシブ。'}, action:{name:'【闇診療】 (2AP)',desc:'同マスの相手のHPを30回復する代わりに5Pを強制徴収。助けるフリをしたカツアゲ。'} },
-    gambler:  { tagline:'運命を賭けることに喜びを感じる、無一文の賭博師', passive:{name:'【アドレナリン】',desc:'ゾロ目が出た時、APが倍になるだけでなくHPも10回復。高リスク高リターンの勝負師スタイル。'}, action:{name:'【イカサマ勝負】 (2AP)',desc:'同マスの相手と1〜6のサイコロ対決。勝者が負けた方から5Pを奪う. 同点は仕掛けた側の負け。'} },
+    gambler:  { tagline:'運命を賭けることに喜びを感じる、無一文の賭博師', passive:{name:'【アドレナリン】',desc:'ゾロ目が出た時、APが倍になるだけでなくHPも10回復。高リスク高リターンの勝負師スタイル。'}, action:{name:'【イカサマ勝負】 (2AP)',desc:'同マスの相手と1〜6のサイコロ対決。勝者が負けた方から5Pを奪う。同点は仕掛けた側の負け。'} },
     detective:{ tagline:'陰からすべてを見通す、元・辣腕探偵', passive:{name:'【張り込み】',desc:'自分の陣地に他プレイヤーが止まった時、通常の陣地収入に加えて相手の手札を1枚没収する。'}, action:{name:'【情報操作】 (3AP)',desc:'マップ上のNPC（警察・ヤクザなど）を1体選び、任意のマスへ瞬間移動させる。'} },
 };
 
