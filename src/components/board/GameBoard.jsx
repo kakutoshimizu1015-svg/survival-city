@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { getDistance, getPathPreviewTiles, getManholeLinkedTiles, getTileW, getTileH } from '../../utils/gameLogic';
+import { getDistance, getPathPreviewTiles, getManholeLinkedTiles } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { BoardPaths } from './BoardPaths';
@@ -58,8 +58,8 @@ export const GameBoard = () => {
         const board = document.getElementById('game-board');
         if (!board) return;
         
-        const bw = board.clientWidth || board.getBoundingClientRect().width;
-        const bh = board.clientHeight || board.getBoundingClientRect().height;
+        const bw = board.scrollWidth;
+        const bh = board.scrollHeight;
         let ww = wrapperRef.current.clientWidth;
         let wh = wrapperRef.current.clientHeight;
 
@@ -90,11 +90,14 @@ export const GameBoard = () => {
 
         const timer = setTimeout(() => {
             if (!wrapperRef.current) return;
-            
-            const tw = getTileW(targetTile.z);
-            const th = getTileH(targetTile.z);
-            const tilePixelX = targetTile.x + tw / 2;
-            const tilePixelY = targetTile.y + th / 2;
+            const computedStyle = getComputedStyle(document.documentElement);
+            const tileSizeStr = computedStyle.getPropertyValue('--tile-size').trim();
+            const tileSize = parseInt(tileSizeStr, 10) || 60;
+            const gap = 20;     
+            const padding = 30; 
+
+            const tilePixelX = padding + (targetTile.col - 1) * (tileSize + gap) + tileSize / 2;
+            const tilePixelY = padding + (targetTile.row - 1) * (tileSize + gap) + tileSize / 2;
 
             const ww = wrapperRef.current.clientWidth;
             const wh = wrapperRef.current.clientHeight;
@@ -234,13 +237,10 @@ export const GameBoard = () => {
     }, [players, gameOver, cp, mapData]);
 
     const zoomBtnStyle = { width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s', padding: 0 };
-    
-    let boardW = 1000, boardH = 800;
+    let maxCol = 0, maxRow = 0;
     if (mapData && mapData.length > 0) {
-        const maxX = Math.max(...mapData.map(t => t.x));
-        const maxY = Math.max(...mapData.map(t => t.y));
-        boardW = maxX + 200;
-        boardH = maxY + 200;
+        maxCol = Math.max(...mapData.map(t => t.col));
+        maxRow = Math.max(...mapData.map(t => t.row));
     }
 
     return (
@@ -276,32 +276,25 @@ export const GameBoard = () => {
                 </div>
             )}
 
-            <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px', position: 'relative', background: "linear-gradient(180deg, #1a0e2e 0%, #1a2a1e 35%, #1a1a2e 100%)", overflow: 'hidden' }}>
+            <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px', position: 'relative' }}>
                 
-                {/* 宇宙・星空エフェクトレイヤー */}
-                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}>
-                    {[...Array(40)].map((_, i) => (
-                        <div key={i} style={{
-                            position: "absolute",
-                            left: `${(i * 31 + 11) % 100}%`, top: `${(i * 19 + 3) % 30}%`,
-                            width: i % 5 === 0 ? 3 : 1.5, height: i % 5 === 0 ? 3 : 1.5, borderRadius: "50%",
-                            background: `rgba(255,255,${200 + (i % 55)},${0.15 + (i % 4) * 0.1})`,
-                            animation: `twinkle ${1.8 + (i % 4) * 0.7}s ease-in-out infinite ${i * 0.2}s`,
-                        }} />
-                    ))}
-                </div>
+                {/* 奥行きを演出する霧のオーバーレイ（背景色を壊さず上部のみフェード） */}
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, height: '35%',
+                    background: 'linear-gradient(180deg, rgba(230,230,230,0.8) 0%, rgba(230,230,230,0) 100%)',
+                    pointerEvents: 'none', zIndex: 10, borderRadius: '8px 8px 0 0'
+                }} />
 
-                <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none', position: 'relative', zIndex: 1 }}>
+                <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none' }}>
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
-                        {/* CSS Gridを廃止し、2.5D用に位置絶対指定に切り替えた描画コンテナ */}
-                        <div id="game-board" style={{ position: 'relative', width: boardW, height: boardH }}>
+                        {/* 完全に元の CSS Grid と 3色の背景グラデーションを復元 */}
+                        <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
                             
                             <BoardPaths />
                             <WeaponArcOverlay />
 
-                            {/* 奥にあるもの（Y座標が小さいもの）から手前に向かって描画 */}
-                            {[...mapData].sort((a, b) => a.y - b.y).map(tile => {
+                            {mapData.map(tile => {
                                 const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
                                 const isFog = visibleTiles && !visibleTiles.has(tile.id);
                                 const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
@@ -321,7 +314,7 @@ export const GameBoard = () => {
                                 );
                             })}
 
-                            {/* プレイヤーの独立アニメーション描画 */}
+                            {/* プレイヤーの独立アニメーション描画（CSS Grid上での完璧な位置合わせ） */}
                             {players.filter(p => p.hp > 0).map(p => {
                                 const isFog = visibleTiles && !visibleTiles.has(p.pos);
                                 if (isFog) return null;
@@ -330,15 +323,7 @@ export const GameBoard = () => {
                         </div>
                     </div>
                 </div>
-
-                {/* 霧グラデーション (手前を覆うように配置) */}
-                <div style={{
-                    position: 'absolute', top: 0, left: 0, right: 0, height: '45%',
-                    background: 'linear-gradient(180deg, rgba(26,14,46,0.95) 0%, rgba(26,14,46,0.55) 30%, rgba(26,14,46,0.1) 60%, rgba(26,14,46,0) 100%)',
-                    pointerEvents: 'none', zIndex: 9999
-                }} />
             </div>
-            <style>{`@keyframes twinkle { 0%,100% { opacity: 0.15; } 50% { opacity: 0.7; } }`}</style>
         </div>
     );
 };

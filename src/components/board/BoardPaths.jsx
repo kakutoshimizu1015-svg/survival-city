@@ -1,12 +1,24 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { getTileW, getTileH } from '../../utils/gameLogic';
 
 export const BoardPaths = () => {
-    // オブジェクトの全体デストラクトを避け、個別に関数呼び出しして無限ループを防ぐ
     const mapData = useGameStore(state => state.mapData);
 
     if (!mapData || mapData.length === 0) return null;
+
+    const TILE = 80;
+    const GAP = 20;
+    const PAD = 30;
+    const STEP = TILE + GAP;
+    const R = TILE / 2;
+
+    const maxCol = Math.max(...mapData.map(t => t.col));
+    const maxRow = Math.max(...mapData.map(t => t.row));
+    const W = (maxCol - 1) * STEP + TILE + PAD * 2;
+    const H = (maxRow - 1) * STEP + TILE + PAD * 2;
+
+    const tcx = (t) => (t.col - 1) * STEP + R + PAD;
+    const tcy = (t) => (t.row - 1) * STEP + R + PAD;
 
     const labelDefs = [
         { label: 'スラム', xFrac: 0.15, fill: 'rgba(30,30,30,0.32)' },
@@ -14,11 +26,23 @@ export const BoardPaths = () => {
         { label: '高級住宅街', xFrac: 0.84, fill: 'rgba(40,40,70,0.32)' },
     ];
 
-    const maxX = Math.max(...mapData.map(t => t.x));
-    const W = maxX + 200;
-
     return (
-        <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'visible', zIndex: 0 }}>
+        <svg
+            id="board-path-svg"
+            viewBox={`0 0 ${W} ${H}`}
+            width={W}
+            height={H}
+            style={{
+                pointerEvents: 'none',
+                display: 'block',
+                overflow: 'visible',
+                background: 'none',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                zIndex: 2
+            }}
+        >
             <defs>
                 <marker
                     id="arr-bk"
@@ -37,7 +61,7 @@ export const BoardPaths = () => {
                 <text
                     key={`label-${idx}`}
                     x={W * def.xFrac}
-                    y={300}
+                    y={H * 0.5}
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fontSize="64"
@@ -52,20 +76,15 @@ export const BoardPaths = () => {
             ))}
 
             {mapData.map(tile => {
-                const tw1 = getTileW(tile.z);
-                const th1 = getTileH(tile.z);
-                const fx = tile.x + tw1 / 2;
-                const fy = tile.y + th1 / 2;
+                const fx = tcx(tile);
+                const fy = tcy(tile);
 
                 return tile.next.map(nextId => {
                     const nextTile = mapData.find(t => t.id === nextId);
                     if (!nextTile) return null;
 
-                    const tw2 = getTileW(nextTile.z);
-                    const th2 = getTileH(nextTile.z);
-                    const tx = nextTile.x + tw2 / 2;
-                    const ty = nextTile.y + th2 / 2;
-                    
+                    const tx = tcx(nextTile);
+                    const ty = tcy(nextTile);
                     const dx = tx - fx;
                     const dy = ty - fy;
                     const len = Math.sqrt(dx * dx + dy * dy);
@@ -74,12 +93,11 @@ export const BoardPaths = () => {
 
                     const ux = dx / len;
                     const uy = dy / len;
-                    const avgZ = (tile.z + nextTile.z) / 2;
 
-                    const x1 = fx + ux * (tw1/2 + 4);
-                    const y1 = fy + uy * (th1/2 + 4);
-                    const x2 = tx - ux * (tw2/2 + 8);
-                    const y2 = ty - uy * (th2/2 + 8);
+                    const x1 = fx + ux * (R + 4);
+                    const y1 = fy + uy * (R + 4);
+                    const x2 = tx - ux * (R + 8);
+                    const y2 = ty - uy * (R + 8);
 
                     return (
                         <line
@@ -88,9 +106,8 @@ export const BoardPaths = () => {
                             y1={y1}
                             x2={x2}
                             y2={y2}
-                            stroke={`rgba(232,213,163,${Math.max(0.04, 0.4 - avgZ * 0.04)})`} 
-                            strokeWidth={Math.max(1, 3.5 - avgZ * 0.35)} 
-                            strokeDasharray={`${4 - avgZ * 0.3},${3 - avgZ * 0.2}`} 
+                            stroke="rgba(0,0,0,0.50)"
+                            strokeWidth="5"
                             strokeLinecap="round"
                             markerEnd="url(#arr-bk)"
                         />

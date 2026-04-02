@@ -1,15 +1,29 @@
 import React, { useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { tileTooltipData, TILE_COLORS } from '../../constants/maps';
-import { getDepthScale, getTileW, getTileH, getSideH } from '../../utils/gameLogic';
 import jinchiBuilding from '../../assets/images/jinchi_building.png';
+
+export const tileTooltipData = {
+    center:    { title:"🏥 病院（スタート地点）", desc:"HPが0になると強制送還。最大15P没収・装備1つロスト。" },
+    normal:    { title:"🛣️ 通常の道", desc:"特別な効果なし。移動の通過点。" },
+    can:       { title:"🥫 空き缶", desc:"1APで缶を拾う（1ターン3回まで）。雨の日は雨具が必要。" },
+    trash:     { title:"🗑️ ゴミ山", desc:"2APでゴミを漁る。失敗すると警察に補導されAP-2ペナルティ。" },
+    exchange:  { title:"💱 買取所", desc:"拾った缶・ゴミを現在相場でP換金（0AP）。" },
+    job:       { title:"💼 バイト", desc:"3APで挑戦。成功率60-80%で12P獲得。" },
+    shop:      { title:"🛒 ショップ", desc:"カードを購入（4-6P）または手持ちカードを2Pで売却できる。" },
+    event:     { title:"🎲 イベント", desc:"ミニゲームまたはストーリーイベントが発生！カード獲得のチャンス。" },
+    shelter:   { title:"🏕️ 避難所", desc:"止まるとステルス状態になり、次の敵を1回やり過ごせる。" },
+    manhole:   { title:"🕳️ マンホール", desc:"1APで別のマンホールへランダムワープ。" },
+    koban:     { title:"🚓 交番", desc:"職務質問でその場に足止め。このターンは移動不可。" },
+    slum:      { title:"🏚️ スラムエリア", desc:"缶・ゴミが多い。相場が低め。" },
+    commercial:{ title:"🏙️ 商業エリア", desc:"バイト・ショップが充実。中程度の相場。" },
+    luxury:    { title:"🏰 高級エリア", desc:"収入が高い。警察が多くパトロールする。" },
+};
 
 export const Tile = React.memo(({ 
     tile, owner, isFog, isClickable, onClick, 
     isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass
 }) => {
     const setTooltipData = useGameStore(state => state.setTooltipData);
-    // Stateオブジェクト返却による無駄な再レンダリング・無限ループを防止するため個別にフックを呼び出す
     const policePos = useGameStore(state => state.policePos);
     const unclePos = useGameStore(state => state.unclePos);
     const animalPos = useGameStore(state => state.animalPos);
@@ -59,29 +73,23 @@ export const Tile = React.memo(({
         setTimeout(handleMouseLeave, 300);
     };
 
-    const { x, y, z = 0 } = tile;
-    const colors = TILE_COLORS[tile.type] || TILE_COLORS["normal"];
-    const tw = getTileW(z);
-    const th = getTileH(z);
-    const sh = getSideH(z);
-    const ds = getDepthScale(z);
-
-    const hasBuilding = tile.area === 'slum' && tile.type === 'normal';
-    const isJinchi = owner !== null && owner !== undefined;
-
-    const buildingFilter = isJinchi 
-        ? `drop-shadow(0 0 8px ${owner.color}) drop-shadow(0 0 16px ${owner.color})` 
-        : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))';
-
-    const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
-    const fontSize = Math.max(5, 10 * ds);
-    const iconSize = Math.max(10, 26 * ds);
-
     let classNameStr = `tile ${tile.type} ${tile.area}`;
     if (isFog) classNameStr += ' night-fog';
     if (isClickable) classNameStr += ' tile-highlight-branch';
     if (pathClass) classNameStr += ` ${pathClass}`;
 
+    const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
+    
+    // スラムエリアの「道(normal)」には常に建物を建てる
+    const hasBuilding = tile.area === 'slum' && tile.type === 'normal';
+    const isJinchi = owner !== null && owner !== undefined;
+
+    // 陣地化された場合はプレイヤーカラーで発光させる
+    const buildingFilter = isJinchi 
+        ? `drop-shadow(0 0 8px ${owner.color}) drop-shadow(0 0 16px ${owner.color})` 
+        : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))';
+
+    // CSS Grid に完全対応
     return (
         <div 
             id={`tile-${tile.id}`} 
@@ -92,26 +100,8 @@ export const Tile = React.memo(({
             onTouchEnd={handleTouchEndOrCancel}
             onTouchCancel={handleTouchEndOrCancel}
             className={classNameStr}
-            style={{ 
-                position: 'absolute', 
-                left: x, 
-                top: y, 
-                width: tw, 
-                height: th + sh, 
-                zIndex: Math.floor(y), 
-                cursor: isClickable ? 'pointer' : 'default',
-                opacity: isFog ? 0.2 : Math.max(0.4, 0.65 + ds * 0.35)
-            }}
+            style={{ gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default', position: 'relative' }}
         >
-            {/* HTML互換を保つため、タイルの立体構造だけ背面のSVGとして描画 */}
-            <svg width={tw + 4*ds} height={th + sh + 6*ds} style={{ position: 'absolute', top: -2*ds, left: -2*ds, overflow: 'visible', pointerEvents: 'none' }}>
-                <ellipse cx={tw/2 + 2*ds} cy={th + sh + 3*ds + 2*ds} rx={tw*0.4} ry={3*ds} fill="rgba(0,0,0,0.18)" />
-                <path d={`M${2*ds},${th+2*ds} L${2*ds},${th+sh+2*ds} Q${tw/2+2*ds},${th+sh+2.5*ds+2*ds} ${tw+2*ds},${th+sh+2*ds} L${tw+2*ds},${th+2*ds} Z`} fill={colors.bg} />
-                <rect x={2*ds} y={2*ds} width={tw} height={th} rx={3*ds} fill={colors.top} stroke={isClickable ? "#ffe066" : `rgba(255,255,255,${0.08+ds*0.1})`} strokeWidth={isClickable ? 2.5*ds : 0.6} />
-                <line x1={4*ds} y1={1+2*ds} x2={tw} y2={1+2*ds} stroke={colors.hi} strokeWidth={1*ds} strokeLinecap="round" opacity={0.5} />
-                {pathClass && <rect x={2*ds} y={2*ds} width={tw} height={th} rx={3*ds} fill="none" stroke="rgba(255, 255, 255, 0.6)" strokeWidth={2*ds} />}
-            </svg>
-
             {hasBuilding && !isFog && (
                 <img 
                     src={jinchiBuilding} 
@@ -126,31 +116,25 @@ export const Tile = React.memo(({
                 />
             )}
 
-            {!hasBuilding && (
-                <>
-                    <div style={{ position: 'absolute', top: th * 0.1, width: '100%', textAlign: 'center', fontSize: `${iconSize}px`, zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
-                    <div style={{ position: 'absolute', top: th * 0.7, width: '100%', textAlign: 'center', fontSize: `${fontSize}px`, fontWeight: 'bold', color: `rgba(255,255,255,${0.5 + ds * 0.4})`, fontFamily: "'DotGothic16', monospace", zIndex: 2, pointerEvents: 'none', whiteSpace: 'nowrap' }}>{tile.name}</div>
-                </>
-            )}
-
-            {isJinchi && (
-                <div style={{ position: 'absolute', right: 0, top: 0, width: `${6*ds}px`, height: `${6*ds}px`, borderRadius: '50%', backgroundColor: owner.color, zIndex: 3, pointerEvents: 'none' }} />
-            )}
+            <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
+            <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9 }}>{tile.name}</div>
+            
+            {isJinchi && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px', zIndex: 3 }}>🚩</div>}
 
             {(tile.fieldCans > 0 || tile.fieldTrash > 0) && !isFog && (
-                <div style={{ position:'absolute', top: -15 * ds, left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'2px 4px', fontSize:`${fontSize + 2}px`, color: '#fff', pointerEvents: 'none' }}>
+                <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'2px 4px', fontSize:'12px' }}>
                     {tile.fieldCans > 0 && <span>🥫{tile.fieldCans}</span>}
                     {tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
                 </div>
             )}
             
-            {!isFog && isTruck && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>🚛</div>}
-            {!isFog && isPolice && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>👮</div>}
-            {!isFog && isUncle && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>🧓</div>}
-            {!isFog && isAnimal && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>🐀</div>}
-            {!isFog && isYakuza && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>😎</div>}
-            {!isFog && isLoanshark && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>💀</div>}
-            {!isFog && isFriend && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>🤝</div>}
+            {!isFog && isTruck && <div className="truck-token" style={{zIndex: 5}}>🚛</div>}
+            {!isFog && isPolice && <div className="npc-token npc-police" style={{zIndex: 5}}>👮</div>}
+            {!isFog && isUncle && <div className="npc-token npc-uncle" style={{zIndex: 5}}>🧓</div>}
+            {!isFog && isAnimal && <div className="npc-token npc-animal" style={{zIndex: 5}}>🐀</div>}
+            {!isFog && isYakuza && <div className="npc-token npc-yakuza" style={{zIndex: 5}}>😎</div>}
+            {!isFog && isLoanshark && <div className="npc-token npc-loanshark" style={{zIndex: 5}}>💀</div>}
+            {!isFog && isFriend && <div className="npc-token npc-friend" style={{zIndex: 5}}>🤝</div>}
         </div>
     );
 }, 
