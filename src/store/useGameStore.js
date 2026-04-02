@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 
 const initialState = {
+    // ▼ 画面遷移フェーズ
+    // 'title' | 'mode_select' | 'setup_offline' | 'online_lobby' | 'char_select' | 'playing'
+    //                                                                ^^^^^^^^^^^^^^^^ 追加
     gamePhase: 'title', diceAnim: { active: false, d1: 1, d2: 1, text: '' },
     turnOrderActive: false, turnOrderData: null, gameOver: false, 
     isBranchPicking: false, currentBranchOptions: [],
@@ -25,11 +28,10 @@ const initialState = {
     centerWarning: null,
     tooltipData: null,
 
-    // ▼ 追加: マップ自動スクロール設定（デフォルトON）
+    // ▼ マップ自動スクロール設定（デフォルトON）
     autoScrollToPlayer: true,
 
-    // ▼ 追加: ラウンド終了処理中フラグ
-    // ホストがprocessRoundEnd実行中にtrue → ゲストに同期され、ゲスト側の再broadcastを抑止する
+    // ▼ ラウンド終了処理中フラグ
     _roundEndInProgress: false,
 
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,

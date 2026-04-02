@@ -100,13 +100,19 @@ export const SetupOffline = () => {
         const maxId = mapData.length - 1;
         const canTrashTiles = mapData.filter(t => t.type === 'can' || t.type === 'trash');
         
+        // ▼▼▼ 変更: キャラ選択モードに応じて遷移先を分岐 ▼▼▼
+        // 'random' (全員ランダム) → キャラ既に決定済みなので直接 playing へ
+        // 'choose' / 'cpu_random' → キャラ選択画面 (char_select) を経由
+        const nextPhase = charAssignMode === 'random' ? 'playing' : 'char_select';
+        
         setGameState({
-            mapData, players: finalPlayers, turn: 0, roundCount: 1, maxRounds, diceRolled: false, gameOver: false, gamePhase: 'playing',
+            mapData, players: finalPlayers, turn: 0, roundCount: 1, maxRounds, diceRolled: false, gameOver: false, gamePhase: nextPhase,
             turnOrderActive, turnOrderData,
             truckPos: Math.floor(maxId * 0.4), policePos: Math.floor(maxId * 0.8), unclePos: Math.floor(maxId * 0.2), 
             animalPos: canTrashTiles.length > 0 ? canTrashTiles[Math.floor(Math.random() * canTrashTiles.length)].id : Math.floor(maxId * 0.3), 
             yakuzaPos: Math.floor(maxId * 0.5), loansharkPos: Math.floor(maxId * 0.6), friendPos: Math.floor(maxId * 0.15)
         });
+        // ▲▲▲ 変更ここまで ▲▲▲
     };
 
     return (
@@ -134,9 +140,13 @@ export const SetupOffline = () => {
                             <option value="cpu">CPU</option>
                         </select>
                         
-                        <select value={p.charType} onChange={e => updatePlayer(p.id, 'charType', e.target.value)} style={{ padding: '6px', borderRadius: '4px', maxWidth: '140px' }}>
-                            {Object.entries(charInfo).map(([key, info]) => <option key={key} value={key}>{info.name}</option>)}
-                        </select>
+                        {/* ▼ 変更: キャラ選択はchar_select画面に移動したため、ここではcharType選択を非表示 */}
+                        {charAssignMode === 'random' && (
+                            <span style={{ padding: '6px', color: '#b0a090', fontSize: '12px' }}>🎲 ランダム</span>
+                        )}
+                        {charAssignMode !== 'random' && (
+                            <span style={{ padding: '6px', color: '#b0a090', fontSize: '12px' }}>→ 次の画面で選択</span>
+                        )}
                         
                         <select value={p.teamColor} onChange={e => updatePlayer(p.id, 'teamColor', e.target.value)} style={{ padding: '6px', borderRadius: '4px' }}>
                             {Object.entries(TEAM_COLORS).map(([key, t]) => <option key={key} value={key}>{t.icon} {t.label}</option>)}
@@ -180,7 +190,7 @@ export const SetupOffline = () => {
             
             <div style={{ display: 'flex', gap: '20px', marginBottom: '40px' }}>
                 <button className="btn-large" style={{ background: '#7f8c8d' }} onClick={() => setGameState({ gamePhase: 'mode_select' })}>◀ 戻る</button>
-                <button className="btn-large btn-brown" onClick={handleStart} style={{ padding: '15px 40px', fontSize: '20px' }}>🎲 ゲームを開始する</button>
+                <button className="btn-large btn-brown" onClick={handleStart} style={{ padding: '15px 40px', fontSize: '20px' }}>{charAssignMode === 'random' ? '🎲 ゲームを開始する' : '🎭 キャラ選択へ ▸'}</button>
             </div>
         </div>
     );

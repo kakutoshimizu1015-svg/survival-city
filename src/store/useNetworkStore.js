@@ -44,7 +44,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
             const roomRef = ref(db, `rooms/${roomCode}`);
             await set(roomRef, { hostPeerId: id, createdAt: Date.now(), hostName: playerName, status: 'waiting' });
             onDisconnect(roomRef).remove(); 
-            setStore({ peer, status: 'connected', lobbyPlayers: [{ userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none', isHost: true, isCPU: false }] });
+            setStore({ peer, status: 'connected', lobbyPlayers: [{ userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none', isHost: true, isCPU: false, charLocked: false }] });
+            //                                                                                                                                                                          ^^^^^^^^^^^^^^^^ 追加
         });
 
         peer.on('connection', (conn) => {
@@ -52,7 +53,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
                 setStore(state => ({ connections: [...state.connections, conn] }));
                 conn.on('data', (data) => {
                     if (data.type === 'JOIN') {
-                        const newPlayer = { ...data.user, isHost: false, isCPU: false };
+                        const newPlayer = { ...data.user, isHost: false, isCPU: false, charLocked: false };
+                        //                                                             ^^^^^^^^^^^^^^^^ 追加
                         const updatedPlayers = [...getStore().lobbyPlayers, newPlayer];
                         setStore({ lobbyPlayers: updatedPlayers });
                         getStore().broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
@@ -97,6 +99,12 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             })();
                         }
                     }
+
+                    // ▼▼▼ 追加: キャラ選択画面でのロック状態同期 ▼▼▼
+                    // ゲストがキャラを決定した際、updateMyInfo経由で LOBBY_CHANGE として送信されるため、
+                    // 上記の LOBBY_CHANGE ハンドラが charType と charLocked を自動的に反映する。
+                    // 追加のハンドラは不要（既存の仕組みで動作する）。
+                    // ▲▲▲ 追加ここまで ▲▲▲
                 });
             });
             conn.on('close', () => {
@@ -119,10 +127,17 @@ export const useNetworkStore = create((setStore, getStore) => ({
             const conn = peer.connect(snapshot.val().hostPeerId);
             conn.on('open', () => {
                 setStore({ peer, hostConnection: conn, status: 'connected' });
-                conn.send({ type: 'JOIN', user: { userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none' } }); 
+                conn.send({ type: 'JOIN', user: { userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none', charLocked: false } }); 
+                //                                                                                                                        ^^^^^^^^^^^^^^^^ 追加
                 conn.on('data', (data) => {
                     if (data.type === 'LOBBY_UPDATE') setStore({ lobbyPlayers: data.players });
-                    if (data.type === 'GAME_START') useGameStore.setState({ ...data.gameState, gamePhase: 'playing' });
+
+                    // ▼▼▼ 変更: GAME_START の遷移先を 'char_select' に変更 ▼▼▼
+                    if (data.type === 'GAME_START') {
+                        useGameStore.setState({ ...data.gameState, gamePhase: 'char_select' });
+                    }
+                    // ▲▲▲ 変更ここまで（元: gamePhase: 'playing'）▲▲▲
+
                     if (data.type === 'GAME_SYNC') {
                         if (data.lastUpdater !== getStore().myUserId) {
                             isReceivingNetworkData = true;
@@ -162,7 +177,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
     addCpu: () => {
         const state = getStore();
         if (!state.isHost || state.lobbyPlayers.length >= 8) return;
-        const newCpu = { userId: 'cpu-' + Math.random().toString(36).substring(2, 8), name: `CPU${state.lobbyPlayers.length + 1}`, charType: 'survivor', teamColor: 'none', isHost: false, isCPU: true };
+        const newCpu = { userId: 'cpu-' + Math.random().toString(36).substring(2, 8), name: `CPU${state.lobbyPlayers.length + 1}`, charType: 'survivor', teamColor: 'none', isHost: false, isCPU: true, charLocked: false };
+        //                                                                                                                                                                                                   ^^^^^^^^^^^^^^^^ 追加
         const updatedPlayers = [...state.lobbyPlayers, newCpu];
         setStore({ lobbyPlayers: updatedPlayers });
         state.broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
@@ -203,6 +219,14 @@ export const useNetworkStore = create((setStore, getStore) => ({
         state.broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
     },
 
+    // ▼▼▼ 追加: キャラ選択完了後にロック状態をリセットする関数 ▼▼▼
+    resetCharLocks: () => {
+        const state = getStore();
+        const updatedPlayers = state.lobbyPlayers.map(p => ({ ...p, charLocked: false }));
+        setStore({ lobbyPlayers: updatedPlayers });
+    },
+    // ▲▲▲ 追加ここまで ▲▲▲
+
     updateRoomStatus: async (newStatus) => {
         const { roomId, isHost } = getStore();
         if (isHost && roomId) await update(ref(db, `rooms/${roomId}`), { status: newStatus });
@@ -224,8 +248,6 @@ useGameStore.subscribe((state) => {
     if (netState.status !== 'connected' || isReceivingNetworkData || state.gamePhase !== 'playing') return;
 
     // ▼ 追加: ゲスト側はラウンド終了処理中の再broadcastを抑止する
-    // ホストが processRoundEnd を実行中に _roundEndInProgress = true を同期してくるので、
-    // ゲストはこのフラグが true の間はbroadcastしない（状態の巻き戻りを防ぐ）
     if (!netState.isHost && state._roundEndInProgress) return;
 
     // ▼ 同期させない（ローカルのみで保持する）Stateのキーを指定
@@ -245,21 +267,19 @@ useGameStore.subscribe((state) => {
         'autoScrollToPlayer',
 
         // --- タイマー駆動の演出系 ---
-        // setTimeout で自動的に値が変更されるため、放置すると古い状態で再broadcastが発生する
-        'eventPopups',      // addEventPopup → 2800ms後に自動削除
-        'bloodAnim',        // 2000ms後に自動クリア
-        'turnBanner',       // GameMain.jsx で 1500ms後にクリア
-        'turnBannerActive', // GameMain.jsx で 2500ms後にクリア
-        'jobResult',        // バイト結果のUI表示（ローカル演出）
+        'eventPopups',
+        'bloodAnim',
+        'turnBanner',
+        'turnBannerActive',
+        'jobResult',
 
-        // --- 個人設定系（デバイスごとに異なるべき値）---
+        // --- 個人設定系 ---
         'volume',
         'showSkipButton',
     ];
 
     const pureState = {};
     for (const key in state) {
-        // 関数と、ローカル専用のキーを除外して同期データを作る
         if (typeof state[key] !== 'function' && !localOnlyKeys.includes(key)) {
             pureState[key] = state[key];
         }

@@ -10,6 +10,8 @@ import { OnlineLobby } from './features/OnlineLobby';
 import { SettingsAndRules } from './components/overlays/SettingsAndRules';
 import { TutorialOverlay } from './components/overlays/TutorialOverlay';
 import { SandboxGuide } from './components/overlays/SandboxGuide';
+import { CharacterSelect } from './features/CharacterSelect';
+
 
 function App() {
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode } = useGameStore();
@@ -129,6 +131,7 @@ function App() {
 
       {gamePhase === 'setup_offline' && <SetupOffline />}
       {gamePhase === 'online_lobby' && <OnlineLobby />}
+      {gamePhase === 'char_select' && <CharacterSelect />}
       {gamePhase === 'playing' && <GameMain />}
 
       <SettingsAndRules />
