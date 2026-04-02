@@ -10,24 +10,19 @@ import { OnlineLobby } from './features/OnlineLobby';
 import { SettingsAndRules } from './components/overlays/SettingsAndRules';
 import { TutorialOverlay } from './components/overlays/TutorialOverlay';
 import { SandboxGuide } from './components/overlays/SandboxGuide';
-import { CharacterSelect } from './features/CharacterSelect';
-
 
 function App() {
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode } = useGameStore();
   
-  // ▼ ユーザーの永続データを取得
   const { isLoggedIn, uid, playerName, wins, totalEarnedP } = useUserStore();
   const [localName, setLocalName] = useState(playerName);
 
-  // アプリ起動時に1回だけ匿名ログインを実行
   useEffect(() => {
     if (!isLoggedIn) {
       loginAnonymously();
     }
   }, [isLoggedIn]);
 
-  // DBから名前がロードされたらローカルの入力欄に反映
   useEffect(() => {
     if (playerName) {
       setLocalName(playerName);
@@ -35,20 +30,16 @@ function App() {
   }, [playerName]);
 
   useEffect(() => {
-    // 既存の関連クラスを全てリセットして競合を防ぐ
     document.body.classList.remove('layout-pc', 'layout-mobile', 'sunny', 'rainy', 'cloudy', 'night', 'horror-mode');
     
-    // レイアウトモードの適用
     if (layoutMode === 'sp') document.body.classList.add('layout-mobile');
     if (layoutMode === 'pc') document.body.classList.add('layout-pc');
     
-    // 天候・昼夜・恐怖演出の適用
     if (weatherState) document.body.classList.add(weatherState);
     if (isNight) document.body.classList.add('night');
     if (horrorMode) document.body.classList.add('horror-mode');
   }, [layoutMode, weatherState, isNight, horrorMode]);
 
-  // 名前入力欄からフォーカスが外れた（Blur）時にセーブを実行
   const handleNameBlur = () => {
     if (localName && localName.trim() !== '' && localName !== playerName) {
       savePlayerName(localName);
@@ -57,7 +48,6 @@ function App() {
 
   return (
     <>
-      {/* ▼ 修正：zIndex を 99999 に変更し、確実に最前面に表示されるようにしました */}
       {(gamePhase === 'title' || gamePhase === 'mode_select') && isLoggedIn && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '45px',
@@ -77,7 +67,6 @@ function App() {
 
       {gamePhase === 'title' && (
         <div id="title-screen-overlay" onClick={() => useGameStore.setState({ gamePhase: 'mode_select' })}>
-          {/* ヘッダーの分だけ余白を空けるため marginTop を増加 */}
           <div style={{ fontSize: '80px', marginBottom: '20px', marginTop: '60px' }}>🏠</div>
           <div className="title-logo">脱・ホームレス<br/>サバイバルシティ</div>
           <div className="blink-text">画面をタップしてスタート</div>
@@ -131,7 +120,6 @@ function App() {
 
       {gamePhase === 'setup_offline' && <SetupOffline />}
       {gamePhase === 'online_lobby' && <OnlineLobby />}
-      {gamePhase === 'char_select' && <CharacterSelect />}
       {gamePhase === 'playing' && <GameMain />}
 
       <SettingsAndRules />

@@ -4,8 +4,8 @@ import { useGameStore } from '../store/useGameStore';
 import { genSmallMap, genMediumMap, genLargeMap } from '../constants/maps';
 import { charEmoji, charInfo } from '../constants/characters';
 import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatterPlayerPositions } from '../utils/mapRandomizer';
-// ▼ 追加：ユーザー情報の取得用
 import { useUserStore } from '../store/useUserStore';
+import { CharacterSelect } from './CharacterSelect';
 
 const TEAM_COLORS = { 
     none: { label:'ソロ', color:'transparent', icon:'⚪' }, 
@@ -16,10 +16,8 @@ const TEAM_COLORS = {
 };
 
 export const OnlineLobby = () => {
-    // ▼ 修正：useUserStore から名前を取得し、ローカルの初期値にする
     const globalPlayerName = useUserStore(state => state.playerName);
     const [playerName, setPlayerName] = useState(globalPlayerName || 'Player' + Math.floor(Math.random() * 1000));
-    
     const [roomInput, setRoomInput] = useState('');
     
     // ホスト設定用
@@ -32,6 +30,9 @@ export const OnlineLobby = () => {
     const [rmapStart, setRmapStart] = useState(false);
     const [rmapScatter, setRmapScatter] = useState(false);
     const [charAssignMode, setCharAssignMode] = useState('choose'); 
+
+    // ▼ 追加: キャラ選択モーダルのターゲット(userId)
+    const [charSelectTarget, setCharSelectTarget] = useState(null);
     
     const { 
         createRoom, joinRoom, leaveRoom, status, roomId, lobbyPlayers, isHost, broadcast, 
@@ -41,7 +42,6 @@ export const OnlineLobby = () => {
     
     const setGameState = useGameStore(state => state.setGameState);
 
-    // ▼ 追加：グローバルな名前が非同期でロードされた場合にローカルステートを更新
     useEffect(() => {
         if (globalPlayerName) {
             setPlayerName(globalPlayerName);
@@ -69,9 +69,15 @@ export const OnlineLobby = () => {
 
         let finalPlayers = [...lobbyPlayers];
         const allChars = Object.keys(charInfo);
-        const shuffledChars = [...allChars].sort(() => Math.random() - 0.5);
-        if (charAssignMode === 'random') { finalPlayers.forEach((p, i) => p.charType = shuffledChars[i % shuffledChars.length]); } 
-        else if (charAssignMode === 'cpu_random') { let cpuIdx = 0; finalPlayers.forEach(p => { if (p.isCPU) { p.charType = shuffledChars[cpuIdx % shuffledChars.length]; cpuIdx++; } }); }
+        
+        // ▼ 変更: ランダム生成時は全キャラから完全ランダムで割り当て
+        if (charAssignMode === 'random') { 
+            finalPlayers.forEach(p => p.charType = allChars[Math.floor(Math.random() * allChars.length)]); 
+        } else if (charAssignMode === 'cpu_random') { 
+            finalPlayers.forEach(p => { 
+                if (p.isCPU) p.charType = allChars[Math.floor(Math.random() * allChars.length)]; 
+            }); 
+        }
 
         let startPos = 0; let scatterPos = [];
         if (rmapScatter) scatterPos = scatterPlayerPositions(mapData, finalPlayers.length);
@@ -135,11 +141,12 @@ export const OnlineLobby = () => {
                                 
                                 {/* ホストによるCPUの直接編集 */}
                                 {isHost && p.isCPU && (
-                                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center' }}>
                                         <input type="text" value={p.name} onChange={e => updateCpu(p.userId, { name: e.target.value })} style={{ padding: '4px', borderRadius: '4px', width: '70px', fontSize: '12px' }} />
-                                        <select value={p.charType} onChange={e => updateCpu(p.userId, { charType: e.target.value })} style={{ padding: '4px', borderRadius: '4px', fontSize: '12px' }}>
-                                            {Object.entries(charInfo).map(([k, info]) => <option key={k} value={k}>{info.name}</option>)}
-                                        </select>
+                                        
+                                        {/* ▼ 変更: CPUのキャラクター変更ボタン */}
+                                        <button onClick={() => setCharSelectTarget(p.userId)} className="btn-clay" style={{ padding: '4px 8px', fontSize: '12px', background: '#e67e22' }}>変更</button>
+                                        
                                         <select value={p.teamColor} onChange={e => updateCpu(p.userId, { teamColor: e.target.value })} style={{ padding: '4px', borderRadius: '4px', fontSize: '12px' }}>
                                             {Object.entries(TEAM_COLORS).map(([k, t]) => <option key={k} value={k}>{t.icon} {t.label}</option>)}
                                         </select>
@@ -155,13 +162,15 @@ export const OnlineLobby = () => {
                 <div className="panel" style={{ width: '100%', maxWidth: '650px', marginBottom: '20px' }}>
                     <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px', color: '#fdf5e6', marginTop: 0 }}>🎭 自分の設定を変更する</h3>
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
-                        {/* ▼ 名前変更を無効化（名前の変更はモード選択画面で行うため） */}
                         <label style={{ fontWeight: 'bold' }}>名前: <input type="text" value={myInfo.name || ''} readOnly style={{ padding: '8px', borderRadius: '4px', width: '100px', background: '#d7ccc8', color: '#5c4a44', cursor: 'not-allowed' }} title="名前の変更はモード選択画面で行ってください" /></label>
-                        <label style={{ fontWeight: 'bold' }}>キャラ: 
-                            <select value={myInfo.charType || 'athlete'} onChange={e => updateMyInfo({ charType: e.target.value })} style={{ padding: '8px', borderRadius: '4px', marginLeft: '5px' }}>
-                                {Object.entries(charInfo).map(([k, info]) => <option key={k} value={k}>{info.name}</option>)}
-                            </select>
+                        
+                        {/* ▼ 変更: 自分のキャラクター変更ボタン */}
+                        <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            キャラ: 
+                            <span style={{ fontSize: '20px', marginLeft: '5px' }}>{charEmoji[myInfo.charType] || '🏃'}</span>
+                            <button onClick={() => setCharSelectTarget(myUserId)} className="btn-clay" style={{ padding: '4px 8px', fontSize: '12px', background: '#3498db' }}>キャラ変更</button>
                         </label>
+                        
                         <label style={{ fontWeight: 'bold' }}>チーム: 
                             <select value={myInfo.teamColor || 'none'} onChange={e => updateMyInfo({ teamColor: e.target.value })} style={{ padding: '8px', borderRadius: '4px', marginLeft: '5px' }}>
                                 {Object.entries(TEAM_COLORS).map(([k, t]) => <option key={k} value={k}>{t.icon} {t.label}</option>)}
@@ -201,12 +210,36 @@ export const OnlineLobby = () => {
                                 <label style={{ color: '#fdf5e6' }}><input type="checkbox" checked={rmapScatter} onChange={e => setRmapScatter(e.target.checked)} /> 🧭 バラバラ</label>
                             </div>
                         </div>
-                        <button className="btn-large btn-blue" onClick={handleStartGame} style={{ width: '100%', marginTop: '10px', padding: '15px', fontSize: '20px' }}>🎲 全員でゲーム開始！</button>
+
+                        {/* ▼ 追加: ランダムキャラ割り当てモードUI */}
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
+                            <button onClick={() => setCharAssignMode('choose')} className="btn-clay" style={{ background: charAssignMode === 'choose' ? '#2ecc71' : '', opacity: charAssignMode === 'choose' ? 1 : 0.6, padding: '8px 12px' }}>🎭 各自選択</button>
+                            <button onClick={() => setCharAssignMode('cpu_random')} className="btn-clay" style={{ background: charAssignMode === 'cpu_random' ? '#e67e22' : '', opacity: charAssignMode === 'cpu_random' ? 1 : 0.6, padding: '8px 12px' }}>🤖 CPUのみ🎲</button>
+                            <button onClick={() => setCharAssignMode('random')} className="btn-clay" style={{ background: charAssignMode === 'random' ? '#8e44ad' : '', opacity: charAssignMode === 'random' ? 1 : 0.6, color: 'white', padding: '8px 12px' }}>🎲 全員ランダム</button>
+                        </div>
+
+                        <button className="btn-large btn-blue" onClick={handleStartGame} style={{ width: '100%', marginTop: '20px', padding: '15px', fontSize: '20px' }}>🎲 全員でゲーム開始！</button>
                     </div>
                 ) : (
                     <p style={{ fontSize: '20px', color: '#f1c40f', fontWeight: 'bold', margin: '30px 0' }}>⏳ ホストがゲームを開始するのを待っています...</p>
                 )}
                 <button className="btn-large" style={{ marginTop: '20px', background: '#e74c3c' }} onClick={() => { leaveRoom(); setGameState({ gamePhase: 'mode_select' }); }}>🚪 退室する</button>
+
+                {/* ▼ 追加: キャラクター選択モーダル */}
+                <CharacterSelect 
+                    isOpen={charSelectTarget !== null}
+                    onClose={() => setCharSelectTarget(null)}
+                    onConfirm={(charKey) => {
+                        if (charSelectTarget === myUserId) {
+                            updateMyInfo({ charType: charKey });
+                        } else {
+                            updateCpu(charSelectTarget, { charType: charKey });
+                        }
+                        setCharSelectTarget(null);
+                    }}
+                    initialCharKey={charSelectTarget === myUserId ? myInfo.charType : lobbyPlayers.find(p => p.userId === charSelectTarget)?.charType || 'athlete'}
+                    targetName={charSelectTarget === myUserId ? "あなた" : lobbyPlayers.find(p => p.userId === charSelectTarget)?.name || "CPU"}
+                />
             </div>
         );
     }
@@ -217,7 +250,6 @@ export const OnlineLobby = () => {
             <h2 style={{ fontSize: '32px' }}>🌐 オンライン対戦</h2>
             <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <div className="panel" style={{ width: '350px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* ▼ 名前入力は App.jsx で行うため ReadOnly（表示のみ）に変更 */}
                     <div>
                         <label>プレイヤー名:</label>
                         <input 

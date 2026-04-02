@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { charInfo } from '../constants/characters';
+import { charInfo, charEmoji } from '../constants/characters';
 import { genSmallMap, genMediumMap, genLargeMap } from '../constants/maps';
 import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatterPlayerPositions } from '../utils/mapRandomizer';
-// ▼ 追加: ユーザー情報の取得と保存関数
 import { useUserStore } from '../store/useUserStore';
 import { savePlayerName } from '../utils/userLogic';
+import { CharacterSelect } from './CharacterSelect';
 
 const TEAM_COLORS = { none: { label:'ソロ', color:'transparent', icon:'⚪' }, red: { label:'赤', color:'#e74c3c', icon:'🔴' }, blue: { label:'青', color:'#3498db', icon:'🟢' }, yellow: { label:'黄', color:'#f1c40f', icon:'🟡' } };
 
 export const SetupOffline = () => {
     const setGameState = useGameStore(state => state.setGameState);
-    
-    // ▼ 追加: グローバルなプレイヤー名を初期値として取得
     const globalPlayerName = useUserStore(state => state.playerName);
     
-    // ▼ 修正: P1の名前初期値をglobalPlayerNameにする
     const [players, setPlayers] = useState([
         { id: 0, name: globalPlayerName || 'P1', charType: 'athlete', isCPU: false, teamColor: 'none' }, 
         { id: 1, name: 'CPU1', charType: 'sales', isCPU: true, teamColor: 'none' }
@@ -30,10 +27,12 @@ export const SetupOffline = () => {
     const [rmapStart, setRmapStart] = useState(false);
     const [rmapScatter, setRmapScatter] = useState(false);
     const [charAssignMode, setCharAssignMode] = useState('choose'); 
+    
+    // ▼ 追加: キャラ選択モーダルのターゲットID
+    const [charSelectTarget, setCharSelectTarget] = useState(null);
 
     const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e91e8c'];
 
-    // ▼ 追加: globalPlayerNameが遅れてロードされた場合にP1の名前を更新
     useEffect(() => {
         if (globalPlayerName) {
             setPlayers(prev => prev.map(p => p.id === 0 ? { ...p, name: globalPlayerName } : p));
@@ -54,7 +53,6 @@ export const SetupOffline = () => {
     };
 
     const handleStart = async () => {
-        // ▼ 追加: ゲーム開始時にP1の名前をFirebaseにセーブする
         const p1Name = players.find(p => p.id === 0)?.name;
         if (p1Name && p1Name.trim() !== '') {
             await savePlayerName(p1Name);
@@ -66,9 +64,15 @@ export const SetupOffline = () => {
 
         let finalPlayers = [...players];
         const allChars = Object.keys(charInfo);
-        const shuffledChars = [...allChars].sort(() => Math.random() - 0.5);
-        if (charAssignMode === 'random') { finalPlayers.forEach((p, i) => p.charType = shuffledChars[i % shuffledChars.length]); } 
-        else if (charAssignMode === 'cpu_random') { let cpuIdx = 0; finalPlayers.forEach(p => { if (p.isCPU) { p.charType = shuffledChars[cpuIdx % shuffledChars.length]; cpuIdx++; } }); }
+        
+        // ▼ 変更: ランダム生成時は全キャラから完全ランダム(重複許可)で割り当てる
+        if (charAssignMode === 'random') { 
+            finalPlayers.forEach(p => p.charType = allChars[Math.floor(Math.random() * allChars.length)]); 
+        } else if (charAssignMode === 'cpu_random') { 
+            finalPlayers.forEach(p => { 
+                if (p.isCPU) p.charType = allChars[Math.floor(Math.random() * allChars.length)]; 
+            }); 
+        }
 
         let startPos = 0; let scatterPos = [];
         if (rmapScatter) scatterPos = scatterPlayerPositions(mapData, finalPlayers.length);
@@ -100,19 +104,14 @@ export const SetupOffline = () => {
         const maxId = mapData.length - 1;
         const canTrashTiles = mapData.filter(t => t.type === 'can' || t.type === 'trash');
         
-        // ▼▼▼ 変更: キャラ選択モードに応じて遷移先を分岐 ▼▼▼
-        // 'random' (全員ランダム) → キャラ既に決定済みなので直接 playing へ
-        // 'choose' / 'cpu_random' → キャラ選択画面 (char_select) を経由
-        const nextPhase = charAssignMode === 'random' ? 'playing' : 'char_select';
-        
+        // ▼ 変更: 直接 playing フェーズへ
         setGameState({
-            mapData, players: finalPlayers, turn: 0, roundCount: 1, maxRounds, diceRolled: false, gameOver: false, gamePhase: nextPhase,
+            mapData, players: finalPlayers, turn: 0, roundCount: 1, maxRounds, diceRolled: false, gameOver: false, gamePhase: 'playing',
             turnOrderActive, turnOrderData,
             truckPos: Math.floor(maxId * 0.4), policePos: Math.floor(maxId * 0.8), unclePos: Math.floor(maxId * 0.2), 
             animalPos: canTrashTiles.length > 0 ? canTrashTiles[Math.floor(Math.random() * canTrashTiles.length)].id : Math.floor(maxId * 0.3), 
             yakuzaPos: Math.floor(maxId * 0.5), loansharkPos: Math.floor(maxId * 0.6), friendPos: Math.floor(maxId * 0.15)
         });
-        // ▲▲▲ 変更ここまで ▲▲▲
     };
 
     return (
@@ -126,7 +125,6 @@ export const SetupOffline = () => {
                     <div key={p.id} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px', background: 'rgba(92, 74, 68, 0.1)', padding: '8px', borderRadius: '8px', flexWrap: 'wrap' }}>
                         <div style={{ width: '16px', height: '16px', backgroundColor: colors[idx % colors.length], borderRadius: '50%' }}></div>
                         
-                        {/* ▼ 修正: P1の名前を入力した時、ローカルステート(players)を更新 */}
                         <input 
                             type="text" 
                             value={p.name} 
@@ -140,13 +138,19 @@ export const SetupOffline = () => {
                             <option value="cpu">CPU</option>
                         </select>
                         
-                        {/* ▼ 変更: キャラ選択はchar_select画面に移動したため、ここではcharType選択を非表示 */}
-                        {charAssignMode === 'random' && (
-                            <span style={{ padding: '6px', color: '#b0a090', fontSize: '12px' }}>🎲 ランダム</span>
-                        )}
-                        {charAssignMode !== 'random' && (
-                            <span style={{ padding: '6px', color: '#b0a090', fontSize: '12px' }}>→ 次の画面で選択</span>
-                        )}
+                        {/* ▼ 変更: キャラクター変更ボタンを表示 */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '90px', justifyContent: 'center' }}>
+                            {charAssignMode === 'random' ? (
+                                <span style={{ fontSize: '12px', color: '#b0a090' }}>🎲 ランダム</span>
+                            ) : charAssignMode === 'cpu_random' && p.isCPU ? (
+                                <span style={{ fontSize: '12px', color: '#b0a090' }}>🤖 ランダム</span>
+                            ) : (
+                                <>
+                                    <span style={{ fontSize: '20px' }}>{charEmoji[p.charType] || '❓'}</span>
+                                    <button onClick={() => setCharSelectTarget(p.id)} className="btn-clay" style={{ padding: '4px 8px', fontSize: '12px', background: '#3498db' }}>変更</button>
+                                </>
+                            )}
+                        </div>
                         
                         <select value={p.teamColor} onChange={e => updatePlayer(p.id, 'teamColor', e.target.value)} style={{ padding: '6px', borderRadius: '4px' }}>
                             {Object.entries(TEAM_COLORS).map(([key, t]) => <option key={key} value={key}>{t.icon} {t.label}</option>)}
@@ -190,8 +194,20 @@ export const SetupOffline = () => {
             
             <div style={{ display: 'flex', gap: '20px', marginBottom: '40px' }}>
                 <button className="btn-large" style={{ background: '#7f8c8d' }} onClick={() => setGameState({ gamePhase: 'mode_select' })}>◀ 戻る</button>
-                <button className="btn-large btn-brown" onClick={handleStart} style={{ padding: '15px 40px', fontSize: '20px' }}>{charAssignMode === 'random' ? '🎲 ゲームを開始する' : '🎭 キャラ選択へ ▸'}</button>
+                <button className="btn-large btn-brown" onClick={handleStart} style={{ padding: '15px 40px', fontSize: '20px' }}>🎲 ゲームを開始する</button>
             </div>
+
+            {/* キャラクター選択モーダル */}
+            <CharacterSelect 
+                isOpen={charSelectTarget !== null}
+                onClose={() => setCharSelectTarget(null)}
+                onConfirm={(charKey) => {
+                    updatePlayer(charSelectTarget, 'charType', charKey);
+                    setCharSelectTarget(null);
+                }}
+                initialCharKey={players.find(p => p.id === charSelectTarget)?.charType || 'athlete'}
+                targetName={players.find(p => p.id === charSelectTarget)?.name || ""}
+            />
         </div>
     );
 };
