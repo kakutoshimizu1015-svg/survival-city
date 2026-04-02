@@ -3,6 +3,27 @@ import { charEmoji, charImages } from '../../constants/characters';
 import { useUserStore } from '../../store/useUserStore';
 import { getDepthScale } from '../../utils/gameLogic';
 
+// =========================================================
+// ▼ 駒のサイズ調整用パラメータ（ここの数値を変更してください）
+// =========================================================
+const TOKEN_CONFIG = {
+    // 遠近法のスケールに乗算するベース倍率（1.0で標準、1.5で全体的に1.5倍大きくなります）
+    scaleMultiplier: 1.15,
+    
+    // キャラクター画像（スキン）を使用している場合のサイズ (px)
+    imageSize: 180,
+    
+    // 絵文字を使用している場合の背景の丸い枠のサイズ (px)
+    emojiBgSize: 64,
+    
+    // 絵文字自体のフォントサイズ (px)
+    emojiFontSize: 34,
+    
+    // 駒の下に表示されるプレイヤー名のフォントサイズ (px)
+    nameFontSize: 16
+};
+// =========================================================
+
 export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const isImage = charImages && charImages[player.charType] !== undefined;
     const showSmoke = useUserStore(state => state.showSmoke);
@@ -27,14 +48,13 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const currentTile = mapData.find(t => t.id === player.pos) || mapData[0];
     const zIndexBase = 50 + currentTile.row * 10;
     
-    // 遠近法スケールの取得
+    // 遠近法スケールの取得と、カスタマイズ用倍率の適用
     const baseScale = getDepthScale(currentTile.row, maxRow);
-    // 駒を全体的に大きく見せるため、スケールに1.15倍を掛ける
-    const ds = baseScale * 1.15;
+    const ds = baseScale * TOKEN_CONFIG.scaleMultiplier;
 
-    // 駒の基本サイズを拡大
-    const tokenWidth = isImage ? 110 : 64;
-    const tokenHeight = isImage ? 110 : 64;
+    // 設定パラメータからサイズを適用
+    const tokenWidth = isImage ? TOKEN_CONFIG.imageSize : TOKEN_CONFIG.emojiBgSize;
+    const tokenHeight = isImage ? TOKEN_CONFIG.imageSize : TOKEN_CONFIG.emojiBgSize;
 
     // 土埃のクリーンアップ
     useEffect(() => {
@@ -209,7 +229,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
             pointerEvents: 'none',
             // 遠近法スケールの適用
             transform: `scale(${ds})`,
-            transformOrigin: 'bottom center'
+            transformOrigin: 'center center'
         }}>
             <style>{`
                 @keyframes tokenDustAnim {
@@ -245,7 +265,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                     zIndex: zIndexBase, display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none'
                 }}>
                     <div ref={scaleRef} style={{
-                        width: tokenWidth, height: tokenHeight, // 拡大したサイズを適用
+                        width: tokenWidth, height: tokenHeight,
                         position: 'relative', transformOrigin: 'bottom center',
                         background: isImage ? 'transparent' : 'rgba(0,0,0,0.6)',
                         border: isImage ? 'none' : `3px solid ${isActiveTurn ? '#ffe066' : player.color}`,
@@ -270,13 +290,13 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                                     }} />
                             </>
                         ) : (
-                            <span ref={emojiRef} style={{ fontSize: 34, transform: `scaleX(${facingRef.current})` }}>{charEmoji[player.charType]}</span>
+                            <span ref={emojiRef} style={{ fontSize: TOKEN_CONFIG.emojiFontSize, transform: `scaleX(${facingRef.current})` }}>{charEmoji[player.charType]}</span>
                         )}
                     </div>
 
                     <div style={{
                         position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-                        marginTop: 2, fontSize: 16, fontWeight: 900, color: player.color, // 文字サイズも調整
+                        marginTop: 2, fontSize: TOKEN_CONFIG.nameFontSize, fontWeight: 900, color: player.color,
                         textShadow: '1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000',
                         whiteSpace: 'nowrap'
                     }}>
