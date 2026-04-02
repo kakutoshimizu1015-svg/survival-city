@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
 import { charEmoji, charInfo, charDetailData } from '../../constants/characters';
-// SkinSelectorのインポート形式（波括弧の有無）でエラーが出る場合は、
-// import { SkinSelector } from './SkinSelector'; に変更してください。
-import SkinSelector from './SkinSelector';
+// ▼ 修正: 波括弧 {} をつけて名前付きインポートに変更しました
+import { SkinSelector } from './SkinSelector';
 
 export const CharacterPreview = ({ charType }) => {
     const safeCharType = (charType && charDetailData[charType]) ? charType : 'survivor';
