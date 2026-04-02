@@ -1,14 +1,13 @@
 import React from 'react';
-import { charEmoji, charImages } from '../../constants/characters';
+import { CharImage } from '../common/CharImage';
 
 const CHAR_COLORS = {
   athlete:'#e74c3c', sales:'#3498db', survivor:'#2ecc71', yankee:'#e67e22',
   hacker:'#9b59b6', musician:'#f1c40f', doctor:'#1abc9c', gambler:'#e91e8c', detective:'#6c5ce7',
 };
 
-export const CharacterIcon = ({ charKey, emoji, name, isSelected, isHovered, onClick, onHover, onLeave }) => {
+export const CharacterIcon = ({ charKey, name, isSelected, isHovered, onClick, onHover, onLeave }) => {
   const color = CHAR_COLORS[charKey] || '#aaa';
-  const isImage = charImages && charImages[charKey] !== undefined;
 
   return (
     <button
@@ -27,17 +26,13 @@ export const CharacterIcon = ({ charKey, emoji, name, isSelected, isHovered, onC
         zIndex: isHovered ? 5 : 1,
       }}
     >
-      <span style={{
-        fontSize: 38, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        filter: isSelected && !isImage ? `drop-shadow(0 0 6px ${color})` : 'none',
-        transition: 'filter 0.2s', width: 64, height: 64
+      <div style={{
+        transition: 'filter 0.2s', 
+        filter: isSelected ? `drop-shadow(0 0 6px ${color})` : 'none'
       }}>
-        {isImage ? (
-          <img src={charImages[charKey].front} alt={name} style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated', filter: isSelected ? `drop-shadow(0 0 8px ${color})` : 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} />
-        ) : (
-          emoji || charEmoji[charKey]
-        )}
-      </span>
+        <CharImage charType={charKey} size={64} imgStyle={{ filter: 'none' }} />
+      </div>
+
       <span style={{
         fontSize: 12, fontWeight: 700, color: isSelected ? color : '#b0a090',
         fontFamily: "'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif",

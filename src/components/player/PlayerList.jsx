@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { charEmoji } from '../../constants/characters';
+import { CharImage } from '../common/CharImage'; // ▼ 追加: CharImageをインポート
 
 const SORT_MODES = [
     { key: 'order', label: '🔢 順番' },
@@ -83,7 +83,6 @@ export const PlayerList = () => {
                     const activeStyle = isActive 
                         ? { boxShadow: '0 0 12px #f1c40f', borderColor: '#f1c40f', background: '#5c4a44' } 
                         : { borderColor: p.color, opacity: 0.9 };
-                    const emoji = charEmoji[p.charType] || '🏃';
 
                     // 領土数の計算
                     const terrCount = Object.values(territories).filter(id => id === p.id).length;
@@ -136,7 +135,11 @@ export const PlayerList = () => {
                             onClick={() => useGameStore.setState({ charInfoModal: p.id })}
                             title={`${p.name}のキャラ詳細を表示`}
                         >
-                            <div className="avatar-small-clay" style={{ borderColor: p.color }}>{emoji}</div>
+                            {/* ▼ 修正: 絵文字を削除し CharImage に差し替え */}
+                            <div className="avatar-small-clay" style={{ borderColor: p.color, overflow: 'hidden', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <CharImage charType={p.charType} size={32} />
+                            </div>
+                            
                             <div style={{ fontSize: '10px', fontWeight: 'bold', lineHeight: '1.3', overflow: 'hidden', flex: 1 }}>
                                 <div style={{ color: p.color, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                                     {rankBadge}

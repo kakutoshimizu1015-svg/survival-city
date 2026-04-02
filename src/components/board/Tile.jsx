@@ -79,7 +79,15 @@ export const Tile = React.memo(({
     if (pathClass) classNameStr += ` ${pathClass}`;
 
     const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
+    
+    // ▼ 変更: スラムエリアの「道(normal)」には常に建物を建てる
+    const hasBuilding = tile.area === 'slum' && tile.type === 'normal';
     const isJinchi = owner !== null && owner !== undefined;
+
+    // ▼ 変更: 陣地化された場合はプレイヤーカラーで発光させる
+    const buildingFilter = isJinchi 
+        ? `drop-shadow(0 0 8px ${owner.color}) drop-shadow(0 0 16px ${owner.color})` 
+        : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))';
 
     return (
         <div 
@@ -93,13 +101,16 @@ export const Tile = React.memo(({
             className={classNameStr}
             style={{ gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default', position: 'relative' }}
         >
-            {isJinchi && !isFog && (
+            {hasBuilding && !isFog && (
                 <img 
                     src={jinchiBuilding} 
-                    alt="陣地" 
+                    alt="建物" 
                     style={{
                         position: 'absolute', bottom: '20%', left: '50%', transform: 'translateX(-50%)',
-                        width: '140%', height: 'auto', pointerEvents: 'none', zIndex: 1, opacity: 0.9, imageRendering: 'pixelated'
+                        width: '140%', height: 'auto', pointerEvents: 'none', zIndex: 1, opacity: 0.95, 
+                        imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
+                        filter: buildingFilter,
+                        transition: 'filter 0.3s ease'
                     }}
                 />
             )}
@@ -107,7 +118,8 @@ export const Tile = React.memo(({
             <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
             <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9 }}>{tile.name}</div>
             
-            {owner && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px', zIndex: 3 }}>🚩</div>}
+            {/* オーナーフラグは建物が光るので控えめ、または残す */}
+            {isJinchi && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px', zIndex: 3 }}>🚩</div>}
 
             {(tile.fieldCans > 0 || tile.fieldTrash > 0) && !isFog && (
                 <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'2px 4px', fontSize:'12px' }}>
@@ -115,8 +127,6 @@ export const Tile = React.memo(({
                     {tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
                 </div>
             )}
-            
-            {/* 古い駒（playersOnTile）は削除し、PlayerTokenに任せます */}
             
             {!isFog && isTruck && <div className="truck-token" style={{zIndex: 5}}>🚛</div>}
             {!isFog && isPolice && <div className="npc-token npc-police" style={{zIndex: 5}}>👮</div>}

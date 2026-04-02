@@ -1,6 +1,6 @@
 import React from 'react';
 import { SkinSelector } from './SkinSelector';
-import { charEmoji, charImages } from '../../constants/characters';
+import { CharImage } from '../common/CharImage';
 
 const CHAR_COLORS = {
   athlete:'#e74c3c', sales:'#3498db', survivor:'#2ecc71', yankee:'#e67e22',
@@ -18,7 +18,6 @@ export const CharacterPreview = ({ character, show }) => {
   }
 
   const color = CHAR_COLORS[character.key] || '#aaa';
-  const isImage = charImages && charImages[character.key] !== undefined;
 
   return (
     <div style={{ flex: 1, minWidth: 280, maxWidth: 480, background: 'rgba(92,74,68,0.3)', border: '1px solid rgba(141,110,99,0.25)', borderRadius: 12, padding: 20, minHeight: 380, position: 'relative', overflow: 'hidden', animation: show ? 'charPreviewSlide 0.3s ease both' : 'none' }}>
@@ -26,17 +25,13 @@ export const CharacterPreview = ({ character, show }) => {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
         <div style={{
-          width: 120, height: 120, borderRadius: 14, // 画像エリアをさらに大きく
-          background: isImage ? 'transparent' : `linear-gradient(135deg, ${color}33, ${color}11)`, // 画像なら背景なし
-          border: isImage ? 'none' : `2px solid ${color}44`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 60, 
-          boxShadow: isImage ? 'none' : `0 0 20px ${color}22`, flexShrink: 0, overflow: 'hidden'
+          width: 120, height: 120, borderRadius: 14, 
+          background: `linear-gradient(135deg, ${color}22, transparent)`,
+          border: `1px solid ${color}44`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: `0 0 15px ${color}11`, flexShrink: 0, overflow: 'hidden'
         }}>
-          {isImage ? (
-            <img src={charImages[character.key].front} alt={character.name} style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'pixelated', filter: 'drop-shadow(0px 6px 8px rgba(0,0,0,0.5))' }} />
-          ) : (
-            character.emoji || charEmoji[character.key]
-          )}
+          <CharImage charType={character.key} size={110} imgStyle={{ filter: 'drop-shadow(0px 6px 8px rgba(0,0,0,0.5))' }} />
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 24, fontWeight: 900, color: '#fdf5e6', fontFamily: "'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif" }}>
