@@ -8,7 +8,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
 
     const [dustTrail, setDustTrail] = useState([]);
     
-    // ▼ 修正: DOM要素を直接操作するための参照（Ref）
+    // DOM要素を直接操作するための参照
     const wrapRef = useRef(null);
     const tokenWrapperRef = useRef(null);
     const scaleRef = useRef(null);
@@ -22,7 +22,8 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
     const idleRafRef = useRef(null);
     const prevPosRef = useRef(player.pos);
 
-    const FOOT_Y = 15;
+    // ▼ 修正: 影の位置を少し上に調整（マスの中心寄りにする）
+    const FOOT_Y = 5; 
     const currentTile = mapData.find(t => t.id === player.pos) || mapData[0];
     const zIndexBase = 50 + currentTile.row * 10;
 
@@ -34,7 +35,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
         }
     }, [dustTrail]);
 
-    // 待機時のフワフワ上下運動（DOM直接操作）
+    // 待機時のフワフワ上下運動
     const startIdle = () => {
         if (isAnimatingRef.current) return;
         const now = performance.now();
@@ -58,7 +59,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
         };
     }, []);
 
-    // 移動＆回転アニメーション（DOM直接操作）
+    // 移動＆回転アニメーション
     useEffect(() => {
         if (prevPosRef.current === player.pos) return;
         const startTile = mapData.find(t => t.id === prevPosRef.current);
@@ -69,7 +70,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
             return;
         }
 
-        // アニメーション開始
         isAnimatingRef.current = true;
         if (idleRafRef.current) cancelAnimationFrame(idleRafRef.current);
 
@@ -85,7 +85,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
 
         let spinRaf, moveRaf;
 
-        // 画像の向きを適用するヘルパー関数
         const updateFacingDOM = (f) => {
             if (frontImgRef.current && backImgRef.current) {
                 frontImgRef.current.style.opacity = 1;
@@ -96,7 +95,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
             if (emojiRef.current) emojiRef.current.style.transform = `scaleX(${f})`;
         };
 
-        // 回転アニメーション
         const triggerSpin = () => {
             return new Promise((resolve) => {
                 if (!isImage || newFacing === facingRef.current) {
@@ -119,7 +117,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
 
                     const curFacing = t >= 0.5 ? newFacing : facingRef.current;
                     
-                    // DOMのスタイルを直接書き換える（再レンダリングさせない）
                     if (frontImgRef.current && backImgRef.current) {
                         frontImgRef.current.style.opacity = showBack ? 0 : 1;
                         backImgRef.current.style.opacity = showBack ? 1 : 0;
@@ -142,9 +139,8 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
             });
         };
 
-        // ジャンプ移動アニメーション
         const runMove = async () => {
-            await triggerSpin(); // 回転が終わるまで待つ
+            await triggerSpin(); 
 
             const startTime = performance.now();
             const dur = 350;
@@ -161,7 +157,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                 const currentY = sy + (ey - sy) * eased;
                 const tilt = Math.sin(now * 0.015) * 6;
 
-                // DOM直接操作
                 if (wrapRef.current) wrapRef.current.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
                 if (tokenWrapperRef.current) tokenWrapperRef.current.style.transform = `translate(-50%, calc(-100% - ${jumpArc * jumpHeight}px))`;
                 if (scaleRef.current) scaleRef.current.style.transform = `scaleX(1) rotate(${tilt}deg)`;
@@ -170,7 +165,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                 if (t < 1) {
                     moveRaf = requestAnimationFrame(animateMove);
                 } else {
-                    // 着地時のリセット
                     if (wrapRef.current) wrapRef.current.style.transform = `translate(-50%, -50%)`;
                     if (tokenWrapperRef.current) tokenWrapperRef.current.style.transform = `translate(-50%, -100%)`;
                     if (scaleRef.current) scaleRef.current.style.transform = `scaleX(1) rotate(0deg)`;
@@ -212,7 +206,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                 }
             `}</style>
 
-            {/* 平面移動を担うラッパー */}
             <div ref={wrapRef} style={{
                 position: 'absolute', left: '50%', top: '50%', transform: `translate(-50%, -50%)`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center'
@@ -234,12 +227,11 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                     transform: 'translate(-50%, -50%)', opacity: 0.7, zIndex: zIndexBase - 1, pointerEvents: 'none'
                 }} />
 
-                {/* 上下動（ジャンプ・ホップ）を担うラッパー */}
+                {/* キャラクター本体ラッパー */}
                 <div ref={tokenWrapperRef} style={{
                     position: 'absolute', left: '50%', top: `${FOOT_Y}px`, transform: 'translate(-50%, -100%)',
                     zIndex: zIndexBase, display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none'
                 }}>
-                    {/* 回転や傾きを担うラッパー */}
                     <div ref={scaleRef} style={{
                         width: isImage ? 80 : 44, height: isImage ? 80 : 44,
                         position: 'relative', transformOrigin: 'bottom center',
@@ -261,7 +253,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                                     style={{
                                         position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', bottom: 0, 
                                         imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
-                                        transform: `scaleX(${facingRef.current})`, opacity: 0, // 初期は非表示
+                                        transform: `scaleX(${facingRef.current})`, opacity: 0, 
                                         filter: isActiveTurn ? 'drop-shadow(0 0 8px #ffe066)' : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))'
                                     }} />
                             </>
@@ -270,8 +262,10 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                         )}
                     </div>
 
+                    {/* ▼ 修正: 名前ラベルを画像の下端（top: 100%）からぶら下げる */}
                     <div style={{
-                        marginTop: 2, fontSize: 12, fontWeight: 900, color: player.color,
+                        position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                        marginTop: 2, fontSize: 13, fontWeight: 900, color: player.color,
                         textShadow: '1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000',
                         whiteSpace: 'nowrap'
                     }}>
