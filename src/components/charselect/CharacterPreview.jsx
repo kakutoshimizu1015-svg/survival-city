@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { charEmoji, charInfo, charDetailData } from '../../constants/characters';
-import SkinSelector from './SkinSelector';
+// ▼ 修正: 波括弧 {} をつけて名前付きインポートに変更しました
+import { SkinSelector } from './SkinSelector';
 
 export const CharacterPreview = ({ charType }) => {
     const detail = useMemo(() => charDetailData[charType], [charType]);
