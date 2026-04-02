@@ -6,7 +6,7 @@ import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatte
 import { useUserStore } from '../store/useUserStore';
 import { savePlayerName } from '../utils/userLogic';
 import { CharacterSelect } from './CharacterSelect';
-import { CharImage } from '../components/common/CharImage'; // 新規コンポーネントをインポート
+import { CharImage } from '../components/common/CharImage';
 
 const TEAM_COLORS = { none: { label:'ソロ', color:'transparent', icon:'⚪' }, red: { label:'赤', color:'#e74c3c', icon:'🔴' }, blue: { label:'青', color:'#3498db', icon:'🟢' }, yellow: { label:'黄', color:'#f1c40f', icon:'🟡' } };
 
@@ -23,6 +23,10 @@ export const SetupOffline = () => {
     const [maxRounds, setMaxRounds] = useState(20);
     const [skipTurnDice, setSkipTurnDice] = useState(false);
     const [isCreative, setIsCreative] = useState(false);
+    
+    // ▼ 新規追加: 検証用の無限移動モード
+    const [isTestMode, setIsTestMode] = useState(false);
+
     const [rmapTileType, setRmapTileType] = useState(false);
     const [rmapLayout, setRmapLayout] = useState(false);
     const [rmapStart, setRmapStart] = useState(false);
@@ -62,6 +66,17 @@ export const SetupOffline = () => {
         if (rmapTileType) mapData = randomizeTileTypes(mapData);
         if (rmapLayout) mapData = randomizeTileLayout(mapData);
 
+        // ▼ 追加: 無限移動モードの場合は、マップの構造を維持したまま全マスを「道」にする
+        if (isTestMode) {
+            mapData = mapData.map(t => ({
+                ...t,
+                type: 'normal',
+                name: '道',
+                fieldCans: 0,
+                fieldTrash: 0
+            }));
+        }
+
         let finalPlayers = [...players];
         const allChars = Object.keys(charInfo);
         
@@ -79,7 +94,10 @@ export const SetupOffline = () => {
 
         const creativeHand = Array.from({length: 38}, (_, i) => i);
         finalPlayers = finalPlayers.map((p, i) => ({
-            ...p, color: colors[i % colors.length], pos: rmapScatter ? scatterPos[i] : startPos, hp: 100, p: 15, ap: 0,
+            ...p, color: colors[i % colors.length], pos: rmapScatter ? scatterPos[i] : startPos, 
+            hp: isTestMode ? 9999 : 100, // ▼ 修正: テストモードはHP無限（死なない）
+            p: 15, 
+            ap: isTestMode ? 9999 : 0,   // ▼ 修正: テストモードはAP無限（移動し放題）
             hand: isCreative ? [...creativeHand] : [Math.floor(Math.random() * 38), Math.floor(Math.random() * 38), Math.floor(Math.random() * 38)], 
             maxHand: isCreative ? 99 : (p.charType === 'hacker' ? 9 : 7),
             cans: 0, trash: 0, kills: 0, deaths: 0, equip: {}
@@ -106,9 +124,14 @@ export const SetupOffline = () => {
         setGameState({
             mapData, players: finalPlayers, turn: 0, roundCount: 1, maxRounds, diceRolled: false, gameOver: false, gamePhase: 'playing',
             turnOrderActive, turnOrderData,
-            truckPos: Math.floor(maxId * 0.4), policePos: Math.floor(maxId * 0.8), unclePos: Math.floor(maxId * 0.2), 
-            animalPos: canTrashTiles.length > 0 ? canTrashTiles[Math.floor(Math.random() * canTrashTiles.length)].id : Math.floor(maxId * 0.3), 
-            yakuzaPos: Math.floor(maxId * 0.5), loansharkPos: Math.floor(maxId * 0.6), friendPos: Math.floor(maxId * 0.15)
+            // ▼ 修正: テストモード時はすべてのNPCを画面外(-1)に飛ばして無効化する
+            truckPos: isTestMode ? -1 : Math.floor(maxId * 0.4), 
+            policePos: isTestMode ? -1 : Math.floor(maxId * 0.8), 
+            unclePos: isTestMode ? -1 : Math.floor(maxId * 0.2), 
+            animalPos: isTestMode ? -1 : (canTrashTiles.length > 0 ? canTrashTiles[Math.floor(Math.random() * canTrashTiles.length)].id : Math.floor(maxId * 0.3)), 
+            yakuzaPos: isTestMode ? -1 : Math.floor(maxId * 0.5), 
+            loansharkPos: isTestMode ? -1 : Math.floor(maxId * 0.6), 
+            friendPos: isTestMode ? -1 : Math.floor(maxId * 0.15)
         });
     };
 
@@ -169,10 +192,18 @@ export const SetupOffline = () => {
                     <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>マップ: <select value={mapSize} onChange={e => setMapSize(e.target.value)} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}><option value="small">小(12)</option><option value="medium">中(48)</option><option value="large">大(75)</option></select></label>
                     <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>ラウンド: <select value={maxRounds} onChange={e => setMaxRounds(Number(e.target.value))} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}>{[1, 5, 10, 15, 20, 30].map(r => <option key={r} value={r}>{r}R</option>)}</select></label>
                 </div>
+                
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginBottom: '15px' }}>
                     <label style={{ color: '#fdf5e6', cursor: 'pointer' }}><input type="checkbox" checked={skipTurnDice} onChange={e => setSkipTurnDice(e.target.checked)} /> 🎲 順番決めダイスをスキップ</label>
                     <label style={{ color: '#f1c40f', cursor: 'pointer', fontWeight: 'bold' }}><input type="checkbox" checked={isCreative} onChange={e => setIsCreative(e.target.checked)} /> 🎨 クリエイティブモード</label>
+                    
+                    {/* ▼ 追加：無限移動モードのチェックボックスUI */}
+                    <label style={{ color: '#2ecc71', cursor: 'pointer', fontWeight: 'bold', background: 'rgba(46, 204, 113, 0.1)', padding: '8px 12px', borderRadius: '8px', border: '1px solid #2ecc71' }}>
+                        <input type="checkbox" checked={isTestMode} onChange={e => setIsTestMode(e.target.checked)} style={{ marginRight: '8px' }} /> 
+                        🛠 検証用：無限移動モード（全マス道＆AP無限＆NPCなし）
+                    </label>
                 </div>
+
                 <div style={{ background: 'rgba(0,0,0,0.15)', padding: '10px', borderRadius: '8px', border: '2px solid #5c4a44', marginBottom: '15px' }}>
                     <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#f1c40f', textAlign: 'center', marginBottom: '8px' }}>🎲 ランダムマップ設定</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>

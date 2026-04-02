@@ -1,35 +1,32 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { charEmoji, charImages } from '../../constants/characters';
 import { useUserStore } from '../../store/useUserStore';
 
 export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
     const isImage = charImages && charImages[player.charType] !== undefined;
-    
-    // ▼ 追加：ユーザーの端末から設定を読み込む
     const showSmoke = useUserStore(state => state.showSmoke);
 
-    const [offset, setOffset] = useState({ x: 0, y: 0, jump: 0 });
-    const [facing, setFacing] = useState(1); // 1 = 右向き, -1 = 左向き
-    const [isMoving, setIsMoving] = useState(false);
-    const [idlePhase, setIdlePhase] = useState(0);
-    const [spinAngle, setSpinAngle] = useState(0);
-    const [isSpinning, setIsSpinning] = useState(false);
     const [dustTrail, setDustTrail] = useState([]);
+    
+    // ▼ 修正: DOM要素を直接操作するための参照（Ref）
+    const wrapRef = useRef(null);
+    const tokenWrapperRef = useRef(null);
+    const scaleRef = useRef(null);
+    const frontImgRef = useRef(null);
+    const backImgRef = useRef(null);
+    const emojiRef = useRef(null);
+    const shadowRef = useRef(null);
 
-    const animRef = useRef(null);
-    const spinRef = useRef(null);
+    const facingRef = useRef(1); // 1 = 右向き, -1 = 左向き
+    const isAnimatingRef = useRef(false);
+    const idleRafRef = useRef(null);
     const prevPosRef = useRef(player.pos);
 
-    // 待機時のフワフワ上下運動
-    useEffect(() => {
-        if (isMoving) return;
-        let f = 0, raf;
-        const tick = () => { f++; setIdlePhase(f); raf = requestAnimationFrame(tick); };
-        raf = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(raf);
-    }, [isMoving]);
+    const FOOT_Y = 15;
+    const currentTile = mapData.find(t => t.id === player.pos) || mapData[0];
+    const zIndexBase = 50 + currentTile.row * 10;
 
-    // 土埃エフェクトのクリーンアップ
+    // 土埃のクリーンアップ
     useEffect(() => {
         if (dustTrail.length > 0) {
             const timer = setTimeout(() => setDustTrail(t => t.slice(1)), 400);
@@ -37,49 +34,31 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
         }
     }, [dustTrail]);
 
-    // ▼ 修正：ペーパーマリオ風の完全回転（2π）アニメーション
-    const triggerSpin = useCallback((newFacing) => {
-        return new Promise((resolve) => {
-            if (isSpinning || !isImage) {
-                setFacing(newFacing);
-                resolve();
-                return;
-            }
-            setIsSpinning(true);
-            const startTime = performance.now();
-            const spinDur = 550; // パタッという回転感のためのタメ時間
+    // 待機時のフワフワ上下運動（DOM直接操作）
+    const startIdle = () => {
+        if (isAnimatingRef.current) return;
+        const now = performance.now();
+        const idleBob = Math.sin(now * 0.005) * -3; 
+        
+        if (tokenWrapperRef.current) {
+            tokenWrapperRef.current.style.transform = `translate(-50%, calc(-100% + ${idleBob}px))`;
+        }
+        if (scaleRef.current) {
+            scaleRef.current.style.transform = `scaleX(1) rotate(0deg)`;
+        }
+        if (shadowRef.current) shadowRef.current.style.opacity = 0.7;
 
-            const animateSpin = (now) => {
-                const t = Math.min((now - startTime) / spinDur, 1);
-                // カスタムイージング: 前後はゆっくり、中間は速く
-                const eased = t < 0.3
-                    ? (t / 0.3) * (t / 0.3) * 0.3
-                    : t > 0.7
-                    ? 0.7 + (1 - ((1 - t) / 0.3) * ((1 - t) / 0.3)) * 0.3
-                    : 0.3 + (t - 0.3) / 0.4 * 0.4;
+        idleRafRef.current = requestAnimationFrame(startIdle);
+    };
 
-                // 2πのフル回転
-                setSpinAngle(eased * Math.PI * 2);
+    useEffect(() => {
+        idleRafRef.current = requestAnimationFrame(startIdle);
+        return () => {
+            if (idleRafRef.current) cancelAnimationFrame(idleRafRef.current);
+        };
+    }, []);
 
-                // 回転の半分のタイミングで新しい向きをセット
-                if (t >= 0.5 && facing !== newFacing) {
-                    setFacing(newFacing);
-                }
-
-                if (t < 1) {
-                    spinRef.current = requestAnimationFrame(animateSpin);
-                } else {
-                    setSpinAngle(0);
-                    setFacing(newFacing);
-                    setIsSpinning(false);
-                    resolve();
-                }
-            };
-            spinRef.current = requestAnimationFrame(animateSpin);
-        });
-    }, [isSpinning, facing, isImage]);
-
-    // ジャンプ・移動アニメーション
+    // 移動＆回転アニメーション（DOM直接操作）
     useEffect(() => {
         if (prevPosRef.current === player.pos) return;
         const startTile = mapData.find(t => t.id === prevPosRef.current);
@@ -90,84 +69,132 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
             return;
         }
 
+        // アニメーション開始
+        isAnimatingRef.current = true;
+        if (idleRafRef.current) cancelAnimationFrame(idleRafRef.current);
+
         const sx = (startTile.col - endTile.col) * 80;
         const sy = (startTile.row - endTile.row) * 80;
         const ex = 0;
         const ey = 0;
 
         const dx = endTile.col - startTile.col;
-        let newFacing = facing;
-        if (dx > 0) newFacing = -1; // 右へ移動
-        else if (dx < 0) newFacing = 1; // 左へ移動
+        let newFacing = facingRef.current;
+        if (dx > 0) newFacing = -1; 
+        else if (dx < 0) newFacing = 1;
 
-        const runAnimation = async () => {
-            // ▼ 修正：ここで回転が終わるまで完全に待機する！
-            if (newFacing !== facing && isImage) {
-                await triggerSpin(newFacing);
-            } else {
-                setFacing(newFacing);
+        let spinRaf, moveRaf;
+
+        // 画像の向きを適用するヘルパー関数
+        const updateFacingDOM = (f) => {
+            if (frontImgRef.current && backImgRef.current) {
+                frontImgRef.current.style.opacity = 1;
+                backImgRef.current.style.opacity = 0;
+                frontImgRef.current.style.transform = `scaleX(${f})`;
+                backImgRef.current.style.transform = `scaleX(${f})`;
             }
+            if (emojiRef.current) emojiRef.current.style.transform = `scaleX(${f})`;
+        };
 
-            setIsMoving(true);
-            const dur = 350;
+        // 回転アニメーション
+        const triggerSpin = () => {
+            return new Promise((resolve) => {
+                if (!isImage || newFacing === facingRef.current) {
+                    facingRef.current = newFacing;
+                    updateFacingDOM(newFacing);
+                    resolve();
+                    return;
+                }
+
+                const startTime = performance.now();
+                const spinDur = 550;
+
+                const animateSpin = (now) => {
+                    const t = Math.min((now - startTime) / spinDur, 1);
+                    const eased = t < 0.3 ? (t / 0.3) ** 2 * 0.3 : t > 0.7 ? 0.7 + (1 - ((1 - t) / 0.3) ** 2) * 0.3 : 0.3 + (t - 0.3) / 0.4 * 0.4;
+                    const angle = eased * Math.PI * 2;
+                    const spinWidth = Math.max(0.02, Math.abs(Math.cos(angle)));
+                    const spinHop = Math.sin(angle) * -12;
+                    const showBack = angle > Math.PI * 0.45 && angle < Math.PI * 1.55;
+
+                    const curFacing = t >= 0.5 ? newFacing : facingRef.current;
+                    
+                    // DOMのスタイルを直接書き換える（再レンダリングさせない）
+                    if (frontImgRef.current && backImgRef.current) {
+                        frontImgRef.current.style.opacity = showBack ? 0 : 1;
+                        backImgRef.current.style.opacity = showBack ? 1 : 0;
+                        frontImgRef.current.style.transform = `scaleX(${curFacing})`;
+                        backImgRef.current.style.transform = `scaleX(${curFacing})`;
+                    }
+                    if (scaleRef.current) scaleRef.current.style.transform = `scaleX(${spinWidth}) rotate(0deg)`;
+                    if (tokenWrapperRef.current) tokenWrapperRef.current.style.transform = `translate(-50%, calc(-100% + ${spinHop}px))`;
+                    if (wrapRef.current) wrapRef.current.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
+
+                    if (t < 1) {
+                        spinRaf = requestAnimationFrame(animateSpin);
+                    } else {
+                        facingRef.current = newFacing;
+                        updateFacingDOM(newFacing);
+                        resolve();
+                    }
+                };
+                spinRaf = requestAnimationFrame(animateSpin);
+            });
+        };
+
+        // ジャンプ移動アニメーション
+        const runMove = async () => {
+            await triggerSpin(); // 回転が終わるまで待つ
+
             const startTime = performance.now();
+            const dur = 350;
 
-            if (showSmoke) {
-                setDustTrail(t => [...t.slice(-5), { x: sx, y: sy, id: Date.now() }]);
-            }
+            if (showSmoke) setDustTrail(t => [...t.slice(-5), { x: sx, y: sy, id: Date.now() }]);
 
             const animateMove = (now) => {
                 const t = Math.min((now - startTime) / dur, 1);
-                // パラボラジャンプの計算
                 const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
                 const jumpArc = -4 * (t - 0.5) * (t - 0.5) + 1;
                 const jumpHeight = 44 + Math.abs(ey - sy) * 0.4 + Math.abs(ex - sx) * 0.15;
 
-                setOffset({
-                    x: sx + (ex - sx) * eased,
-                    y: sy + (ey - sy) * eased,
-                    jump: jumpArc * jumpHeight
-                });
+                const currentX = sx + (ex - sx) * eased;
+                const currentY = sy + (ey - sy) * eased;
+                const tilt = Math.sin(now * 0.015) * 6;
+
+                // DOM直接操作
+                if (wrapRef.current) wrapRef.current.style.transform = `translate(calc(-50% + ${currentX}px), calc(-50% + ${currentY}px))`;
+                if (tokenWrapperRef.current) tokenWrapperRef.current.style.transform = `translate(-50%, calc(-100% - ${jumpArc * jumpHeight}px))`;
+                if (scaleRef.current) scaleRef.current.style.transform = `scaleX(1) rotate(${tilt}deg)`;
+                if (shadowRef.current) shadowRef.current.style.opacity = 0.35;
 
                 if (t < 1) {
-                    animRef.current = requestAnimationFrame(animateMove);
+                    moveRaf = requestAnimationFrame(animateMove);
                 } else {
-                    setOffset({ x: ex, y: ey, jump: 0 });
-                    setIsMoving(false);
-                    // 着地時の土埃（設定ON時のみ）
+                    // 着地時のリセット
+                    if (wrapRef.current) wrapRef.current.style.transform = `translate(-50%, -50%)`;
+                    if (tokenWrapperRef.current) tokenWrapperRef.current.style.transform = `translate(-50%, -100%)`;
+                    if (scaleRef.current) scaleRef.current.style.transform = `scaleX(1) rotate(0deg)`;
+                    if (shadowRef.current) shadowRef.current.style.opacity = 0.7;
+
                     if (showSmoke) {
-                        setDustTrail(t => [...t.slice(-4),
-                            { x: ex - 12, y: ey, id: Date.now() },
-                            { x: ex + 12, y: ey, id: Date.now() + 1 }
-                        ]);
+                        setDustTrail(t => [...t.slice(-4), { x: ex - 12, y: ey, id: Date.now() }, { x: ex + 12, y: ey, id: Date.now() + 1 }]);
                     }
+
                     prevPosRef.current = player.pos;
+                    isAnimatingRef.current = false;
+                    idleRafRef.current = requestAnimationFrame(startIdle);
                 }
             };
-            animRef.current = requestAnimationFrame(animateMove);
+            moveRaf = requestAnimationFrame(animateMove);
         };
 
-        runAnimation();
+        runMove();
 
         return () => {
-            if (animRef.current) cancelAnimationFrame(animRef.current);
-            if (spinRef.current) cancelAnimationFrame(spinRef.current);
+            if (spinRaf) cancelAnimationFrame(spinRaf);
+            if (moveRaf) cancelAnimationFrame(moveRaf);
         };
-    }, [player.pos, mapData, facing, isImage, triggerSpin, showSmoke]);
-
-    // ▼ 修正：cos(spinAngle) を用いて紙の薄さを完全再現
-    const spinWidth = isSpinning ? Math.max(0.02, Math.abs(Math.cos(spinAngle))) : 1;
-    // 半回転〜1回転半の間は裏面画像を表示
-    const showBack = isSpinning && spinAngle > Math.PI * 0.45 && spinAngle < Math.PI * 1.55;
-    // ▼ 修正：回転中のホップ（浮き上がり）を追加
-    const spinHop = isSpinning ? Math.sin(spinAngle) * -12 : 0;
-    
-    const idleBob = Math.sin(idlePhase * 0.06) * -3;
-    const tilt = isMoving ? Math.sin(Date.now() * 0.015) * 6 : 0;
-
-    const currentTile = mapData.find(t => t.id === player.pos) || mapData[0];
-    const zIndexBase = 50 + currentTile.row * 10;
-    const FOOT_Y = 15;
+    }, [player.pos, mapData, isImage, showSmoke]);
 
     return (
         <div style={{
@@ -185,72 +212,61 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
                 }
             `}</style>
 
-            <div style={{
-                position: 'absolute',
-                left: '50%', top: '50%',
-                transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
+            {/* 平面移動を担うラッパー */}
+            <div ref={wrapRef} style={{
+                position: 'absolute', left: '50%', top: '50%', transform: `translate(-50%, -50%)`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center'
             }}>
                 
-                {/* 煙エフェクト（条件付き描画） */}
+                {/* 煙エフェクト */}
                 {showSmoke && dustTrail.map(d => (
                     <div key={d.id} style={{
-                        position: 'absolute', 
-                        left: `calc(50% + ${d.x - offset.x}px)`, 
-                        top: `calc(${FOOT_Y}px + ${d.y - offset.y}px)`,
+                        position: 'absolute', left: `calc(50% + ${d.x}px)`, top: `calc(${FOOT_Y}px + ${d.y}px)`,
                         width: 14, height: 14, background: 'rgba(210,195,150,0.7)', borderRadius: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        animation: 'tokenDustAnim 0.4s ease-out forwards', pointerEvents: 'none',
+                        transform: 'translate(-50%, -50%)', animation: 'tokenDustAnim 0.4s ease-out forwards', pointerEvents: 'none',
                         zIndex: zIndexBase - 2
                     }} />
                 ))}
 
                 {/* 落ち影 */}
-                <div style={{
-                    position: 'absolute',
-                    left: '50%', top: FOOT_Y,
-                    width: 32, height: 10, background: 'rgba(0,0,0,0.5)', borderRadius: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    opacity: isMoving ? 0.35 : 0.7,
-                    transition: 'opacity 0.2s',
-                    zIndex: zIndexBase - 1, pointerEvents: 'none'
+                <div ref={shadowRef} style={{
+                    position: 'absolute', left: '50%', top: FOOT_Y, width: 32, height: 10, background: 'rgba(0,0,0,0.5)', borderRadius: '50%',
+                    transform: 'translate(-50%, -50%)', opacity: 0.7, zIndex: zIndexBase - 1, pointerEvents: 'none'
                 }} />
 
-                {/* キャラクター本体 */}
-                <div style={{
-                    position: 'absolute',
-                    left: '50%',
-                    // ▼ 修正：回転中のホップ（spinHop）を加算
-                    top: `calc(${FOOT_Y}px - ${offset.jump}px + ${isMoving ? 0 : idleBob}px + ${spinHop}px)`,
-                    transform: 'translate(-50%, -100%)',
-                    zIndex: zIndexBase,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none'
+                {/* 上下動（ジャンプ・ホップ）を担うラッパー */}
+                <div ref={tokenWrapperRef} style={{
+                    position: 'absolute', left: '50%', top: `${FOOT_Y}px`, transform: 'translate(-50%, -100%)',
+                    zIndex: zIndexBase, display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none'
                 }}>
-                    <div style={{
+                    {/* 回転や傾きを担うラッパー */}
+                    <div ref={scaleRef} style={{
                         width: isImage ? 80 : 44, height: isImage ? 80 : 44,
-                        position: 'relative',
-                        // ▼ 修正：cosで計算した spinWidth を適用し、ペーパーマリオ風の幅を再現
-                        transform: `scaleX(${spinWidth}) rotate(${tilt}deg)`,
-                        transformOrigin: 'bottom center',
+                        position: 'relative', transformOrigin: 'bottom center',
                         background: isImage ? 'transparent' : 'rgba(0,0,0,0.6)',
                         border: isImage ? 'none' : `3px solid ${isActiveTurn ? '#ffe066' : player.color}`,
-                        borderRadius: isImage ? '0' : '50%',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        borderRadius: isImage ? '0' : '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         boxShadow: (!isImage && isActiveTurn) ? `0 0 15px ${player.color}` : 'none',
                     }}>
                         {isImage ? (
-                            <img src={showBack ? charImages[player.charType].back : charImages[player.charType].front} alt=""
-                                style={{
-                                    position: 'absolute', 
-                                    width: '100%', height: '100%', 
-                                    objectFit: 'contain', 
-                                    bottom: 0, 
-                                    imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
-                                    transform: `scaleX(${facing})`, 
-                                    filter: isActiveTurn ? 'drop-shadow(0 0 8px #ffe066)' : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))'
-                                }} />
+                            <>
+                                <img ref={frontImgRef} src={charImages[player.charType].front} alt=""
+                                    style={{
+                                        position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', bottom: 0, 
+                                        imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
+                                        transform: `scaleX(${facingRef.current})`, 
+                                        filter: isActiveTurn ? 'drop-shadow(0 0 8px #ffe066)' : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))'
+                                    }} />
+                                <img ref={backImgRef} src={charImages[player.charType].back} alt=""
+                                    style={{
+                                        position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', bottom: 0, 
+                                        imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
+                                        transform: `scaleX(${facingRef.current})`, opacity: 0, // 初期は非表示
+                                        filter: isActiveTurn ? 'drop-shadow(0 0 8px #ffe066)' : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))'
+                                    }} />
+                            </>
                         ) : (
-                            <span style={{ fontSize: 26, transform: `scaleX(${facing})` }}>{charEmoji[player.charType]}</span>
+                            <span ref={emojiRef} style={{ fontSize: 26, transform: `scaleX(${facingRef.current})` }}>{charEmoji[player.charType]}</span>
                         )}
                     </div>
 
