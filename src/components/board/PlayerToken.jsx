@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { charEmoji, charImages } from '../../constants/characters';
-import { useGameStore } from '../../store/useGameStore';
 
 // マスのグリッドサイズ設定 (GameBoardのCSSと合わせる)
 const TILE_SIZE = 60;
@@ -141,7 +140,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
       left: animPos.x,
       top: animPos.y + spinHop,
       transform: 'translate(-50%, -50%)',
-      zIndex: 10 + (player.pos % 100), // 手前に来るように調整可能
+      zIndex: 50 + (player.pos % 100), // タイルより確実に上に表示させる
       pointerEvents: 'none',
       display: 'flex',
       flexDirection: 'column',
@@ -151,7 +150,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
       <div style={{
         width: 44, height: 44,
         border: `3px solid ${borderColor}`,
-        borderRadius: isImage ? '8px' : '50%', // サバイバーは四角っぽく、絵文字は丸く
+        borderRadius: isImage ? '8px' : '50%',
         background: 'rgba(0,0,0,0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: isActiveTurn ? `0 0 15px ${borderColor}` : '0 4px 6px rgba(0,0,0,0.5)',
@@ -163,7 +162,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
             src={showBack ? charImages[player.charType].back : charImages[player.charType].front} 
             alt={player.name} 
             style={{ width: '120%', height: '120%', objectFit: 'contain', transform: `scaleX(${facing})` }} 
-            // 枠ごと反転すると画像も反転してしまうため、imgタグで再度反転して相殺する
           />
         ) : (
           <span style={{ fontSize: '24px', transform: `scaleX(${facing})` }}>
@@ -172,7 +170,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn }) => {
         )}
       </div>
 
-      {/* プレイヤー名ラベル (回転させないためコンテナの外に配置) */}
+      {/* プレイヤー名ラベル */}
       <div style={{
         marginTop: 2, fontSize: '10px', fontWeight: 900, color: player.color,
         textShadow: '1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000',

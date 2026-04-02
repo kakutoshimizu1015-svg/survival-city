@@ -1,5 +1,8 @@
+import survivorFront from '../assets/images/survivor_front.png';
+import survivorBack from '../assets/images/survivor_back.png';
+
 export const charImages = {
-    survivor: { front: '/survivor_front.png', back: '/survivor_back.png' }
+    survivor: { front: survivorFront, back: survivorBack }
 };
 
 export const charEmoji = { athlete:'🏃', sales:'💼', survivor:'🌿', yankee:'👊', hacker:'💻', musician:'🎸', doctor:'🩺', gambler:'🎲', detective:'🕵️' };
