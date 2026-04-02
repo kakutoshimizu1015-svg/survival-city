@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useMemo, useRef, useEffect, useCallback, useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { getDistance, getPathPreviewTiles, getManholeLinkedTiles } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
@@ -6,18 +6,21 @@ import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { BoardPaths } from './BoardPaths';
 import { Tile } from './Tile';
 import { TileTooltip } from '../overlays/TileTooltip';
-import { PlayerToken } from './PlayerToken'; // 追加: 独立したプレイヤー駒コンポーネント
+import { PlayerToken } from './PlayerToken'; // 追加
 
 export const GameBoard = () => {
     const { 
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
-        roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
+        RoundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
         autoScrollToPlayer
     } = useGameStore();
 
     const cp = players[turn];
     
+    // ▼ 座標計算の同期用: CSS変数の値をJavaScriptステートとして管理
+    const [gridConfig, setGridConfig] = useState(null);
+
     const scale = useRef(1.0);
     const offset = useRef({ x: 0, y: 0 });
     const wrapperRef = useRef(null);
@@ -28,8 +31,19 @@ export const GameBoard = () => {
     const isClickPrevented = useRef(false);
     const rafRef = useRef(null);
 
-    // ターン追跡ref
     const prevAutoScrollTurn = useRef(-1);
+
+    // グリッド設定の取得（座標ズレ修正のため）
+    const updateGridConfig = useCallback(() => {
+        const board = document.getElementById('game-board');
+        if (!board) return;
+        const computedStyle = getComputedStyle(board);
+        setGridConfig({
+            tileSize: parseInt(computedStyle.getPropertyValue('--tile-size')) || 60,
+            gap: parseInt(computedStyle.getPropertyValue('gap')) || 20,
+            padding: parseInt(computedStyle.getPropertyValue('padding')) || 30
+        });
+    }, []);
 
     const applyTransform = useCallback((smooth = false) => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -73,12 +87,8 @@ export const GameBoard = () => {
 
         if (bw === 0 || bh === 0 || ww === 0 || wh === 0) return;
 
-        if (wh > window.innerHeight) {
-            wh = window.innerHeight * 0.5;
-        }
-
+        if (wh > window.innerHeight) wh = window.innerHeight * 0.5;
         const paddingRatio = ww <= 768 ? 0.95 : 1.0; 
-
         const fitScale = Math.min(ww / bw, wh / bh, 1.0) * paddingRatio;
         scale.current = fitScale;
         
@@ -87,81 +97,48 @@ export const GameBoard = () => {
             y: (wh - bh * fitScale) / 2
         };
         applyTransform(true);
-    }, [applyTransform]);
-
-    const mapTileCount = mapData?.length || 0;
+        updateGridConfig(); // ズームリセット時にグリッド設定も更新
+    }, [applyTransform, updateGridConfig]);
 
     useEffect(() => {
-        if (mapTileCount === 0) return; 
-        
-        const timer = setTimeout(() => {
-            resetZoom();
-        }, 150);
-
+        if (!mapData?.length) return; 
+        const timer = setTimeout(() => resetZoom(), 150);
         window.addEventListener('resize', resetZoom);
-
         return () => {
             clearTimeout(timer);
             window.removeEventListener('resize', resetZoom);
         };
-    }, [mapTileCount, resetZoom]);
+    }, [mapData, resetZoom]);
 
     useEffect(() => {
-        if (!autoScrollToPlayer) return;
-        if (!wrapperRef.current) return;
-        if (!mapData || mapData.length === 0) return;
-        if (!cp) return;
-        if (prevAutoScrollTurn.current === turn) return;
-        if (gameOver) return;
-
+        if (!autoScrollToPlayer || !wrapperRef.current || !mapData?.length || !cp || prevAutoScrollTurn.current === turn || gameOver || !gridConfig) return;
         prevAutoScrollTurn.current = turn;
-
         const targetTile = mapData.find(t => t.id === cp.pos);
         if (!targetTile) return;
 
         const timer = setTimeout(() => {
-            if (!wrapperRef.current) return;
-
-            const computedStyle = getComputedStyle(document.documentElement);
-            const tileSizeStr = computedStyle.getPropertyValue('--tile-size').trim();
-            const tileSize = parseInt(tileSizeStr, 10) || 60;
-            const gap = 20;
-            const padding = 30;
-
+            if (!wrapperRef.current || !gridConfig) return;
+            const { tileSize, gap, padding } = gridConfig;
             const tilePixelX = padding + (targetTile.col - 1) * (tileSize + gap) + tileSize / 2;
             const tilePixelY = padding + (targetTile.row - 1) * (tileSize + gap) + tileSize / 2;
-
             const ww = wrapperRef.current.clientWidth;
             const wh = wrapperRef.current.clientHeight;
-            const currentScale = scale.current;
-
-            offset.current = {
-                x: ww / 2 - tilePixelX * currentScale,
-                y: wh / 2 - tilePixelY * currentScale
-            };
+            offset.current = { x: ww / 2 - tilePixelX * scale.current, y: wh / 2 - tilePixelY * scale.current };
             applyTransform(true);
         }, 300);
-
         return () => clearTimeout(timer);
-    }, [turn, cp, mapData, autoScrollToPlayer, gameOver, applyTransform]);
+    }, [turn, cp, mapData, autoScrollToPlayer, gameOver, applyTransform, gridConfig]);
 
-    const getTouchCoords = (touches) => {
-        return Array.from(touches).map(t => ({ clientX: t.clientX, clientY: t.clientY }));
-    };
+    const getTouchCoords = (touches) => Array.from(touches).map(t => ({ clientX: t.clientX, clientY: t.clientY }));
 
     useEffect(() => {
         const wrapper = wrapperRef.current;
         if (!wrapper) return;
-
         const handleWheel = (e) => {
             e.preventDefault();
             const rect = wrapper.getBoundingClientRect();
-            const px = e.clientX - rect.left;
-            const py = e.clientY - rect.top;
-            const delta = e.deltaY < 0 ? 0.15 : -0.15;
-            zoomAt(px, py, delta);
+            zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 0.15 : -0.15);
         };
-
         const handleMouseDown = (e) => {
             if (e.button !== 0) return;
             e.preventDefault();
@@ -172,76 +149,50 @@ export const GameBoard = () => {
             const inner = document.getElementById('game-board-inner');
             if (inner) inner.style.transition = 'none';
         };
-
         const handleMouseMove = (e) => {
             if (!isDragging.current) return;
-            const dx = e.clientX - dragStart.current.x;
-            const dy = e.clientY - dragStart.current.y;
-            offset.current = {
-                x: offsetStart.current.x + dx,
-                y: offsetStart.current.y + dy
-            };
+            offset.current = { x: offsetStart.current.x + e.clientX - dragStart.current.x, y: offsetStart.current.y + e.clientY - dragStart.current.y };
             applyTransform(false);
         };
-
         const handleMouseUp = (e) => {
             if (!isDragging.current) return;
             isDragging.current = false;
             wrapper.classList.remove('dragging');
-            
             const inner = document.getElementById('game-board-inner');
             if (inner) inner.style.transition = 'transform 0.12s ease';
-
-            const moved = Math.abs(e.clientX - dragStart.current.x) + Math.abs(e.clientY - dragStart.current.y);
-            if (moved > 5) {
+            if (Math.abs(e.clientX - dragStart.current.x) + Math.abs(e.clientY - dragStart.current.y) > 5) {
                 isClickPrevented.current = true;
                 setTimeout(() => { isClickPrevented.current = false; }, 50);
             }
         };
-
         const handleTouchStart = (e) => {
             lastTouches.current = getTouchCoords(e.touches);
             wrapper.classList.add('dragging');
             const inner = document.getElementById('game-board-inner');
             if (inner) inner.style.transition = 'none';
         };
-
         const handleTouchMove = (e) => {
             if (!lastTouches.current) return;
             const currentTouches = getTouchCoords(e.touches);
-
             if (currentTouches.length === 1 && lastTouches.current.length === 1) {
-                const sensitivity = 1.8;
-                const dx = (currentTouches[0].clientX - lastTouches.current[0].clientX) * sensitivity;
-                const dy = (currentTouches[0].clientY - lastTouches.current[0].clientY) * sensitivity;
-                offset.current = { x: offset.current.x + dx, y: offset.current.y + dy };
+                offset.current = { x: offset.current.x + (currentTouches[0].clientX - lastTouches.current[0].clientX) * 1.8, y: offset.current.y + (currentTouches[0].clientY - lastTouches.current[0].clientY) * 1.8 };
                 applyTransform(false);
                 if (e.cancelable) e.preventDefault();
             } else if (currentTouches.length === 2 && lastTouches.current.length === 2) {
-                const prevDist = Math.hypot(
-                    lastTouches.current[0].clientX - lastTouches.current[1].clientX,
-                    lastTouches.current[0].clientY - lastTouches.current[1].clientY
-                );
-                const newDist = Math.hypot(
-                    currentTouches[0].clientX - currentTouches[1].clientX,
-                    currentTouches[0].clientY - currentTouches[1].clientY
-                );
+                const prevDist = Math.hypot(lastTouches.current[0].clientX - lastTouches.current[1].clientX, lastTouches.current[0].clientY - lastTouches.current[1].clientY);
+                const newDist = Math.hypot(currentTouches[0].clientX - currentTouches[1].clientX, currentTouches[0].clientY - currentTouches[1].clientY);
                 const rect = wrapper.getBoundingClientRect();
-                const cx = ((currentTouches[0].clientX + currentTouches[1].clientX) / 2) - rect.left;
-                const cy = ((currentTouches[0].clientY + currentTouches[1].clientY) / 2) - rect.top;
-                zoomAt(cx, cy, (newDist - prevDist) * 0.005);
+                zoomAt(((currentTouches[0].clientX + currentTouches[1].clientX) / 2) - rect.left, ((currentTouches[0].clientY + currentTouches[1].clientY) / 2) - rect.top, (newDist - prevDist) * 0.005);
                 if (e.cancelable) e.preventDefault();
             }
             lastTouches.current = currentTouches;
         };
-
         const handleTouchEnd = () => {
             lastTouches.current = null;
             wrapper.classList.remove('dragging');
             const inner = document.getElementById('game-board-inner');
             if (inner) inner.style.transition = 'transform 0.12s ease';
         };
-
         wrapper.addEventListener('wheel', handleWheel, { passive: false });
         wrapper.addEventListener('mousedown', handleMouseDown);
         document.addEventListener('mousemove', handleMouseMove);
@@ -250,167 +201,76 @@ export const GameBoard = () => {
         wrapper.addEventListener('touchmove', handleTouchMove, { passive: false });
         wrapper.addEventListener('touchend', handleTouchEnd, { passive: true });
         wrapper.addEventListener('touchcancel', handleTouchEnd, { passive: true });
-
         return () => {
-            wrapper.removeEventListener('wheel', handleWheel);
-            wrapper.removeEventListener('mousedown', handleMouseDown);
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-            wrapper.removeEventListener('touchstart', handleTouchStart);
-            wrapper.removeEventListener('touchmove', handleTouchMove);
-            wrapper.removeEventListener('touchend', handleTouchEnd);
-            wrapper.removeEventListener('touchcancel', handleTouchEnd);
+            wrapper.removeEventListener('wheel', handleWheel); wrapper.removeEventListener('mousedown', handleMouseDown); document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); wrapper.removeEventListener('touchstart', handleTouchStart); wrapper.removeEventListener('touchmove', handleTouchMove); wrapper.removeEventListener('touchend', handleTouchEnd); wrapper.removeEventListener('touchcancel', handleTouchEnd);
         };
     }, [zoomAt, applyTransform]);
 
     const handleTileClick = (tileId) => {
         if (isClickPrevented.current) return;
-
         if (npcMovePick) {
-            const state = useGameStore.getState();
-            state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
+            useGameStore.getState().updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
             useGameStore.setState({ [npcMovePick]: tileId, npcMovePick: null });
-        } else if (isBranchPicking && currentBranchOptions.includes(tileId)) {
-            executeMove(tileId);
-        }
+        } else if (isBranchPicking && currentBranchOptions.includes(tileId)) executeMove(tileId);
     };
 
     const visibleTiles = useMemo(() => {
         if (!isNight) return null;
         const visible = new Set();
-        const viewers = players.filter(p => !p.isCPU || p.id === turn);
-        viewers.forEach(v => {
-            if (v.hp > 0) {
-                mapData.forEach(t => { if (getDistance(v.pos, t.id, mapData) <= 3) visible.add(t.id); });
-            }
+        players.filter(p => !p.isCPU || p.id === turn).forEach(v => {
+            if (v.hp > 0) mapData.forEach(t => { if (getDistance(v.pos, t.id, mapData) <= 3) visible.add(t.id); });
         });
-        if (isBranchPicking) {
-            currentBranchOptions.forEach(id => visible.add(id));
-        }
+        if (isBranchPicking) currentBranchOptions.forEach(id => visible.add(id));
         return visible;
     }, [isNight, players, mapData, turn, isBranchPicking, currentBranchOptions]);
 
     const pathPreview = useMemo(() => {
         const preview = { path1: new Set(), path2: new Set(), path3: new Set(), manholes: new Set() };
-        if (!players || players.length === 0 || gameOver || !cp || cp.isCPU) return preview;
-
+        if (!players?.length || gameOver || !cp || cp.isCPU) return preview;
         const pathData = getPathPreviewTiles(cp.pos, mapData);
-        preview.path1 = pathData.depth1;
-        preview.path2 = pathData.depth2;
-        preview.path3 = pathData.depth3;
-
+        preview.path1 = pathData.depth1; preview.path2 = pathData.depth2; preview.path3 = pathData.depth3;
         const curTile = mapData.find(t => t.id === cp.pos);
-        if (curTile && curTile.type === 'manhole') {
-            preview.manholes = getManholeLinkedTiles(cp.pos, mapData);
-        }
-
+        if (curTile?.type === 'manhole') preview.manholes = getManholeLinkedTiles(cp.pos, mapData);
         return preview;
     }, [players, gameOver, cp, mapData]);
 
-    const zoomBtnStyle = {
-        width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', 
-        background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', 
-        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-        boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s',
-        padding: 0
-    };
-
+    const zoomBtnStyle = { width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s', padding: 0 };
     let maxCol = 0, maxRow = 0;
-    if (mapData && mapData.length > 0) {
-        maxCol = Math.max(...mapData.map(t => t.col));
-        maxRow = Math.max(...mapData.map(t => t.row));
-    }
+    if (mapData?.length) { maxCol = Math.max(...mapData.map(t => t.col)); maxRow = Math.max(...mapData.map(t => t.row)); }
 
     return (
         <div id="board-area" style={{ flexGrow: 1, overflowX: 'hidden', minWidth: 0, position: 'relative' }}>
-            
             <TileTooltip />
-
-            {npcMovePick && (
-                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ npcMovePick: null }); useGameStore.getState().showToast("情報操作をキャンセルしました"); }}>
-                    🕵️ 移動先マスをタップしてください（タップでキャンセル）
-                </div>
-            )}
-            {isBranchPicking && !npcMovePick && (
-                <div id="branch-prompt" style={{ display: 'block' }}>
-                    🛣️ 光っているマスをタップして進む道を選んでください
-                </div>
-            )}
-
+            {npcMovePick && <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ npcMovePick: null }); useGameStore.getState().showToast("情報操作をキャンセルしました"); }}>🕵️ 移動先マスをタップしてください（タップでキャンセル）</div>}
+            {isBranchPicking && !npcMovePick && <div id="branch-prompt" style={{ display: 'block' }}>🛣️ 光っているマスをタップして進む道を選んでください</div>}
             <div id="map-env-hud" style={{ position: 'absolute', top: '8px', left: '8px', zIndex: 55, display: 'flex', flexDirection: 'column', pointerEvents: 'none' }}>
                 <div style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', padding: '5px 10px', fontSize: '11px', fontWeight: 'bold', color: '#fdf5e6', lineHeight: 1.6, whiteSpace: 'nowrap' }}>
-                    <span id="hud-round" style={{ color: '#f1c40f' }}>R:{roundCount}/{maxRounds}</span>
-                    <span id="hud-weather" style={{ marginLeft: '6px' }}>{isRainy ? '🌧️雨' : weatherState === 'cloudy' ? '☁️曇' : '☀️晴'}</span>
-                    <span id="hud-daynight" style={{ marginLeft: '6px' }}>{isNight ? '🌙夜' : '☀️昼'}</span>
-                    <br/>
-                    <span style={{ color: '#bdc3c7' }}>缶:<span id="hud-can-price">{canPrice}</span>P</span>
-                    <span style={{ color: '#bdc3c7', marginLeft: '6px' }}>ゴミ:<span id="hud-trash-price">{trashPrice}</span>P</span>
+                    <span id="hud-round" style={{ color: '#f1c40f' }}>R:{RoundCount}/{maxRounds}</span><span id="hud-weather" style={{ marginLeft: '6px' }}>{isRainy ? '🌧️雨' : weatherState === 'cloudy' ? '☁️曇' : '☀️晴'}</span><span id="hud-daynight" style={{ marginLeft: '6px' }}>{isNight ? '🌙夜' : '☀️昼'}</span><br/><span style={{ color: '#bdc3c7' }}>缶:<span id="hud-can-price">{canPrice}</span>P</span><span style={{ color: '#bdc3c7', marginLeft: '6px' }}>ゴミ:<span id="hud-trash-price">{trashPrice}</span>P</span>
                 </div>
                 <div id="zoom-controls" style={{ display: 'flex', flexDirection: 'row', position: 'static', gap: '6px', pointerEvents: 'auto', marginTop: '8px' }}>
-                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(0.15)} title="ズームイン">＋</button>
-                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(-0.15)} title="ズームアウト">－</button>
-                    <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={resetZoom} title="リセット">⟳</button>
+                    <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(0.15)} title="ズームイン">＋</button><button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(-0.15)} title="ズームアウト">－</button><button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={resetZoom} title="リセット">⟳</button>
                 </div>
             </div>
-
-            {cp && (
-                <div id="map-ap-hud" style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 50, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', border: `2px solid ${cp.ap > 0 ? 'rgba(255,220,50,0.5)' : 'rgba(200,80,80,0.5)'}`, borderRadius: '10px', padding: '6px 12px', color: cp.ap > 0 ? '#f1c40f' : '#e74c3c', fontWeight: 'bold', fontSize: '18px', textShadow: '0 0 8px currentColor', pointerEvents: 'none', transition: 'all 0.3s' }}>
-                    ⚡ <span id="map-ap-display">{cp.ap}</span>
-                </div>
-            )}
-
+            {cp && <div id="map-ap-hud" style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 50, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', border: `2px solid ${cp.ap > 0 ? 'rgba(255,220,50,0.5)' : 'rgba(200,80,80,0.5)'}`, borderRadius: '10px', padding: '6px 12px', color: cp.ap > 0 ? '#f1c40f' : '#e74c3c', fontWeight: 'bold', fontSize: '18px', textShadow: '0 0 8px currentColor', pointerEvents: 'none', transition: 'all 0.3s' }}>⚡ <span id="map-ap-display">{cp.ap}</span></div>}
             <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px' }}>
-                <div id="game-board-wrapper" ref={wrapperRef} style={{ 
-                    overflow: 'hidden', 
-                    width: '100%', 
-                    maxHeight: 'calc(100vh - 280px)', 
-                    cursor: 'grab', 
-                    userSelect: 'none',
-                    touchAction: 'none'
-                }}>
+                <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none' }}>
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
-                            
-                            <BoardPaths />
-                            <WeaponArcOverlay />
-
+                            <BoardPaths /><WeaponArcOverlay />
                             {mapData.map(tile => {
                                 const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
-                                const isFog = visibleTiles && !visibleTiles.has(tile.id);
-                                const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
-                                const isClickable = npcMovePick !== null || isBranchTarget;
-                                
                                 let pathClass = '';
-                                if (pathPreview.path1.has(tile.id)) pathClass = 'tile-path-1';
-                                else if (pathPreview.path2.has(tile.id)) pathClass = 'tile-path-2';
-                                else if (pathPreview.path3.has(tile.id)) pathClass = 'tile-path-3';
-                                else if (pathPreview.manholes.has(tile.id)) pathClass = 'tile-manhole-linked';
-
+                                if (pathPreview.path1.has(tile.id)) pathClass = 'tile-path-1'; else if (pathPreview.path2.has(tile.id)) pathClass = 'tile-path-2'; else if (pathPreview.path3.has(tile.id)) pathClass = 'tile-path-3'; else if (pathPreview.manholes.has(tile.id)) pathClass = 'tile-manhole-linked';
                                 return (
-                                    <Tile 
-                                        key={tile.id}
-                                        tile={tile}
-                                        owner={owner}
-                                        isFog={isFog}
-                                        isClickable={isClickable}
-                                        onClick={() => handleTileClick(tile.id)}
-                                        isTruck={tile.id === truckPos}
-                                        isPolice={tile.id === policePos}
-                                        isUncle={tile.id === unclePos}
-                                        isAnimal={tile.id === animalPos}
-                                        isYakuza={tile.id === yakuzaPos}
-                                        isLoanshark={tile.id === loansharkPos}
-                                        isFriend={tile.id === friendPos}
-                                        pathClass={pathClass}
-                                    />
+                                    <Tile key={tile.id} tile={tile} owner={owner} isFog={visibleTiles && !visibleTiles.has(tile.id)} isClickable={npcMovePick !== null || (isBranchPicking && currentBranchOptions.includes(tile.id))} onClick={() => handleTileClick(tile.id)} isTruck={tile.id === truckPos} isPolice={tile.id === policePos} isUncle={tile.id === unclePos} isAnimal={tile.id === animalPos} isYakuza={tile.id === yakuzaPos} isLoanshark={tile.id === loansharkPos} isFriend={tile.id === friendPos} pathClass={pathClass}
+                                    /> // playersOnTile などのPropを削除
                                 );
                             })}
-
-                            {/* プレイヤーの駒をマス目とは別に独立して描画 */}
-                            {players.filter(p => p.hp > 0).map(player => (
-                                <PlayerToken key={`token-${player.id}`} player={player} />
+                            
+                            {/* ▼ 追加: 全プレイヤーの駒を独立して最前面に描画 ▼ */}
+                            {gridConfig && players.filter(p => p.hp > 0).map(player => (
+                                <PlayerToken key={`token-${player.id}`} player={player} gridConfig={gridConfig} />
                             ))}
-
                         </div>
                     </div>
                 </div>

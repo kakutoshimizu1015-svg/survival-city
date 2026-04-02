@@ -1,20 +1,3 @@
-export const tileTooltipData = {
-    center:    { title:"🏥 病院（スタート地点）", desc:"HPが0になると強制送還。最大15P没収・装備1つロスト。" },
-    normal:    { title:"🛣️ 通常の道", desc:"特別な効果なし。移動の通過点。" },
-    can:       { title:"🥫 空き缶", desc:"1APで缶を拾う（1ターン3回まで）。雨の日は雨具が必要。" },
-    trash:     { title:"🗑️ ゴミ山", desc:"2APでゴミを漁る。失敗すると警察に補導されAP-2ペナルティ。" },
-    exchange:  { title:"💱 買取所", desc:"拾った缶・ゴミを現在相場でP換金（0AP）。" },
-    job:       { title:"💼 バイト", desc:"3APで挑戦。成功率60-80%で12P獲得。" },
-    shop:      { title:"🛒 ショップ", desc:"カードを購入（4-6P）または手持ちカードを2Pで売却できる。" },
-    event:     { title:"🎲 イベント", desc:"ミニゲームまたはストーリーイベントが発生！カード獲得のチャンス。" },
-    shelter:   { title:"🏕️ 避難所", desc:"止まるとステルス状態になり、次の敵を1回やり過ごせる。" },
-    manhole:   { title:"🕳️ マンホール", desc:"1APで別のマンホールへランダムワープ。" },
-    koban:     { title:"🚓 交番", desc:"職務質問でその場に足止め。このターンは移動不可。" },
-    slum:      { title:"🏚️ スラムエリア", desc:"缶・ゴミが多い。相場が低め。" },
-    commercial:{ title:"🏙️ 商業エリア", desc:"バイト・ショップが充実。中程度の相場。" },
-    luxury:    { title:"🏰 高級エリア", desc:"収入が高い。警察が多くパトロールする。" },
-};
-
 export function genSmallMap(){
     const tiles = [
         {id:0,col:2,row:2,next:[1],area:"slum",type:"center",name:"病院"},

@@ -1,33 +1,37 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-
-// ▼ アセット画像（パスは実際のプロジェクトに合わせてください）
-import survivorFront from '../../assets/images/characters/homeless_front.png';
-import survivorBack from '../../assets/images/characters/homeless_back.png';
-
-// マップのグリッド計算用の定数（GameBoard.jsxのスタイルに合わせています）
-const TILE_SIZE = 60;
-const GAP = 20;
-const PADDING = 30;
+import { charTokenImages, charEmoji, pIdColors } from '../../constants/characters';
 
 // Z軸によるスケール計算
 const getDepthScale = (z) => Math.max(0.35, 1 - (z || 0) * 0.09);
 
-// マス目の論理的なピクセル座標を計算するヘルパー
-const getTileCoords = (tile) => {
-    if (!tile) return { x: 0, y: 0, z: 0 };
-    // col, row からグリッド内の中心座標を割り出す
-    const cx = PADDING + (tile.col - 1) * (TILE_SIZE + GAP) + TILE_SIZE / 2;
-    const cy = PADDING + (tile.row - 1) * (TILE_SIZE + GAP) + TILE_SIZE / 2;
-    return { x: cx, y: cy, z: tile.z || 0 };
-};
-
-export const PlayerToken = ({ player }) => {
+export const PlayerToken = ({ player, gridConfig }) => {
     const mapData = useGameStore(state => state.mapData);
+    const turn = useGameStore(state => state.turn);
     
+    // サバイバー等の画像アセット取得（設定がないキャラはnullになる）
+    const tokenImages = useMemo(() => charTokenImages[player.charType] || null, [player.charType]);
+
+    // マス目の論理的なピクセル座標を計算するヘルパー
+    const getTileCoords = useCallback((tileId) => {
+        const tile = mapData.find(t => t.id === tileId);
+        // 構文エラーを修正（スペース削除）
+        if (!tile || !gridConfig) return { x: 0, y: 0, z: 0 };
+        const { tileSize, gap, padding } = gridConfig;
+        
+        // CSS Gridの col, row からグリッド内の中心座標を割り出す
+        const cx = padding + (tile.col - 1) * (tileSize + gap) + tileSize / 2;
+        let cy = padding + (tile.row - 1) * (tileSize + gap) + tileSize / 2;
+        
+        // Tile.jsxのZ軸 translateY に合わせてY座標を調整（駒の浮きを修正）
+        cy += -(tile.z || 0) * 15;
+
+        return { x: cx, y: cy, z: tile.z || 0 };
+    }, [mapData, gridConfig]);
+
     // エフェクト・表示用ステート
     const [dustTrail, setDustTrail] = useState([]);
-    const [imageSrc, setImageSrc] = useState(survivorFront);
+    const [imageSrc, setImageSrc] = useState(tokenImages?.front || null);
 
     // DOM操作用のRef
     const containerRef = useRef(null);
@@ -44,20 +48,22 @@ export const PlayerToken = ({ player }) => {
         idlePhase: 0,
         tilt: 0,
         hop: 0,
-        posId: player.pos
+        posId: player.pos,
+        initialized: false
     });
 
     // 砂埃エフェクトの追加
     const addDust = useCallback((x, y, z) => {
+        if (!tokenImages) return; // 画像キャラ以外は出さない
         const ds = getDepthScale(z);
         const newDust = {
             id: Date.now() + Math.random(),
             x: x + (Math.random() * 10 - 5),
-            y: y + 10 * ds, // 足元
+            y: y, // 足元の座標に合わせる
             s: ds
         };
         setDustTrail(prev => [...prev.slice(-4), newDust]);
-    }, []);
+    }, [tokenImages]);
 
     // 砂埃エフェクトの自動消去タイマー
     useEffect(() => {
@@ -67,8 +73,9 @@ export const PlayerToken = ({ player }) => {
         }
     }, [dustTrail]);
 
-    // DOMのスタイルを直接更新して描画を反映
+    // DOMのスタイルを直接更新して描画を反映（画像キャラ用）
     const updateDOM = useCallback(() => {
+        if (!tokenImages) return;
         const curr = state.current;
         const depthScale = getDepthScale(curr.z);
 
@@ -81,7 +88,7 @@ export const PlayerToken = ({ player }) => {
         const idleBob = curr.isMoving ? 0 : Math.sin(curr.idlePhase * 0.03) * -1.5;
         const totalY = curr.y + idleBob + curr.hop;
 
-        // Y座標に基づくZソート（手前のものが前に来るように）
+        // Y座標に基づくZソート
         const zIndex = Math.floor(curr.y);
 
         if (containerRef.current) {
@@ -90,30 +97,32 @@ export const PlayerToken = ({ player }) => {
         }
         
         if (wrapperRef.current) {
+            // 足元の中心を起点にする
             wrapperRef.current.style.transform = `translate(-50%, -100%) scale(${scaleX}, ${scaleY}) rotate(${curr.tilt}deg)`;
         }
 
         if (shadowRef.current) {
-            shadowRef.current.style.transform = `translate3d(${curr.x}px, ${curr.y + 10 * depthScale}px, 0) translate(-50%, -50%) scale(${depthScale})`;
+            // 影をマスの中心にピッタリ合わせる
+            shadowRef.current.style.transform = `translate3d(${curr.x}px, ${curr.y}px, 0) translate(-50%, -50%) scale(${depthScale})`;
             shadowRef.current.style.opacity = curr.isMoving ? "0.35" : "0.65";
             shadowRef.current.style.zIndex = zIndex - 1;
         }
-    }, []);
+    }, [tokenImages]);
 
     // 初期位置の設定
     useEffect(() => {
-        const initialTile = mapData.find(t => t.id === player.pos);
-        if (initialTile) {
-            const coords = getTileCoords(initialTile);
-            state.current.x = coords.x;
-            state.current.y = coords.y;
-            state.current.z = coords.z;
-            updateDOM();
-        }
-    }, [mapData, player.pos, updateDOM]);
+        if (!gridConfig || !mapData.length || state.current.initialized) return;
+        const coords = getTileCoords(player.pos);
+        state.current.x = coords.x;
+        state.current.y = coords.y;
+        state.current.z = coords.z;
+        state.current.initialized = true;
+        updateDOM();
+    }, [gridConfig, mapData, player.pos, getTileCoords, updateDOM]);
 
-    // 常時実行される待機アニメーションループ
+    // 常時実行される待機アニメーションループ（画像キャラ用）
     useEffect(() => {
+        if (!tokenImages) return;
         let rafId;
         const tick = () => {
             if (!state.current.isMoving) {
@@ -127,18 +136,17 @@ export const PlayerToken = ({ player }) => {
         };
         rafId = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(rafId);
-    }, [updateDOM]);
+    }, [tokenImages, updateDOM]);
 
     // ペーパーマリオ風の回転アニメーション
     const runSpinAnim = useCallback((newFacing) => {
         return new Promise(resolve => {
             state.current.isSpinning = true;
             const startTime = performance.now();
-            const spinDur = 550; // 劇的なターンを演出するための時間
+            const spinDur = 550; 
 
             const tick = (now) => {
                 const t = Math.min((now - startTime) / spinDur, 1);
-                // イージング: ゆっくり開始、中間速く、最後ゆっくり
                 const eased = t < 0.3
                     ? (t / 0.3) * (t / 0.3) * 0.3
                     : t > 0.7
@@ -146,17 +154,14 @@ export const PlayerToken = ({ player }) => {
                     : 0.3 + (t - 0.3) / 0.4 * 0.4;
 
                 state.current.spinAngle = eased * Math.PI * 2;
-                // 回転時に少しだけ跳ねる
                 state.current.hop = Math.sin(state.current.spinAngle) * -8 * getDepthScale(state.current.z);
 
-                // 半回転した時点で向き（Facing）を反転
                 if (t >= 0.5 && state.current.facing !== newFacing) {
                     state.current.facing = newFacing;
                 }
 
-                // 背面を見せるタイミングの計算
                 const showBack = state.current.spinAngle > Math.PI * 0.45 && state.current.spinAngle < Math.PI * 1.55;
-                setImageSrc(showBack ? survivorBack : survivorFront);
+                setImageSrc(showBack ? tokenImages.back : tokenImages.front);
 
                 updateDOM();
 
@@ -167,16 +172,16 @@ export const PlayerToken = ({ player }) => {
                     state.current.spinAngle = 0;
                     state.current.hop = 0;
                     state.current.facing = newFacing;
-                    setImageSrc(survivorFront);
+                    setImageSrc(tokenImages.front);
                     updateDOM();
                     resolve();
                 }
             };
             requestAnimationFrame(tick);
         });
-    }, [updateDOM]);
+    }, [tokenImages, updateDOM]);
 
-    // 放物線を描くジャンプアニメーション
+    // 放物線ジャンプアニメーション
     const runJumpAnim = useCallback((target) => {
         return new Promise(resolve => {
             const startX = state.current.x;
@@ -185,7 +190,7 @@ export const PlayerToken = ({ player }) => {
             const dur = 330;
             const startTime = performance.now();
 
-            addDust(startX, startY, startZ); // 出発時の砂埃
+            addDust(startX, startY, startZ); 
 
             const tick = (now) => {
                 const t = Math.min((now - startTime) / dur, 1);
@@ -205,7 +210,7 @@ export const PlayerToken = ({ player }) => {
                     state.current.x = target.x;
                     state.current.y = target.y;
                     state.current.z = target.z;
-                    addDust(target.x, target.y, target.z); // 着地時の砂埃
+                    addDust(target.x, target.y, target.z); 
                     updateDOM();
                     resolve();
                 }
@@ -214,41 +219,71 @@ export const PlayerToken = ({ player }) => {
         });
     }, [addDust, updateDOM]);
 
-    // 移動全体を管理（スピン判定＋ジャンプ）
+    // 移動制御
     const animateTo = useCallback(async (target) => {
         state.current.isMoving = true;
+        useGameStore.setState({ isTokenAnimating: true });
+
         const dx = target.x - state.current.x;
         
         let newFacing = state.current.facing;
-        if (dx > 0) newFacing = -1; // 右へ
-        else if (dx < 0) newFacing = 1; // 左へ
+        if (dx > 0) newFacing = -1; 
+        else if (dx < 0) newFacing = 1; 
 
-        // 進行方向が変わった場合、先にスピンアニメーションを実行
-        if (newFacing !== state.current.facing) {
+        if (tokenImages && newFacing !== state.current.facing) {
             await runSpinAnim(newFacing);
+        } else {
+            state.current.facing = newFacing; 
         }
 
-        // 目的地へジャンプ
         await runJumpAnim(target);
 
         state.current.isMoving = false;
         state.current.tilt = 0;
         updateDOM();
-    }, [runSpinAnim, runJumpAnim, updateDOM]);
+        useGameStore.setState({ isTokenAnimating: false });
+    }, [tokenImages, runSpinAnim, runJumpAnim, updateDOM]);
 
-    // ストア上の現在位置（player.pos）の変更を検知して移動発火
+    // ストア上の位置変更検知
     useEffect(() => {
+        if (!state.current.initialized || !gridConfig) return;
         if (player.pos !== state.current.posId && mapData.length > 0) {
-            const targetTile = mapData.find(t => t.id === player.pos);
-            if (targetTile) {
-                const targetCoords = getTileCoords(targetTile);
-                animateTo(targetCoords);
-                state.current.posId = player.pos;
-            }
+            const targetCoords = getTileCoords(player.pos);
+            animateTo(targetCoords);
+            state.current.posId = player.pos;
         }
-    }, [player.pos, mapData, animateTo]);
+    }, [player.pos, mapData, gridConfig, getTileCoords, animateTo]);
 
-    // レンダーツリー（CSSのtransformで操作されるため、極力軽量に保つ）
+    // ▼▼▼ 条件分岐描画 ▼▼▼
+
+    if (!tokenImages || !gridConfig) {
+        // 【1】画像データがないキャラクター（元のゲームと同じ見た目を復元）
+        const coords = getTileCoords(player.pos);
+        const depthScale = getDepthScale(coords.z);
+        const isActive = player.id === turn && !state.current.isMoving;
+
+        return (
+            <div style={{
+                position: 'absolute',
+                left: coords.x,
+                top: coords.y,
+                transform: `scale(${depthScale}) translate(-50%, -100%)`,
+                transformOrigin: 'bottom center',
+                transition: 'left 0.3s ease, top 0.3s ease, transform 0.3s ease', 
+                zIndex: Math.floor(coords.y)
+            }}>
+                <div className={`player-token pos-${player.id % 4} ${isActive ? 'token-active' : ''}`} 
+                     style={{ borderColor: player.color, width: '36px', height: '36px' }}>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', lineHeight:1 }}>
+                        <span style={{ fontSize:'18px' }}>{charEmoji[player.charType]}</span>
+                        <span style={{ fontSize:'7px', fontWeight:900, color:player.color, textShadow:'0 0 4px rgba(0,0,0,1)', whiteSpace: 'nowrap', maxWidth: '32px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // 【2】画像データがあるキャラクター（サバイバー）の場合
     return (
         <>
             <style>{`
@@ -291,8 +326,11 @@ export const PlayerToken = ({ player }) => {
                 pointerEvents: 'none',
             }}>
                 <div ref={wrapperRef} style={{
+                    position: 'absolute',
+                    left: 0, top: 0,
                     transformOrigin: 'bottom center',
-                    width: 80, height: 80, // 基本サイズ（ここからZスケールで縮小される）
+                    width: gridConfig.tileSize * 1.3,
+                    height: gridConfig.tileSize * 1.3,
                 }}>
                     <img 
                         src={imageSrc} 
