@@ -1,10 +1,37 @@
+// 全キャラクターの画像をインポート
+import athleteFront from '../assets/images/athlete_front.png';
+import athleteBack from '../assets/images/athlete_back.png';
+import salesFront from '../assets/images/sales_front.png';
+import salesBack from '../assets/images/sales_back.png';
 import survivorFront from '../assets/images/survivor_front.png';
 import survivorBack from '../assets/images/survivor_back.png';
+import yankeeFront from '../assets/images/yankee_front.png';
+import yankeeBack from '../assets/images/yankee_back.png';
+import hackerFront from '../assets/images/hacker_front.png';
+import hackerBack from '../assets/images/hacker_back.png';
+import musicianFront from '../assets/images/musician_front.png';
+import musicianBack from '../assets/images/musician_back.png';
+import doctorFront from '../assets/images/doctor_front.png';
+import doctorBack from '../assets/images/doctor_back.png';
+import gamblerFront from '../assets/images/gambler_front.png';
+import gamblerBack from '../assets/images/gambler_back.png';
+import detectiveFront from '../assets/images/detective_front.png';
+import detectiveBack from '../assets/images/detective_back.png';
 
+// キャラクターキーと画像のマッピング
 export const charImages = {
-    survivor: { front: survivorFront, back: survivorBack }
+    athlete:  { front: athleteFront,  back: athleteBack },
+    sales:    { front: salesFront,    back: salesBack },
+    survivor: { front: survivorFront, back: survivorBack },
+    yankee:   { front: yankeeFront,   back: yankeeBack },
+    hacker:   { front: hackerFront,   back: hackerBack },
+    musician: { front: musicianFront, back: musicianBack },
+    doctor:   { front: doctorFront,   back: doctorBack },
+    gambler:  { front: gamblerFront,  back: gamblerBack },
+    detective:{ front: detectiveFront,back: detectiveBack },
 };
 
+// 画像がない場合のフォールバック用絵文字（ログテキスト等でも使用）
 export const charEmoji = { athlete:'🏃', sales:'💼', survivor:'🌿', yankee:'👊', hacker:'💻', musician:'🎸', doctor:'🩺', gambler:'🎲', detective:'🕵️' };
 
 export const charInfo = {
