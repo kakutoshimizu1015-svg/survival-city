@@ -6,6 +6,7 @@ import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { BoardPaths } from './BoardPaths';
 import { Tile } from './Tile';
 import { TileTooltip } from '../overlays/TileTooltip';
+import { PlayerToken } from './PlayerToken'; // 追加: 独立したプレイヤー駒コンポーネント
 
 export const GameBoard = () => {
     const { 
@@ -27,7 +28,7 @@ export const GameBoard = () => {
     const isClickPrevented = useRef(false);
     const rafRef = useRef(null);
 
-    // ▼ 追加: 自動スクロール用のターン追跡ref
+    // ターン追跡ref
     const prevAutoScrollTurn = useRef(-1);
 
     const applyTransform = useCallback((smooth = false) => {
@@ -60,7 +61,6 @@ export const GameBoard = () => {
         zoomAt(cx, cy, delta);
     };
 
-    // ▼ 修正: 安全装置とモバイル向けパディングを追加した resetZoom
     const resetZoom = useCallback(() => {
         if (!wrapperRef.current) return;
         const board = document.getElementById('game-board');
@@ -73,18 +73,15 @@ export const GameBoard = () => {
 
         if (bw === 0 || bh === 0 || ww === 0 || wh === 0) return;
 
-        // 【安全対策】万が一ラッパーの高さが異常に大きい（画面を突き抜けている）場合はスマホ高さを基準にする
         if (wh > window.innerHeight) {
             wh = window.innerHeight * 0.5;
         }
 
-        // スマホ画面幅の場合は少し余白を持たせる
         const paddingRatio = ww <= 768 ? 0.95 : 1.0; 
 
         const fitScale = Math.min(ww / bw, wh / bh, 1.0) * paddingRatio;
         scale.current = fitScale;
         
-        // 中央揃えの計算
         offset.current = {
             x: (ww - bw * fitScale) / 2,
             y: (wh - bh * fitScale) / 2
@@ -94,16 +91,13 @@ export const GameBoard = () => {
 
     const mapTileCount = mapData?.length || 0;
 
-    // ▼ 修正: マウント時とリサイズ時に自動フィットを実行
     useEffect(() => {
         if (mapTileCount === 0) return; 
         
-        // DOM描画のラグを考慮して少し待ってから実行
         const timer = setTimeout(() => {
             resetZoom();
         }, 150);
 
-        // 画面サイズが変わった時（スマホの縦横回転など）もフィットし直す
         window.addEventListener('resize', resetZoom);
 
         return () => {
@@ -112,9 +106,7 @@ export const GameBoard = () => {
         };
     }, [mapTileCount, resetZoom]);
 
-    // ▼ 追加: ターン開始時にプレイヤーのマス位置へ自動パン
     useEffect(() => {
-        // 条件チェック: 設定OFF、マップ未読み込み、同じターンの重複実行を防止
         if (!autoScrollToPlayer) return;
         if (!wrapperRef.current) return;
         if (!mapData || mapData.length === 0) return;
@@ -124,27 +116,21 @@ export const GameBoard = () => {
 
         prevAutoScrollTurn.current = turn;
 
-        // 現在のプレイヤーがいるマスのデータを取得
         const targetTile = mapData.find(t => t.id === cp.pos);
         if (!targetTile) return;
 
-        // DOM描画の完了を待ってから実行（ターンバナー表示中の遅延も考慮）
         const timer = setTimeout(() => {
             if (!wrapperRef.current) return;
 
-            // CSSの --tile-size を取得（デフォルト60px想定）
             const computedStyle = getComputedStyle(document.documentElement);
             const tileSizeStr = computedStyle.getPropertyValue('--tile-size').trim();
             const tileSize = parseInt(tileSizeStr, 10) || 60;
-            const gap = 20;     // GameBoardのgrid gap
-            const padding = 30; // GameBoardのpadding
+            const gap = 20;
+            const padding = 30;
 
-            // マスのピクセル座標を計算（グリッドの左上基準）
-            // col, row は1始まりなので -1 する
             const tilePixelX = padding + (targetTile.col - 1) * (tileSize + gap) + tileSize / 2;
             const tilePixelY = padding + (targetTile.row - 1) * (tileSize + gap) + tileSize / 2;
 
-            // ラッパーの中央にそのマスが来るようにオフセットを計算
             const ww = wrapperRef.current.clientWidth;
             const wh = wrapperRef.current.clientHeight;
             const currentScale = scale.current;
@@ -394,9 +380,6 @@ export const GameBoard = () => {
                                 const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
                                 const isClickable = npcMovePick !== null || isBranchTarget;
                                 
-                                const playersOnTile = players.filter(p => p.pos === tile.id && p.hp > 0);
-                                const isActiveTurnPlayerOnTile = playersOnTile.some(p => p.id === turn);
-
                                 let pathClass = '';
                                 if (pathPreview.path1.has(tile.id)) pathClass = 'tile-path-1';
                                 else if (pathPreview.path2.has(tile.id)) pathClass = 'tile-path-2';
@@ -411,8 +394,6 @@ export const GameBoard = () => {
                                         isFog={isFog}
                                         isClickable={isClickable}
                                         onClick={() => handleTileClick(tile.id)}
-                                        playersOnTile={playersOnTile}
-                                        isActiveTurnPlayerOnTile={isActiveTurnPlayerOnTile}
                                         isTruck={tile.id === truckPos}
                                         isPolice={tile.id === policePos}
                                         isUncle={tile.id === unclePos}
@@ -424,6 +405,12 @@ export const GameBoard = () => {
                                     />
                                 );
                             })}
+
+                            {/* プレイヤーの駒をマス目とは別に独立して描画 */}
+                            {players.filter(p => p.hp > 0).map(player => (
+                                <PlayerToken key={`token-${player.id}`} player={player} />
+                            ))}
+
                         </div>
                     </div>
                 </div>

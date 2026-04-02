@@ -1,4 +1,21 @@
+// プロジェクトに合わせて適切なパス・画像ファイルを用意してください
+import homelessFront from '../assets/images/characters/homeless_front.jpg';
+import homelessBack from '../assets/images/characters/homeless_back.jpg';
+
 export const charEmoji = { athlete:'🏃', sales:'💼', survivor:'🌿', yankee:'👊', hacker:'💻', musician:'🎸', doctor:'🩺', gambler:'🎲', detective:'🕵️' };
+
+// ▼ 追加: キャラクターの画像データ（正面・背面）
+export const charImages = {
+    athlete:  { front: homelessFront, back: homelessBack },
+    sales:    { front: homelessFront, back: homelessBack },
+    survivor: { front: homelessFront, back: homelessBack },
+    yankee:   { front: homelessFront, back: homelessBack },
+    hacker:   { front: homelessFront, back: homelessBack },
+    musician: { front: homelessFront, back: homelessBack },
+    doctor:   { front: homelessFront, back: homelessBack },
+    gambler:  { front: homelessFront, back: homelessBack },
+    detective:{ front: homelessFront, back: homelessBack },
+};
 
 export const charInfo = {
     athlete:  { name:'元アスリート',           desc:'【健脚】移動常1AP・雨無効 / 【疾風ダッシュ】3AP:3マス先へ跳躍' },

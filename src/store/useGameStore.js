@@ -33,6 +33,9 @@ const initialState = {
     // ▼ ラウンド終了処理中フラグ
     _roundEndInProgress: false,
 
+    // ▼ 追加: アニメーション待機状態
+    isTokenAnimating: false,
+
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
     mapData: [], territories: {}, isRainy: false, weatherState: 'sunny', isNight: false,
     roundCount: 1, maxRounds: 20, canPrice: 1, trashPrice: 2, destTile: -1,
