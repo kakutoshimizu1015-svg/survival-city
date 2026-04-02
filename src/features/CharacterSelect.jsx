@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
-import ClayButton from '../components/common/ClayButton';
+// ▼ 修正1: ClayButton は名前付きインポート ({}) に変更
+import { ClayButton } from '../components/common/ClayButton';
 import { useGameStore } from '../store/useGameStore';
 import { charEmoji, charInfo } from '../constants/characters';
 import { CharacterGrid } from '../components/charselect/CharacterGrid';
-import { CharacterPreview } from '../components/charselect/CharacterPreview';
+// ▼ 修正2: CharacterPreview はデフォルトインポート ({}なし) に変更
+import CharacterPreview from '../components/charselect/CharacterPreview';
 
 export const CharacterSelect = () => {
     const players = useGameStore(state => state.players) || [];
