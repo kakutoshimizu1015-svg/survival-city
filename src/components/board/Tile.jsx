@@ -1,13 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { pIdColors } from '../../constants/characters';
-// ▼ 拡張子を .png に修正
-import jinchiBuildingImg from '../../assets/images/map/jinchi_building.png'; 
+import jinchiBuildingImg from '../../assets/images/map/jinchi_building.png';
 
-const tileTooltipData = { center: { title:"🏥 病院（スタート地点）", desc:"HPが0になると強制送還。最大15P没収・装備1つロスト。" }, normal: { title:"🛣️ 通常の道", desc:"特別な効果なし。移動の通過点。" }, can: { title:"🥫 空き缶", desc:"1APで缶を拾う（1ターン3回まで）。雨の日は雨具が必要。" }, trash: { title:"🗑️ ゴミ山", desc:"2APでゴミを漁る。失敗すると警察に補導されAP-2ペナルティ。" }, exchange: { title:"💱 買取所", desc:"拾った缶・ゴミを現在相場でP換金（0AP）。" }, job: { title:"💼 バイト", desc:"3APで挑戦。成功率60-80%で12P獲得。" }, shop: { title:"🛒 ショップ", desc:"カードを購入（4-6P）または手持ちカードを2Pで売却できる。" }, event: { title:"🎲 イベント", desc:"ミニゲームまたはストーリーイベントが発生！カード獲得のチャンス。" }, shelter: { title:"🏕️ 避難所", desc:"止まるとステルス状態になり、次の敵を1回やり過ごせる。" }, manhole: { title:"🕳️ マンホール", desc:"1APで別のマンホールへランダムワープ。" }, koban: { title:"🚓 交番", desc:"職務質問でその場に足止め。このターンは移動不可。" }, slum: { title:"🏚️ スラムエリア", desc:"缶・ゴミが多い。相場が低め。" }, commercial:{ title:"🏙️ 商業エリア", desc:"バイト・ショップが充実。中程度の相場。" }, luxury: { title:"🏰 高級エリア", desc:"収入が高い。警察が多くパトロールする。" }, };
+const tileTooltipData = { center: { title:"🏥 病院（スタート地点）", desc:"HPが0になると強制送還。最大15P没収・装備1つロスト。" }, normal: { title:"🛣️ 通常の道", desc:"特別な効果なし。移動の通過点。" }, can: { title:"🥫 空き缶", desc:"1APで缶を拾う（1ターン3回まで）。雨の日は雨具が必要。" }, trash: { title:"🗑️ ゴミ山", desc:"2APでゴミを漁る。失敗すると警察に補導されAP-2ペナルティ。" }, exchange: { title:"💱 買取所", desc:"拾った缶・ゴミを現在相場でP換金（0AP）。" }, job: { title:"💼 バイト", desc:"3APで挑戦。成功率 60-80%で12P獲得。" }, shop: { title:"🛒 ショップ", desc:"カードを購入（4-6P）または手持ちカードを2Pで売却できる。" }, event: { title:"🎲 イベント", desc:"ミニゲームまたはストーリーイベントが発生！カード獲得のチャンス。" }, shelter: { title:"🏕️ 避難所", desc:"止まるとステルス状態になり、次の敵を1回やり過ごせる。" }, manhole: { title:"🕳️ マンホール", desc:"1APで別のマンホールへランダムワープ。" }, koban: { title:"🚓 交番", desc:"職務質問でその場に足止め。このターンは移動不可。" }, slum: { title:"🏚️ スラムエリア", desc:"缶・ゴミが多い。相場が低め。" }, commercial:{ title:"🏙️ 商業エリア", desc:"バイト・ショップが充実。中程度の相場。" }, luxury: { title:"🏰 高級エリア", desc:"収入が高い。警察が多くパトロールする。" }, };
 
 export const Tile = React.memo(({ tile, owner, isFog, isClickable, onClick, isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass }) => {
-    // zustand から個別に取得（再レンダリング抑制のため）
     const setTooltipData = useGameStore(state => state.setTooltipData);
     const policePos = useGameStore(state => state.policePos);
     const unclePos = useGameStore(state => state.unclePos);
@@ -48,28 +45,33 @@ export const Tile = React.memo(({ tile, owner, isFog, isClickable, onClick, isTr
 
     const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
 
-    // ▼▼▼ 疑似3D Z軸（奥行き）スケール計算の追加 ▼▼▼
+    // Z軸スケール計算
     const depthScale = Math.max(0.35, 1 - (tile.z || 0) * 0.09);
+    // 奥のマスほど「上」にズラすことで3Dパースを強調
+    const yOffset = -(tile.z || 0) * 16; 
 
     return (
         <div id={`tile-${tile.id}`} onClick={isClickable ? onClick : undefined} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEndOrCancel} onTouchCancel={handleTouchEndOrCancel} className={classNameStr}
             style={{ 
                 gridColumn: tile.col, gridRow: tile.row, cursor: isClickable ? 'pointer' : 'default',
-                // ▼▼▼ スタイル適用 ▼▼▼
-                transform: `scale(${depthScale}) translateY(${-(tile.z || 0) * 15}px)`,
+                height: 'calc(var(--tile-size) / 2)',
+                borderRadius: '50%',
+                // パース強調を適用
+                transform: `scale(${depthScale}) translateY(${yOffset}px)`,
                 transformOrigin: 'bottom center',
-                zIndex: Math.floor(tile.row) // Y軸ベースのZソート
+                zIndex: Math.floor(tile.row),
+                position: 'relative',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
             }}
         >
-            <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
-            <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9 }}>{tile.name}</div>
+            <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none', transform: `scale(${1/depthScale}) translateY(-10px)` }}>{iconStr}</div>
+            <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9, transform: `scale(${1/depthScale}) translateY(-10px)` }}>{tile.name}</div>
             
-            {/* ▼▼▼ 陣地の場合、建物のビジュアルを表示 ▼▼▼ */}
             {owner && (
                 <div style={{
                     position: 'absolute',
-                    top: '-50px', left: '50%',
-                    transform: 'translateX(-50%)',
+                    top: '-60px', left: '50%',
+                    transform: `scale(${1/depthScale}) translateX(-50%)`,
                     width: '84px', height: '84px',
                     pointerEvents: 'none',
                     zIndex: 1
@@ -93,12 +95,10 @@ export const Tile = React.memo(({ tile, owner, isFog, isClickable, onClick, isTr
             {!isFog && isYakuza && <div className="npc-token npc-yakuza">😎</div>}
             {!isFog && isLoanshark && <div className="npc-token npc-loanshark">💀</div>}
             {!isFog && isFriend && <div className="npc-token npc-friend">🤝</div>}
-            
         </div>
     );
 }, 
 (prev, next) => {
-    // React.memo の比較ロジック
     if (prev.tile.id !== next.tile.id) return false;
     if (prev.isFog !== next.isFog) return false;
     if (prev.isClickable !== next.isClickable) return false;

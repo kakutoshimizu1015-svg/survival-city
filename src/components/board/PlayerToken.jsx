@@ -2,46 +2,41 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useGameStore } from '../../store/useGameStore';
 import { charTokenImages, charEmoji, pIdColors } from '../../constants/characters';
 
-// Z軸によるスケール計算
 const getDepthScale = (z) => Math.max(0.35, 1 - (z || 0) * 0.09);
 
 export const PlayerToken = ({ player, gridConfig }) => {
     const mapData = useGameStore(state => state.mapData);
     const turn = useGameStore(state => state.turn);
     
-    // サバイバー等の画像アセット取得（設定がないキャラはnullになる）
     const tokenImages = useMemo(() => charTokenImages[player.charType] || null, [player.charType]);
 
-    // マス目の論理的なピクセル座標を計算するヘルパー
+    // 座標計算（宙に浮く現象をTile.jsxと完全同期して修正）
     const getTileCoords = useCallback((tileId) => {
         const tile = mapData.find(t => t.id === tileId);
-        // 構文エラーを修正（スペース削除）
         if (!tile || !gridConfig) return { x: 0, y: 0, z: 0 };
         const { tileSize, gap, padding } = gridConfig;
         
-        // CSS Gridの col, row からグリッド内の中心座標を割り出す
         const cx = padding + (tile.col - 1) * (tileSize + gap) + tileSize / 2;
         let cy = padding + (tile.row - 1) * (tileSize + gap) + tileSize / 2;
         
-        // Tile.jsxのZ軸 translateY に合わせてY座標を調整（駒の浮きを修正）
-        cy += -(tile.z || 0) * 15;
+        // Tile.jsxと同じZ軸のYズレ( -16 )を、スケールも加味して計算
+        const depthScale = getDepthScale(tile.z);
+        const yOffset = -(tile.z || 0) * 16 * depthScale; 
+        cy += yOffset;
 
         return { x: cx, y: cy, z: tile.z || 0 };
     }, [mapData, gridConfig]);
 
-    // エフェクト・表示用ステート
     const [dustTrail, setDustTrail] = useState([]);
     const [imageSrc, setImageSrc] = useState(tokenImages?.front || null);
 
-    // DOM操作用のRef
     const containerRef = useRef(null);
     const wrapperRef = useRef(null);
     const shadowRef = useRef(null);
 
-    // アニメーション用のミュータブルな状態（再レンダリングを防ぐためRefで管理）
     const state = useRef({
         x: 0, y: 0, z: 0,
-        facing: -1, // -1: 右向き, 1: 左向き
+        facing: -1, 
         isSpinning: false,
         spinAngle: 0,
         isMoving: false,
@@ -52,20 +47,18 @@ export const PlayerToken = ({ player, gridConfig }) => {
         initialized: false
     });
 
-    // 砂埃エフェクトの追加
     const addDust = useCallback((x, y, z) => {
-        if (!tokenImages) return; // 画像キャラ以外は出さない
+        if (!tokenImages) return; 
         const ds = getDepthScale(z);
         const newDust = {
             id: Date.now() + Math.random(),
             x: x + (Math.random() * 10 - 5),
-            y: y, // 足元の座標に合わせる
+            y: y, 
             s: ds
         };
         setDustTrail(prev => [...prev.slice(-4), newDust]);
     }, [tokenImages]);
 
-    // 砂埃エフェクトの自動消去タイマー
     useEffect(() => {
         if (dustTrail.length > 0) {
             const timer = setTimeout(() => setDustTrail(t => t.slice(1)), 380);
@@ -73,22 +66,18 @@ export const PlayerToken = ({ player, gridConfig }) => {
         }
     }, [dustTrail]);
 
-    // DOMのスタイルを直接更新して描画を反映（画像キャラ用）
     const updateDOM = useCallback(() => {
         if (!tokenImages) return;
         const curr = state.current;
         const depthScale = getDepthScale(curr.z);
 
-        // スピン時の紙の薄さ（cosカーブで立体回転を表現）
         const spinWidth = curr.isSpinning ? Math.max(0.02, Math.abs(Math.cos(curr.spinAngle))) : 1;
         const scaleX = curr.facing * spinWidth * depthScale;
         const scaleY = depthScale;
 
-        // 待機時の上下の揺れ
-        const idleBob = curr.isMoving ? 0 : Math.sin(curr.idlePhase * 0.03) * -1.5;
+        // 待機時の揺れを極小化（フワフワ感を抑える）
+        const idleBob = curr.isMoving ? 0 : Math.sin(curr.idlePhase * 0.03) * -1.0;
         const totalY = curr.y + idleBob + curr.hop;
-
-        // Y座標に基づくZソート
         const zIndex = Math.floor(curr.y);
 
         if (containerRef.current) {
@@ -97,19 +86,16 @@ export const PlayerToken = ({ player, gridConfig }) => {
         }
         
         if (wrapperRef.current) {
-            // 足元の中心を起点にする
             wrapperRef.current.style.transform = `translate(-50%, -100%) scale(${scaleX}, ${scaleY}) rotate(${curr.tilt}deg)`;
         }
 
         if (shadowRef.current) {
-            // 影をマスの中心にピッタリ合わせる
             shadowRef.current.style.transform = `translate3d(${curr.x}px, ${curr.y}px, 0) translate(-50%, -50%) scale(${depthScale})`;
             shadowRef.current.style.opacity = curr.isMoving ? "0.35" : "0.65";
             shadowRef.current.style.zIndex = zIndex - 1;
         }
     }, [tokenImages]);
 
-    // 初期位置の設定
     useEffect(() => {
         if (!gridConfig || !mapData.length || state.current.initialized) return;
         const coords = getTileCoords(player.pos);
@@ -120,7 +106,6 @@ export const PlayerToken = ({ player, gridConfig }) => {
         updateDOM();
     }, [gridConfig, mapData, player.pos, getTileCoords, updateDOM]);
 
-    // 常時実行される待機アニメーションループ（画像キャラ用）
     useEffect(() => {
         if (!tokenImages) return;
         let rafId;
@@ -138,7 +123,6 @@ export const PlayerToken = ({ player, gridConfig }) => {
         return () => cancelAnimationFrame(rafId);
     }, [tokenImages, updateDOM]);
 
-    // ペーパーマリオ風の回転アニメーション
     const runSpinAnim = useCallback((newFacing) => {
         return new Promise(resolve => {
             state.current.isSpinning = true;
@@ -181,7 +165,6 @@ export const PlayerToken = ({ player, gridConfig }) => {
         });
     }, [tokenImages, updateDOM]);
 
-    // 放物線ジャンプアニメーション
     const runJumpAnim = useCallback((target) => {
         return new Promise(resolve => {
             const startX = state.current.x;
@@ -196,7 +179,9 @@ export const PlayerToken = ({ player, gridConfig }) => {
                 const t = Math.min((now - startTime) / dur, 1);
                 const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
                 const jumpArc = -4 * (t - 0.5) * (t - 0.5) + 1;
-                const jumpHeight = 44 + Math.abs(target.y - startY) * 0.4 + Math.abs(target.x - startX) * 0.15;
+                
+                // ジャンプの高さを徹底的に低くし、機敏な移動に
+                const jumpHeight = 15 + Math.abs(target.y - startY) * 0.15 + Math.abs(target.x - startX) * 0.1;
 
                 state.current.x = startX + (target.x - startX) * eased;
                 state.current.y = startY + (target.y - startY) * eased - jumpArc * jumpHeight;
@@ -219,7 +204,6 @@ export const PlayerToken = ({ player, gridConfig }) => {
         });
     }, [addDust, updateDOM]);
 
-    // 移動制御
     const animateTo = useCallback(async (target) => {
         state.current.isMoving = true;
         useGameStore.setState({ isTokenAnimating: true });
@@ -244,7 +228,6 @@ export const PlayerToken = ({ player, gridConfig }) => {
         useGameStore.setState({ isTokenAnimating: false });
     }, [tokenImages, runSpinAnim, runJumpAnim, updateDOM]);
 
-    // ストア上の位置変更検知
     useEffect(() => {
         if (!state.current.initialized || !gridConfig) return;
         if (player.pos !== state.current.posId && mapData.length > 0) {
@@ -254,10 +237,9 @@ export const PlayerToken = ({ player, gridConfig }) => {
         }
     }, [player.pos, mapData, gridConfig, getTileCoords, animateTo]);
 
-    // ▼▼▼ 条件分岐描画 ▼▼▼
 
     if (!tokenImages || !gridConfig) {
-        // 【1】画像データがないキャラクター（元のゲームと同じ見た目を復元）
+        // 画像なしのキャラ（その他のキャラ）もサイズを大きく
         const coords = getTileCoords(player.pos);
         const depthScale = getDepthScale(coords.z);
         const isActive = player.id === turn && !state.current.isMoving;
@@ -273,17 +255,16 @@ export const PlayerToken = ({ player, gridConfig }) => {
                 zIndex: Math.floor(coords.y)
             }}>
                 <div className={`player-token pos-${player.id % 4} ${isActive ? 'token-active' : ''}`} 
-                     style={{ borderColor: player.color, width: '36px', height: '36px' }}>
+                     style={{ borderColor: player.color, width: '90px', height: '90px', borderWidth: '4px' }}> {/* 倍以上に拡大 */}
                     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', lineHeight:1 }}>
-                        <span style={{ fontSize:'18px' }}>{charEmoji[player.charType]}</span>
-                        <span style={{ fontSize:'7px', fontWeight:900, color:player.color, textShadow:'0 0 4px rgba(0,0,0,1)', whiteSpace: 'nowrap', maxWidth: '32px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span>
+                        <span style={{ fontSize:'40px' }}>{charEmoji[player.charType]}</span>
+                        <span style={{ fontSize:'12px', fontWeight:900, color:player.color, textShadow:'0 0 4px rgba(0,0,0,1)', whiteSpace: 'nowrap', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{player.name}</span>
                     </div>
                 </div>
             </div>
         );
     }
 
-    // 【2】画像データがあるキャラクター（サバイバー）の場合
     return (
         <>
             <style>{`
@@ -293,7 +274,6 @@ export const PlayerToken = ({ player, gridConfig }) => {
                 }
             `}</style>
 
-            {/* 砂埃エフェクト */}
             {dustTrail.map(d => (
                 <div key={d.id} style={{
                     position: 'absolute',
@@ -308,7 +288,6 @@ export const PlayerToken = ({ player, gridConfig }) => {
                 }} />
             ))}
 
-            {/* 足元の影 */}
             <div ref={shadowRef} style={{
                 position: 'absolute',
                 left: 0, top: 0,
@@ -319,7 +298,6 @@ export const PlayerToken = ({ player, gridConfig }) => {
                 pointerEvents: 'none'
             }} />
 
-            {/* プレイヤーの駒（メイン） */}
             <div ref={containerRef} style={{
                 position: 'absolute',
                 left: 0, top: 0,
@@ -329,8 +307,9 @@ export const PlayerToken = ({ player, gridConfig }) => {
                     position: 'absolute',
                     left: 0, top: 0,
                     transformOrigin: 'bottom center',
-                    width: gridConfig.tileSize * 1.3,
-                    height: gridConfig.tileSize * 1.3,
+                    // ▼ 駒を限界まで大きく（元のtileSize * 1.3 から 3.0に拡大）
+                    width: gridConfig.tileSize * 3.0, 
+                    height: gridConfig.tileSize * 3.0,
                 }}>
                     <img 
                         src={imageSrc} 
