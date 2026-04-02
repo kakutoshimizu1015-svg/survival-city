@@ -2,13 +2,17 @@ import React from 'react';
 import homelessFront from '../assets/images/characters/homeless_front.png';
 import homelessBack from '../assets/images/characters/homeless_back.png';
 
-// サバイバーのみ絵文字ではなく画像タグを定義（UI反映用）
-const survivorIcon = <img src={homelessFront} alt="🌿" style={{ width: '1em', height: '1em', objectFit: 'contain', verticalAlign: 'middle' }} />;
+// JSXを使わずに純粋なJSの関数でReact要素（画像）を作成し、ビルドエラーを回避
+const survivorIcon = React.createElement('img', {
+    src: homelessFront,
+    alt: '🌿',
+    style: { width: '1em', height: '1em', objectFit: 'contain', verticalAlign: 'middle', borderRadius: '4px' }
+});
 
 export const charEmoji = { 
     athlete: '🏃', 
     sales: '💼', 
-    survivor: survivorIcon, // 絵文字の代わりに画像タグを使用
+    survivor: survivorIcon, // サバイバーのみ画像化
     yankee: '👊', 
     hacker: '💻', 
     musician: '🎸', 
