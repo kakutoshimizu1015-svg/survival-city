@@ -11,7 +11,7 @@ const TOKEN_CONFIG = {
     scaleMultiplier: 1.15,
     
     // キャラクター画像（スキン）を使用している場合のサイズ (px)
-    imageSize: 180,
+    imageSize: 140,
     
     // 絵文字を使用している場合の背景の丸い枠のサイズ (px)
     emojiBgSize: 64,
