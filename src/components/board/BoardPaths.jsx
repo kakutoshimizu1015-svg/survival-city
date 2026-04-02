@@ -3,7 +3,8 @@ import { useGameStore } from '../../store/useGameStore';
 import { getTileW, getTileH } from '../../utils/gameLogic';
 
 export const BoardPaths = () => {
-    const { mapData } = useGameStore();
+    // オブジェクトの全体デストラクトを避け、個別に関数呼び出しして無限ループを防ぐ
+    const mapData = useGameStore(state => state.mapData);
 
     if (!mapData || mapData.length === 0) return null;
 
@@ -17,7 +18,7 @@ export const BoardPaths = () => {
     const W = maxX + 200;
 
     return (
-        <g id="board-path-group" style={{ pointerEvents: 'none' }}>
+        <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'visible', zIndex: 0 }}>
             <defs>
                 <marker
                     id="arr-bk"
@@ -30,17 +31,8 @@ export const BoardPaths = () => {
                 >
                     <polygon points="0,1 13,7 0,13" fill="rgba(0,0,0,0.55)" />
                 </marker>
-                
-                {/* 奥行きを強調する深い霧のグラデーション */}
-                <linearGradient id="depthFog" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgba(26,14,46,0.95)"/>
-                    <stop offset="30%" stopColor="rgba(26,14,46,0.55)"/>
-                    <stop offset="60%" stopColor="rgba(26,14,46,0.1)"/>
-                    <stop offset="100%" stopColor="rgba(26,14,46,0)"/>
-                </linearGradient>
             </defs>
 
-            {/* 背景のエリア文字（スラム、商業など） */}
             {labelDefs.map((def, idx) => (
                 <text
                     key={`label-${idx}`}
@@ -59,7 +51,6 @@ export const BoardPaths = () => {
                 </text>
             ))}
 
-            {/* マスとマスを繋ぐ矢印（Z軸スケール計算による遠近法） */}
             {mapData.map(tile => {
                 const tw1 = getTileW(tile.z);
                 const th1 = getTileH(tile.z);
@@ -85,7 +76,6 @@ export const BoardPaths = () => {
                     const uy = dy / len;
                     const avgZ = (tile.z + nextTile.z) / 2;
 
-                    // タイルの端から端へ矢印を引く計算（スケールに応じて調整）
                     const x1 = fx + ux * (tw1/2 + 4);
                     const y1 = fy + uy * (th1/2 + 4);
                     const x2 = tx - ux * (tw2/2 + 8);
@@ -107,6 +97,6 @@ export const BoardPaths = () => {
                     );
                 });
             })}
-        </g>
+        </svg>
     );
 };

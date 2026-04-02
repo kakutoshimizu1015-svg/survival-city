@@ -9,18 +9,19 @@ export const Tile = React.memo(({
     isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass
 }) => {
     const setTooltipData = useGameStore(state => state.setTooltipData);
-    const { policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos } = useGameStore(state => ({
-        policePos: state.policePos,
-        unclePos: state.unclePos,
-        animalPos: state.animalPos,
-        yakuzaPos: state.yakuzaPos,
-        loansharkPos: state.loansharkPos,
-        friendPos: state.friendPos,
-    }));
+    // Stateオブジェクト返却による無駄な再レンダリング・無限ループを防止するため個別にフックを呼び出す
+    const policePos = useGameStore(state => state.policePos);
+    const unclePos = useGameStore(state => state.unclePos);
+    const animalPos = useGameStore(state => state.animalPos);
+    const yakuzaPos = useGameStore(state => state.yakuzaPos);
+    const loansharkPos = useGameStore(state => state.loansharkPos);
+    const friendPos = useGameStore(state => state.friendPos);
     
     const touchTimer = useRef(null);
 
     const handleMouseEnter = (e) => {
+        const wrapper = document.getElementById('game-board-wrapper');
+        if (wrapper && wrapper.classList.contains('dragging')) return;
         if (isClickable) return; 
         
         const ttKey = tile.type in tileTooltipData ? tile.type : tile.area;
@@ -74,69 +75,83 @@ export const Tile = React.memo(({
 
     const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
     const fontSize = Math.max(5, 10 * ds);
-    const iconSize = Math.max(10, 20 * ds);
+    const iconSize = Math.max(10, 26 * ds);
+
+    let classNameStr = `tile ${tile.type} ${tile.area}`;
+    if (isFog) classNameStr += ' night-fog';
+    if (isClickable) classNameStr += ' tile-highlight-branch';
+    if (pathClass) classNameStr += ` ${pathClass}`;
 
     return (
-        <g 
+        <div 
             id={`tile-${tile.id}`} 
-            opacity={isFog ? 0.2 : Math.max(0.4, 0.65 + ds * 0.35)}
             onClick={isClickable ? onClick : undefined}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEndOrCancel}
             onTouchCancel={handleTouchEndOrCancel}
-            style={{ cursor: isClickable ? 'pointer' : 'default' }}
+            className={classNameStr}
+            style={{ 
+                position: 'absolute', 
+                left: x, 
+                top: y, 
+                width: tw, 
+                height: th + sh, 
+                zIndex: Math.floor(y), 
+                cursor: isClickable ? 'pointer' : 'default',
+                opacity: isFog ? 0.2 : Math.max(0.4, 0.65 + ds * 0.35)
+            }}
         >
-            {/* タイル影 */}
-            <ellipse cx={x + tw/2} cy={y + th + sh + 3 * ds} rx={tw * 0.4} ry={3 * ds} fill="rgba(0,0,0,0.18)" />
+            {/* HTML互換を保つため、タイルの立体構造だけ背面のSVGとして描画 */}
+            <svg width={tw + 4*ds} height={th + sh + 6*ds} style={{ position: 'absolute', top: -2*ds, left: -2*ds, overflow: 'visible', pointerEvents: 'none' }}>
+                <ellipse cx={tw/2 + 2*ds} cy={th + sh + 3*ds + 2*ds} rx={tw*0.4} ry={3*ds} fill="rgba(0,0,0,0.18)" />
+                <path d={`M${2*ds},${th+2*ds} L${2*ds},${th+sh+2*ds} Q${tw/2+2*ds},${th+sh+2.5*ds+2*ds} ${tw+2*ds},${th+sh+2*ds} L${tw+2*ds},${th+2*ds} Z`} fill={colors.bg} />
+                <rect x={2*ds} y={2*ds} width={tw} height={th} rx={3*ds} fill={colors.top} stroke={isClickable ? "#ffe066" : `rgba(255,255,255,${0.08+ds*0.1})`} strokeWidth={isClickable ? 2.5*ds : 0.6} />
+                <line x1={4*ds} y1={1+2*ds} x2={tw} y2={1+2*ds} stroke={colors.hi} strokeWidth={1*ds} strokeLinecap="round" opacity={0.5} />
+                {pathClass && <rect x={2*ds} y={2*ds} width={tw} height={th} rx={3*ds} fill="none" stroke="rgba(255, 255, 255, 0.6)" strokeWidth={2*ds} />}
+            </svg>
 
-            {/* 側面 */}
-            <path d={`M${x},${y + th} L${x},${y + th + sh} Q${x + tw/2},${y + th + sh + 2.5 * ds} ${x + tw},${y + th + sh} L${x + tw},${y + th} Z`} fill={colors.bg} />
-
-            {/* 上面 */}
-            <rect x={x} y={y} width={tw} height={th} rx={3 * ds} fill={colors.top} stroke={isClickable ? "#ffe066" : `rgba(255,255,255,${0.08 + ds * 0.1})`} strokeWidth={isClickable ? 2.5 * ds : 0.6} />
-
-            {/* 建物（陣地） */}
             {hasBuilding && !isFog && (
-                <image href={jinchiBuilding} x={x + tw/2 - tw * 0.7} y={y - tw * 0.9} width={tw * 1.4} height={tw * 1.4} opacity={0.95} style={{ filter: buildingFilter, imageRendering: 'pixelated' }} />
+                <img 
+                    src={jinchiBuilding} 
+                    alt="建物" 
+                    style={{
+                        position: 'absolute', bottom: '20%', left: '50%', transform: 'translateX(-50%)',
+                        width: '140%', height: 'auto', pointerEvents: 'none', zIndex: 1, opacity: 0.95, 
+                        imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
+                        filter: buildingFilter,
+                        transition: 'filter 0.3s ease'
+                    }}
+                />
             )}
 
-            {/* ハイライト */}
-            <line x1={x + 2 * ds} y1={y + 1} x2={x + tw - 2 * ds} y2={y + 1} stroke={colors.hi} strokeWidth={1 * ds} strokeLinecap="round" opacity={0.5} />
-
-            {/* アイコンとラベル */}
             {!hasBuilding && (
                 <>
-                    <text x={x + tw/2} y={y + th * 0.55} textAnchor="middle" fontSize={iconSize} pointerEvents="none">{iconStr}</text>
-                    <text x={x + tw/2} y={y + th * 0.85} textAnchor="middle" fill={`rgba(255,255,255,${0.5 + ds * 0.4})`} fontSize={fontSize} fontFamily="'DotGothic16', monospace" fontWeight="bold" pointerEvents="none">{tile.name}</text>
+                    <div style={{ position: 'absolute', top: th * 0.1, width: '100%', textAlign: 'center', fontSize: `${iconSize}px`, zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
+                    <div style={{ position: 'absolute', top: th * 0.7, width: '100%', textAlign: 'center', fontSize: `${fontSize}px`, fontWeight: 'bold', color: `rgba(255,255,255,${0.5 + ds * 0.4})`, fontFamily: "'DotGothic16', monospace", zIndex: 2, pointerEvents: 'none', whiteSpace: 'nowrap' }}>{tile.name}</div>
                 </>
             )}
 
-            {/* オーナーフラグ */}
             {isJinchi && (
-                <circle cx={x + tw - 4 * ds} cy={y + 4 * ds} r={4 * ds} fill={owner.color} />
+                <div style={{ position: 'absolute', right: 0, top: 0, width: `${6*ds}px`, height: `${6*ds}px`, borderRadius: '50%', backgroundColor: owner.color, zIndex: 3, pointerEvents: 'none' }} />
             )}
 
-            {/* フィールドの缶・ゴミ表示 */}
             {(tile.fieldCans > 0 || tile.fieldTrash > 0) && !isFog && (
-                <text x={x + tw/2} y={y - 5 * ds} textAnchor="middle" fontSize={fontSize + 2} fill="#fff" pointerEvents="none" style={{ textShadow: "1px 1px 2px #000" }}>
-                    {tile.fieldCans > 0 ? `🥫${tile.fieldCans}` : ''} {tile.fieldTrash > 0 ? `🗑️${tile.fieldTrash}` : ''}
-                </text>
+                <div style={{ position:'absolute', top: -15 * ds, left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'2px 4px', fontSize:`${fontSize + 2}px`, color: '#fff', pointerEvents: 'none' }}>
+                    {tile.fieldCans > 0 && <span>🥫{tile.fieldCans}</span>}
+                    {tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
+                </div>
             )}
-
-            {/* NPCトークン */}
-            {!isFog && (
-                <text x={x + tw/2} y={y - 10 * ds} textAnchor="middle" fontSize={iconSize * 1.2} pointerEvents="none">
-                    {isTruck ? '🚛' : isPolice ? '👮' : isUncle ? '🧓' : isAnimal ? '🐀' : isYakuza ? '😎' : isLoanshark ? '💀' : isFriend ? '🤝' : ''}
-                </text>
-            )}
-
-            {/* パスプレビューのハイライト */}
-            {pathClass && (
-                <rect x={x} y={y} width={tw} height={th} rx={3 * ds} fill="none" stroke="rgba(255, 255, 255, 0.5)" strokeWidth={2 * ds} />
-            )}
-        </g>
+            
+            {!isFog && isTruck && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>🚛</div>}
+            {!isFog && isPolice && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>👮</div>}
+            {!isFog && isUncle && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>🧓</div>}
+            {!isFog && isAnimal && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>🐀</div>}
+            {!isFog && isYakuza && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>😎</div>}
+            {!isFog && isLoanshark && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>💀</div>}
+            {!isFog && isFriend && <div style={{ position: 'absolute', top: -10*ds, left: '50%', transform: 'translateX(-50%)', fontSize: `${iconSize*1.2}px`, zIndex: 5, pointerEvents: 'none' }}>🤝</div>}
+        </div>
     );
 }, 
 (prev, next) => {

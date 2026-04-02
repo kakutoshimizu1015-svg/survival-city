@@ -35,9 +35,7 @@ function apply3DCoordinates(tiles) {
     if (tiles.length === 0) return tiles;
     const maxRow = Math.max(...tiles.map(t => t.row));
     return tiles.map(tile => {
-        // 奥（rowが小さい）ほどZ値を大きくする
         const z = Math.max(0, (maxRow - tile.row) * 1.15);
-        // Zによるスケールを考慮しつつX, Y座標を決定
         const x = tile.col * 65;
         const y = tile.row * 50;
         return { ...tile, x, y, z };

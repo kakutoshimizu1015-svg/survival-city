@@ -55,7 +55,7 @@ export const GameBoard = () => {
 
     const resetZoom = useCallback(() => {
         if (!wrapperRef.current) return;
-        const board = document.getElementById('game-board-svg');
+        const board = document.getElementById('game-board');
         if (!board) return;
         
         const bw = board.clientWidth || board.getBoundingClientRect().width;
@@ -91,7 +91,6 @@ export const GameBoard = () => {
         const timer = setTimeout(() => {
             if (!wrapperRef.current) return;
             
-            // 2.5D仕様のX,Yピクセル座標計算
             const tw = getTileW(targetTile.z);
             const th = getTileH(targetTile.z);
             const tilePixelX = targetTile.x + tw / 2;
@@ -236,7 +235,6 @@ export const GameBoard = () => {
 
     const zoomBtnStyle = { width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s', padding: 0 };
     
-    // マップ全体のキャンバス幅を計算
     let boardW = 1000, boardH = 800;
     if (mapData && mapData.length > 0) {
         const maxX = Math.max(...mapData.map(t => t.x));
@@ -278,10 +276,10 @@ export const GameBoard = () => {
                 </div>
             )}
 
-            <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px', position: 'relative', background: "linear-gradient(180deg, #1a0e2e 0%, #1a2a1e 35%, #1a1a2e 100%)" }}>
+            <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px', position: 'relative', background: "linear-gradient(180deg, #1a0e2e 0%, #1a2a1e 35%, #1a1a2e 100%)", overflow: 'hidden' }}>
                 
                 {/* 宇宙・星空エフェクトレイヤー */}
-                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, overflow: 'hidden' }}>
+                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}>
                     {[...Array(40)].map((_, i) => (
                         <div key={i} style={{
                             position: "absolute",
@@ -296,14 +294,13 @@ export const GameBoard = () => {
                 <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none', position: 'relative', zIndex: 1 }}>
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
-                        {/* CSS GridからSVGベースの絶対座標へ変更 */}
-                        <svg id="game-board-svg" width={boardW} height={boardH} viewBox={`0 0 ${boardW} ${boardH}`} style={{ display: 'block', overflow: 'visible' }}>
-                            <BoardPaths />
+                        {/* CSS Gridを廃止し、2.5D用に位置絶対指定に切り替えた描画コンテナ */}
+                        <div id="game-board" style={{ position: 'relative', width: boardW, height: boardH }}>
                             
-                            {/* WeaponArcOverlayがSVG内部に対応している前提、またはgタグでラップして使用 */}
+                            <BoardPaths />
                             <WeaponArcOverlay />
 
-                            {/* Y座標でソートし、奥（上）のタイルから手前へ描画 */}
+                            {/* 奥にあるもの（Y座標が小さいもの）から手前に向かって描画 */}
                             {[...mapData].sort((a, b) => a.y - b.y).map(tile => {
                                 const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
                                 const isFog = visibleTiles && !visibleTiles.has(tile.id);
@@ -330,13 +327,16 @@ export const GameBoard = () => {
                                 if (isFog) return null;
                                 return <PlayerToken key={p.id} player={p} mapData={mapData} isActiveTurn={p.id === turn} />;
                             })}
-
-                            {/* 手前側にかかる霧のグラデーション（画面全体を覆うように配置） */}
-                            <rect x="0" y="0" width={boardW} height={boardH * 0.45} fill="url(#depthFog)" style={{ pointerEvents: 'none' }} />
-                        </svg>
-
+                        </div>
                     </div>
                 </div>
+
+                {/* 霧グラデーション (手前を覆うように配置) */}
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, height: '45%',
+                    background: 'linear-gradient(180deg, rgba(26,14,46,0.95) 0%, rgba(26,14,46,0.55) 30%, rgba(26,14,46,0.1) 60%, rgba(26,14,46,0) 100%)',
+                    pointerEvents: 'none', zIndex: 9999
+                }} />
             </div>
             <style>{`@keyframes twinkle { 0%,100% { opacity: 0.15; } 50% { opacity: 0.7; } }`}</style>
         </div>
