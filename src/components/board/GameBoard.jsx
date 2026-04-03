@@ -11,11 +11,12 @@ import { PlayerToken } from './PlayerToken';
 import { mapBackgrounds } from '../../constants/maps';
 
 export const GameBoard = () => {
+    // ▼ horrorMode を追加で取得
     const { 
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
         roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
-        autoScrollToPlayer
+        autoScrollToPlayer, horrorMode
     } = useGameStore();
 
     // ユーザー設定から煙エフェクト（フォグ）の表示設定を取得
@@ -249,12 +250,10 @@ export const GameBoard = () => {
         maxRow = Math.max(...mapData.map(t => t.row));
     }
 
+    // ▼ 背景画像の取得処理を堅牢化（要素数と完全一致しない場合の保険を追加）
     const mapSize = mapData?.length || 0;
-    const bgData = mapBackgrounds[mapSize];
+    const bgData = mapBackgrounds[mapSize] || Object.values(mapBackgrounds)[0];
     const currentBgImage = bgData ? (isNight ? bgData.night : bgData.day) : null;
-    const boardBackground = currentBgImage
-        ? `url(${currentBgImage}) center / 100% 100% no-repeat`
-        : 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)';
 
     return (
         <div id="board-area" style={{ flexGrow: 1, overflowX: 'hidden', minWidth: 0, position: 'relative' }}>
@@ -303,14 +302,18 @@ export const GameBoard = () => {
                 <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none' }}>
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
-                        {/* ▼ 変更箇所: filterとWebkitFilterを'none'にして暗闇効果を強制解除、背景色も明示的に指定 */}
+                        {/* ▼ CSSの記述をプロパティごとに分割し、ホラーモード時のみフィルターを適用 */}
                         <div id="game-board" style={{ 
                             display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', 
                             border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', 
-                            background: boardBackground, 
+                            backgroundImage: currentBgImage ? `url("${currentBgImage}")` : 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)',
+                            backgroundSize: '100% 100%',
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat',
                             backgroundColor: isNight ? '#222' : '#fff',
-                            filter: 'none', 
-                            WebkitFilter: 'none',
+                            filter: horrorMode ? 'brightness(0.3) sepia(0.4) hue-rotate(320deg) saturate(1.5)' : 'none', 
+                            WebkitFilter: horrorMode ? 'brightness(0.3) sepia(0.4) hue-rotate(320deg) saturate(1.5)' : 'none',
+                            transition: 'filter 0.5s ease',
                             width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', 
                             gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, 
                             gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` 

@@ -21,12 +21,6 @@ export const BoardPaths = () => {
     const tcx = (t) => (t.col - 1) * STEP + R + PAD;
     const tcy = (t) => (t.row - 1) * STEP + R + PAD;
 
-    const labelDefs = [
-        { label: 'スラム', xFrac: 0.15, fill: 'rgba(30,30,30,0.32)' },
-        { label: '商業', xFrac: 0.50, fill: 'rgba(70,45,0,0.32)' },
-        { label: '高級住宅街', xFrac: 0.84, fill: 'rgba(40,40,70,0.32)' },
-    ];
-
     return (
         <svg
             id="board-path-svg"
@@ -57,24 +51,6 @@ export const BoardPaths = () => {
                     <polygon points="0,1 13,7 0,13" fill="rgba(0,0,0,0.85)" />
                 </marker>
             </defs>
-
-            {labelDefs.map((def, idx) => (
-                <text
-                    key={`label-${idx}`}
-                    x={W * def.xFrac}
-                    y={H * 0.5}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fontSize="64"
-                    fontWeight="900"
-                    fill={def.fill}
-                    fontFamily="'Hiragino Maru Gothic ProN','Meiryo',sans-serif"
-                    letterSpacing="4"
-                    pointerEvents="none"
-                >
-                    {def.label}
-                </text>
-            ))}
 
             {mapData.map(tile => {
                 const fx = tcx(tile);
@@ -111,7 +87,6 @@ export const BoardPaths = () => {
                             y1={y1}
                             x2={x2}
                             y2={y2}
-                            // ▼ strokeの透明度計算を削除し、不透明な濃いグレーに固定
                             stroke="rgba(0,0,0,0.85)"
                             strokeWidth={Math.max(1.5, 7 * ds)}
                             strokeLinecap="round"
