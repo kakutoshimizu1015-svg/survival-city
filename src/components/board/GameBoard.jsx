@@ -8,6 +8,7 @@ import { BoardPaths } from './BoardPaths';
 import { Tile } from './Tile';
 import { TileTooltip } from '../overlays/TileTooltip';
 import { PlayerToken } from './PlayerToken';
+import { mapBackgrounds } from '../../constants/maps';
 
 export const GameBoard = () => {
     const { 
@@ -241,11 +242,20 @@ export const GameBoard = () => {
     }, [players, gameOver, cp, mapData]);
 
     const zoomBtnStyle = { width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s', padding: 0 };
+    
     let maxCol = 0, maxRow = 0;
     if (mapData && mapData.length > 0) {
         maxCol = Math.max(...mapData.map(t => t.col));
         maxRow = Math.max(...mapData.map(t => t.row));
     }
+
+    // ▼ 新規追加: マップサイズと昼夜に応じた背景画像の切り替えロジック
+    const mapSize = mapData?.length || 0;
+    const bgData = mapBackgrounds[mapSize];
+    const currentBgImage = bgData ? (isNight ? bgData.night : bgData.day) : null;
+    const boardBackground = currentBgImage
+        ? `url(${currentBgImage}) center / 100% 100% no-repeat`
+        : 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)';
 
     return (
         <div id="board-area" style={{ flexGrow: 1, overflowX: 'hidden', minWidth: 0, position: 'relative' }}>
@@ -294,7 +304,8 @@ export const GameBoard = () => {
                 <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none' }}>
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
-                        <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
+                        {/* ▼ 変更箇所: styleの background に boardBackground 変数を適用 */}
+                        <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: boardBackground, width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
                             
                             <BoardPaths />
                             <WeaponArcOverlay />
