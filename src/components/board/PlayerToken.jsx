@@ -1,28 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { charEmoji, charImages } from '../../constants/characters';
+import { charEmoji, charImages, TOKEN_CONFIG } from '../../constants/characters';
 import { useUserStore } from '../../store/useUserStore';
 import { getDepthScale } from '../../utils/gameLogic';
-
-// =========================================================
-// ▼ 駒のサイズ調整用パラメータ（ここの数値を変更してください）
-// =========================================================
-const TOKEN_CONFIG = {
-    // 遠近法のスケールに乗算するベース倍率（1.0で標準、1.5で全体的に1.5倍大きくなります）
-    scaleMultiplier: 1.15,
-    
-    // キャラクター画像（スキン）を使用している場合のサイズ (px)
-    imageSize: 125,
-    
-    // 絵文字を使用している場合の背景の丸い枠のサイズ (px)
-    emojiBgSize: 64,
-    
-    // 絵文字自体のフォントサイズ (px)
-    emojiFontSize: 34,
-    
-    // 駒の下に表示されるプレイヤー名のフォントサイズ (px)
-    nameFontSize: 12
-};
-// =========================================================
 
 export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const isImage = charImages && charImages[player.charType] !== undefined;
@@ -50,11 +29,11 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     
     // 遠近法スケールの取得と、カスタマイズ用倍率の適用
     const baseScale = getDepthScale(currentTile.row, maxRow);
-    const ds = baseScale * TOKEN_CONFIG.scaleMultiplier;
+    const ds = baseScale * TOKEN_CONFIG.player.scaleMultiplier;
 
     // 設定パラメータからサイズを適用
-    const tokenWidth = isImage ? TOKEN_CONFIG.imageSize : TOKEN_CONFIG.emojiBgSize;
-    const tokenHeight = isImage ? TOKEN_CONFIG.imageSize : TOKEN_CONFIG.emojiBgSize;
+    const tokenWidth = isImage ? TOKEN_CONFIG.player.imageSize : TOKEN_CONFIG.player.emojiBgSize;
+    const tokenHeight = isImage ? TOKEN_CONFIG.player.imageSize : TOKEN_CONFIG.player.emojiBgSize;
 
     // 土埃のクリーンアップ
     useEffect(() => {
@@ -290,13 +269,13 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                                     }} />
                             </>
                         ) : (
-                            <span ref={emojiRef} style={{ fontSize: TOKEN_CONFIG.emojiFontSize, transform: `scaleX(${facingRef.current})` }}>{charEmoji[player.charType]}</span>
+                            <span ref={emojiRef} style={{ fontSize: TOKEN_CONFIG.player.emojiFontSize, transform: `scaleX(${facingRef.current})` }}>{charEmoji[player.charType]}</span>
                         )}
                     </div>
 
                     <div style={{
                         position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-                        marginTop: 2, fontSize: TOKEN_CONFIG.nameFontSize, fontWeight: 900, color: player.color,
+                        marginTop: 2, fontSize: TOKEN_CONFIG.player.nameFontSize, fontWeight: 900, color: player.color,
                         textShadow: '1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000',
                         whiteSpace: 'nowrap'
                     }}>

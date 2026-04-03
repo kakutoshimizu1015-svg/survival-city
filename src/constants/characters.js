@@ -18,6 +18,15 @@ import gamblerBack from '../assets/images/gambler_back.png';
 import detectiveFront from '../assets/images/detective_front.png';
 import detectiveBack from '../assets/images/detective_back.png';
 
+// NPC画像のインポート
+import policeImg from '../assets/images/NPC/police.png';
+import truckImg from '../assets/images/NPC/truck.png';
+import uncleImg from '../assets/images/NPC/uncle.png';
+import yakuzaImg from '../assets/images/NPC/yakuza.png';
+import loansharkImg from '../assets/images/NPC/loanshark.png';
+import friendImg from '../assets/images/NPC/friend.png';
+import animalImg from '../assets/images/NPC/animal.png';
+
 // キャラクターキーと画像のマッピング
 export const charImages = {
     athlete:  { front: athleteFront,  back: athleteBack },
@@ -30,6 +39,35 @@ export const charImages = {
     gambler:  { front: gamblerFront,  back: gamblerBack },
     detective:{ front: detectiveFront,back: detectiveBack },
 };
+
+// NPC画像のマッピング
+export const npcImages = {
+    police:    policeImg,
+    truck:     truckImg,
+    uncle:     uncleImg,
+    yakuza:    yakuzaImg,
+    loanshark: loansharkImg,
+    friend:    friendImg,
+    animal:    animalImg,
+};
+
+// =========================================================
+// ▼ 駒とNPCのサイズ調整用パラメータ（開発者用一括管理）
+// =========================================================
+export const TOKEN_CONFIG = {
+    player: {
+        scaleMultiplier: 1.15, // 遠近法に乗算するベース倍率
+        imageSize: 125,        // スキン画像使用時のサイズ (px)
+        emojiBgSize: 64,       // 絵文字使用時の丸枠サイズ (px)
+        emojiFontSize: 34,     // 絵文字のフォントサイズ (px)
+        nameFontSize: 12       // プレイヤー名のフォントサイズ (px)
+    },
+    npc: {
+        baseSize: 60,          // 警察、ヤクザなどの基本サイズ (px)
+        truckSize: 85          // ゴミ収集車のサイズ (px)
+    }
+};
+// =========================================================
 
 // 画像がない場合のフォールバック用絵文字（ログテキスト等でも使用）
 export const charEmoji = { athlete:'🏃', sales:'💼', survivor:'🌿', yankee:'👊', hacker:'💻', musician:'🎸', doctor:'🩺', gambler:'🎲', detective:'🕵️' };

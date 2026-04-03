@@ -1,14 +1,20 @@
 import React from 'react';
-import { charEmoji, charImages } from '../../constants/characters';
+import { charEmoji, charImages, npcImages } from '../../constants/characters';
 
 export const CharImage = ({ charType, size = 40, style = {}, imgStyle = {} }) => {
-    const isImage = charImages && charImages[charType] !== undefined;
+    // プレイヤー画像またはNPC画像からデータを取得
+    const playerImgData = charImages && charImages[charType];
+    const npcImgData = npcImages && npcImages[charType];
+    const isImage = playerImgData !== undefined || npcImgData !== undefined;
+
+    // 画像ソースの決定（プレイヤーはfrontプロパティ、NPCはそのまま）
+    const imgSrc = playerImgData ? playerImgData.front : npcImgData;
 
     return (
         <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', ...style }}>
             {isImage ? (
                 <img 
-                    src={charImages[charType].front} 
+                    src={imgSrc} 
                     alt={charType} 
                     style={{ 
                         width: '100%', 
