@@ -21,6 +21,12 @@ export const BoardPaths = () => {
     const tcx = (t) => (t.col - 1) * STEP + R + PAD;
     const tcy = (t) => (t.row - 1) * STEP + R + PAD;
 
+    const labelDefs = [
+        { label: 'スラム', xFrac: 0.15, fill: 'rgba(30,30,30,0.32)' },
+        { label: '商業', xFrac: 0.50, fill: 'rgba(70,45,0,0.32)' },
+        { label: '高級住宅街', xFrac: 0.84, fill: 'rgba(40,40,70,0.32)' },
+    ];
+
     return (
         <svg
             id="board-path-svg"
@@ -35,7 +41,7 @@ export const BoardPaths = () => {
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                zIndex: 1
+                zIndex: 2
             }}
         >
             <defs>
@@ -51,6 +57,24 @@ export const BoardPaths = () => {
                     <polygon points="0,1 13,7 0,13" fill="rgba(0,0,0,0.55)" />
                 </marker>
             </defs>
+
+            {labelDefs.map((def, idx) => (
+                <text
+                    key={`label-${idx}`}
+                    x={W * def.xFrac}
+                    y={H * 0.5}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize="64"
+                    fontWeight="900"
+                    fill={def.fill}
+                    fontFamily="'Hiragino Maru Gothic ProN','Meiryo',sans-serif"
+                    letterSpacing="4"
+                    pointerEvents="none"
+                >
+                    {def.label}
+                </text>
+            ))}
 
             {mapData.map(tile => {
                 const fx = tcx(tile);
@@ -87,7 +111,7 @@ export const BoardPaths = () => {
                             y1={y1}
                             x2={x2}
                             y2={y2}
-                            stroke={`rgba(0,0,0,${Math.max(0.15, 0.6 * ds)})`}
+                            stroke={`rgba(0,0,0,${Math.max(0.2, 0.6 * ds)})`}
                             strokeWidth={Math.max(1.5, 7 * ds)}
                             strokeLinecap="round"
                             markerEnd="url(#arr-bk)"

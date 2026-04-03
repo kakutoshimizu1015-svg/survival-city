@@ -9,17 +9,6 @@ import { Tile } from './Tile';
 import { TileTooltip } from '../overlays/TileTooltip';
 import { PlayerToken } from './PlayerToken';
 
-// =========================================================
-// ▼ 背景の3D（奥行き）調整用パラメータ
-// =========================================================
-const BG_CONFIG = {
-    perspective: '1000px', // 遠近感の強さ（数値が小さいほど奥が急激に狭まる）
-    rotateX: '55deg',      // 床の倒れ具合（角度が大きいほど床が寝る）
-    scale: 1.4,            // 拡大率（床を倒すと横幅が足りなくなるため、全体を拡大して補う）
-    translateY: '-5%'      // 上下位置の微調整
-};
-// =========================================================
-
 export const GameBoard = () => {
     const { 
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
@@ -28,6 +17,7 @@ export const GameBoard = () => {
         autoScrollToPlayer
     } = useGameStore();
 
+    // ユーザー設定から煙エフェクト（フォグ）の表示設定を取得
     const showSmoke = useUserStore(state => state.showSmoke);
 
     const cp = players[turn];
@@ -304,34 +294,8 @@ export const GameBoard = () => {
                 <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none' }}>
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
-                        {/* メインのマップコンテナ。背景色は外し、3Dレイヤーに任せる */}
-                        <div id="game-board" style={{ 
-                            display: 'grid', gap: '20px', padding: '30px', 
-                            width: 'max-content', margin: '0 auto', 
-                            position: 'relative', isolation: 'isolate', 
-                            gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, 
-                            gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` 
-                        }}>
+                        <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)', width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
                             
-                            {/* パース（遠近感）をつけた専用の3D背景レイヤー */}
-                            <div className="board-background-3d" style={{
-                                position: 'absolute',
-                                top: 0, bottom: 0, left: 0, right: 0,
-                                zIndex: -1,
-                                background: 'linear-gradient(to right, #b0b0b0 0%, #b0b0b0 32%, #f0c830 32%, #f0c830 68%, #f8f8f8 68%, #f8f8f8 100%)',
-                                border: '6px solid #3e2f2a',
-                                borderRadius: '24px',
-                                boxShadow: '0 20px 0px #2a1f1b, 0 30px 20px rgba(0,0,0,0.5)',
-                                // CSS3Dで床を奥に倒す
-                                transform: `perspective(${BG_CONFIG.perspective}) rotateX(${BG_CONFIG.rotateX}) scale(${BG_CONFIG.scale}) translateY(${BG_CONFIG.translateY})`,
-                                transformOrigin: 'center center',
-                            }}>
-                                {/* 背景の文字も3Dレイヤー内に配置し、床と一緒にパースをかける */}
-                                <div style={{ position: 'absolute', top: '50%', left: '16%', transform: 'translate(-50%, -50%)', fontSize: '8vw', fontWeight: 900, color: 'rgba(30,30,30,0.15)', letterSpacing: '4px' }}>スラム</div>
-                                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '8vw', fontWeight: 900, color: 'rgba(70,45,0,0.15)', letterSpacing: '4px' }}>商業</div>
-                                <div style={{ position: 'absolute', top: '50%', left: '84%', transform: 'translate(-50%, -50%)', fontSize: '8vw', fontWeight: 900, color: 'rgba(40,40,70,0.15)', letterSpacing: '4px' }}>高級住宅街</div>
-                            </div>
-
                             <BoardPaths />
                             <WeaponArcOverlay />
 
