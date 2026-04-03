@@ -3,6 +3,9 @@ import { useGameStore } from '../../store/useGameStore';
 import { getDepthScale } from '../../utils/gameLogic';
 import jinchiBuilding from '../../assets/images/jinchi_building.png';
 
+// ▼ テキストの表示/非表示を切り替えるフラグ（trueで表示、falseで非表示）
+const SHOW_TILE_TEXT = false;
+
 export const tileTooltipData = {
     center:    { title:"🏥 病院（スタート地点）", desc:"HPが0になると強制送還。最大15P没収・装備1つロスト。" },
     normal:    { title:"🛣️ 通常の道", desc:"特別な効果なし。移動の通過点。" },
@@ -106,11 +109,11 @@ export const Tile = React.memo(({
                 gridRow: tile.row, 
                 cursor: isClickable ? 'pointer' : 'default', 
                 position: 'relative',
-                // スケールをかけて奥のマスを小さくし、透明度を少し下げる（遠近表現）
+                // ▼ スケールは残し、透明度は1に固定（視界外のみ0.2）
                 transform: `scale(${ds})`,
                 transformOrigin: 'center center',
-                opacity: isFog ? 0.2 : Math.max(0.4, ds + 0.1),
-                zIndex: tile.row // 手前（row大）ほど上に重なるように
+                opacity: isFog ? 0.2 : 1,
+                zIndex: tile.row 
             }}
         >
             {hasBuilding && !isFog && (
@@ -128,7 +131,11 @@ export const Tile = React.memo(({
             )}
 
             <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
-            <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9 }}>{tile.name}</div>
+            
+            {/* ▼ SHOW_TILE_TEXTフラグがtrueの時のみ文字を描画 */}
+            {SHOW_TILE_TEXT && (
+                <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9 }}>{tile.name}</div>
+            )}
             
             {isJinchi && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px', zIndex: 3 }}>🚩</div>}
 

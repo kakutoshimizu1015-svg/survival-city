@@ -249,7 +249,6 @@ export const GameBoard = () => {
         maxRow = Math.max(...mapData.map(t => t.row));
     }
 
-    // ▼ 新規追加: マップサイズと昼夜に応じた背景画像の切り替えロジック
     const mapSize = mapData?.length || 0;
     const bgData = mapBackgrounds[mapSize];
     const currentBgImage = bgData ? (isNight ? bgData.night : bgData.day) : null;
@@ -304,8 +303,18 @@ export const GameBoard = () => {
                 <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none' }}>
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
-                        {/* ▼ 変更箇所: styleの background に boardBackground 変数を適用 */}
-                        <div id="game-board" style={{ display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', background: boardBackground, width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` }}>
+                        {/* ▼ 変更箇所: filterとWebkitFilterを'none'にして暗闇効果を強制解除、背景色も明示的に指定 */}
+                        <div id="game-board" style={{ 
+                            display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', 
+                            border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', 
+                            background: boardBackground, 
+                            backgroundColor: isNight ? '#222' : '#fff',
+                            filter: 'none', 
+                            WebkitFilter: 'none',
+                            width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', 
+                            gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, 
+                            gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` 
+                        }}>
                             
                             <BoardPaths />
                             <WeaponArcOverlay />

@@ -54,7 +54,7 @@ export const BoardPaths = () => {
                     markerHeight="5"
                     orient="auto"
                 >
-                    <polygon points="0,1 13,7 0,13" fill="rgba(0,0,0,0.55)" />
+                    <polygon points="0,1 13,7 0,13" fill="rgba(0,0,0,0.85)" />
                 </marker>
             </defs>
 
@@ -111,7 +111,8 @@ export const BoardPaths = () => {
                             y1={y1}
                             x2={x2}
                             y2={y2}
-                            stroke={`rgba(0,0,0,${Math.max(0.2, 0.6 * ds)})`}
+                            // ▼ strokeの透明度計算を削除し、不透明な濃いグレーに固定
+                            stroke="rgba(0,0,0,0.85)"
                             strokeWidth={Math.max(1.5, 7 * ds)}
                             strokeLinecap="round"
                             markerEnd="url(#arr-bk)"
