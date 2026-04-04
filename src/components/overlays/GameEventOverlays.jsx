@@ -21,7 +21,6 @@ export const GameEventOverlays = () => {
     const { charInfoModal, roundSummary, acquiredCard, territorySelectOptions, mapData, territories, gameResult } = useGameStore();
     const [confirmEnd, setConfirmEnd] = useState(false);
 
-    // ▼ 追加：優勝文言のリストと、1度だけランダム抽出する処理
     const victoryPhrases = [
         "優勝！",
         "空き缶拾って成り上がり！見事、人生カンストだ！！",
@@ -34,7 +33,6 @@ export const GameEventOverlays = () => {
         return victoryPhrases[Math.floor(Math.random() * victoryPhrases.length)];
     }, [gameResult]);
 
-    // ▼ 追加：ストーリーイベントの定義（HTML版と同一内容）
     const storyEvents = [
         {
             title: "💰 怪しい男の投資話", 
@@ -92,9 +90,13 @@ export const GameEventOverlays = () => {
         }
     }, [mgActive, mgType, mgResult, slotStopped]);
 
-    const handleResult = (isWin, msg) => {
+    // ▼ 修正：第3引数に出た数字（resultNum）を受け取るように変更
+    const handleResult = (isWin, msg, resultNum) => {
         if (!isMyTurn) return;
-        useGameStore.setState({ mgResult: isWin ? '大成功！' : '失敗...' });
+        
+        // ▼ 修正：失敗時に出た数字をモーダルテキストに組み込む
+        const failureText = resultNum !== undefined ? `失敗... (出た数字: ${resultNum})` : '失敗...';
+        useGameStore.setState({ mgResult: isWin ? '大成功！' : failureText });
         logMsg(`🎲 ${msg}`);
         
         if (isWin) {
@@ -107,7 +109,7 @@ export const GameEventOverlays = () => {
             logMsg(`🎁 ${cp.name}は「${cardData.name}」を手に入れた！`);
         }
         
-        setTimeout(() => useGameStore.setState({ mgActive: false, mgResult: null }), 2000);
+        setTimeout(() => useGameStore.setState({ mgActive: false, mgResult: null }), 2500);
     };
 
     return (
@@ -155,11 +157,13 @@ export const GameEventOverlays = () => {
                                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                                             <button className="mg-btn high" onClick={() => {
                                                 const result = Math.floor(Math.random() * 14); 
-                                                handleResult(result >= mgValue, `出目【${result}】${result >= mgValue ? "正解！" : "ハズレ..."}`);
+                                                // ▼ 修正：第3引数に result を渡す
+                                                handleResult(result >= mgValue, `出目【${result}】${result >= mgValue ? "正解！" : "ハズレ..."}`, result);
                                             }}>High</button>
                                             <button className="mg-btn low" onClick={() => {
                                                 const result = Math.floor(Math.random() * 14); 
-                                                handleResult(result < mgValue, `出目【${result}】${result < mgValue ? "正解！" : "ハズレ..."}`);
+                                                // ▼ 修正：第3引数に result を渡す
+                                                handleResult(result < mgValue, `出目【${result}】${result < mgValue ? "正解！" : "ハズレ..."}`, result);
                                             }}>Low</button>
                                         </div>
                                     </>

@@ -47,14 +47,24 @@ export const GameMain = () => {
         }
     }, [turn, players, gameOver, gamePhase, status, isHost, turnBannerActive]);
 
-    // ▼ 修正：ゲームを開いた「最初の1回だけ」画面幅を判定し、以降は自動で切り替えないように変更
+    // ▼ 修正：再マウント時やリサイズ時に確実にクラスを当て直すようにリスナーを復活・強化
     useEffect(() => {
-        if (window.innerWidth <= 768) {
-            document.body.classList.add('layout-mobile');
-        } else {
-            document.body.classList.remove('layout-mobile');
-        }
-        // ※ resize イベントリスナーを削除しました
+        const updateLayout = () => {
+            if (window.innerWidth <= 768) {
+                document.body.classList.add('layout-mobile');
+            } else {
+                document.body.classList.remove('layout-mobile');
+            }
+        };
+
+        // 初回と再マウント時に実行
+        updateLayout(); 
+        
+        // 画面幅が変わった際にも実行
+        window.addEventListener('resize', updateLayout);
+        return () => {
+            window.removeEventListener('resize', updateLayout);
+        };
     }, []);
 
     return (

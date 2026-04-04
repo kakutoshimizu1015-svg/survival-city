@@ -77,13 +77,44 @@ export const GameBoard = () => {
         applyTransform(true);
     }, [applyTransform]);
 
+    // ▼ 追加：自分の駒の位置にカメラを移動する関数
+    const focusCurrentPlayer = useCallback(() => {
+        if (!wrapperRef.current || !mapData || mapData.length === 0 || !cp || gameOver) return;
+        const targetTile = mapData.find(t => t.id === cp.pos);
+        if (!targetTile) return;
+
+        const computedStyle = getComputedStyle(document.documentElement);
+        const tileSizeStr = computedStyle.getPropertyValue('--tile-size').trim();
+        const tileSize = parseInt(tileSizeStr, 10) || 60;
+        const gap = 20;     
+        const padding = 30; 
+
+        const tilePixelX = padding + (targetTile.col - 1) * (tileSize + gap) + tileSize / 2;
+        const tilePixelY = padding + (targetTile.row - 1) * (tileSize + gap) + tileSize / 2;
+
+        const ww = wrapperRef.current.clientWidth;
+        const wh = wrapperRef.current.clientHeight;
+        offset.current = { x: ww / 2 - tilePixelX * scale.current, y: wh / 2 - tilePixelY * scale.current };
+        applyTransform(true);
+    }, [mapData, cp, gameOver, applyTransform]);
+
     const mapTileCount = mapData?.length || 0;
 
+    // ▼ 修正：スマホのスクロール（URLバーの出現/消失による縦幅変化）でリセットされないよう横幅のみ監視
     useEffect(() => {
         if (mapTileCount === 0) return; 
+        
+        let lastWidth = window.innerWidth;
+        const handleResize = () => {
+            if (window.innerWidth !== lastWidth) {
+                lastWidth = window.innerWidth;
+                resetZoom();
+            }
+        };
+
         const timer = setTimeout(() => { resetZoom(); }, 150);
-        window.addEventListener('resize', resetZoom);
-        return () => { clearTimeout(timer); window.removeEventListener('resize', resetZoom); };
+        window.addEventListener('resize', handleResize);
+        return () => { clearTimeout(timer); window.removeEventListener('resize', handleResize); };
     }, [mapTileCount, resetZoom]);
 
     useEffect(() => {
@@ -276,6 +307,8 @@ export const GameBoard = () => {
                     <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(0.15)} title="ズームイン">＋</button>
                     <button className="zoom-btn" style={zoomBtnStyle} onClick={() => handleZoomBtn(-0.15)} title="ズームアウト">－</button>
                     <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={resetZoom} title="リセット">⟳</button>
+                    {/* ▼ 追加：自分の駒へカメラを移動するボタン */}
+                    <button className="zoom-btn" style={{ ...zoomBtnStyle, fontSize: '12px' }} onClick={focusCurrentPlayer} title="自分の駒へ">📍</button>
                 </div>
             </div>
 
@@ -331,7 +364,7 @@ export const GameBoard = () => {
                                 return (
                                     <Tile 
                                         key={tile.id} tile={tile} owner={owner} isFog={isFog} isClickable={isClickable} onClick={() => handleTileClick(tile.id)} maxRow={maxRow}
-                                        isTruck={tile.id === truckPos} isPolice={tile.id === policePos} isUncle={tile.id === unclePos} isAnimal={tile.id === animalPos} isYakuza={tile.id === yakuzaPos} isLoanshark={tile.id === loansharkPos} isFriend={tile.id === friendPos} pathClass={pathClass}
+                                        isTruck={tile.id === truckPos} isPolice={tile.id === policePos} isUncle={tile.id === unclePos} isAnimal={tile.id === animalPos} isYakuza={tile.id === yakuzaPos} isLoanshark={tile.id === friendPos} pathClass={pathClass}
                                     />
                                 );
                             })}
