@@ -1,7 +1,6 @@
 import React, { useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { getDepthScale } from '../../utils/gameLogic';
-import jinchiBuilding from '../../assets/images/jinchi_building.png';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
 
@@ -86,12 +85,7 @@ export const Tile = React.memo(({
 
     const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
     
-    const hasBuilding = tile.area === 'slum' && tile.type === 'normal';
     const isJinchi = owner !== null && owner !== undefined;
-
-    const buildingFilter = isJinchi 
-        ? `drop-shadow(0 0 8px ${owner.color}) drop-shadow(0 0 16px ${owner.color})` 
-        : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))';
 
     // 遠近法のスケール計算
     const ds = getDepthScale(tile.row, maxRow);
@@ -121,20 +115,6 @@ export const Tile = React.memo(({
                 zIndex: tile.row 
             }}
         >
-            {hasBuilding && !isFog && (
-                <img 
-                    src={jinchiBuilding} 
-                    alt="建物" 
-                    style={{
-                        position: 'absolute', bottom: '20%', left: '50%', transform: 'translateX(-50%)',
-                        width: '140%', height: 'auto', pointerEvents: 'none', zIndex: 1, opacity: 0.95, 
-                        imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
-                        filter: buildingFilter,
-                        transition: 'filter 0.3s ease'
-                    }}
-                />
-            )}
-
             <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
             
             {SHOW_TILE_TEXT && (
@@ -150,14 +130,14 @@ export const Tile = React.memo(({
                 </div>
             )}
             
-            {/* ▼ フワフワなしの静的なCharImageとして配置 */}
-            {!isFog && isTruck     && <CharImage charType="truck"     size={TOKEN_CONFIG.npc.truckSize} style={truckStyle} />}
-            {!isFog && isPolice    && <CharImage charType="police"    size={TOKEN_CONFIG.npc.baseSize}  style={npcStyle} />}
-            {!isFog && isUncle     && <CharImage charType="uncle"     size={TOKEN_CONFIG.npc.baseSize}  style={npcStyle} />}
-            {!isFog && isAnimal    && <CharImage charType="animal"    size={TOKEN_CONFIG.npc.baseSize}  style={npcStyle} />}
-            {!isFog && isYakuza    && <CharImage charType="yakuza"    size={TOKEN_CONFIG.npc.baseSize}  style={npcStyle} />}
-            {!isFog && isLoanshark && <CharImage charType="loanshark" size={TOKEN_CONFIG.npc.baseSize}  style={npcStyle} />}
-            {!isFog && isFriend    && <CharImage charType="friend"    size={TOKEN_CONFIG.npc.baseSize}  style={npcStyle} />}
+            {/* ▼ フワフワなしの静的なCharImageとして配置。個別のサイズ指定を適用。トラックにはclassNameを追加。 */}
+            {!isFog && isTruck     && <CharImage charType="truck"     size={TOKEN_CONFIG.npc.truckSize}     style={truckStyle} className="truck-token" />}
+            {!isFog && isPolice    && <CharImage charType="police"    size={TOKEN_CONFIG.npc.policeSize}    style={npcStyle} />}
+            {!isFog && isUncle     && <CharImage charType="uncle"     size={TOKEN_CONFIG.npc.uncleSize}     style={npcStyle} />}
+            {!isFog && isAnimal    && <CharImage charType="animal"    size={TOKEN_CONFIG.npc.animalSize}    style={npcStyle} />}
+            {!isFog && isYakuza    && <CharImage charType="yakuza"    size={TOKEN_CONFIG.npc.yakuzaSize}    style={npcStyle} />}
+            {!isFog && isLoanshark && <CharImage charType="loanshark" size={TOKEN_CONFIG.npc.loansharkSize} style={npcStyle} />}
+            {!isFog && isFriend    && <CharImage charType="friend"    size={TOKEN_CONFIG.npc.friendSize}    style={npcStyle} />}
         </div>
     );
 }, 

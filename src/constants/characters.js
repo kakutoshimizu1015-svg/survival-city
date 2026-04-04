@@ -63,8 +63,14 @@ export const TOKEN_CONFIG = {
         nameFontSize: 12       // プレイヤー名のフォントサイズ (px)
     },
     npc: {
-        baseSize: 120,          // 警察、ヤクザなどの基本サイズ (px)
-        truckSize: 150          // ゴミ収集車のサイズ (px)
+        baseSize: 120,         // デフォルトの基本サイズ (px)
+        truckSize: 150,        // ゴミ収集車のサイズ (px)
+        policeSize: 120,       // 警察のサイズ (px)
+        uncleSize: 120,        // 厄介なおじさんのサイズ (px)
+        yakuzaSize: 130,       // ヤクザのサイズ (px)
+        loansharkSize: 120,    // 闇金のサイズ (px)
+        friendSize: 120,       // 仲間のサイズ (px)
+        animalSize: 100        // 野良動物のサイズ (px)
     }
 };
 // =========================================================

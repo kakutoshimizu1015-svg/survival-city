@@ -1,7 +1,7 @@
 import React from 'react';
 import { charEmoji, charImages, npcImages } from '../../constants/characters';
 
-export const CharImage = ({ charType, size = 40, style = {}, imgStyle = {} }) => {
+export const CharImage = ({ charType, size = 40, style = {}, imgStyle = {}, className = '' }) => {
     // プレイヤー画像またはNPC画像からデータを取得
     const playerImgData = charImages && charImages[charType];
     const npcImgData = npcImages && npcImages[charType];
@@ -11,7 +11,7 @@ export const CharImage = ({ charType, size = 40, style = {}, imgStyle = {} }) =>
     const imgSrc = playerImgData ? playerImgData.front : npcImgData;
 
     return (
-        <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', ...style }}>
+        <div className={className} style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', ...style }}>
             {isImage ? (
                 <img 
                     src={imgSrc} 
