@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { CharImage } from '../common/CharImage'; // ▼ 追加: CharImageをインポート
+import { CharImage } from '../common/CharImage';
 
 const SORT_MODES = [
     { key: 'order', label: '🔢 順番' },
@@ -8,7 +8,6 @@ const SORT_MODES = [
     { key: 'team',  label: '🚩 チーム' },
 ];
 
-// チームカラーのソート優先度（同じチームをまとめるため）
 const TEAM_ORDER = { red: 0, blue: 1, green: 2, yellow: 3, none: 99 };
 
 export const PlayerList = () => {
@@ -16,31 +15,23 @@ export const PlayerList = () => {
     const turn = useGameStore(state => state.turn);
     const territories = useGameStore(state => state.territories);
 
-    // ▼ ソートモードのローカルstate（ネットワーク同期しない）
     const [sortMode, setSortMode] = useState('order');
 
-    // ▼ ソート済みプレイヤー配列を生成
     const sortedPlayers = useMemo(() => {
-        // 元の配列を壊さないようにコピー（元indexも保持）
         const list = players.map((p, index) => ({ ...p, _originalIndex: index }));
 
         if (sortMode === 'rank') {
-            // 総ポイント数（p.p）の降順
             list.sort((a, b) => b.p - a.p);
         } else if (sortMode === 'team') {
-            // チームカラーでグループ化 → 同チーム内は元の順番順
             list.sort((a, b) => {
                 const teamDiff = (TEAM_ORDER[a.teamColor] ?? 50) - (TEAM_ORDER[b.teamColor] ?? 50);
                 if (teamDiff !== 0) return teamDiff;
                 return a._originalIndex - b._originalIndex;
             });
         }
-        // 'order' の場合はそのまま（元の配列順＝ターン順）
-
         return list;
     }, [players, sortMode]);
 
-    // ▼ ソートモード切替ボタンのスタイル
     const sortBtnStyle = (isActive) => ({
         flex: 1,
         padding: '3px 2px',
@@ -57,13 +48,12 @@ export const PlayerList = () => {
     });
 
     return (
-        <div id="player-list-panel" className="panel">
-            <h3 className="player-list-header" style={{ margin: '0 0 4px 0', fontSize: '13px', borderBottom: '2px dashed #8d7b68', paddingBottom: '5px', textAlign: 'center' }}>
+        <div id="player-list-panel" className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
+            <h3 className="player-list-header" style={{ margin: '0 0 4px 0', fontSize: '13px', borderBottom: '2px dashed #8d7b68', paddingBottom: '5px', textAlign: 'center', flexShrink: 0 }}>
                 👥 プレイヤー
             </h3>
 
-            {/* ▼ ソート切替ボタン */}
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', gap: '4px', marginBottom: '6px', flexShrink: 0 }}>
                 {SORT_MODES.map(mode => (
                     <button
                         key={mode.key}
@@ -76,18 +66,16 @@ export const PlayerList = () => {
                 ))}
             </div>
 
-            <div id="all-players-list" style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            {/* ▼ 修正: max-heightとoverflow-yを追加し、溢れたら内部でスクロールするように修正 */}
+            <div id="all-players-list" style={{ display: 'flex', flexDirection: 'column', gap: '5px', overflowY: 'auto', maxHeight: '280px', paddingRight: '4px' }}>
                 {sortedPlayers.map((p) => {
-                    // ▼ 修正: ソート後もp.idで正しく判定
                     const isActive = p.id === turn;
                     const activeStyle = isActive 
                         ? { boxShadow: '0 0 12px #f1c40f', borderColor: '#f1c40f', background: '#5c4a44' } 
                         : { borderColor: p.color, opacity: 0.9 };
 
-                    // 領土数の計算
                     const terrCount = Object.values(territories).filter(id => id === p.id).length;
 
-                    // 装備アイテムアイコンの文字列生成
                     const eq = p.equip || {};
                     let equipIcons = '';
                     if (eq.bicycle) equipIcons += '🚲';
@@ -100,7 +88,6 @@ export const PlayerList = () => {
                     if (p.rainGear) equipIcons += '☂️';
                     if (!equipIcons) equipIcons = '-';
 
-                    // ▼ ランクモード時は順位バッジを表示
                     let rankBadge = null;
                     if (sortMode === 'rank') {
                         const rankIndex = sortedPlayers.indexOf(p);
@@ -110,7 +97,6 @@ export const PlayerList = () => {
                         );
                     }
 
-                    // ▼ チームモード時はチームカラーバッジを表示
                     let teamBadge = null;
                     if (sortMode === 'team' && p.teamColor !== 'none') {
                         const teamColorMap = { red: '#e74c3c', blue: '#3498db', green: '#2ecc71', yellow: '#f1c40f' };
@@ -135,7 +121,6 @@ export const PlayerList = () => {
                             onClick={() => useGameStore.setState({ charInfoModal: p.id })}
                             title={`${p.name}のキャラ詳細を表示`}
                         >
-                            {/* ▼ 修正: 絵文字を削除し CharImage に差し替え */}
                             <div className="avatar-small-clay" style={{ borderColor: p.color, overflow: 'hidden', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <CharImage charType={p.charType} size={32} />
                             </div>

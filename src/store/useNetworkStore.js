@@ -5,8 +5,8 @@ import { db } from '../lib/firebase';
 import { useGameStore } from './useGameStore';
 import { processRoundEnd } from '../game/round';
 
-// ネットワーク受信中フラグ（無限ループ防止用）
 let isReceivingNetworkData = false;
+let networkReceiveTimer = null; // ▼ 追加: 受信タイマー管理用
 
 export const useNetworkStore = create((setStore, getStore) => ({
     myUserId: null,
@@ -63,6 +63,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                     if (data.type === 'GAME_SYNC') {
                         if (data.lastUpdater !== getStore().myUserId) {
                             isReceivingNetworkData = true;
+                            if (networkReceiveTimer) clearTimeout(networkReceiveTimer); // ▼ 修正: 連続受信時にタイマーをクリア
                             
                             const logger = document.getElementById("log");
                             if (logger && data.gameState.logs) {
@@ -71,7 +72,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             }
 
                             useGameStore.setState(data.gameState);
-                            setTimeout(() => { isReceivingNetworkData = false; }, 200);
+                            networkReceiveTimer = setTimeout(() => { isReceivingNetworkData = false; }, 200);
                         }
                         getStore().connections.forEach(c => {
                             if (c.peer !== conn.peer && c.open) c.send(data);
@@ -119,7 +120,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
                 conn.on('data', (data) => {
                     if (data.type === 'LOBBY_UPDATE') setStore({ lobbyPlayers: data.players });
 
-                    // ゲーム開始時は直接playingへ
                     if (data.type === 'GAME_START') {
                         useGameStore.setState({ ...data.gameState, gamePhase: 'playing' });
                     }
@@ -127,6 +127,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                     if (data.type === 'GAME_SYNC') {
                         if (data.lastUpdater !== getStore().myUserId) {
                             isReceivingNetworkData = true;
+                            if (networkReceiveTimer) clearTimeout(networkReceiveTimer); // ▼ 修正: 連続受信時にタイマーをクリア
                             
                             const logger = document.getElementById("log");
                             if (logger && data.gameState.logs) {
@@ -135,7 +136,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             }
 
                             useGameStore.setState(data.gameState);
-                            setTimeout(() => { isReceivingNetworkData = false; }, 200);
+                            networkReceiveTimer = setTimeout(() => { isReceivingNetworkData = false; }, 200);
                         }
                     }
                 });
@@ -215,9 +216,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
     }
 }));
 
-// ======================================================================
-// 自動同期エンジン
-// ======================================================================
 useGameStore.subscribe((state) => {
     const netState = useNetworkStore.getState();
     if (netState.status !== 'connected' || isReceivingNetworkData || state.gamePhase !== 'playing') return;
