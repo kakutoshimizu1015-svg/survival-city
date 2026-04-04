@@ -20,9 +20,9 @@ export const CharImage = ({ charType, size = 40, style = {}, imgStyle = {}, clas
                         width: '100%', 
                         height: '100%', 
                         objectFit: 'contain', 
-                        // ブラウザの画像補間（ぼやけ）を無効化してドットをくっきりさせる
-                        imageRendering: 'pixelated',
-                        WebkitFontSmoothing: 'none',
+                        // ▼ 修正: プレイヤー画像(ドット絵前提)はくっきり、NPC画像は滑らかに表示を切り替える
+                        imageRendering: playerImgData ? 'pixelated' : 'auto',
+                        WebkitFontSmoothing: playerImgData ? 'none' : 'auto',
                         filter: 'drop-shadow(0px 4px 4px rgba(0,0,0,0.4))',
                         ...imgStyle 
                     }} 
