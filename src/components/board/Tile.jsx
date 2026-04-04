@@ -39,6 +39,9 @@ export const Tile = React.memo(({
     // ▼ ホラー演出のフラグを取得
     const horrorMode = useGameStore(state => state.horrorMode);
     
+    // ▼ このマスが「ホラー演出中のトラックがいるマス」かどうかを判定
+    const isHorrorTruckTile = horrorMode && isTruck;
+
     const touchTimer = useRef(null);
 
     const handleMouseEnter = (e) => {
@@ -82,7 +85,8 @@ export const Tile = React.memo(({
     };
 
     let classNameStr = `tile ${tile.type} ${tile.area}`;
-    if (isFog) classNameStr += ' night-fog';
+    // ▼ ホラートラックがいる場合は、マスを暗くする night-fog クラスを適用しない
+    if (isFog && !isHorrorTruckTile) classNameStr += ' night-fog';
     if (isClickable) classNameStr += ' tile-highlight-branch';
     if (pathClass) classNameStr += ` ${pathClass}`;
 
@@ -96,12 +100,11 @@ export const Tile = React.memo(({
     // NPC配置用の共通スタイル（中央下部に配置）
     const npcStyle = { position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '15%', zIndex: 5, pointerEvents: 'none' };
     
-    // ▼ ゴミ収集車のスタイル。ホラーモード時はz-indexを上げて最前面にし、透過をなくす
+    // ▼ ゴミ収集車のスタイル
     const truckStyle = { 
         ...npcStyle, 
         bottom: '10%', 
         opacity: horrorMode ? 1 : TOKEN_CONFIG.npc.truckOpacity,
-        zIndex: horrorMode ? 100 : 5
     };
 
     // ▼ 進めるマスの強力なグラデーション発光（boxShadow）
@@ -132,9 +135,11 @@ export const Tile = React.memo(({
                 position: 'relative',
                 transform: `scale(${ds})`,
                 transformOrigin: 'center center',
-                opacity: isFog ? 0.2 : 1,
-                zIndex: tile.row,
-                ...clickableStyle // ハイライトスタイルの適用
+                // ▼ ホラートラックがいる場合はマス全体の opacity も 1 にして暗闇を突き破る
+                opacity: (isFog && !isHorrorTruckTile) ? 0.2 : 1,
+                // ▼ ホラートラックがいる場合はマス全体の zIndex を特大にして画面の最前面に出す
+                zIndex: isHorrorTruckTile ? 9999 : tile.row,
+                ...clickableStyle 
             }}
         >
             {/* 強力なハイライト用とトラック専用の赤発光アニメーション定義 */}
@@ -144,8 +149,8 @@ export const Tile = React.memo(({
                     to { filter: brightness(1.4) drop-shadow(0 0 8px rgba(255,224,102,0.6)); }
                 }
                 @keyframes truckDropShadowGlow {
-                    0% { filter: drop-shadow(0 0 4px rgba(255, 50, 50, 0.6)) drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
-                    100% { filter: drop-shadow(0 0 18px rgba(255, 0, 0, 1)) drop-shadow(0 0 8px rgba(255, 0, 0, 0.8)); }
+                    0% { filter: brightness(1.2) drop-shadow(0 0 8px rgba(255, 0, 0, 0.8)); }
+                    100% { filter: brightness(1.5) drop-shadow(0 0 25px rgba(255, 0, 0, 1)); }
                 }
             `}</style>
 
@@ -157,19 +162,20 @@ export const Tile = React.memo(({
             
             {isJinchi && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px', zIndex: 3 }}>🚩</div>}
 
-            {(tile.fieldCans > 0 || tile.fieldTrash > 0) && !isFog && (
+            {(tile.fieldCans > 0 || tile.fieldTrash > 0) && (!isFog || isHorrorTruckTile) && (
                 <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'2px 4px', fontSize:'12px' }}>
                     {tile.fieldCans > 0 && <span>🥫{tile.fieldCans}</span>}
                     {tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
                 </div>
             )}
             
-            {/* ▼ ホラーモード時は霧(isFog)の中でもトラックを描画し、赤い発光アニメーションを適用する */}
-            {(!isFog || horrorMode) && isTruck && (
+            {/* ▼ 霧の影響をマス単位で剥がしたため、トラック自身の描写条件もシンプルに。 */}
+            {(!isFog || isHorrorTruckTile) && isTruck && (
                 <CharImage 
                     charType="truck" 
                     size={TOKEN_CONFIG.npc.truckSize} 
                     style={truckStyle} 
+                    // ▼ 確実に赤く光らせるために brightness も適用
                     imgStyle={horrorMode ? { animation: 'truckDropShadowGlow 0.8s infinite alternate' } : { filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))' }} 
                 />
             )}
