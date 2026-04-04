@@ -198,6 +198,15 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         };
     }, [player.pos, mapData, isImage, showSmoke]);
 
+    // ▼ プレイヤー色に基づいた発光スタイルの生成
+    const playerGlowFilter = isActiveTurn 
+        ? `drop-shadow(0 0 12px #ffe066) drop-shadow(0 0 4px ${player.color})` 
+        : `drop-shadow(0 0 8px ${player.color}) drop-shadow(0 4px 6px rgba(0,0,0,0.6))`;
+
+    const playerGlowBoxShadow = isActiveTurn
+        ? `0 0 20px #ffe066, 0 0 10px ${player.color}`
+        : `0 0 15px ${player.color}`;
+
     return (
         <div style={{
             gridColumn: currentTile.col,
@@ -249,7 +258,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                         background: isImage ? 'transparent' : 'rgba(0,0,0,0.6)',
                         border: isImage ? 'none' : `3px solid ${isActiveTurn ? '#ffe066' : player.color}`,
                         borderRadius: isImage ? '0' : '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: (!isImage && isActiveTurn) ? `0 0 15px ${player.color}` : 'none',
+                        boxShadow: isImage ? 'none' : playerGlowBoxShadow,
                     }}>
                         {isImage ? (
                             <>
@@ -258,14 +267,14 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                                         position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', bottom: 0, 
                                         imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
                                         transform: `scaleX(${facingRef.current})`, 
-                                        filter: isActiveTurn ? 'drop-shadow(0 0 8px #ffe066)' : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))'
+                                        filter: playerGlowFilter
                                     }} />
                                 <img ref={backImgRef} src={charImages[player.charType].back} alt=""
                                     style={{
                                         position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', bottom: 0, 
                                         imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
                                         transform: `scaleX(${facingRef.current})`, opacity: 0, 
-                                        filter: isActiveTurn ? 'drop-shadow(0 0 8px #ffe066)' : 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))'
+                                        filter: playerGlowFilter
                                     }} />
                             </>
                         ) : (

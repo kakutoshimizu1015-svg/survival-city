@@ -92,7 +92,24 @@ export const Tile = React.memo(({
 
     // NPC配置用の共通スタイル（中央下部に配置）
     const npcStyle = { position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '15%', zIndex: 5, pointerEvents: 'none' };
-    const truckStyle = { ...npcStyle, bottom: '10%' }; // トラックは少し大きめなので微調整
+    
+    // ▼ ゴミ収集車の透過度を適用
+    const truckStyle = { 
+        ...npcStyle, 
+        bottom: '10%', 
+        opacity: TOKEN_CONFIG.npc.truckOpacity 
+    };
+
+    // ▼ 進めるマスの強力なグラデーション発光（boxShadow）
+    const clickableStyle = isClickable ? {
+        boxShadow: `
+            inset 0 0 15px rgba(255, 224, 102, 0.6),
+            0 0 25px rgba(255, 224, 102, 0.8),
+            0 0 10px rgba(255, 255, 255, 0.4)
+        `,
+        border: '2px solid rgba(255, 224, 102, 0.9)',
+        animation: 'tilePulse 1.5s infinite alternate'
+    } : {};
 
     return (
         <div 
@@ -112,9 +129,18 @@ export const Tile = React.memo(({
                 transform: `scale(${ds})`,
                 transformOrigin: 'center center',
                 opacity: isFog ? 0.2 : 1,
-                zIndex: tile.row 
+                zIndex: tile.row,
+                ...clickableStyle // ハイライトスタイルの適用
             }}
         >
+            {/* 強力なハイライト用のアニメーション定義 */}
+            <style>{`
+                @keyframes tilePulse {
+                    from { filter: brightness(1); }
+                    to { filter: brightness(1.4) drop-shadow(0 0 8px rgba(255,224,102,0.6)); }
+                }
+            `}</style>
+
             <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
             
             {SHOW_TILE_TEXT && (
@@ -130,7 +156,6 @@ export const Tile = React.memo(({
                 </div>
             )}
             
-            {/* ▼ フワフワなしの静的なCharImageとして配置。個別のサイズ指定を適用。トラックにはclassNameを追加。 */}
             {!isFog && isTruck     && <CharImage charType="truck"     size={TOKEN_CONFIG.npc.truckSize}     style={truckStyle} className="truck-token" />}
             {!isFog && isPolice    && <CharImage charType="police"    size={TOKEN_CONFIG.npc.policeSize}    style={npcStyle} />}
             {!isFog && isUncle     && <CharImage charType="uncle"     size={TOKEN_CONFIG.npc.uncleSize}     style={npcStyle} />}
