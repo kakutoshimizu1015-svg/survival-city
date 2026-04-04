@@ -41,7 +41,8 @@ export const Tile = React.memo(({
 
     const touchTimer = useRef(null);
 
-    const handleMouseEnter = (e) => {
+    // ▼ 修正: 引数として座標(x, y)を受け取れるように拡張
+    const handleMouseEnter = (e, initialX = 0, initialY = 0) => {
         const wrapper = document.getElementById('game-board-wrapper');
         if (wrapper && wrapper.classList.contains('dragging')) return;
         if (isClickable) return; 
@@ -63,7 +64,15 @@ export const Tile = React.memo(({
                 descText += '\n─────\n' + npcsHere.map(n => `${n.info.emoji}${n.info.name}: ${n.info.desc}`).join('\n');
             }
 
-            setTooltipData({ title: ttData.title, desc: descText, visible: true });
+            // イベントオブジェクトがある場合はカーソル位置を取得、なければタッチ初期位置を使用
+            let x = initialX, y = initialY;
+            if (e && e.clientX !== undefined) {
+                x = e.clientX;
+                y = e.clientY;
+            }
+
+            // 座標データ(x, y)も含めてStoreに保存するよう変更
+            setTooltipData({ title: ttData.title, desc: descText, visible: true, x, y });
         }
     };
 
@@ -72,13 +81,20 @@ export const Tile = React.memo(({
         setTooltipData(null); 
     };
 
+    // ▼ 修正: タップ時の座標を即座に取得し、反応速度を150ms→80msに短縮
     const handleTouchStart = (e) => {
-        touchTimer.current = setTimeout(() => { handleMouseEnter(e); }, 150);
+        const touch = e.touches[0];
+        const startX = touch.clientX;
+        const startY = touch.clientY;
+        touchTimer.current = setTimeout(() => { 
+            handleMouseEnter(null, startX, startY); 
+        }, 80); 
     };
 
+    // ▼ 修正: 指を離したあとも読む時間を確保するため、消去までの時間を300ms→1500msに延長
     const handleTouchEndOrCancel = () => {
         if (touchTimer.current) clearTimeout(touchTimer.current);
-        setTimeout(handleMouseLeave, 300);
+        setTimeout(handleMouseLeave, 1500);
     };
 
     let classNameStr = `tile ${tile.type} ${tile.area}`;
