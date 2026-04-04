@@ -133,11 +133,15 @@ export const Tile = React.memo(({
                 ...clickableStyle // ハイライトスタイルの適用
             }}
         >
-            {/* 強力なハイライト用のアニメーション定義 */}
+            {/* 強力なハイライト用とトラック専用の赤発光アニメーション定義 */}
             <style>{`
                 @keyframes tilePulse {
                     from { filter: brightness(1); }
                     to { filter: brightness(1.4) drop-shadow(0 0 8px rgba(255,224,102,0.6)); }
+                }
+                @keyframes truckDropShadowGlow {
+                    0% { filter: drop-shadow(0 0 4px rgba(255, 50, 50, 0.6)) drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+                    100% { filter: drop-shadow(0 0 18px rgba(255, 0, 0, 1)) drop-shadow(0 0 8px rgba(255, 0, 0, 0.8)); }
                 }
             `}</style>
 
@@ -156,7 +160,8 @@ export const Tile = React.memo(({
                 </div>
             )}
             
-            {!isFog && isTruck     && <CharImage charType="truck"     size={TOKEN_CONFIG.npc.truckSize}     style={truckStyle} className="truck-token" />}
+            {/* ▼ classNameを外し、画像本体(imgStyle)に直接赤い発光アニメーションを適用 */}
+            {!isFog && isTruck     && <CharImage charType="truck"     size={TOKEN_CONFIG.npc.truckSize}     style={truckStyle} imgStyle={{ animation: 'truckDropShadowGlow 0.8s infinite alternate' }} />}
             {!isFog && isPolice    && <CharImage charType="police"    size={TOKEN_CONFIG.npc.policeSize}    style={npcStyle} />}
             {!isFog && isUncle     && <CharImage charType="uncle"     size={TOKEN_CONFIG.npc.uncleSize}     style={npcStyle} />}
             {!isFog && isAnimal    && <CharImage charType="animal"    size={TOKEN_CONFIG.npc.animalSize}    style={npcStyle} />}
