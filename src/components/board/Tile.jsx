@@ -41,7 +41,6 @@ export const Tile = React.memo(({
 
     const touchTimer = useRef(null);
 
-    // ▼ 修正: 引数として座標(x, y)を受け取れるように拡張
     const handleMouseEnter = (e, initialX = 0, initialY = 0) => {
         const wrapper = document.getElementById('game-board-wrapper');
         if (wrapper && wrapper.classList.contains('dragging')) return;
@@ -64,14 +63,17 @@ export const Tile = React.memo(({
                 descText += '\n─────\n' + npcsHere.map(n => `${n.info.emoji}${n.info.name}: ${n.info.desc}`).join('\n');
             }
 
-            // イベントオブジェクトがある場合はカーソル位置を取得、なければタッチ初期位置を使用
+            // ▼ 追加: 領土の所有者情報を追記
+            if (owner) {
+                descText += `\n─────\n🚩 所有者: ${owner.name}`;
+            }
+
             let x = initialX, y = initialY;
             if (e && e.clientX !== undefined) {
                 x = e.clientX;
                 y = e.clientY;
             }
 
-            // 座標データ(x, y)も含めてStoreに保存するよう変更
             setTooltipData({ title: ttData.title, desc: descText, visible: true, x, y });
         }
     };
@@ -81,7 +83,6 @@ export const Tile = React.memo(({
         setTooltipData(null); 
     };
 
-    // ▼ 修正: タップ時の座標を即座に取得し、反応速度を150ms→80msに短縮
     const handleTouchStart = (e) => {
         const touch = e.touches[0];
         const startX = touch.clientX;
@@ -91,7 +92,6 @@ export const Tile = React.memo(({
         }, 80); 
     };
 
-    // ▼ 修正: 指を離したあとも読む時間を確保するため、消去までの時間を300ms→1500msに延長
     const handleTouchEndOrCancel = () => {
         if (touchTimer.current) clearTimeout(touchTimer.current);
         setTimeout(handleMouseLeave, 1500);
@@ -106,10 +106,8 @@ export const Tile = React.memo(({
     
     const isJinchi = owner !== null && owner !== undefined;
 
-    // 遠近法のスケール計算
     const ds = getDepthScale(tile.row, maxRow);
 
-    // NPC配置用の共通スタイル
     const npcStyle = { position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '15%', zIndex: 5, pointerEvents: 'none' };
     
     const truckStyle = { 
