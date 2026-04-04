@@ -63,8 +63,8 @@ export const TOKEN_CONFIG = {
         nameFontSize: 12       // プレイヤー名のフォントサイズ (px)
     },
     npc: {
-        baseSize: 60,          // 警察、ヤクザなどの基本サイズ (px)
-        truckSize: 85          // ゴミ収集車のサイズ (px)
+        baseSize: 120,          // 警察、ヤクザなどの基本サイズ (px)
+        truckSize: 150          // ゴミ収集車のサイズ (px)
     }
 };
 // =========================================================
