@@ -36,6 +36,9 @@ export const Tile = React.memo(({
     const loansharkPos = useGameStore(state => state.loansharkPos);
     const friendPos = useGameStore(state => state.friendPos);
     
+    // ▼ ホラー演出のフラグを取得
+    const horrorMode = useGameStore(state => state.horrorMode);
+    
     const touchTimer = useRef(null);
 
     const handleMouseEnter = (e) => {
@@ -93,11 +96,12 @@ export const Tile = React.memo(({
     // NPC配置用の共通スタイル（中央下部に配置）
     const npcStyle = { position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '15%', zIndex: 5, pointerEvents: 'none' };
     
-    // ▼ ゴミ収集車の透過度を適用
+    // ▼ ゴミ収集車のスタイル。ホラーモード時はz-indexを上げて最前面にし、透過をなくす
     const truckStyle = { 
         ...npcStyle, 
         bottom: '10%', 
-        opacity: TOKEN_CONFIG.npc.truckOpacity 
+        opacity: horrorMode ? 1 : TOKEN_CONFIG.npc.truckOpacity,
+        zIndex: horrorMode ? 100 : 5
     };
 
     // ▼ 進めるマスの強力なグラデーション発光（boxShadow）
@@ -160,8 +164,16 @@ export const Tile = React.memo(({
                 </div>
             )}
             
-            {/* ▼ classNameを外し、画像本体(imgStyle)に直接赤い発光アニメーションを適用 */}
-            {!isFog && isTruck     && <CharImage charType="truck"     size={TOKEN_CONFIG.npc.truckSize}     style={truckStyle} imgStyle={{ animation: 'truckDropShadowGlow 0.8s infinite alternate' }} />}
+            {/* ▼ ホラーモード時は霧(isFog)の中でもトラックを描画し、赤い発光アニメーションを適用する */}
+            {(!isFog || horrorMode) && isTruck && (
+                <CharImage 
+                    charType="truck" 
+                    size={TOKEN_CONFIG.npc.truckSize} 
+                    style={truckStyle} 
+                    imgStyle={horrorMode ? { animation: 'truckDropShadowGlow 0.8s infinite alternate' } : { filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))' }} 
+                />
+            )}
+            
             {!isFog && isPolice    && <CharImage charType="police"    size={TOKEN_CONFIG.npc.policeSize}    style={npcStyle} />}
             {!isFog && isUncle     && <CharImage charType="uncle"     size={TOKEN_CONFIG.npc.uncleSize}     style={npcStyle} />}
             {!isFog && isAnimal    && <CharImage charType="animal"    size={TOKEN_CONFIG.npc.animalSize}    style={npcStyle} />}
