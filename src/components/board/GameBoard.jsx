@@ -11,7 +11,6 @@ import { PlayerToken } from './PlayerToken';
 import { mapBackgrounds } from '../../constants/maps';
 
 export const GameBoard = () => {
-    // ▼ horrorMode を追加で取得
     const { 
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
@@ -19,7 +18,6 @@ export const GameBoard = () => {
         autoScrollToPlayer, horrorMode
     } = useGameStore();
 
-    // ユーザー設定から煙エフェクト（フォグ）の表示設定を取得
     const showSmoke = useUserStore(state => state.showSmoke);
 
     const cp = players[turn];
@@ -250,7 +248,6 @@ export const GameBoard = () => {
         maxRow = Math.max(...mapData.map(t => t.row));
     }
 
-    // ▼ 背景画像の取得処理を堅牢化（要素数と完全一致しない場合の保険を追加）
     const mapSize = mapData?.length || 0;
     const bgData = mapBackgrounds[mapSize] || Object.values(mapBackgrounds)[0];
     const currentBgImage = bgData ? (isNight ? bgData.night : bgData.day) : null;
@@ -290,7 +287,6 @@ export const GameBoard = () => {
 
             <div id="game-board-container" className="panel" style={{ width: '100%', paddingBottom: '10px', position: 'relative' }}>
                 
-                {/* 煙エフェクト設定と連動する白い霧のオーバーレイ */}
                 {showSmoke && (
                     <div style={{
                         position: 'absolute', top: 0, left: 0, right: 0, height: '40%',
@@ -302,7 +298,6 @@ export const GameBoard = () => {
                 <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none' }}>
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
-                        {/* ▼ CSSの記述をプロパティごとに分割し、ホラーモード時のみフィルターを適用 */}
                         <div id="game-board" style={{ 
                             display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', 
                             border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', 
@@ -311,8 +306,7 @@ export const GameBoard = () => {
                             backgroundPosition: 'center',
                             backgroundRepeat: 'no-repeat',
                             backgroundColor: isNight ? '#222' : '#fff',
-                            filter: horrorMode ? 'brightness(0.3) sepia(0.4) hue-rotate(320deg) saturate(1.5)' : 'none', 
-                            WebkitFilter: horrorMode ? 'brightness(0.3) sepia(0.4) hue-rotate(320deg) saturate(1.5)' : 'none',
+                            /* 親の強制暗転フィルターを削除 */
                             transition: 'filter 0.5s ease',
                             width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', 
                             gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, 

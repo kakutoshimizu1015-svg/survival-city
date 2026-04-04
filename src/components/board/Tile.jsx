@@ -36,10 +36,7 @@ export const Tile = React.memo(({
     const loansharkPos = useGameStore(state => state.loansharkPos);
     const friendPos = useGameStore(state => state.friendPos);
     
-    // ▼ ホラー演出のフラグを取得
     const horrorMode = useGameStore(state => state.horrorMode);
-    
-    // ▼ このマスが「ホラー演出中のトラックがいるマス」かどうかを判定
     const isHorrorTruckTile = horrorMode && isTruck;
 
     const touchTimer = useRef(null);
@@ -85,7 +82,6 @@ export const Tile = React.memo(({
     };
 
     let classNameStr = `tile ${tile.type} ${tile.area}`;
-    // ▼ ホラートラックがいる場合は、マスを暗くする night-fog クラスを適用しない
     if (isFog && !isHorrorTruckTile) classNameStr += ' night-fog';
     if (isClickable) classNameStr += ' tile-highlight-branch';
     if (pathClass) classNameStr += ` ${pathClass}`;
@@ -97,17 +93,15 @@ export const Tile = React.memo(({
     // 遠近法のスケール計算
     const ds = getDepthScale(tile.row, maxRow);
 
-    // NPC配置用の共通スタイル（中央下部に配置）
+    // NPC配置用の共通スタイル
     const npcStyle = { position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '15%', zIndex: 5, pointerEvents: 'none' };
     
-    // ▼ ゴミ収集車のスタイル
     const truckStyle = { 
         ...npcStyle, 
         bottom: '10%', 
         opacity: horrorMode ? 1 : TOKEN_CONFIG.npc.truckOpacity,
     };
 
-    // ▼ 進めるマスの強力なグラデーション発光（boxShadow）
     const clickableStyle = isClickable ? {
         boxShadow: `
             inset 0 0 15px rgba(255, 224, 102, 0.6),
@@ -135,22 +129,15 @@ export const Tile = React.memo(({
                 position: 'relative',
                 transform: `scale(${ds})`,
                 transformOrigin: 'center center',
-                // ▼ ホラートラックがいる場合はマス全体の opacity も 1 にして暗闇を突き破る
                 opacity: (isFog && !isHorrorTruckTile) ? 0.2 : 1,
-                // ▼ ホラートラックがいる場合はマス全体の zIndex を特大にして画面の最前面に出す
                 zIndex: isHorrorTruckTile ? 9999 : tile.row,
                 ...clickableStyle 
             }}
         >
-            {/* 強力なハイライト用とトラック専用の赤発光アニメーション定義 */}
             <style>{`
                 @keyframes tilePulse {
                     from { filter: brightness(1); }
                     to { filter: brightness(1.4) drop-shadow(0 0 8px rgba(255,224,102,0.6)); }
-                }
-                @keyframes truckDropShadowGlow {
-                    0% { filter: brightness(1.2) drop-shadow(0 0 8px rgba(255, 0, 0, 0.8)); }
-                    100% { filter: brightness(1.5) drop-shadow(0 0 25px rgba(255, 0, 0, 1)); }
                 }
             `}</style>
 
@@ -169,14 +156,12 @@ export const Tile = React.memo(({
                 </div>
             )}
             
-            {/* ▼ 霧の影響をマス単位で剥がしたため、トラック自身の描写条件もシンプルに。 */}
             {(!isFog || isHorrorTruckTile) && isTruck && (
                 <CharImage 
                     charType="truck" 
                     size={TOKEN_CONFIG.npc.truckSize} 
                     style={truckStyle} 
-                    // ▼ 確実に赤く光らせるために brightness も適用
-                    imgStyle={horrorMode ? { animation: 'truckDropShadowGlow 0.8s infinite alternate' } : { filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.6))' }} 
+                    className="truck-token" 
                 />
             )}
             
