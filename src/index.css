@@ -859,27 +859,27 @@ body.horror-mode #game-board .tile:has(.truck-token) {
     /* 右側（下部）エリア：アクションボタンとプレイヤーリストを横に並べる */
     #right-side-area, .right-side-area { 
         width: 100% !important; 
-        flex-direction: row !important; /* ▼ 修正：横並びに変更 */
+        flex-direction: row !important; 
         gap: 10px !important; 
-        max-height: 35vh !important; /* ▼ 修正：高さを制限して内部スクロールさせる */
-        overflow-y: hidden !important; 
+        height: 38vh !important; /* ▼ 修正：max-heightではなくheightで高さを完全に固定する */
+        overflow: hidden !important; 
         flex-shrink: 0 !important; 
     }
     
     #action-panel { 
-        width: 50% !important; /* ▼ 修正：幅を半分に */
+        width: calc(50% - 5px) !important; /* ▼ 修正：隙間(10px)の半分を引いて横幅ピッタリに */
         display: grid !important; 
-        grid-template-columns: repeat(2, 1fr) !important; /* ▼ 修正：2列ボタンに変更 */
+        grid-template-columns: repeat(2, 1fr) !important; 
         gap: 6px !important; 
         padding: 8px !important; 
         height: 100% !important; 
-        overflow-y: auto !important; /* ▼ 修正：ボタンが多い場合はスクロール */
+        overflow-y: auto !important; /* これで確実にスクロール可能になります */
     }
     
     #player-list-panel { 
-        width: 50% !important; /* ▼ 修正：幅を半分に */
+        width: calc(50% - 5px) !important; /* ▼ 修正：隙間(10px)の半分を引いて横幅ピッタリに */
         height: 100% !important; 
-        overflow-y: auto !important; /* ▼ 修正：プレイヤーが多い場合はスクロール */
+        overflow-y: auto !important; /* これで確実にスクロール可能になります */
         padding: 8px !important; 
     }
 
