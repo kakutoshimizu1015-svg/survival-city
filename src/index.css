@@ -856,36 +856,38 @@ body.horror-mode #game-board .tile:has(.truck-token) {
         flex-shrink: 0 !important;
     }
 
-    /* 右側（下部）エリア：アクションボタンとプレイヤーリストを縦に並べる */
+    /* 右側（下部）エリア：アクションボタンとプレイヤーリストを横に並べる */
     #right-side-area, .right-side-area { 
         width: 100% !important; 
-        flex-direction: column !important; 
-        gap: 15px !important; 
-        max-height: none !important; 
-        overflow-y: visible !important; 
+        flex-direction: row !important; /* ▼ 修正：横並びに変更 */
+        gap: 10px !important; 
+        max-height: 35vh !important; /* ▼ 修正：高さを制限して内部スクロールさせる */
+        overflow-y: hidden !important; 
         flex-shrink: 0 !important; 
     }
     
     #action-panel { 
-        width: 100% !important; 
+        width: 50% !important; /* ▼ 修正：幅を半分に */
         display: grid !important; 
-        grid-template-columns: repeat(3, 1fr) !important; /* 3列ボタン */
+        grid-template-columns: repeat(2, 1fr) !important; /* ▼ 修正：2列ボタンに変更 */
         gap: 6px !important; 
-        padding: 10px !important; 
-        height: auto !important; 
+        padding: 8px !important; 
+        height: 100% !important; 
+        overflow-y: auto !important; /* ▼ 修正：ボタンが多い場合はスクロール */
     }
     
     #player-list-panel { 
-        width: 100% !important; 
-        height: auto !important; 
-        overflow-y: visible !important; 
+        width: 50% !important; /* ▼ 修正：幅を半分に */
+        height: 100% !important; 
+        overflow-y: auto !important; /* ▼ 修正：プレイヤーが多い場合はスクロール */
+        padding: 8px !important; 
     }
 
     .btn-clay { font-size: 11px !important; padding: 6px !important; text-align: center !important; }
     
     /* ターンエンドボタンを大きく押しやすくする */
     .btn-end-clay, .btn-end-highlight, #action-panel > div:last-child { 
-        grid-column: span 3 !important; 
+        grid-column: span 2 !important; /* ▼ 修正：2列レイアウトに合わせる */
         font-size: 16px !important; 
         padding: 14px 4px !important; 
         min-height: 48px !important; 
