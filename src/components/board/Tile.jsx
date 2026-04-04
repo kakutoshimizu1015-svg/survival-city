@@ -39,6 +39,9 @@ export const Tile = React.memo(({
     const horrorMode = useGameStore(state => state.horrorMode);
     const isHorrorTruckTile = horrorMode && isTruck;
 
+    // ▼ 追加: アスリートのダッシュなど、白く強く光らせるための判定用ステート
+    const isDashPicking = useGameStore(state => state.isDashPicking);
+
     const touchTimer = useRef(null);
 
     const handleMouseEnter = (e, initialX = 0, initialY = 0) => {
@@ -63,7 +66,6 @@ export const Tile = React.memo(({
                 descText += '\n─────\n' + npcsHere.map(n => `${n.info.emoji}${n.info.name}: ${n.info.desc}`).join('\n');
             }
 
-            // ▼ 追加: 領土の所有者情報を追記
             if (owner) {
                 descText += `\n─────\n🚩 所有者: ${owner.name}`;
             }
@@ -116,15 +118,26 @@ export const Tile = React.memo(({
         opacity: horrorMode ? 1 : TOKEN_CONFIG.npc.truckOpacity,
     };
 
-    const clickableStyle = isClickable ? {
-        boxShadow: `
-            inset 0 0 15px rgba(255, 224, 102, 0.6),
-            0 0 25px rgba(255, 224, 102, 0.8),
-            0 0 10px rgba(255, 255, 255, 0.4)
-        `,
-        border: '2px solid rgba(255, 224, 102, 0.9)',
-        animation: 'tilePulse 1.5s infinite alternate'
-    } : {};
+    // ▼ 修正: isDashPicking が true の場合は白く強く光らせる
+    const clickableStyle = isClickable ? (
+        isDashPicking ? {
+            boxShadow: `
+                inset 0 0 20px rgba(255, 255, 255, 0.8),
+                0 0 35px rgba(255, 255, 255, 1),
+                0 0 15px rgba(255, 255, 255, 0.6)
+            `,
+            border: '3px solid rgba(255, 255, 255, 1)',
+            animation: 'tilePulseDash 0.8s infinite alternate'
+        } : {
+            boxShadow: `
+                inset 0 0 15px rgba(255, 224, 102, 0.6),
+                0 0 25px rgba(255, 224, 102, 0.8),
+                0 0 10px rgba(255, 255, 255, 0.4)
+            `,
+            border: '2px solid rgba(255, 224, 102, 0.9)',
+            animation: 'tilePulse 1.5s infinite alternate'
+        }
+    ) : {};
 
     return (
         <div 
@@ -152,6 +165,10 @@ export const Tile = React.memo(({
                 @keyframes tilePulse {
                     from { filter: brightness(1); }
                     to { filter: brightness(1.4) drop-shadow(0 0 8px rgba(255,224,102,0.6)); }
+                }
+                @keyframes tilePulseDash {
+                    from { filter: brightness(1); filter: drop-shadow(0 0 5px rgba(255,255,255,0.8)); }
+                    to { filter: brightness(1.6) drop-shadow(0 0 15px rgba(255,255,255,1)); }
                 }
             `}</style>
 

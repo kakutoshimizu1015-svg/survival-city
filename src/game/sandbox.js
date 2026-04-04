@@ -73,9 +73,9 @@ export const getScenarioSteps = (id) => {
             { title:'🎯 ミニゲーム', icon:'🎮', text:'ミニゲームが始まったら、画面の指示に従ってプレイしてください！<br><br>• <b>ハイ&ロー</b>：数字の大小を当てる<br>• <b>宝箱</b>：3つから1つ選ぶ<br>• <b>スロット</b>：リールを止めて揃える', waitMode: '🎮 ミニゲームをプレイ中...', watchCondition: () => !s().mgActive && s().players[0].pos === 4 }
         ];
         case 7: return [
-            { title:'🏆 キャラスキル', icon:'🏃', text:'<b>元アスリート</b>でプレイ中です。<br>パッシブ：移動が常に<em>1AP</em>（雨でも！）<br>アクションスキル：<b>💨 疾風ダッシュ（3AP）</b>で3マス先へジャンプ！<br>「疾風ダッシュ」ボタンを試してみましょう。', setup: () => initSandboxGame({ p1pos:0, p1ap:12, p1p:8, p1char:'athlete', diceRolled:true, p2pos:9 }), highlight: '#btn-dash', waitMode: '👆 疾風ダッシュを使用', watchCondition: () => s().players[0].pos !== 0 },
-            { title:'🏆 キャラスキル', icon:'👊', text:'次は<b>元ヤン</b>のスキルを試します。<br>パッシブ：同マスの相手から<b>自動で1Pカツアゲ</b>！<br>アクション：<b>👊 殴る（2AP）</b>で10ダメージ。<br>CPUのいるマスへ移動してみましょう。', setup: () => initSandboxGame({ p1pos:0, p1ap:12, p1p:5, p1char:'yankee', diceRolled:true, p2pos:1, p2p:10 }), waitMode: '👆 CPUのマスへ移動→殴る', watchCondition: () => s().players[0].pos === s().players[1].pos },
-            { title:'🏆 キャラスキル', icon:'✅', text:'カツアゲが発動しましたか？同じマスにいるので「👊 殴る」も試してみてください。<br><br>他のキャラも個性的なスキルを持っています：<br>• 💼 <b>営業マン</b>：カードを押し付けて3P稼ぐ<br>• 🌿 <b>サバイバー</b>：ゴミ漁りノーリスク<br>• 💻 <b>ハッカー</b>：遠隔ショップ購入<br>• 🎸 <b>ミュージシャン</b>：人を集めて投げ銭', nextLabel: '理解した！ ▶' }
+            { title:'🏆 キャラスキル', icon:'🏃', text:'<b>元アスリート</b>でプレイ中です。<br>パッシブ：移動が常に<em>1AP</em>（雨でも！）<br>アクションスキル：<b>💨 疾風ダッシュ（3AP）</b>で3マス先へジャンプ！<br>「疾風ダッシュ」ボタンを試してみましょう。候補のマスが白く光ります。', setup: () => initSandboxGame({ p1pos:0, p1ap:12, p1p:8, p1char:'athlete', diceRolled:true, p2pos:9 }), highlight: '#btn-dash', waitMode: '👆 疾風ダッシュを使用', watchCondition: () => s().players[0].pos !== 0 },
+            { title:'🏆 キャラスキル', icon:'💼', text:'次は<b>元営業マン</b>のスキルを試します。<br>パッシブ：ショップが2P割引！<br>アクション：<b>📦 訪問販売（2AP）</b>で手札を選んで相手に押し付け3Pを徴収。<br>CPUのいるマスへ移動してみましょう。', setup: () => initSandboxGame({ p1pos:0, p1ap:12, p1p:5, p1char:'sales', p1hand:[0, 1], diceRolled:true, p2pos:1, p2p:10 }), waitMode: '👆 CPUのマスへ移動', watchCondition: () => s().players[0].pos === s().players[1].pos },
+            { title:'🏆 キャラスキル', icon:'✅', text:'同じマスに着きました。「📦 訪問販売」ボタンを押すと、上部の手札のボタンが「売りつける」に変わるので選んでみてください。<br><br>他のキャラも個性的なスキルを持っています：<br>• 🎲 <b>ギャンブラー</b>：25%の確率でサイコロが3つに増える<br>• 🕵️ <b>探偵</b>：好きなNPCを任意のマスへ移動(クールタイム3R)<br>• 💻 <b>ハッカー</b>：遠隔ショップ購入', waitMode: '👆 訪問販売を使用', watchCondition: () => s().players[0].p > 5 }
         ];
         default: return [];
     }

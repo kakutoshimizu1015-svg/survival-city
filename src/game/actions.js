@@ -31,10 +31,16 @@ export const actionRollDice = async (isCpuCall = false) => {
     await new Promise(r => setTimeout(r, 1000));
     clearInterval(sfxInterval);
 
-    const d1 = Math.floor(Math.random() * 6) + 1, d2 = Math.floor(Math.random() * 6) + 1;
-    let totalAP = d1 + d2;
+    const d1 = Math.floor(Math.random() * 6) + 1;
+    const d2 = Math.floor(Math.random() * 6) + 1;
+    
+    // ▼ 追加：ギャンブラーの第3のサイコロ判定 (25%の確率)
+    const isGamblerBonus = cp.charType === 'gambler' && Math.random() < 0.25;
+    const d3 = isGamblerBonus ? Math.floor(Math.random() * 6) + 1 : 0;
+
+    let totalAP = d1 + d2 + d3;
     const isZorome = d1 === d2;
-    if (isZorome) totalAP *= 2;
+    if (isZorome) totalAP *= 2; // ゾロ目判定はd1とd2のみ。2倍化の恩恵は全体にかかる
     if (cp.equip?.bicycle) totalAP += 2; 
 
     if (isZorome && cp.charType === 'gambler') {
@@ -42,9 +48,15 @@ export const actionRollDice = async (isCpuCall = false) => {
         if (heal > 0) { state.updateCurrentPlayer(p => ({ hp: p.hp + heal })); logMsg(`🎲 ギャンブラー興奮！HP+${heal}`); }
     }
 
-    let textResult = `${d1}+${d2}=${d1+d2}AP${isZorome ? " (🎲ゾロ目×2)" : ""}`;
+    let textResult = `${d1}+${d2}${d3 > 0 ? '+'+d3 : ''}=${d1+d2+d3}AP${isZorome ? " (🎲ゾロ目×2)" : ""}`;
     useGameStore.setState({ diceAnim: { active: true, d1, d2, text: textResult }, diceRolled: true, canPickedThisTurn: 0 });
     state.updateCurrentPlayer(p => ({ ap: p.ap + totalAP }));
+    
+    if (isGamblerBonus) {
+        logMsg(`🎲 <span style="color:#f1c40f">大勝負！ギャンブラーの第3のサイコロ発動（+${d3}）！</span>`);
+        playSfx('success');
+    }
+    
     playSfx('success'); logMsg(`<span style="color:${cp.color}">${cp.name}</span>は${totalAP}AP獲得！`);
     
     await new Promise(r => setTimeout(r, 1800));
@@ -67,10 +79,10 @@ export const executeMove = (targetTileId) => {
     const moveCost = (state.isRainy && !cp.rainGear && cp.charType !== "athlete") ? 2 : 1;
 
     state.updateCurrentPlayer(p => ({ ap: Math.max(0, p.ap - moveCost), pos: targetTileId, rainGear: state.isRainy ? false : p.rainGear }));
-    useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [] });
+    // ▼ 追加：ダッシュのフラグもクリアする
+    useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [], isDashPicking: false });
     logMsg(`🚶 「${tile.name}」に移動。`); playSfx('move');
 
-    // ▼ 修正：病院マスでの回復処理を追加
     if (tile.type === "center") {
         const healAmount = Math.min(30, 100 - cp.hp);
         if (healAmount > 0) {
@@ -108,9 +120,10 @@ export const executeMove = (targetTileId) => {
     const terrOwnerId = state.territories[targetTileId];
     if (terrOwnerId !== undefined && terrOwnerId !== cp.id) {
         const det = state.players.find(p => p.id === terrOwnerId && p.charType === 'detective' && p.hp > 0 && !isSameTeam(p, cp));
-        if (det && cp.hand.length > 0) {
+        // ▼ 修正：完全に止まった時（executeMove）のみ、かつ30%の確率で没収
+        if (det && cp.hand.length > 0 && Math.random() < 0.3) {
             state.updateCurrentPlayer(p => { const h = [...p.hand]; const stolen = h.splice(Math.floor(Math.random() * h.length), 1)[0]; state.updatePlayer(det.id, dp => ({ hand: [...dp.hand, stolen] })); return { hand: h }; });
-            logMsg(`🕵️ ${det.name}が${cp.name}の手札を没収！`);
+            logMsg(`🕵️ ${det.name}が張り込みで${cp.name}の手札を没収！`);
         }
     }
 
@@ -182,7 +195,17 @@ export const actionJob = () => {
     useGameStore.setState({ jobResult: { active: true, isSuccess: win, points: win ? 12 : 0 } });
 };
 
-export const actionOccupy = () => { const s = useGameStore.getState(), cp = s.players[s.turn], cost = s.territories[cp.pos] !== undefined ? 5 : 3; if (cp.p >= cost) { s.updateCurrentPlayer(p => ({ p: p.p - cost })); useGameStore.setState(st => ({ territories: { ...st.territories, [cp.pos]: cp.id } })); playSfx('success'); } };
+// ▼ 修正：領土上書きコストを5から6に変更
+export const actionOccupy = () => { 
+    const s = useGameStore.getState(), cp = s.players[s.turn];
+    const cost = s.territories[cp.pos] !== undefined ? 6 : 3; 
+    if (cp.p >= cost) { 
+        s.updateCurrentPlayer(p => ({ p: p.p - cost })); 
+        useGameStore.setState(st => ({ territories: { ...st.territories, [cp.pos]: cp.id } })); 
+        playSfx('success'); 
+    } 
+};
+
 export const actionExchange = () => { const s = useGameStore.getState(), cp = s.players[s.turn], tot = cp.cans * s.canPrice + cp.trash * s.trashPrice; s.updateCurrentPlayer(p => ({ p: p.p + tot, cans: 0, trash: 0 })); playSfx('coin'); };
 export const actionManhole = () => { const s = useGameStore.getState(), cp = s.players[s.turn], mh = s.mapData.filter(t => t.type === "manhole" && t.id !== cp.pos); if (mh.length > 0) { s.updateCurrentPlayer(p => ({ ap: p.ap - 1, pos: mh[Math.floor(Math.random() * mh.length)].id })); playSfx('move'); checkNpcCollision(cp.id); } };
 
@@ -196,21 +219,23 @@ export const actionEndTurn = async () => {
         if (newEquip.cart) { newTimer.cart = (newTimer.cart || 5) - 1; if (newTimer.cart <= 0) { newEquip.cart = false; logMsg(`🛒 リヤカーが壊れた！`); } }
 
         state.updateCurrentPlayer(p => ({ ap: 0, stealth: false, _katsuage: 0, equip: newEquip, equipTimer: newTimer, cannotMove: false })); 
-        useGameStore.setState({ isBranchPicking: false, mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null });
+        
+        // ▼ 追加：新規追加したモードのフラグもクリアする
+        useGameStore.setState({ 
+            isBranchPicking: false, isDashPicking: false, 
+            isSalesVisiting: false, salesTargetId: null, npcSelectActive: false,
+            mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null 
+        });
         
         const isLastPlayer = state.turn === state.players.length - 1;
 
-        // ▼ 追加: オンラインゲスト側はラウンド終了処理をホストに委譲する
-        // 理由: processRoundEnd は10〜15秒の長時間非同期処理であり、
-        // ゲスト側で実行すると同期のフィードバックループ（状態の巻き戻り）が発生するため。
         if (isLastPlayer) {
             const netState = useNetworkStore.getState();
             if (netState.status === 'connected' && !netState.isHost) {
-                // ゲスト: ホストにラウンド終了リクエストを送信し、ターン遷移もホストに任せる
                 if (netState.hostConnection && netState.hostConnection.open) {
                     netState.hostConnection.send({ type: 'REQUEST_ROUND_END' });
                 }
-                return; // ← ここでreturn。ターン遷移はホスト側の REQUEST_ROUND_END ハンドラが行う
+                return; 
             }
             await processRoundEnd();
         }

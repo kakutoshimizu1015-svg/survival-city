@@ -29,7 +29,8 @@ export const actionDash = () => {
         state.updateCurrentPlayer(p => ({ pos: targets[0] }));
         logMsg(`💨 疾風ダッシュ！3マス先へ跳躍！`);
     } else {
-        useGameStore.setState({ isBranchPicking: true, currentBranchOptions: targets });
+        // ▼ 追加：isDashPicking を true にして、UI側で白く光らせる判定に使う
+        useGameStore.setState({ isBranchPicking: true, currentBranchOptions: targets, isDashPicking: true });
         logMsg(`💨 疾風ダッシュ！着地点を選んでください`);
     }
 };
@@ -56,18 +57,37 @@ export const actionCamp = () => {
     logMsg(`⛺ ${cp.name}が野宿した！HPが${healed}回復！`);
 };
 
+// ▼ 修正：すぐ押し付けるのではなく、カードを選択するモードへ移行する
 export const actionSalesVisit = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const targets = state.players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
     if (targets.length === 0 || cp.ap < 2 || cp.hand.length === 0) return;
 
-    const target = targets[0];
-    const cardToGive = cp.hand[0]; 
+    // 手札選択モードのUIを表示させるためのステートを設定
+    useGameStore.setState({ isSalesVisiting: true, salesTargetId: targets[0].id });
+    logMsg(`📦 訪問販売の準備... 押し付けるカードを選んでください。`);
+};
+
+// ▼ 追加：UI側（HandCards.jsxなど）でカードを選んだ時に呼ばれる確定処理
+export const executeSalesVisit = (cardIndex) => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    const targetId = state.salesTargetId;
+    const target = state.players.find(p => p.id === targetId);
+    
+    if (!target || cp.ap < 2 || cp.hand.length <= cardIndex) return;
+
+    const cardToGive = cp.hand[cardIndex]; 
     const fee = Math.min(3, Math.max(0, target.p));
 
-    state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p + fee, hand: p.hand.slice(1) }));
+    const newHand = [...cp.hand];
+    newHand.splice(cardIndex, 1);
+
+    state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p + fee, hand: newHand }));
     state.updatePlayer(target.id, p => ({ p: p.p - fee, hand: [...p.hand, cardToGive] }));
+    
+    useGameStore.setState({ isSalesVisiting: false, salesTargetId: null });
     logMsg(`📦 ${cp.name}が${target.name}にカードを押し付け、${fee}Pを徴収した！`);
 };
 
@@ -145,10 +165,30 @@ export const actionGamble = () => {
     }
 };
 
+// ▼ 修正：固定で警察を動かすのではなく、UIを開いてNPCを選ばせる
 export const actionNpcMove = () => {
     const state = useGameStore.getState();
-    if (state.players[state.turn].ap < 3) return;
+    const cp = state.players[state.turn];
     
-    useGameStore.setState({ npcMovePick: 'policePos' });
-    logMsg(`🕵️ 情報操作！警察を移動させます。マップ上のマスをタップしてください。`);
+    if (cp.ap < 3) return;
+    if (cp.detectiveCd > 0) {
+        useGameStore.getState().showToast(`クールタイム中です（あと${cp.detectiveCd}ラウンド）`);
+        return;
+    }
+    
+    // UI側にNPC選択モーダルを開くよう指示
+    useGameStore.setState({ npcSelectActive: true });
+    logMsg(`🕵️ 情報操作！動かすNPCを選んでください。`);
+};
+
+// ▼ 追加：UI側でNPCを選んだ時に呼ばれ、マップ選択モードへ移行する処理
+export const setupNpcMove = (npcKey) => {
+    const state = useGameStore.getState();
+    
+    // コストとクールタイムを適用
+    state.updateCurrentPlayer(p => ({ ap: p.ap - 3, detectiveCd: 3 }));
+    
+    // ターゲット指定モードへ移行
+    useGameStore.setState({ npcSelectActive: false, npcMovePick: npcKey });
+    logMsg(`🕵️ マップ上のマスをタップしてNPCを移動させてください。`);
 };

@@ -8,9 +8,8 @@ export const SettingsAndRules = () => {
     const { settingsActive, rulesActive, layoutMode, volume, showSkipButton, autoScrollToPlayer, setGameState, resetGame } = useGameStore();
     const [confirmOpen, setConfirmOpen] = useState(false);
 
-    // ▼ 追加：showSmoke と setShowSmoke を useUserStore から取得
     const { playerName, wins, totalEarnedP, showSmoke, setShowSmoke } = useUserStore();
-    const [activeTab, setActiveTab] = useState('player'); // 'player' または 'settings'
+    const [activeTab, setActiveTab] = useState('player');
     const [editingName, setEditingName] = useState(playerName);
 
     useEffect(() => {
@@ -82,15 +81,15 @@ export const SettingsAndRules = () => {
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#27ae60', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🎭 キャラクター一覧（全9種）</h3>
                             <p style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>各キャラは <b>パッシブ（自動発動）</b> と <b>アクションスキル（AP消費）</b> を1つずつ持ちます。<br/>キャラアイコンをクリックすると詳細を確認できます。</p>
                             <ul style={{ fontSize: '13px', lineHeight: '1.7', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🏃</span><b>元アスリート —【健脚】</b>移動常に1AP・雨無効 ／ <b>【疾風ダッシュ】</b>3AP: ピッタリ3マス先へ跳躍（交番・罠を飛び越え可）</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💼</span><b>元営業マン —【コミュ力】</b>バイト成功率80%・ショップ1P割引 ／ <b>【訪問販売】</b>2AP: 手札1枚を同マスの相手に強制購入させ3P徴収</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🏃</span><b>元アスリート —【健脚】</b>移動常に1AP・雨無効 ／ <b>【疾風ダッシュ】</b>3AP: ピッタリ3マス先へ跳躍（候補マスが白く光ります）</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💼</span><b>元営業マン —【コミュ力】</b>バイト成功率80%・ショップ<b>2P割引</b> ／ <b>【訪問販売】</b>2AP: 手札を1枚選んで相手に強制購入させ3P徴収</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🌿</span><b>サバイバー —【危機察知】</b>ゴミ漁り失敗の警察ペナ無効 ／ <b>【野宿】</b>2AP: その場でHP+15回復</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>👊</span><b>元ヤン —【威圧】</b>同マス/すれ違いで自動1Pカツアゲ（1ターン2P上限）／ <b>【殴る】</b>2AP: 同マス相手に10ダメージ</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💻</span><b>元ハッカー —【クラウドストレージ】</b>手札上限+2（デフォルト9枚）／ <b>【遠隔ハッキング】</b>3AP: どこからでもショップ在庫を強制入替え＆1枚購入</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🎸</span><b>ストリートミュージシャン —【投げ銭】</b>他者が同マスor隣接に来るたび銀行から+3P ／ <b>【路上ライブ】</b>4AP: 周囲2マス以内の全員を強制引き寄せ</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🩺</span><b>闇医者 —【自己治癒】</b>ターン開始時に自動HP+5 ／ <b>【闇診療】</b>2AP: 同マスの相手HP+30の代わりに5P強制徴収</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🎲</span><b>ギャンブラー —【アドレナリン】</b>ゾロ目でAP倍＋HP+10回復 ／ <b>【イカサマ勝負】</b>2AP: 同マスの相手と1d6対決・勝者が5P奪取（同点は仕掛け側の負け）</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🕵️</span><b>元探偵 —【張り込み】</b>自分の陣地に相手が止まると手札1枚没収 ／ <b>【情報操作】</b>3AP: NPC1体を任意のマスへ強制移動</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🎲</span><b>ギャンブラー —【アドレナリン】</b>ゾロ目でAP倍＋HP+10回復。<b>さらに25%の確率で3つ目のサイコロが追加！</b> ／ <b>【イカサマ勝負】</b>2AP: 同マスの相手と1d6対決・勝者が5P奪取（同点は仕掛け側の負け）</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🕵️</span><b>元探偵 —【張り込み】</b>自陣地に相手が完全に止まると<b>30%の確率で</b>手札1枚没収 ／ <b>【情報操作】</b>3AP: <b>好きなNPCを1体選んで</b>任意のマスへ強制移動<b>(クールタイム3R)</b></li>
                             </ul>
                         </div>
 
@@ -110,7 +109,7 @@ export const SettingsAndRules = () => {
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🚓</span><b>交番:</b> 職務質問で足止め、そのターンは移動不可。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🎯</span><b>目的地(的):</b> 到達するとボーナスP（ラウンド×2+5P）獲得。的は別の場所へ移動。</li>
                                 <hr style={{ border: 0, borderTop: '1px dashed #ccc', margin: '8px 0' }} />
-                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🚩</span><b>陣地と維持費:</b> 陣地にすると毎ターンダイス時に収入（スラム1P/商業2P/高級3P）。3ラウンドに1回、維持費（スラム0P/商業1P/高級2P）が引き落とされる。<b>払えないと所持Pが0になり、最も価値の高い陣地を没収される。</b></li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🚩</span><b>陣地と維持費:</b> 陣地にすると毎ターンダイス時に収入（スラム1P/商業2P/高級3P）。3ラウンドに1回、維持費（スラム0P/商業1P/高級2P）が引き落とされる。<b>払えないと所持Pが0になり、最も価値の高い陣地を没収される。</b><br/>※空き地を陣地にするのは3P、<b>他人の陣地を上書きして奪う場合は6P</b>必要です。</li>
                             </ul>
                         </div>
 
@@ -315,7 +314,6 @@ export const SettingsAndRules = () => {
                             </div>
                         </div>
 
-                        {/* ▼ 追加：煙（土埃）エフェクトの表示設定（端末保存） */}
                         <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
                             <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                                 <input type="checkbox" checked={showSmoke} onChange={(e) => setShowSmoke(e.target.checked)} style={{ marginRight: '10px', width: '18px', height: '18px' }} />

@@ -3,9 +3,11 @@ import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
 import { actionUseCard, actionDiscardCard } from '../../game/cards';
+import { executeSalesVisit } from '../../game/skills'; // ▼ 追加：営業マンのカード押し付け処理
 
 export const HandCards = () => {
-    const { players, turn, diceRolled, mgActive, isBranchPicking } = useGameStore();
+    // ▼ 追加：isSalesVisiting ステートを取得
+    const { players, turn, diceRolled, mgActive, isBranchPicking, isSalesVisiting } = useGameStore();
     const cp = players[turn];
     const { myUserId, status } = useNetworkStore();
 
@@ -13,12 +15,10 @@ export const HandCards = () => {
 
     let isMyTurn = !cp.isCPU;
     
-    // マルチプレイ時は自分以外のプレイヤーのカードは裏面として扱う
     if (status === 'connected') {
         isMyTurn = (cp.userId === myUserId);
     }
 
-    // 他人のターンの時はカード裏面を表示
     if (!isMyTurn) {
         return (
             <div id="hand-cards-area" style={{ flexGrow: 1, display: 'flex', overflowX: 'auto', minWidth: 0 }}>
@@ -33,9 +33,11 @@ export const HandCards = () => {
         );
     }
 
+    // ▼ 追加：営業マンの訪問販売でカードを選択するモードかどうか
+    const isSalesMode = isMyTurn && isSalesVisiting;
+
     return (
         <div id="hand-cards-area" style={{ flexGrow: 1, display: 'flex', overflowX: 'auto', minWidth: 0 }}>
-            {/* ▼ flex: 1 などのインライン設定を外し、間延びを防ぐ */}
             <div id="card-panel-clay" className="panel" style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center', width: '100%', padding: '10px', margin: 0, minHeight: '120px' }}>
                 {cp.hand.length === 0 && <div style={{ color: '#fdf5e6', width: '100%', textAlign: 'center' }}>手札なし</div>}
                 
@@ -44,18 +46,29 @@ export const HandCards = () => {
                     if (!cardData) return null;
 
                     const apCost = cardData.type === 'weapon' ? 2 : 0;
-                    const isDisabled = !isMyTurn || !diceRolled || cp.ap < apCost || mgActive || isBranchPicking;
-                    const isDiscardDisabled = !isMyTurn || mgActive || isBranchPicking;
+                    
+                    // ▼ 修正：営業モード中はAP条件や使用不可判定を専用のものに切り替える
+                    const isDisabled = !isMyTurn || !diceRolled || cp.ap < (isSalesMode ? 2 : apCost) || mgActive || isBranchPicking;
+                    const isDiscardDisabled = !isMyTurn || mgActive || isBranchPicking || isSalesMode;
 
                     return (
                         <div key={index} style={{ background: '#fdf5e6', border: `3px solid ${cardData.color || '#8d6e63'}`, borderRadius: '8px', padding: '8px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', minWidth: '110px', display: 'flex', flexDirection: 'column', gap: '3px', color: '#333', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)' }}>
                             <div style={{ fontSize: '12px', borderBottom: '1px solid #ccc', paddingBottom: '2px' }}>{cardData.icon} {cardData.name}</div>
                             <div style={{ flexGrow: 1, marginTop: '3px' }}>{cardData.desc}</div>
                             <div style={{ display: 'flex', gap: '5px', width: '100%', justifyContent: 'center', marginTop: '3px' }}>
-                                <button onClick={() => actionUseCard(index, cardId)} disabled={isDisabled} style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDisabled ? 'not-allowed' : 'pointer', border: '2px solid #8d6e63', background: isDisabled ? '#eee' : '#fff', opacity: isDisabled ? 0.5 : 1 }}>
-                                    {apCost > 0 ? `使用(${apCost}AP)` : '使用'}
+                                {/* ▼ 修正：営業モード中は executeSalesVisit を呼び出し、ボタン名と色を変える */}
+                                <button 
+                                    onClick={() => isSalesMode ? executeSalesVisit(index) : actionUseCard(index, cardId)} 
+                                    disabled={isDisabled} 
+                                    style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDisabled ? 'not-allowed' : 'pointer', border: `2px solid ${isSalesMode ? '#f39c12' : '#8d6e63'}`, background: isDisabled ? '#eee' : (isSalesMode ? '#fdebd0' : '#fff'), opacity: isDisabled ? 0.5 : 1, color: isSalesMode ? '#d35400' : '#333' }}
+                                >
+                                    {isSalesMode ? '売りつける' : (apCost > 0 ? `使用(${apCost}AP)` : '使用')}
                                 </button>
-                                <button onClick={() => actionDiscardCard(index)} disabled={isDiscardDisabled} style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDiscardDisabled ? 'not-allowed' : 'pointer', border: '2px solid #c0392b', background: isDiscardDisabled ? '#eee' : '#fff', opacity: isDiscardDisabled ? 0.5 : 1 }}>
+                                <button 
+                                    onClick={() => actionDiscardCard(index)} 
+                                    disabled={isDiscardDisabled} 
+                                    style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDiscardDisabled ? 'not-allowed' : 'pointer', border: '2px solid #c0392b', background: isDiscardDisabled ? '#eee' : '#fff', opacity: isDiscardDisabled ? 0.5 : 1 }}
+                                >
                                     捨てる
                                 </button>
                             </div>

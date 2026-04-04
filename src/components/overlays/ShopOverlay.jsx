@@ -22,7 +22,6 @@ export const ShopOverlay = () => {
     const slotsUsed = cp.hand.length + shopCart.length;
 
     const addToCart = (cardId, price) => {
-        // ▼ 修正：上限のときは中央警告を表示する
         if (slotsUsed >= cp.maxHand) {
             useGameStore.getState().showCenterWarning("手札が上限です！これ以上カートに追加できません");
             return;
@@ -55,10 +54,14 @@ export const ShopOverlay = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '30vh', overflowY: 'auto' }}>
                     {shopStock.map((cardId, i) => {
                         const cd = deckData.find(d => d.id === cardId);
-                        const price = (cd.type === 'weapon' ? Math.max(5, cd.dmg / 5) : cd.type === 'equip' ? 6 : 4) - (cp.charType === 'sales' ? 1 : 0);
+                        
+                        // ▼ 修正：営業マンの割引額を 1 から 2 に変更。念のため Math.max(0) でマイナスを防ぐ
+                        const basePrice = cd.type === 'weapon' ? Math.max(5, cd.dmg / 5) : cd.type === 'equip' ? 6 : 4;
+                        const price = Math.max(0, basePrice - (cp.charType === 'sales' ? 2 : 0));
+                        
                         const canAfford = remainP >= price && slotsUsed < cp.maxHand;
+                        
                         return (
-                            // ▼ 修正：クリック自体は常にできるようにし、エラーチェックを関数の内部で行うため disabled を外す
                             <ClayButton key={i} onClick={() => addToCart(cardId, price)} style={{ borderColor: cd.color, textAlign: 'left', opacity: canAfford ? 1 : 0.5 }}>
                                 {cd.icon} {cd.name} (<span style={{ color: canAfford ? '#2ecc71' : '#e74c3c' }}>{price}P</span>)<br/>
                                 <span style={{ fontSize: '10px' }}>{cd.desc}</span>

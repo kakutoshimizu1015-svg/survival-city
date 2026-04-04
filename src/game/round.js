@@ -5,7 +5,6 @@ import { playSfx } from '../utils/audio';
 import { charEmoji } from '../constants/characters';
 import { recordWin } from '../utils/userLogic';
 import { useNetworkStore } from '../store/useNetworkStore';
-// ▼ 追加：名前で自分を判定するためにインポート
 import { useUserStore } from '../store/useUserStore';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -44,16 +43,13 @@ const endGame = () => {
     let sortedTeams = null;
     const hasTeams = state.players.some(p => p.teamColor !== 'none');
     
-    // ▼ 修正: IDシャッフル対策。オンラインとオフラインで確実な自分判定を行う
     const netState = useNetworkStore.getState();
     const isOnline = netState.status === 'connected';
     
     const isMe = (p) => {
         if (isOnline) {
-            // オンライン時はネットワークのIDと一致するか確認
             return p.userId === netState.myUserId;
         } else {
-            // オフライン時はIDがシャッフルされるため、CPU以外かつ「自分の名前」と一致するかで判定
             const myName = useUserStore.getState().playerName;
             return !p.isCPU && p.name === myName;
         }
@@ -107,6 +103,13 @@ export const processRoundEnd = async () => {
 
         let summaryDigest = [];
 
+        // ▼ 追加: キャラクターのクールタイムなどのターン経過処理
+        state.players.forEach(p => {
+            if (p.detectiveCd > 0) {
+                useGameStore.getState().updatePlayer(p.id, { detectiveCd: p.detectiveCd - 1 });
+            }
+        });
+
         let weather = Math.random() < 0.2 ? "rainy" : Math.random() < 0.4 ? "cloudy" : "sunny";
         let isNight = Math.floor(newRound / 3) % 2 === 1;
         let canPrice = Math.max(1, Math.floor(Math.random() * 4));
@@ -116,14 +119,21 @@ export const processRoundEnd = async () => {
         summaryDigest.push(isNight ? "🌙 夜になった" : "☀️ 昼になった");
         summaryDigest.push(`📈 相場変動: 缶${canPrice}P ゴミ${trashPrice}P`);
 
+        // ▼ 維持費計算ロジック（スラム0, 商業1, 高級2 を1マスごとに厳密に加算）
         if (newRound % 3 === 0) {
             const AREA_TAX = { slum: 0, commercial: 1, luxury: 2 };
             state.players.forEach(p => {
                 const owned = Object.keys(state.territories).filter(k => state.territories[k] === p.id);
                 if (owned.length === 0) return;
+                
                 let tax = 0;
-                owned.forEach(tId => { tax += AREA_TAX[state.mapData.find(x => x.id == tId)?.area || 'slum']; });
+                owned.forEach(tId => { 
+                    const areaType = state.mapData.find(x => x.id == tId)?.area || 'slum';
+                    tax += AREA_TAX[areaType]; 
+                });
+                
                 if (tax === 0) { summaryDigest.push(`💸 ${p.name}: 維持費 0P`); return; }
+                
                 if (p.p >= tax) {
                     useGameStore.getState().updatePlayer(p.id, prev => ({ p: prev.p - tax }));
                     logMsg(`💸 ${p.name}の維持費: -${tax}P`);
@@ -134,7 +144,7 @@ export const processRoundEnd = async () => {
                     delete newTerr[lostId];
                     useGameStore.getState().updatePlayer(p.id, { p: 0 });
                     useGameStore.setState({ territories: newTerr });
-                    logMsg(`⚠️ ${p.name}は維持費不足で陣地没収！`);
+                    logMsg(`⚠️ ${p.name}は維持費不足で最も価値の高い陣地を没収！`);
                     summaryDigest.push(`⚠️ ${p.name}: 維持費不足で陣地没収`);
                 }
             });
