@@ -32,7 +32,6 @@ export const TutorialOverlay = () => {
     const tabs = ['🎯 目的', '🎮 ターンの流れ', '📊 画面の見方', '🗺️ マスの種類', '🃏 カード＆装備', '👥 NPCと危険', '🎯 ミニゲーム', '🏆 キャラ攻略'];
     const sandboxLabels = ['🎮 スコア計算を体験する', '🎮 1ターンをプレイしてみる', '🎮 画面の各要素を確認する', '🎮 いろんなマスを巡ってみる', '🎮 カードを使ってみる', '🎮 NPCに遭遇してみる', '🎮 ミニゲームを遊んでみる', '🎮 キャラスキルを試す'];
 
-    // ▼ 先ほどここがすっぽり抜けていました！大変失礼しました。
     const handleNext = () => {
         if (currentTab < tabs.length - 1) setCurrentTab(prev => prev + 1);
     };
@@ -133,7 +132,7 @@ export const TutorialOverlay = () => {
                         <div className="tut-card">
                             <h3>🏆 勝利条件</h3>
                             <p>このゲームは<b>指定ラウンド数</b>が終わった時点で、<em>最も高い総合スコア</em>を持つプレイヤーの勝利です。</p>
-                            <div className="tut-highlight"><p><strong>スコア計算式</strong><br/>スコア ＝ 所持P × 2 ＋ 陣地の価値 ＋ 資源価値 ＋ キル×3 − デス×5</p></div>
+                            <div className="tut-highlight"><p><strong>スコア計算式</strong><br/>スコア ＝ 所持P × 2 ＋ 陣地の価値(スラム3/商業6/高級10) ＋ 資源価値 ＋ キル×3 − デス×5</p></div>
                             <p>つまり、<b>お金（P）</b>を稼ぐだけでなく、<b>陣地の確保</b>や<b>他プレイヤーとの戦闘</b>も重要です。死亡回数が多いと大きく減点されるので注意！</p>
                         </div>
                         <div className="tut-card">
@@ -150,9 +149,9 @@ export const TutorialOverlay = () => {
                             <h3>⚠️ よくある負けパターン</h3>
                             <ul>
                                 <li>💀 死亡を繰り返してデス数が増えすぎる（−5P/回）</li>
-                                <li>🗑️ 缶やゴミを大量に持ったまま倒されてドロップする</li>
+                                <li>🗑️ 缶やゴミを大量に持ったまま倒されて全てドロップしてしまう</li>
                                 <li>🚩 陣地を取らず固定収入がないまま後半に入る</li>
-                                <li>🃏 手札を使わずに腐らせる（手札上限に注意）</li>
+                                <li>💸 陣地の維持費が払えず、最も価値の高い陣地を没収される</li>
                             </ul>
                         </div>
                     </div>
@@ -168,7 +167,7 @@ export const TutorialOverlay = () => {
                                 <div className="tut-step"><div className="tut-step-num">1</div><div className="tut-step-body"><div className="tut-step-title">🎲 サイコロを振る</div><div className="tut-step-desc">2つのサイコロの合計が<b>AP（行動力）</b>になります。<br/><em>ゾロ目</em>が出るとAPが2倍！自転車装備なら+2AP追加。</div></div></div>
                                 <div className="tut-step"><div className="tut-step-num">2</div><div className="tut-step-body"><div className="tut-step-title">🚶 移動＆アクション</div><div className="tut-step-desc">APを消費して自由に行動します。<br/>移動は1AP（雨の日は2AP）、各マスのアクション（缶拾い、バイト等）を実行できます。<br/><em>APが続く限り何度でも行動OK！</em></div></div></div>
                                 <div className="tut-step"><div className="tut-step-num">3</div><div className="tut-step-body"><div className="tut-step-title">🃏 カード使用</div><div className="tut-step-desc">手札のカードを<b>2AP</b>で使用可能。回復、攻撃、バフなど多彩。<br/>APがあれば1ターンに何枚でも使えます。</div></div></div>
-                                <div className="tut-step"><div className="tut-step-num">4</div><div className="tut-step-body"><div className="tut-step-title">🛑 ターン終了</div><div className="tut-step-desc">やることが終わったら「ターン終了」ボタンを押します。<br/><em>残ったAPは持ち越せません！</em>なるべく使い切りましょう。</div></div></div>
+                                <div className="tut-step"><div className="tut-step-num">4</div><div className="tut-step-body"><div className="tut-step-title">🛑 ターン終了</div><div className="tut-step-desc">やることが終わったら「ターン終了」ボタンを押します。<br/><em>残ったAPは全て消滅します！</em>なるべく使い切りましょう。</div></div></div>
                             </div>
                         </div>
                         <div className="tut-card">
@@ -178,8 +177,8 @@ export const TutorialOverlay = () => {
                                 <li>🌤️ <b>天候が変化</b>する場合がある（晴れ→曇り→雨）</li>
                                 <li>🌙 <b>昼夜が切り替わる</b>ことがある（夜は視界制限あり）</li>
                                 <li>📈 <b>缶・ゴミの相場</b>がランダムに変動</li>
-                                <li>🛻 <b>ゴミ収集車</b>が通過する可能性（エリアにいるとダメージ！）</li>
-                                <li>🎯 <b>目的地</b>が新しい場所に移動</li>
+                                <li>🛻 <b>ゴミ収集車</b>が暴走し、同じエリアのプレイヤーにダメージ！</li>
+                                <li>💸 <b>維持費徴収</b>（3ラウンドごと）</li>
                             </ul>
                         </div>
                     </div>
@@ -242,18 +241,12 @@ export const TutorialOverlay = () => {
                             <div className="tut-highlight"><p><strong>ポイント：</strong>ボタンが明るく光っている＝今使えるアクション。<br/>灰色の半透明＝条件未達（APが足りない、現在のマスでは使えない等）。<br/>まずサイコロを振り、APを確保してから他のアクションを行います。</p></div>
                         </div>
                         <div className="tut-card">
-                            <h3>🃏 手札エリア（上部中央〜右）</h3>
-                            <p>取得したカードが並びます。カード上の「使う」ボタンで<b>2AP</b>消費して使用、「捨てる」で破棄します。</p>
-                            <div className="tut-highlight"><p><strong>手札上限に注意！</strong>上限（通常7枚）を超えるとカードを捨てるまで行動できません。<br/>不要なカードは早めに使うか捨てましょう。</p></div>
-                        </div>
-                        <div className="tut-card">
                             <h3>🗺️ マップエリア（中央）</h3>
                             <p>ゲームボードが表示されます。丸いタイル上にプレイヤーのコマやNPCが配置されています。</p>
                             <ul>
-                                <li>🔍 <b>ズーム</b> — 左上のボタン（＋/−/⟳）またはマウスホイール/ピンチ操作</li>
-                                <li>🖐️ <b>スクロール</b> — ドラッグまたは1本指スワイプで視点移動</li>
+                                <li>🔍 <b>ズーム</b> — マウスホイール/ピンチ操作でズーム</li>
+                                <li>🖐️ <b>パン(スクロール)</b> — 画面をドラッグ/スワイプして視点移動</li>
                                 <li>👆 <b>タイルタップ</b> — 分岐点で進む方向を選択する時に使用</li>
-                                <li>⚡ <b>右上のAP表示</b> — マップ上でも残りAPが常に見える</li>
                             </ul>
                         </div>
                     </div>
@@ -268,26 +261,25 @@ export const TutorialOverlay = () => {
                             <div className="tut-tile-grid">
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#78c6ff,#1565c0)' }}>🔵</div><div className="tut-tile-info"><div className="tut-tile-name">道（通常マス）</div><div className="tut-tile-desc">通過するだけ。分岐点になることも</div></div></div>
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#4dd0e1,#006064)' }}>🥫</div><div className="tut-tile-info"><div className="tut-tile-name">空き缶マス</div><div className="tut-tile-desc">1APで缶を拾える（1ターン3回まで）</div></div></div>
-                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#ef9a9a,#b71c1c)' }}>🗑️</div><div className="tut-tile-info"><div className="tut-tile-name">ゴミ山マス</div><div className="tut-tile-desc">2APでゴミ漁り。失敗リスクあり</div></div></div>
+                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#ef9a9a,#b71c1c)' }}>🗑️</div><div className="tut-tile-info"><div className="tut-tile-name">ゴミ山マス</div><div className="tut-tile-desc">2APでゴミ漁り。約16%で補導(次AP-2&終了)。夜にボーナス</div></div></div>
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#ce93d8,#6a1b9a)' }}>❓</div><div className="tut-tile-info"><div className="tut-tile-name">イベントマス</div><div className="tut-tile-desc">到着時にランダムイベント発生</div></div></div>
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#81c784,#1b5e20)' }}>💼</div><div className="tut-tile-info"><div className="tut-tile-name">バイトマス</div><div className="tut-tile-desc">3APで働いてPを稼ぐ</div></div></div>
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#ffee58,#f9a825)' }}>🛒</div><div className="tut-tile-info"><div className="tut-tile-name">ショップマス</div><div className="tut-tile-desc">Pを払ってカードを購入・売却</div></div></div>
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#ffa726,#bf360c)' }}>💱</div><div className="tut-tile-info"><div className="tut-tile-name">買取所マス</div><div className="tut-tile-desc">缶やゴミを換金できる（0AP）</div></div></div>
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#80deea,#00838f)' }}>🏠</div><div className="tut-tile-info"><div className="tut-tile-name">避難所マス</div><div className="tut-tile-desc">通過時にHP回復</div></div></div>
-                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#ff7043,#b71c1c)' }}>🚓</div><div className="tut-tile-info"><div className="tut-tile-name">交番マス</div><div className="tut-tile-desc">通過で補導リスク（次AP-2）</div></div></div>
-                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#90a4ae,#263238)', borderColor: 'rgba(150,220,255,0.75)' }}>🕳️</div><div className="tut-tile-info"><div className="tut-tile-name">マンホール</div><div className="tut-tile-desc">1APで別のマンホールへワープ</div></div></div>
-                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#fff59d,#f9a825)', border: '2px solid #f1c40f', boxShadow: '0 0 8px #f1c40f' }}>🏥</div><div className="tut-tile-info"><div className="tut-tile-name">病院（中央）</div><div className="tut-tile-desc">死亡時のリスポーン地点</div></div></div>
+                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#ff7043,#b71c1c)' }}>🚓</div><div className="tut-tile-info"><div className="tut-tile-name">交番マス</div><div className="tut-tile-desc">通過で強制足止め（ターン終了）</div></div></div>
+                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#fff59d,#f9a825)', border: '2px solid #f1c40f', boxShadow: '0 0 8px #f1c40f' }}>🏥</div><div className="tut-tile-info"><div className="tut-tile-name">病院（中央）</div><div className="tut-tile-desc">到着・通過でHP最大30無料回復！</div></div></div>
                             </div>
                         </div>
                         <div className="tut-card">
                             <h3>🌍 エリアと陣地の価値</h3>
                             <p>マップは3つのエリアに分かれています。占領時の<b>収入とコスト</b>が異なります。</p>
                             <div className="tut-tile-grid">
-                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: '#796859' }}>🏚️</div><div className="tut-tile-info"><div className="tut-tile-name">スラム街</div><div className="tut-tile-desc">占領コスト低め。収入1P/ターン</div></div></div>
-                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: '#a89481' }}>🏢</div><div className="tut-tile-info"><div className="tut-tile-name">商業地区</div><div className="tut-tile-desc">中間コスト。収入2P/ターン</div></div></div>
-                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: '#d1c4b9', color: '#333' }}>💎</div><div className="tut-tile-info"><div className="tut-tile-name">高級住宅街</div><div className="tut-tile-desc">占領コスト高め。収入3P/ターン</div></div></div>
+                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: '#796859' }}>🏚️</div><div className="tut-tile-info"><div className="tut-tile-name">スラム街</div><div className="tut-tile-desc">維持費0P。収入1P/ターン</div></div></div>
+                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: '#a89481' }}>🏢</div><div className="tut-tile-info"><div className="tut-tile-name">商業地区</div><div className="tut-tile-desc">維持費1P。収入2P/ターン</div></div></div>
+                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: '#d1c4b9', color: '#333' }}>💎</div><div className="tut-tile-info"><div className="tut-tile-name">高級住宅街</div><div className="tut-tile-desc">維持費2P。収入3P/ターン</div></div></div>
                             </div>
-                            <div className="tut-highlight"><p><strong>定石：</strong>序盤はスラム街の安いマスを2〜3個確保し、安定した固定収入を作ることが重要です。<br/>リヤカー装備を取得すると陣地収入が<em>2倍</em>になるため非常に強力。</p></div>
+                            <div className="tut-highlight"><p><strong>定石：</strong>序盤はスラム街の安いマスを2〜3個確保し、安定した固定収入を作ることが重要です。<br/>3ラウンドごとの維持費が払えないと、一番高い陣地が没収されてしまうので注意！</p></div>
                         </div>
                     </div>
                 )}
@@ -296,23 +288,20 @@ export const TutorialOverlay = () => {
                 {currentTab === 4 && (
                     <div className="tut-page active">
                         <div className="tut-card">
-                            <h3>🃏 カードの入手方法</h3>
+                            <h3>🃏 カードの基本</h3>
                             <ul>
-                                <li>❓ <b>イベントマス</b>に止まるとミニゲーム発生。勝つとカード入手</li>
-                                <li>🛒 <b>ショップ</b>でPを払って購入</li>
-                                <li>🗑️ <b>ゴミ漁り</b>で低確率ドロップ</li>
-                                <li>特定のイベントやキャラスキルによる獲得</li>
+                                <li>使用コスト：すべてのカード使用に<em>2AP</em>必要</li>
+                                <li>手札上限：通常7枚（リュックで+2）</li>
+                                <li>入手方法：イベントマス、ショップ購入、ゴミ漁りドロップなど</li>
                             </ul>
-                            <div className="tut-highlight"><p><strong>使用コスト：</strong>すべてのカード使用に<em>2AP</em>必要。カード自体の効果は無料。</p></div>
                         </div>
                         <div className="tut-card">
-                            <h3>🟢 バフ・収入系カード</h3>
-                            <p>安全にPやAPを増やすカード。序盤〜中盤で活躍します。</p>
+                            <h3>⚔️ 戦闘とPのドロップ（重要）</h3>
+                            <p>武器カードやスキルで他プレイヤーにダメージを与えると、<b>ダメージの1/5にあたるP</b>を相手はその場にドロップします。</p>
                             <ul>
-                                <li><b>支援面談</b> — +5P ＆ 次回AP+2。最も安定した収入カード</li>
-                                <li><b>炊き出し</b> — +3P確定。リスクゼロ</li>
-                                <li><b>エナジードリンク</b> — 即座にAP+5。追加行動に</li>
-                                <li><b>スケボー</b> — 次回ダイス+5AP。大型ターンを作れる</li>
+                                <li>近接攻撃で倒せばそのまま自分がPを奪えます。</li>
+                                <li>遠距離攻撃の場合、ドロップしたPは周囲のプレイヤーに「ハイエナ（横取り）」される可能性があります。</li>
+                                <li>HP0で死亡させた場合、相手の持っていた「缶」と「ゴミ」も全てその場にドロップします！</li>
                             </ul>
                         </div>
                         <div className="tut-card">
@@ -323,31 +312,18 @@ export const TutorialOverlay = () => {
                                 <li><b>バット（射程1）</b> — 20ダメージ。同マス/隣接で</li>
                                 <li><b>拳銃（射程3）</b> — 40ダメージ。遠距離攻撃の主力</li>
                                 <li><b>ショットガン（射程2）</b> — 範囲内全員に30ダメ。逆転要素</li>
-                                <li><b>缶泥棒</b> — 他人から最大2P強奪</li>
                                 <li><b>通報</b> — 相手の次AP-2。地味に強い妨害</li>
                             </ul>
-                            <div className="tut-highlight"><p><strong>武器の射程について：</strong>射程はマス数です。射程2なら2マス離れた相手まで攻撃可能。<br/>使用すると<em>扇形の照準UI</em>が出るので、スライダーで角度を調整して攻撃します。</p></div>
+                            <div className="tut-highlight"><p><strong>武器の射程について：</strong>使用すると<em>扇形の照準UI</em>が出るので、スライダーで角度を調整してハイライトされたマスを攻撃します。</p></div>
                         </div>
                         <div className="tut-card">
-                            <h3>🛡️ 装備品カード（永続効果）</h3>
-                            <p>使用すると永続的な効果が付きます。一度装備したら外れません。</p>
+                            <h3>🛡️ 装備品・リアクションカード</h3>
                             <ul>
                                 <li>🚲 <b>ボロボロの自転車</b> — 毎ターンAP+2。最重要装備</li>
-                                <li>👟 <b>安全靴</b> — ゴミ漁りのAPコストが2→1に</li>
                                 <li>🛒 <b>大きなリヤカー</b> — 陣地収入2倍。不動産プレイの核</li>
-                                <li>🎒 <b>リュック</b> — 手札上限+2</li>
-                                <li>☂️ <b>雨具</b> — 雨の日のペナルティを完全無効化</li>
+                                <li><b>弁護士の盾</b> — 次の攻撃/カツアゲを完全無効化（使用して予約しておく）</li>
+                                <li><b>裏取引</b> — 「下剋上」「大暴落」などの全体魔法を相手に反射</li>
                             </ul>
-                        </div>
-                        <div className="tut-card">
-                            <h3>⚖️ リアクションカード</h3>
-                            <p>使用すると「予約」され、特定の攻撃を受けた時に自動発動します。</p>
-                            <ul>
-                                <li><b>弁護士の盾</b> — 次の攻撃/カツアゲを完全無効化</li>
-                                <li><b>裏取引</b> — 「下剋上」「大暴落」を使った相手に効果を反射</li>
-                                <li><b>反撃の一撃</b> — 受けたダメージをそのまま相手に返す</li>
-                            </ul>
-                            <div className="tut-highlight"><p><strong>定石：</strong>トップに立った時は「弁護士の盾」や「裏取引」を予約しておくと、<br/>逆転カードからの防御が可能。1位の防衛に必須。</p></div>
                         </div>
                     </div>
                 )}
@@ -359,23 +335,14 @@ export const TutorialOverlay = () => {
                             <h3>👥 マップ上のNPC</h3>
                             <p>マップには複数のNPCが巡回しています。近づくと自動的にイベントが発生します。</p>
                             <div className="tut-npc-list">
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🚓</div><div className="tut-npc-info"><div className="tut-npc-name">警察</div><div className="tut-npc-desc">同マスに止まると補導。次のターンAP-2ペナルティ。<br/>「身分証明書」カードや「ステルス行動」で回避可能。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🛻</div><div className="tut-npc-info"><div className="tut-npc-name">ゴミ収集車</div><div className="tut-npc-desc">ラウンド開始時に一定確率で出現し、エリアを走り抜ける。<br/>通過マスにいるとダメージ！事前にどのエリアが危険か告知されます。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🐕</div><div className="tut-npc-info"><div className="tut-npc-name">野良犬</div><div className="tut-npc-desc">同マスにいると缶拾い・ゴミ漁りができなくなる。<br/>避けて通るか、追い払うまで待つ。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">👴</div><div className="tut-npc-info"><div className="tut-npc-name">おじさん</div><div className="tut-npc-desc">同マスにいると陣地占領ができない。<br/>タイミングを見て避ける必要あり。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">😎</div><div className="tut-npc-info"><div className="tut-npc-name">ヤクザ</div><div className="tut-npc-desc">同マスに止まるとPを強奪される。<br/>「身代わり人形」装備で1回無効化可能。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">💰</div><div className="tut-npc-info"><div className="tut-npc-name">闇金</div><div className="tut-npc-desc">同マスに止まるとP没収のリスク。<br/>借金状態になることも。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🤝</div><div className="tut-npc-info"><div className="tut-npc-name">仲間</div><div className="tut-npc-desc">同マスに止まるとHP回復やPボーナスなど良い効果。<br/>見つけたら積極的に寄ろう。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🚓</div><div className="tut-npc-info"><div className="tut-npc-name">警察</div><div className="tut-npc-desc">同マスに止まると<b>次回AP-2 ＆ ターン強制終了！</b><br/>偶数ラウンド終了時には広範囲をパトロール巡回します。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🛻</div><div className="tut-npc-info"><div className="tut-npc-name">ごみ収集車（ホラー）</div><div className="tut-npc-desc">毎ラウンド終了時にランダムでエリアを暴走。<br/>轢かれると<b>55%の確率で50の大ダメージ！</b>事前に危険エリアが予告されます。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">👴</div><div className="tut-npc-info"><div className="tut-npc-name">厄介なおじさん</div><div className="tut-npc-desc">絡まれると<b>カード1枚破棄 ＆ ターン強制終了！</b></div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">😎</div><div className="tut-npc-info"><div className="tut-npc-name">ヤクザ</div><div className="tut-npc-desc">遭遇すると30ダメージ＋手札1枚ランダム強奪。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">💰</div><div className="tut-npc-info"><div className="tut-npc-name">闇金</div><div className="tut-npc-desc">遭遇すると所持金から最大10P強制没収。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🤝</div><div className="tut-npc-info"><div className="tut-npc-name">仲間</div><div className="tut-npc-desc">同マスに止まると空き缶を1つもらえる有益なNPC。</div></div></div>
                             </div>
-                        </div>
-                        <div className="tut-card">
-                            <h3>🌧️ 天候と昼夜の影響</h3>
-                            <ul>
-                                <li>🌧️ <b>雨</b> — 移動コスト2AP、缶拾い/ゴミ漁り不可。雨具で無効化</li>
-                                <li>🌙 <b>夜</b> — 自分の前後3マスしか見えない。ゴミ漁りにボーナスあり</li>
-                                <li>🚧 <b>道路工事</b> — 一定確率で発生。該当マスが2ラウンド通行不可</li>
-                            </ul>
-                            <div className="tut-highlight"><p><strong>定石：</strong>雨の日は移動が重いので、ショップやバイトマスに留まってカードを買ったり働いたりするのが効率的。<br/>元アスリートなら雨でも移動1APなので大チャンス！</p></div>
+                            <div className="tut-highlight"><p><strong>回避方法：</strong>「身代わり人形」を装備していれば1回だけNPCの妨害を無効化できます。警察は「身分証明書」「ステルス行動」等のカードでも回避可能です。</p></div>
                         </div>
                         <div className="tut-card">
                             <h3>💀 死亡とリスポーン</h3>
@@ -384,7 +351,7 @@ export const TutorialOverlay = () => {
                                 <li>病院マス（中央）に強制転送</li>
                                 <li>所持Pの約1/3を没収（最大15P）</li>
                                 <li>装備品をランダムで1つ落とす</li>
-                                <li>持っていた缶・ゴミをその場にドロップ（他人が拾える）</li>
+                                <li>持っていた缶・ゴミをすべてその場にドロップ（他人が拾える）</li>
                                 <li>デス数+1（スコアに−5）</li>
                                 <li>復活後<em>2ターン無敵</em></li>
                             </ul>
@@ -428,7 +395,7 @@ export const TutorialOverlay = () => {
                         <div className="tut-char-grid">
                             <CharCard emoji="🏃" name="元アスリート" role="機動力特化型" passive="移動が常に1AP＆雨の影響なし" action="疾風ダッシュ（3AP）:3マス先へジャンプ" strategy="序盤から積極的に動き回り、缶拾い→換金のサイクルを素早く回すのが基本。雨の日は他プレイヤーが動けない中で独走できるため、雨の日にイベントマスや遠方の買取所を狙う。疾風ダッシュは危険なNPCからの脱出にも有効。陣地は通り道沿いに確保し、高回転の移動で稼ぐスタイル。" color="#e74c3c" />
                             <CharCard emoji="💼" name="元営業マン" role="金策特化型" passive="バイト成功率80%＆ショップ1P割引" action="訪問販売（2AP）:相手にカードを押し付けて3P徴収" strategy="バイトマスに居座って安定収入を稼ぐのが基本。ショップも割引で使えるため、装備品を早めに揃えやすい。訪問販売は「不要カード→3P」に変換するスキルとして非常に強力。手札をあえて多く持ち、不要カードを押し付けて稼ぐ「カード回転型」の立ち回りが強い。" color="#3498db" />
-                            <CharCard emoji="🌿" name="サバイバー" role="耐久型" passive="ゴミ漁り失敗のペナルティ無効" action="野宿（2AP）:HP+15回復" strategy="ゴミ山マスでノーリスクにゴミを集めて換金する。ゴミ漁りは通常リスクがあるが、サバイバーなら失敗してもダメージなし。野宿でHP管理も容易なので、前線に出続けられる。安全靴を装備するとゴミ漁り1APになり、効率が劇的に向上。序盤はゴミ漁り→換金→陣地確保のルートが安定。" color="#2ecc71" />
+                            <CharCard emoji="🌿" name="サバイバー" role="耐久型" passive="ゴミ漁り失敗の警察ペナ無効" action="野宿（2AP）:HP+15回復" strategy="ゴミ山マスでノーリスクにゴミを集めて換金する。ゴミ漁りは通常リスクがあるが、サバイバーなら失敗してもダメージなし。野宿でHP管理も容易なので、前線に出続けられる。安全靴を装備するとゴミ漁り1APになり、効率が劇的に向上。序盤はゴミ漁り→換金→陣地確保のルートが安定。" color="#2ecc71" />
                             <CharCard emoji="👊" name="元ヤン" role="PvP特化型" passive="同マス/すれ違いで自動1Pカツアゲ（1ターン2P上限）" action="殴る（2AP）:同マスの相手に10ダメージ" strategy="他プレイヤーの多いルートを歩き回り、すれ違いカツアゲで稼ぐ。序盤は移動しながらカツアゲ→中盤以降は武器カードで本格PvP。殴るスキルは低コストで使えるため、HPの減った相手を仕留めてキルポイントを稼ぐのも有効。ただし集中攻撃されやすいため、段ボールの盾やヘルメットの装備が重要。" color="#e67e22" />
                             <CharCard emoji="💻" name="元ハッカー" role="戦略型" passive="手札上限+2（9枚）" action="遠隔ハッキング（3AP）:どこからでもショップ入替え＆1枚購入" strategy="手札上限9枚を活かし、多種多様なカードをストック。遠隔ハッキングでショップ品を吟味し、最適なカードだけ購入する。大量のカードを持てるため、攻撃カード+リアクションカード+装備を同時に保持可能。状況に応じたカードを選んで使い分ける戦略的プレイが求められる。" color="#3498db" />
                             <CharCard emoji="🎸" name="ストリートミュージシャン" role="支援＆制圧型" passive="他者が同マスor隣接にいると銀行+3P" action="路上ライブ（4AP）:周囲2マスの全員を自分のマスに引き寄せ" strategy="人が集まりやすい交差点や中央付近に陣取り、投げ銭パッシブで稼ぐのが基本。路上ライブで強制的にプレイヤーを集めることで、投げ銭の機会を作りつつ、元ヤンなどの戦闘キャラと組み合わせると凶悪。ただしAPコストが重いので、自転車装備やスケボーカードとの併用が重要。" color="#9b59b6" />

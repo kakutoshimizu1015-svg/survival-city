@@ -44,7 +44,8 @@ export const SettingsAndRules = () => {
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#c0392b', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🏆 ゲームの目的</h3>
                             <p style={{ fontSize: '14px', lineHeight: '1.5', margin: '5px 0', color: '#333' }}>
                                 指定のラウンド数終了時に、最も多くの<b>総合スコア</b>を獲得したプレイヤーが優勝！<br/>
-                                スコア ＝ <b>所持P × 2</b> ＋ 陣地の価値 ＋ 資源価値 ＋ キル×3 − デス×5
+                                スコア ＝ <b>所持P × 2</b> ＋ 陣地の価値(※) ＋ 資源価値 ＋ (キル数×3) − (デス数×5)<br/>
+                                <span style={{ fontSize: '12px', color: '#e74c3c' }}>※ゲーム終了時の陣地の価値：スラム 3 / 商業 6 / 高級 10</span>
                             </p>
                         </div>
 
@@ -68,6 +69,15 @@ export const SettingsAndRules = () => {
                             </ul>
                         </div>
 
+                        <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #c0392b' }}>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#c0392b', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>⚔️ 戦闘とPのドロップ</h3>
+                            <ul style={{ margin: '5px 0', paddingLeft: '20px', fontSize: '14px', lineHeight: '1.5', color: '#333' }}>
+                                <li>武器カードやスキルでダメージを受けると、<b>ダメージの1/5にあたるPをその場に落とします。</b></li>
+                                <li>落としたPは攻撃者が奪いますが、遠距離攻撃などの場合は周囲2マスにいる他プレイヤーが「ハイエナ（横取り）」できます。</li>
+                                <li>死亡時（HP0）は、所持している「空き缶」と「ゴミ」をすべてそのマスに落とします。落としたアイテムは後からそのマスを通った人が拾えます。</li>
+                            </ul>
+                        </div>
+
                         <div style={{ background: '#f0fff4', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #2ecc71' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#27ae60', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🎭 キャラクター一覧（全9種）</h3>
                             <p style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>各キャラは <b>パッシブ（自動発動）</b> と <b>アクションスキル（AP消費）</b> を1つずつ持ちます。<br/>キャラアイコンをクリックすると詳細を確認できます。</p>
@@ -87,10 +97,10 @@ export const SettingsAndRules = () => {
                         <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid rgba(0,0,0,0.1)' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#c0392b', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🗺️ マスの種類と効果</h3>
                             <ul style={{ fontSize: '13px', lineHeight: '1.6', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
-                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🏥</span><b>病院(開始地点):</b> HPが0になるとここへ搬送され、最大15P没収・装備1つ喪失・資源ドロップが発生する。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🏥</span><b>病院(開始地点):</b> 通過・停止すると<b>無料でHPが最大30回復</b>する。HP0で搬送されると、最大15P没収・装備1つ喪失・所持資源をその場に全ドロップする。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🛣️</span><b>通常の道:</b> 特別な効果なし。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🥫</span><b>空き缶:</b> 1APで缶を拾う（1ターン3回まで）。雨の日は雨具が必要。</li>
-                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🗑️</span><b>ゴミ山:</b> 2APでゴミを漁る。失敗すると次回AP-2ペナルティ。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🗑️</span><b>ゴミ山:</b> 2APでゴミを漁る。約16%の確率で失敗し次回AP-2ペナルティ。<b>夜に漁ると発見量にボーナス</b>がつく。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>💱</span><b>買取所:</b> 缶・ゴミを現在の相場でP換金（0AP）。相場はラウンドごとに変動。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>💼</span><b>バイト:</b> 3APで挑戦。成功率60%（営業マンは80%）で12P獲得。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🛒</span><b>ショップ:</b> カード購入（毎ターン在庫が刷新）や手札の売却（2P）ができる。</li>
@@ -100,7 +110,7 @@ export const SettingsAndRules = () => {
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🚓</span><b>交番:</b> 職務質問で足止め、そのターンは移動不可。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🎯</span><b>目的地(的):</b> 到達するとボーナスP（ラウンド×2+5P）獲得。的は別の場所へ移動。</li>
                                 <hr style={{ border: 0, borderTop: '1px dashed #ccc', margin: '8px 0' }} />
-                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🚩</span><b>陣地占領（3P / 敵陣地5P）:</b> マスを自分の陣地にすると毎ターン収入（スラム1P・商業2P・高級3P）。敵の陣地は距離が遠いほど安く奪取できる（空き巣割引）。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🚩</span><b>陣地と維持費:</b> 陣地にすると毎ターンダイス時に収入（スラム1P/商業2P/高級3P）。3ラウンドに1回、維持費（スラム0P/商業1P/高級2P）が引き落とされる。<b>払えないと所持Pが0になり、最も価値の高い陣地を没収される。</b></li>
                             </ul>
                         </div>
 
@@ -108,10 +118,10 @@ export const SettingsAndRules = () => {
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#e74c3c', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>⚠️ NPC（敵）と危険なイベント</h3>
                             <p style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>「身代わり人形」を装備していると1回だけ無効化可能。探偵の【情報操作】でNPCを移動させることもできます。</p>
                             <ul style={{ fontSize: '13px', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🚓</span><b>警察:</b> 補導されると次回AP-2（身分証・ステルス・サバイバーで回避可）。偶数ラウンド終了時にパトロール巡回あり。</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>😎</span><b>ヤクザ:</b> 30ダメージ＋手札1枚ランダム強奪。</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💀</span><b>闇金:</b> 所持金から最大10P没収。</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🧓</span><b>厄介なおじさん:</b> 絡まれてターン強制終了＋カード1枚喪失。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🚓</span><b>警察:</b> 遭遇すると補導され<b>「次回AP-2 ＆ その場でターン強制終了」</b>（身分証・ステルス等で回避可）。偶数ラウンド終了時には必ずパトロール巡回が発生。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>😎</span><b>ヤクザ:</b> 遭遇すると30ダメージ＋手札1枚ランダム強奪。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💀</span><b>闇金:</b> 遭遇すると所持金から最大10P強制没収。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🧓</span><b>厄介なおじさん:</b> 絡まれると<b>「カード1枚破棄 ＆ その場でターン強制終了」</b>。</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🐀</span><b>野良動物:</b> 同マスにいる間、缶拾い・ゴミ漁りが不可能になる。</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🤝</span><b>仲間のホームレス:</b> 出会うと空き缶を1つもらえる有益なNPC。</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🛻</span><b>ごみ収集車（毎ラウンド末）:</b> マップを暴走。轢かれると<b>50の大ダメージ</b>（55%の確率で命中）。次のラウンド開始前に「予兆」として危険エリアが予告される。</li>
