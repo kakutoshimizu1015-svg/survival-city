@@ -57,20 +57,20 @@ export const npcImages = {
 export const TOKEN_CONFIG = {
     player: {
         scaleMultiplier: 1.15, // 遠近法に乗算するベース倍率
-        imageSize: 125,        // スキン画像使用時のサイズ (px)
+        imageSize: 130,        // スキン画像使用時のサイズ (px)
         emojiBgSize: 64,       // 絵文字使用時の丸枠サイズ (px)
         emojiFontSize: 34,     // 絵文字のフォントサイズ (px)
         nameFontSize: 12       // プレイヤー名のフォントサイズ (px)
     },
     npc: {
-        baseSize: 120,         // デフォルトの基本サイズ (px)
-        truckSize: 150,        // ゴミ収集車のサイズ (px)
-        policeSize: 120,       // 警察のサイズ (px)
-        uncleSize: 120,        // 厄介なおじさんのサイズ (px)
+        baseSize: 130,         // デフォルトの基本サイズ (px)
+        truckSize: 250,        // ゴミ収集車のサイズ (px)
+        policeSize: 200,       // 警察のサイズ (px)
+        uncleSize: 130,        // 厄介なおじさんのサイズ (px)
         yakuzaSize: 130,       // ヤクザのサイズ (px)
-        loansharkSize: 120,    // 闇金のサイズ (px)
-        friendSize: 120,       // 仲間のサイズ (px)
-        animalSize: 100        // 野良動物のサイズ (px)
+        loansharkSize: 130,    // 闇金のサイズ (px)
+        friendSize: 130,       // 仲間のサイズ (px)
+        animalSize: 130        // 野良動物のサイズ (px)
     }
 };
 // =========================================================
