@@ -278,6 +278,16 @@ select, .name-input { padding:6px; font-size:14px; border-radius:5px; border:2px
 .tile-highlight-branch { box-shadow:0 0 20px #f1c40f,inset 0 0 15px rgba(241,196,15,0.8) !important; border:4px solid #f1c40f !important; cursor:pointer; animation:pulse-branch 0.8s infinite alternate; z-index:20 !important; transform:scale(1.15); }
 @keyframes pulse-branch { 0%{box-shadow:0 0 10px #f1c40f,inset 0 0 10px rgba(241,196,15,0.5); transform:scale(1.15);} 100%{box-shadow:0 0 30px #f1c40f,inset 0 0 20px rgba(241,196,15,1); transform:scale(1.25);} }
 
+/* ▼ 追加：Tile.jsx から移行したマス発光アニメーション */
+@keyframes tilePulse {
+    from { filter: brightness(1); }
+    to { filter: brightness(1.4) drop-shadow(0 0 8px rgba(255,224,102,0.6)); }
+}
+@keyframes tilePulseDash {
+    from { filter: brightness(1); }
+    to { filter: brightness(1.6) drop-shadow(0 0 15px rgba(255,255,255,1)); }
+}
+
 /* ▼ レイアウト修正：PCの右側パネルもはみ出さずに内部スクロールする */
 #right-side-area { display:flex; flex-direction:column; gap:15px; width:220px; flex-shrink:0; overflow-y:auto; }
 #action-panel { display:flex; flex-direction:column; gap:5px; padding:10px; }
