@@ -9,44 +9,68 @@ export const checkNpcCollision = (playerId) => {
     if (!p || p.hp <= 0 || p.respawnShield > 0) return;
 
     if (p.pos === state.policePos) {
-        if (p.equip?.doll) { state.updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll: false} })); logMsg(`🎎 身代わり人形で警察回避！`); }
-        else if (p.stealth) { state.updatePlayer(p.id, { stealth: false }); logMsg(`💨 ステルスで警察回避！`); }
-        else if (p.hasID) { state.updatePlayer(p.id, { hasID: false }); logMsg(`🔵 身分証で警察回避！`); }
+        if (p.equip?.doll) { state.updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll: false} })); logMsg(`🎎 身代わり人形でパトカー回避！`); }
+        else if (p.stealth) { state.updatePlayer(p.id, { stealth: false }); logMsg(`💨 ステルスでパトカー回避！`); }
+        else if (p.hasID) { state.updatePlayer(p.id, { hasID: false }); logMsg(`🔵 身分証でパトカー回避！`); }
         else if (p.charType === "survivor") { logMsg(`🌿 サバイバーの勘で回避！`); }
         else {
-            // ▼ cannotMove: true を追加し、確実に行動を封じる
-            state.updatePlayer(p.id, { penaltyAP: (p.penaltyAP || 0) + 2, ap: 0, cannotMove: true });
-            logMsg(`<span style="color:#e74c3c">🚓 警察に補導！次回AP-2、行動終了！</span>`); playSfx('fail');
-            state.addEventPopup(p.id, "🚓", "警察に補導", "次回AP-2", "bad");
+            // ▼ 修正: ターン強制終了を廃止し、次回AP-2のみ付与
+            state.updatePlayer(p.id, { penaltyAP: (p.penaltyAP || 0) + 2 });
+            logMsg(`<span style="color:#e74c3c">🚓 パトカーに補導！次回AP-2！</span>`); playSfx('fail');
+            state.addEventPopup(p.id, "🚓", "パトカー補導", "次回AP-2", "bad");
+            useGameStore.setState({ policePos: 999, policeCd: 2 });
         }
     }
+    
     if (p.pos === state.unclePos) {
-        state.updatePlayer(p.id, prev => ({ ap: 0, cannotMove: true, hand: prev.hand.slice(0, -1) }));
-        logMsg(`<span style="color:#e74c3c">🧓 厄介なおじさん！カード破棄＆ターン終了！</span>`); playSfx('fail');
-        state.addEventPopup(p.id, "🧓", "厄介なおじさん", "カード破棄＆行動終了", "bad");
+        // ▼ 修正: ランダム1枚破棄のみ（ターン終了なし）
+        if (p.hand.length > 0) {
+            state.updatePlayer(p.id, prev => {
+                const newHand = [...prev.hand];
+                newHand.splice(Math.floor(Math.random() * newHand.length), 1);
+                return { hand: newHand };
+            });
+            logMsg(`<span style="color:#e74c3c">🧓 厄介なおじさんに絡まれた！手札をランダムに1枚破棄！</span>`); 
+            state.addEventPopup(p.id, "🧓", "厄介なおじさん", "カード破棄", "bad");
+        } else {
+            logMsg(`🧓 厄介なおじさんに絡まれたが、破棄するカードがなかった。`);
+        }
+        playSfx('fail');
+        useGameStore.setState({ unclePos: 999, uncleCd: 2 });
     }
+    
     if (p.pos === state.yakuzaPos) {
         if (p.equip?.doll) { state.updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll: false} })); logMsg(`🎎 身代わり人形でヤクザ回避！`); }
         else {
-            dealDamage(p.id, 30, "ヤクザ");
+            // ▼ 修正: 15〜20のランダムダメージ
+            const dmg = 15 + Math.floor(Math.random() * 6);
+            dealDamage(p.id, dmg, "ヤクザ");
             if (p.hand.length > 0) {
                 state.updatePlayer(p.id, prev => { const newHand = [...prev.hand]; newHand.splice(Math.floor(Math.random() * newHand.length), 1); return { hand: newHand }; });
-                logMsg(`😎 ヤクザにカードを強奪された！`); state.addEventPopup(p.id, "😎", "ヤクザ", "カード強奪", "bad");
+                logMsg(`😎 ヤクザ！${dmg}ダメージ＆カード強奪！`); state.addEventPopup(p.id, "😎", "ヤクザ", "強奪", "bad");
+            } else {
+                logMsg(`😎 ヤクザ！${dmg}ダメージ！`); state.addEventPopup(p.id, "😎", "ヤクザ", `${dmg}ダメ`, "bad");
             }
+            useGameStore.setState({ yakuzaPos: 999, yakuzaCd: 2 });
         }
     }
+    
     if (p.pos === state.loansharkPos) {
         if (p.equip?.doll) { state.updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll: false} })); logMsg(`🎎 身代わり人形で闇金回避！`); }
         else {
-            const lostP = Math.min(10, Math.max(0, p.p));
+            // ▼ 修正: 所持Pの20%（最大20P）没収
+            const lostP = Math.min(20, Math.floor(p.p * 0.2));
             state.updatePlayer(p.id, { p: p.p - lostP });
             logMsg(`<span style="color:#e74c3c">💀 闇金に遭遇！${lostP}P没収！</span>`); playSfx('fail');
             state.addEventPopup(p.id, "💀", "闇金", `-${lostP}P没収`, "bad");
+            useGameStore.setState({ loansharkPos: 999, loansharkCd: 2 });
         }
     }
+    
     if (p.pos === state.friendPos) {
         state.updatePlayer(p.id, { cans: p.cans + 1 });
         logMsg(`🤝 仲間のホームレスから空き缶をもらった！`); playSfx('coin');
         state.addEventPopup(p.id, "🤝", "仲間", "缶ゲット！", "good");
+        useGameStore.setState({ friendPos: 999, friendCd: 2 });
     }
 };

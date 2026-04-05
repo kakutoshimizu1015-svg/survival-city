@@ -158,14 +158,16 @@ export const actionTrash = () => {
             logMsg(`💨 ステルスで回避！`);
         } else if (cp.hasID) {
             s.updateCurrentPlayer(p => ({ hasID: false }));
-            logMsg(`🔵 身分証で警察を回避！`);
+            // ▼ 修正: 警察をパトカーに変更
+            logMsg(`🔵 身分証でパトカーを回避！`);
         } else if (cp.charType === 'survivor') {
             logMsg(`🌿 サバイバーの勘で回避！`);
         } else {
             s.updateCurrentPlayer(p => ({ penaltyAP: (p.penaltyAP||0) + 2 }));
-            logMsg(`<span style="color:#e74c3c">👮 ゴミ漁り失敗！警察に見つかり次回AP-2！</span>`);
+            // ▼ 修正: 警察をパトカーに変更
+            logMsg(`<span style="color:#e74c3c">🚓 ゴミ漁り失敗！パトカーに見つかり次回AP-2！</span>`);
             playSfx('fail');
-            s.addEventPopup(cp.id, "👮", "ゴミ漁り失敗", "次回AP-2", "bad");
+            s.addEventPopup(cp.id, "🚓", "ゴミ漁り失敗", "次回AP-2", "bad");
             return; 
         }
     }
@@ -208,7 +210,6 @@ export const actionManhole = () => { const s = useGameStore.getState(), cp = s.p
 
 export const actionEndTurn = async () => {
     const state = useGameStore.getState();
-    // ▼ 修正: すでにラウンド終了処理が走っている場合はここで強制ブロック
     if (state._roundEndInProgress) return;
 
     try {

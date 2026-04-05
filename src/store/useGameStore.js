@@ -4,14 +4,13 @@ const initialState = {
     gamePhase: 'title', diceAnim: { active: false, d1: 1, d2: 1, text: '' },
     turnOrderActive: false, turnOrderData: null, gameOver: false, 
     
-    // ▼ 今回追加・修正したアクション用フラグ群
     isBranchPicking: false, 
     currentBranchOptions: [],
-    isDashPicking: false,    // アスリートのダッシュ発光用
-    isSalesVisiting: false,  // 営業マンのカード選択用
-    salesTargetId: null,     // 営業マンのターゲット
-    npcSelectActive: false,  // 探偵のNPC選択モーダル用
-    npcMovePick: null,       // 探偵の移動対象NPC
+    isDashPicking: false,    
+    isSalesVisiting: false,  
+    salesTargetId: null,     
+    npcSelectActive: false,  
+    npcMovePick: null,       
     
     shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
     mgActive: false, mgType: "", mgValue: 0, mgResult: null, storyActive: false,
@@ -36,7 +35,15 @@ const initialState = {
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
     mapData: [], territories: {}, isRainy: false, weatherState: 'sunny', isNight: false,
     roundCount: 1, maxRounds: 20, canPrice: 1, trashPrice: 2, destTile: -1,
-    truckPos: 0, policePos: 0, unclePos: 0, animalPos: 0, yakuzaPos: 0, loansharkPos: 0, friendPos: 0,
+    
+    // ▼ NPCの位置とクールタイム
+    truckPos: 0, 
+    policePos: 0, policeCd: 0,
+    unclePos: 0, uncleCd: 0,
+    animalPos: 0, animalCd: 0,
+    yakuzaPos: 0, yakuzaCd: 0,
+    loansharkPos: 0, loansharkCd: 0,
+    friendPos: 0, friendCd: 0,
 };
 
 export const useGameStore = create((set, get) => ({
