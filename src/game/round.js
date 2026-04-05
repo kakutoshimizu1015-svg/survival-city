@@ -257,7 +257,6 @@ export const processRoundEnd = async () => {
         await sleep(800);
         useGameStore.setState({ horrorMode: false });
 
-        // ▼ NPCの再スポーン処理
         const npcKeys = ['police', 'uncle', 'yakuza', 'loanshark', 'friend'];
         const npcDisplayNames = { police: 'パトカー', uncle: '厄介なおじさん', yakuza: 'ヤクザ', loanshark: '闇金', friend: '仲間のホームレス' };
         
@@ -276,7 +275,6 @@ export const processRoundEnd = async () => {
         });
         await sleep(500);
 
-        // ▼ パトカーの巡回ターン (偶数ラウンドのみ発動)
         let pCd = state.policeCd || 0;
         let newPolicePos = useGameStore.getState().policePos;
         const policeHp = useGameStore.getState().policeHp;
@@ -287,7 +285,8 @@ export const processRoundEnd = async () => {
                 if (pCd === 0) newPolicePos = md[Math.floor(Math.random() * md.length)].id;
             } else if (newPolicePos !== 999) {
                 if (newRound % 2 === 0) {
-                    logMsg(`<span style="color:#2980b9">🚓 パトカーの巡回ターン！</span>`);
+                    // ▼ 修正: パトカー巡回中のメッセージに変更
+                    logMsg(`<span style="color:#2980b9">🚓 パトカー巡回中！</span>`);
                     await sleep(1000);
 
                     let policeRoll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1;

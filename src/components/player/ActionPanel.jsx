@@ -3,7 +3,8 @@ import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
 import { ClayButton } from '../common/ClayButton';
-import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, actionManhole } from '../../game/actions';
+// ▼ 修正: getOccupyCost をインポート
+import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, actionManhole, getOccupyCost } from '../../game/actions';
 import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove } from '../../game/skills';
 
 const ActionBtn = ({ action, condition, failMsg, highlight, color, style, children, isMyTurn, isBusy }) => (
@@ -23,7 +24,6 @@ const ActionBtn = ({ action, condition, failMsg, highlight, color, style, childr
 
 export const ActionPanel = () => {
     const state = useGameStore();
-    // ▼ 修正: _roundEndInProgress をStoreから取得するように追加
     const { turn, players, mapData, diceRolled, isBranchPicking, mgActive, storyActive, canPickedThisTurn, territories, animalPos, turnBannerActive, showSkipButton, _roundEndInProgress } = state;
     const cp = players[turn];
     const { myUserId, status } = useNetworkStore();
@@ -37,7 +37,6 @@ export const ActionPanel = () => {
         isMyTurn = !cp.isCPU && cp.userId === myUserId; 
     }
 
-    // ▼ 修正: isBusy の条件に _roundEndInProgress (ラウンド終了演出中) を追加し、操作を完全ブロック
     const isBusy = isBranchPicking || mgActive || storyActive || turnBannerActive || _roundEndInProgress;
     const hasAP = (cost) => cp.ap >= cost;
     const othersOnTile = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
@@ -46,9 +45,13 @@ export const ActionPanel = () => {
     const canMove = isMyTurn && diceRolled && hasAP(1) && !cp.cannotMove && !isBusy;
     const isBlockedByAnimal = cp.pos === animalPos;
     
+    // ▼ 修正: ボタンに表示する動的な価格を取得
+    const occupyCost = getOccupyCost(cp.pos);
+
     const canDoCan = isMyTurn && diceRolled && hasAP(1) && tileType === 'can' && canPickedThisTurn < 3 && !isBlockedByAnimal && !isBusy;
     const canDoTrash = isMyTurn && diceRolled && hasAP(cp.equip?.shoes ? 1 : 2) && tileType === 'trash' && !isBlockedByAnimal && !isBusy;
-    const canDoOccupy = isMyTurn && diceRolled && ["normal","can","trash","job","exchange","shelter"].includes(tileType) && territories[cp.pos] !== cp.id && !isBusy && cp.p >= (territories[cp.pos] !== undefined ? 6 : 3); // ※上書きコスト6P反映済み
+    // ▼ 修正: 動的なコスト(occupyCost) で判定を行うように変更
+    const canDoOccupy = isMyTurn && diceRolled && ["normal","can","trash","job","exchange","shelter"].includes(tileType) && territories[cp.pos] !== cp.id && !isBusy && cp.p >= occupyCost;
     const canDoJob = isMyTurn && diceRolled && hasAP(3) && tileType === 'job' && !isBusy;
     const canDoExchange = isMyTurn && diceRolled && (cp.cans > 0 || cp.trash > 0) && tileType === 'exchange' && !isBusy;
     const canDoShop = isMyTurn && diceRolled && tileType === 'shop' && !isBusy;
@@ -89,7 +92,8 @@ export const ActionPanel = () => {
             <div id="btn-move"><ActionBtn action={actionMove} condition={canMove} failMsg={cp.cannotMove ? "足止めされています！" : !diceRolled ? "サイコロを振ってください" : "APが不足しています"} highlight={canMove} isMyTurn={isMyTurn} isBusy={isBusy}>🚶 移動 (1AP)</ActionBtn></div>
             <div id="btn-can"><ActionBtn action={actionCan} condition={canDoCan} failMsg={isBlockedByAnimal ? "野良犬がいて拾えません！" : canPickedThisTurn >= 3 ? "1ターンの拾う上限です" : "AP不足か場所が違います"} isMyTurn={isMyTurn} isBusy={isBusy}>🥫 缶拾い (1AP)</ActionBtn></div>
             <div id="btn-trash"><ActionBtn action={actionTrash} condition={canDoTrash} failMsg={isBlockedByAnimal ? "野良犬がいて漁れません！" : "AP不足か場所が違います"} isMyTurn={isMyTurn} isBusy={isBusy}>🗑️ ゴミ漁り ({cp.equip?.shoes ? 1 : 2}AP)</ActionBtn></div>
-            <div id="btn-occupy"><ActionBtn action={actionOccupy} condition={canDoOccupy} failMsg={cp.p < 3 ? "Pが不足しています" : "このマスは陣地にできません"} isMyTurn={isMyTurn} isBusy={isBusy}>🚩 陣地占領 (3P〜)</ActionBtn></div>
+            {/* ▼ 修正: ボタンテキストに occupyCost を表示 */}
+            <div id="btn-occupy"><ActionBtn action={actionOccupy} condition={canDoOccupy} failMsg={cp.p < occupyCost ? "Pが不足しています" : "このマスは陣地にできません"} isMyTurn={isMyTurn} isBusy={isBusy}>🚩 陣地占領 ({occupyCost}P)</ActionBtn></div>
             <div id="btn-job"><ActionBtn action={actionJob} condition={canDoJob} failMsg="AP不足か場所が違います" style={{borderColor: '#2980b9'}} isMyTurn={isMyTurn} isBusy={isBusy}>💼 バイト (3AP)</ActionBtn></div>
             
             {tileType === 'exchange' && <ActionBtn action={actionExchange} condition={canDoExchange} failMsg="換金するものがありません" style={{borderColor: '#d4a017'}} isMyTurn={isMyTurn} isBusy={isBusy}>💱 換金 (0AP)</ActionBtn>}

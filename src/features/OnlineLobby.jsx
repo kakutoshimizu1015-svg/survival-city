@@ -59,6 +59,14 @@ export const OnlineLobby = () => {
     const handleCreate = () => createRoom(Math.random().toString(36).substring(2, 6).toUpperCase(), playerName);
     const handleJoin = (targetRoomId) => { const code = targetRoomId || roomInput; if (code.length > 0) joinRoom(code.toUpperCase(), playerName); };
 
+    // ▼ 新規追加: 5%のレア確率を適用したカードドロー関数
+    const drawInitialCard = () => {
+        const rarePool = [12, 13, 35, 36, 37];
+        const normalPool = [0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
+        if (Math.random() < 0.05) return rarePool[Math.floor(Math.random() * rarePool.length)];
+        return normalPool[Math.floor(Math.random() * normalPool.length)];
+    };
+
     const handleStartGame = async () => {
         if (!isHost) return;
         await updateRoomStatus('playing');
@@ -87,7 +95,8 @@ export const OnlineLobby = () => {
         finalPlayers = finalPlayers.map((p, i) => ({
             ...p, id: i, color: ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e91e8c'][i % 8],
             pos: rmapScatter ? scatterPos[i] : startPos, hp: 100, p: 15, ap: 0,
-            hand: isCreative ? [...creativeHand] : [Math.floor(Math.random() * 38), Math.floor(Math.random() * 38), Math.floor(Math.random() * 38)], 
+            // ▼ 修正: drawInitialCard()を使って5%レア確率を適用した初期手札を配る
+            hand: isCreative ? [...creativeHand] : [drawInitialCard(), drawInitialCard(), drawInitialCard()], 
             maxHand: isCreative ? 99 : (p.charType === 'hacker' ? 9 : 7), cans: 0, trash: 0, kills: 0, deaths: 0, equip: {}
         }));
 

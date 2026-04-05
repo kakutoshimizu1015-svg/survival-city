@@ -229,17 +229,26 @@ export const actionJob = () => {
     useGameStore.setState({ jobResult: { active: true, isSuccess: win, points: win ? 12 : 0 } });
 };
 
+// ▼ 新規追加: 指定マスの現在の「占拠コスト（動的P）」を返す関数
+export const getOccupyCost = (tileId) => {
+    const s = useGameStore.getState();
+    const currentOwner = s.territories[tileId];
+    const cp = s.players[s.turn];
+    
+    let cost = 3;
+    if (currentOwner !== undefined && currentOwner !== cp?.id) {
+        const prevCost = s.territoryCosts?.[tileId] || 3;
+        cost = Math.round(prevCost * 1.5);
+    }
+    return cost;
+};
+
 export const actionOccupy = () => { 
     const s = useGameStore.getState();
     const cp = s.players[s.turn];
-    const currentOwner = s.territories[cp.pos];
     
-    // ▼ 乗っ取りコストの1.5倍計算ロジック
-    let cost = 3; // 初回の占領コスト
-    if (currentOwner !== undefined && currentOwner !== cp.id) {
-        const prevCost = s.territoryCosts?.[cp.pos] || 3;
-        cost = Math.round(prevCost * 1.5);
-    }
+    // ▼ 修正: 関数を利用して動的コストを取得
+    const cost = getOccupyCost(cp.pos);
 
     if (cp.p >= cost) { 
         s.updateCurrentPlayer(p => ({ p: p.p - cost })); 

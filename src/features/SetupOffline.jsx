@@ -24,7 +24,6 @@ export const SetupOffline = () => {
     const [skipTurnDice, setSkipTurnDice] = useState(false);
     const [isCreative, setIsCreative] = useState(false);
     
-    // ▼ 新規追加: 検証用の無限移動モード
     const [isTestMode, setIsTestMode] = useState(false);
 
     const [rmapTileType, setRmapTileType] = useState(false);
@@ -56,6 +55,14 @@ export const SetupOffline = () => {
         if (players.length > 2) setPlayers(players.filter(p => p.id !== id).map((p, idx) => ({ ...p, id: idx }))); 
     };
 
+    // ▼ 新規追加: 5%のレア確率を適用したカードドロー関数
+    const drawInitialCard = () => {
+        const rarePool = [12, 13, 35, 36, 37];
+        const normalPool = [0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
+        if (Math.random() < 0.05) return rarePool[Math.floor(Math.random() * rarePool.length)];
+        return normalPool[Math.floor(Math.random() * normalPool.length)];
+    };
+
     const handleStart = async () => {
         const p1Name = players.find(p => p.id === 0)?.name;
         if (p1Name && p1Name.trim() !== '') {
@@ -66,7 +73,6 @@ export const SetupOffline = () => {
         if (rmapTileType) mapData = randomizeTileTypes(mapData);
         if (rmapLayout) mapData = randomizeTileLayout(mapData);
 
-        // ▼ 追加: 無限移動モードの場合は、マップの構造を維持したまま全マスを「道」にする
         if (isTestMode) {
             mapData = mapData.map(t => ({
                 ...t,
@@ -95,10 +101,11 @@ export const SetupOffline = () => {
         const creativeHand = Array.from({length: 38}, (_, i) => i);
         finalPlayers = finalPlayers.map((p, i) => ({
             ...p, color: colors[i % colors.length], pos: rmapScatter ? scatterPos[i] : startPos, 
-            hp: isTestMode ? 9999 : 100, // ▼ 修正: テストモードはHP無限（死なない）
+            hp: isTestMode ? 9999 : 100, 
             p: 15, 
-            ap: isTestMode ? 9999 : 0,   // ▼ 修正: テストモードはAP無限（移動し放題）
-            hand: isCreative ? [...creativeHand] : [Math.floor(Math.random() * 38), Math.floor(Math.random() * 38), Math.floor(Math.random() * 38)], 
+            ap: isTestMode ? 9999 : 0,   
+            // ▼ 修正: drawInitialCard()を使って5%レア確率を適用した初期手札を配る
+            hand: isCreative ? [...creativeHand] : [drawInitialCard(), drawInitialCard(), drawInitialCard()], 
             maxHand: isCreative ? 99 : (p.charType === 'hacker' ? 9 : 7),
             cans: 0, trash: 0, kills: 0, deaths: 0, equip: {}
         }));
@@ -124,7 +131,6 @@ export const SetupOffline = () => {
         setGameState({
             mapData, players: finalPlayers, turn: 0, roundCount: 1, maxRounds, diceRolled: false, gameOver: false, gamePhase: 'playing',
             turnOrderActive, turnOrderData,
-            // ▼ 修正: テストモード時はすべてのNPCを画面外(-1)に飛ばして無効化する
             truckPos: isTestMode ? -1 : Math.floor(maxId * 0.4), 
             policePos: isTestMode ? -1 : Math.floor(maxId * 0.8), 
             unclePos: isTestMode ? -1 : Math.floor(maxId * 0.2), 
@@ -197,7 +203,6 @@ export const SetupOffline = () => {
                     <label style={{ color: '#fdf5e6', cursor: 'pointer' }}><input type="checkbox" checked={skipTurnDice} onChange={e => setSkipTurnDice(e.target.checked)} /> 🎲 順番決めダイスをスキップ</label>
                     <label style={{ color: '#f1c40f', cursor: 'pointer', fontWeight: 'bold' }}><input type="checkbox" checked={isCreative} onChange={e => setIsCreative(e.target.checked)} /> 🎨 クリエイティブモード</label>
                     
-                    {/* ▼ 追加：無限移動モードのチェックボックスUI */}
                     <label style={{ color: '#2ecc71', cursor: 'pointer', fontWeight: 'bold', background: 'rgba(46, 204, 113, 0.1)', padding: '8px 12px', borderRadius: '8px', border: '1px solid #2ecc71' }}>
                         <input type="checkbox" checked={isTestMode} onChange={e => setIsTestMode(e.target.checked)} style={{ marginRight: '8px' }} /> 
                         🛠 検証用：無限移動モード（全マス道＆AP無限＆NPCなし）

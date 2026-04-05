@@ -36,11 +36,37 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
             logMsg(`☠️ 武器で${npcNames[npcType] || 'NPC'}を倒した！`);
             useGameStore.setState({
                 [`${npcType}Hp`]: 0,
-                [`${npcType}Pos`]: 999, // マップから一時消去
-                [`${npcType}Respawn`]: 1 // 1ターン後に再スポーン
+                [`${npcType}Pos`]: 999,
+                [`${npcType}Respawn`]: 1 
             });
+            
+            // ▼ 新規追加: 討伐時の報酬処理 (30P or 2枚カード)
             if (attackerId !== null) {
-                state.updatePlayer(attackerId, p => ({ kills: (p.kills || 0) + 1 }));
+                state.updatePlayer(attackerId, p => {
+                    let newP = p.p;
+                    let newHand = [...p.hand];
+                    let rewardMsg = "";
+                    
+                    if (Math.random() < 0.5) {
+                        newP += 30;
+                        rewardMsg = `💰 30Pを獲得！`;
+                        playSfx('coin');
+                    } else {
+                        const rarePool = [12, 13, 35, 36, 37];
+                        const normalPool = [0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
+                        const drawCard = () => Math.random() < 0.05 ? rarePool[Math.floor(Math.random() * rarePool.length)] : normalPool[Math.floor(Math.random() * normalPool.length)];
+                        
+                        const c1 = drawCard();
+                        const c2 = drawCard();
+                        if (newHand.length < p.maxHand) newHand.push(c1);
+                        if (newHand.length < p.maxHand) newHand.push(c2);
+                        rewardMsg = `🎴 カードを2枚獲得！`;
+                        playSfx('success');
+                    }
+                    
+                    setTimeout(() => logMsg(`🎁 ${p.name}は討伐報酬として${rewardMsg}`), 100);
+                    return { kills: (p.kills || 0) + 1, p: newP, hand: newHand };
+                });
             }
         } else {
             useGameStore.setState({ [`${npcType}Hp`]: newHp });
