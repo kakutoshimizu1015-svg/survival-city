@@ -15,7 +15,8 @@ export const GameBoard = () => {
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
         roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
-        autoScrollToPlayer, horrorMode
+        autoScrollToPlayer, horrorMode,
+        isDashPicking // ▼ 追加: ダッシュ中かどうかのフラグを取得
     } = useGameStore();
 
     const showSmoke = useUserStore(state => state.showSmoke);
@@ -32,7 +33,6 @@ export const GameBoard = () => {
     const rafRef = useRef(null);
     const prevAutoScrollTurn = useRef(-1);
     
-    // ▼ 追加: ホラーモードが開始した瞬間を検知するためのRef
     const prevHorrorMode = useRef(false);
 
     const applyTransform = useCallback((smooth = false) => {
@@ -80,7 +80,6 @@ export const GameBoard = () => {
         applyTransform(true);
     }, [applyTransform]);
 
-    // ▼ 追加・修正: 任意のマスへカメラを移動させる共通関数を作成
     const focusTile = useCallback((targetTileId) => {
         if (!wrapperRef.current || !mapData || mapData.length === 0 || gameOver) return;
         const targetTile = mapData.find(t => t.id === targetTileId);
@@ -101,7 +100,6 @@ export const GameBoard = () => {
         applyTransform(true);
     }, [mapData, gameOver, applyTransform]);
 
-    // ▼ 修正: 共通関数 `focusTile` を呼び出す形にリファクタリング
     const focusCurrentPlayer = useCallback(() => {
         if (cp) focusTile(cp.pos);
     }, [cp, focusTile]);
@@ -124,7 +122,6 @@ export const GameBoard = () => {
         return () => { clearTimeout(timer); window.removeEventListener('resize', handleResize); };
     }, [mapTileCount, resetZoom]);
 
-    // ▼ 修正: ターンの切り替わりによるスクロールも共通関数を使用
     useEffect(() => {
         if (!autoScrollToPlayer || !cp || prevAutoScrollTurn.current === turn || gameOver) return;
         prevAutoScrollTurn.current = turn;
@@ -136,10 +133,8 @@ export const GameBoard = () => {
         return () => clearTimeout(timer);
     }, [turn, cp, autoScrollToPlayer, gameOver, focusTile]);
 
-    // ▼ 追加: ホラーモード開始時に一回だけゴミ収集車へスクロールする処理
     useEffect(() => {
         if (horrorMode && !prevHorrorMode.current) {
-            // falseからtrueに変わった瞬間だけ、トラックの位置へスクロール
             focusTile(truckPos);
         }
         prevHorrorMode.current = horrorMode;
@@ -355,6 +350,9 @@ export const GameBoard = () => {
                                 const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
                                 const isClickable = npcMovePick !== null || isBranchTarget;
                                 
+                                // ▼ 追加: 自分がダッシュのターゲットになっているかどうかを個別に判定
+                                const isDashTarget = isClickable && isDashPicking;
+                                
                                 let pathClass = '';
                                 if (pathPreview.path1.has(tile.id)) pathClass = 'tile-path-1';
                                 else if (pathPreview.path2.has(tile.id)) pathClass = 'tile-path-2';
@@ -363,7 +361,10 @@ export const GameBoard = () => {
 
                                 return (
                                     <Tile 
-                                        key={tile.id} tile={tile} owner={owner} isFog={isFog} isClickable={isClickable} onClick={() => handleTileClick(tile.id)} maxRow={maxRow}
+                                        key={tile.id} tile={tile} owner={owner} isFog={isFog} 
+                                        isClickable={isClickable} 
+                                        isDashTarget={isDashTarget} // ▼ Tile に Prop として渡す
+                                        onClick={() => handleTileClick(tile.id)} maxRow={maxRow}
                                         isTruck={tile.id === truckPos} isPolice={tile.id === policePos} isUncle={tile.id === unclePos} isAnimal={tile.id === animalPos} isYakuza={tile.id === yakuzaPos} isLoanshark={tile.id === loansharkPos} isFriend={tile.id === friendPos} pathClass={pathClass}
                                     />
                                 );

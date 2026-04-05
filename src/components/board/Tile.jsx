@@ -4,7 +4,6 @@ import { getDepthScale } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
 
-// ▼ テキストの表示/非表示を切り替えるフラグ（trueで表示、falseで非表示）
 const SHOW_TILE_TEXT = false;
 
 export const tileTooltipData = {
@@ -25,7 +24,7 @@ export const tileTooltipData = {
 };
 
 export const Tile = React.memo(({ 
-    tile, owner, isFog, isClickable, onClick, maxRow,
+    tile, owner, isFog, isClickable, isDashTarget, onClick, maxRow, // ▼ 修正: isDashTarget を追加
     isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass
 }) => {
     const setTooltipData = useGameStore(state => state.setTooltipData);
@@ -39,9 +38,8 @@ export const Tile = React.memo(({
     const horrorMode = useGameStore(state => state.horrorMode);
     const isHorrorTruckTile = horrorMode && isTruck;
 
-    // ▼ 追加: アスリートのダッシュなど、白く強く光らせるための判定用ステート
-    const isDashPicking = useGameStore(state => state.isDashPicking);
-    const liteMode = useGameStore(state => state.liteMode); // ▼ 追加
+    // ▼ 修正: Storeから直接 isDashPicking を読み取るのをやめました
+    const liteMode = useGameStore(state => state.liteMode); 
 
     const touchTimer = useRef(null);
 
@@ -102,7 +100,8 @@ export const Tile = React.memo(({
 
     let classNameStr = `tile ${tile.type} ${tile.area}`;
     if (isFog && !isHorrorTruckTile) classNameStr += ' night-fog';
-    if (isClickable) classNameStr += ' tile-highlight-branch';
+    // ▼ 修正: isDashTarget の場合は `tile-highlight-branch` (黄色く光るCSS) を付与しないようにし、競合を防ぎます
+    if (isClickable && !isDashTarget) classNameStr += ' tile-highlight-branch';
     if (pathClass) classNameStr += ` ${pathClass}`;
 
     const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
@@ -119,13 +118,13 @@ export const Tile = React.memo(({
         opacity: horrorMode ? 1 : TOKEN_CONFIG.npc.truckOpacity,
     };
 
-    // ▼ 修正: isDashPicking が true の場合は白く強く光らせる（軽量モード対応）
+    // ▼ 修正: 親から渡された isDashTarget を使ってスタイルを適用する
     const clickableStyle = isClickable ? (
         liteMode ? {
-            border: `3px solid ${isDashPicking ? 'white' : '#ffe066'}`,
-            backgroundColor: isDashPicking ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 224, 102, 0.3)'
+            border: `3px solid ${isDashTarget ? 'white' : '#ffe066'}`,
+            backgroundColor: isDashTarget ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 224, 102, 0.3)'
         } : (
-        isDashPicking ? {
+        isDashTarget ? {
             boxShadow: `
                 inset 0 0 20px rgba(255, 255, 255, 0.8),
                 0 0 35px rgba(255, 255, 255, 1),
@@ -173,7 +172,7 @@ export const Tile = React.memo(({
                         to { filter: brightness(1.4) drop-shadow(0 0 8px rgba(255,224,102,0.6)); }
                     }
                     @keyframes tilePulseDash {
-                        from { filter: brightness(1); filter: drop-shadow(0 0 5px rgba(255,255,255,0.8)); }
+                        from { filter: brightness(1); }
                         to { filter: brightness(1.6) drop-shadow(0 0 15px rgba(255,255,255,1)); }
                     }
                 `}</style>
@@ -216,6 +215,7 @@ export const Tile = React.memo(({
     if (prev.tile.id !== next.tile.id) return false;
     if (prev.isFog !== next.isFog) return false;
     if (prev.isClickable !== next.isClickable) return false;
+    if (prev.isDashTarget !== next.isDashTarget) return false; // ▼ 追加: 比較対象に含める
     if (prev.pathClass !== next.pathClass) return false;
     if (prev.isTruck !== next.isTruck) return false;
     if (prev.isPolice !== next.isPolice) return false;
