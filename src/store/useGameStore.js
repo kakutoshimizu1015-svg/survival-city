@@ -60,8 +60,9 @@ export const useGameStore = create((set, get) => ({
         } : p)
     })),
     
+    // 修正: p.id ではなく第二引数の index と state.turn を比較する
     updateCurrentPlayer: (updater) => set((state) => ({
-        players: state.players.map(p => p.id === state.turn ? { 
+        players: state.players.map((p, index) => index === state.turn ? { 
             ...p, 
             ...(typeof updater === 'function' ? updater(p) : updater) 
         } : p)

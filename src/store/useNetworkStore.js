@@ -81,14 +81,16 @@ export const useNetworkStore = create((setStore, getStore) => ({
 
                     if (data.type === 'REQUEST_ROUND_END') {
                         const gameState = useGameStore.getState();
-                        if (gameState.gamePhase === 'playing' && !gameState.gameOver) {
+                        // 修正: _roundEndInProgress チェックを追加し、多重実行を防止
+                        if (gameState.gamePhase === 'playing' && !gameState.gameOver && !gameState._roundEndInProgress) {
                             (async () => {
                                 try {
+                                    useGameStore.setState({ _roundEndInProgress: true });
                                     await processRoundEnd();
                                     useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false }));
                                 } catch (e) {
                                     console.error("Host processRoundEnd error:", e);
-                                    useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false }));
+                                    useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false, _roundEndInProgress: false }));
                                 }
                             })();
                         }
@@ -216,31 +218,38 @@ export const useNetworkStore = create((setStore, getStore) => ({
     }
 }));
 
+// ▼ 修正: 送信のデバウンス（間引き）処理を追加し、通信フラッドを防ぐ
+let syncTimeout = null;
+
 useGameStore.subscribe((state) => {
     const netState = useNetworkStore.getState();
     if (netState.status !== 'connected' || isReceivingNetworkData || state.gamePhase !== 'playing') return;
 
     if (!netState.isHost && state._roundEndInProgress) return;
 
-    const localOnlyKeys = [
-        'charInfoModal', 'acquiredCard', 'toastMsg', 'centerWarning', 'tooltipData',
-        'settingsActive', 'rulesActive', 'tutorialActive', 'shopActive', 'shopCart',
-        'layoutMode', 'autoScrollToPlayer', 'eventPopups', 'bloodAnim', 'turnBanner',
-        'turnBannerActive', 'jobResult', 'volume', 'showSkipButton',
-    ];
+    if (syncTimeout) clearTimeout(syncTimeout);
 
-    const pureState = {};
-    for (const key in state) {
-        if (typeof state[key] !== 'function' && !localOnlyKeys.includes(key)) {
-            pureState[key] = state[key];
+    syncTimeout = setTimeout(() => {
+        const localOnlyKeys = [
+            'charInfoModal', 'acquiredCard', 'toastMsg', 'centerWarning', 'tooltipData',
+            'settingsActive', 'rulesActive', 'tutorialActive', 'shopActive', 'shopCart',
+            'layoutMode', 'autoScrollToPlayer', 'eventPopups', 'bloodAnim', 'turnBanner',
+            'turnBannerActive', 'jobResult', 'volume', 'showSkipButton',
+        ];
+
+        const pureState = {};
+        for (const key in state) {
+            if (typeof state[key] !== 'function' && !localOnlyKeys.includes(key)) {
+                pureState[key] = state[key];
+            }
         }
-    }
-    
-    const data = { type: 'GAME_SYNC', gameState: pureState, lastUpdater: netState.myUserId };
-    
-    if (netState.isHost) {
-        netState.broadcast(data);
-    } else if (netState.hostConnection && netState.hostConnection.open) {
-        netState.hostConnection.send(data);
-    }
+        
+        const data = { type: 'GAME_SYNC', gameState: pureState, lastUpdater: netState.myUserId };
+        
+        if (netState.isHost) {
+            netState.broadcast(data);
+        } else if (netState.hostConnection && netState.hostConnection.open) {
+            netState.hostConnection.send(data);
+        }
+    }, 50); // 50ミリ秒のバッファで連続するsetStateをまとめる
 });

@@ -11,6 +11,9 @@ export const runCpuTurn = async () => {
     if (state.cpuActing || state.gameOver || state.players.length === 0) return;
     
     useGameStore.setState({ cpuActing: true });
+    
+    // ▼ 修正: turnId を事前に保持しておく
+    const turnId = state.turn;
 
     try {
         // ▼ 修正: ラウンド終了演出（ホラーモード等）が実行中の場合は、終わるまで待機する
@@ -21,7 +24,6 @@ export const runCpuTurn = async () => {
         await sleep(1500); // 思考時間
 
         state = useGameStore.getState();
-        const turnId = state.turn;
         let cp = state.players[turnId];
 
         if (!cp || !cp.isCPU) return; // catch/finallyに飛ぶ
@@ -163,7 +165,8 @@ export const runCpuTurn = async () => {
     } finally {
         // 5. ターン終了処理（エラー発生時も必ず実行してロックを防ぐ）
         let finalState = useGameStore.getState();
-        if (!finalState.gameOver && finalState.turn === finalState.turn) {
+        // 修正: 処理開始時の turnId と、現在の状態の turn を比較する
+        if (!finalState.gameOver && finalState.turn === turnId) {
             await actionEndTurn();
         }
         useGameStore.setState({ cpuActing: false });
