@@ -1,4 +1,5 @@
 import { useGameStore } from '../store/useGameStore';
+import { useUserStore } from '../store/useUserStore'; // ▼ 追加
 import { deckData } from '../constants/cards';
 import { logMsg } from './actions';
 
@@ -19,6 +20,11 @@ export const actionUseCard = (handIndex, cardId) => {
     state.updateCurrentPlayer(p => ({ ap: p.ap - apCost, hand: newHand }));
 
     logMsg(`🎴 「${cardData.name}」を使用！`);
+    
+    // ▼ 追加: 使ったカード数のスタッツ更新
+    if (!cp.isCPU) {
+        useUserStore.getState().incrementStat('totalCardsUsed', 1);
+    }
 
     // 武器は別UIで処理
     if (cardData.type === 'weapon') {

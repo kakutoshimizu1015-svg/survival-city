@@ -1,5 +1,6 @@
 import { useGameStore, isSameTeam } from '../store/useGameStore';
 import { useNetworkStore } from '../store/useNetworkStore';
+import { useUserStore } from '../store/useUserStore'; // ▼ 追加
 import { checkNpcCollision } from './npc';
 import { processRoundEnd } from './round';
 import { playSfx } from '../utils/audio';
@@ -80,7 +81,13 @@ export const executeMove = (targetTileId) => {
 
     state.updateCurrentPlayer(p => ({ ap: Math.max(0, p.ap - moveCost), pos: targetTileId, rainGear: state.isRainy ? false : p.rainGear }));
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [], isDashPicking: false });
+    
     logMsg(`🚶 「${tile.name}」に移動。`); playSfx('move');
+    
+    // ▼ 追加: 移動したマスのスタッツ更新
+    if (!cp.isCPU) {
+        useUserStore.getState().incrementStat('totalTilesMoved', 1);
+    }
 
     if (tile.type === "center") {
         const healAmount = Math.min(30, 100 - cp.hp);
@@ -127,6 +134,13 @@ export const executeMove = (targetTileId) => {
 
     if (tile.fieldCans > 0 || tile.fieldTrash > 0) {
         state.updateCurrentPlayer(p => ({ cans: p.cans + (tile.fieldCans||0), trash: p.trash + (tile.fieldTrash||0) }));
+        
+        // ▼ 追加: 落ちているアイテムを回収したときのスタッツ更新
+        if (!cp.isCPU) {
+            if (tile.fieldCans > 0) useUserStore.getState().incrementStat('totalCansCollected', tile.fieldCans);
+            if (tile.fieldTrash > 0) useUserStore.getState().incrementStat('totalTrashCollected', tile.fieldTrash);
+        }
+        
         useGameStore.setState(s => ({ mapData: s.mapData.map(t => t.id === targetTileId ? { ...t, fieldCans: 0, fieldTrash: 0 } : t) }));
         logMsg(`📦 ドロップアイテムを回収！`); playSfx('coin');
     }
@@ -142,7 +156,20 @@ export const executeMove = (targetTileId) => {
     }
 };
 
-export const actionCan = () => { const s = useGameStore.getState(); s.updateCurrentPlayer(p => ({ ap: p.ap - 1, cans: p.cans + 1 })); useGameStore.setState(st => ({ canPickedThisTurn: st.canPickedThisTurn + 1 })); playSfx('coin'); };
+export const actionCan = () => { 
+    const s = useGameStore.getState();
+    const cp = s.players[s.turn]; // ▼ 追加: cpの取得
+    
+    s.updateCurrentPlayer(p => ({ ap: p.ap - 1, cans: p.cans + 1 })); 
+    useGameStore.setState(st => ({ canPickedThisTurn: st.canPickedThisTurn + 1 })); 
+    
+    // ▼ 追加: 缶を拾ったスタッツ更新
+    if (!cp.isCPU) {
+        useUserStore.getState().incrementStat('totalCansCollected', 1);
+    }
+    
+    playSfx('coin'); 
+};
 
 export const actionTrash = () => { 
     const s = useGameStore.getState();
@@ -158,13 +185,11 @@ export const actionTrash = () => {
             logMsg(`💨 ステルスで回避！`);
         } else if (cp.hasID) {
             s.updateCurrentPlayer(p => ({ hasID: false }));
-            // ▼ 修正: 警察をパトカーに変更
             logMsg(`🔵 身分証でパトカーを回避！`);
         } else if (cp.charType === 'survivor') {
             logMsg(`🌿 サバイバーの勘で回避！`);
         } else {
             s.updateCurrentPlayer(p => ({ penaltyAP: (p.penaltyAP||0) + 2 }));
-            // ▼ 修正: 警察をパトカーに変更
             logMsg(`<span style="color:#e74c3c">🚓 ゴミ漁り失敗！パトカーに見つかり次回AP-2！</span>`);
             playSfx('fail');
             s.addEventPopup(cp.id, "🚓", "ゴミ漁り失敗", "次回AP-2", "bad");
@@ -175,6 +200,12 @@ export const actionTrash = () => {
     let nightBonus = s.isNight ? Math.floor(Math.random() * 3) : 0;
     gain += nightBonus;
     s.updateCurrentPlayer(p => ({ trash: p.trash + gain }));
+    
+    // ▼ 追加: ゴミを拾ったスタッツ更新
+    if (!cp.isCPU) {
+        useUserStore.getState().incrementStat('totalTrashCollected', gain);
+    }
+    
     logMsg(`🗑️ ゴミ${gain}個見つけた！${nightBonus > 0 ? `(夜ボーナス+${nightBonus})` : ''}`);
     playSfx('coin');
     s.addEventPopup(cp.id, "🗑️", `ゴミ${gain}個発見！`, nightBonus > 0 ? `夜+${nightBonus}` : "", "good");

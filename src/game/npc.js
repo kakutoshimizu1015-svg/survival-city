@@ -1,4 +1,5 @@
 import { useGameStore } from '../store/useGameStore';
+import { useUserStore } from '../store/useUserStore'; // ▼ 追加
 import { dealDamage } from './combat';
 import { logMsg } from './actions';
 import { playSfx } from '../utils/audio';
@@ -9,12 +10,14 @@ export const checkNpcCollision = (playerId) => {
     if (!p || p.hp <= 0 || p.respawnShield > 0) return;
 
     if (p.pos === state.policePos) {
+        // ▼ 追加: NPC遭遇スタッツの更新
+        if (!p.isCPU) useUserStore.getState().incrementNpcEncounter('police');
+        
         if (p.equip?.doll) { state.updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll: false} })); logMsg(`🎎 身代わり人形でパトカー回避！`); }
         else if (p.stealth) { state.updatePlayer(p.id, { stealth: false }); logMsg(`💨 ステルスでパトカー回避！`); }
         else if (p.hasID) { state.updatePlayer(p.id, { hasID: false }); logMsg(`🔵 身分証でパトカー回避！`); }
         else if (p.charType === "survivor") { logMsg(`🌿 サバイバーの勘で回避！`); }
         else {
-            // ▼ 修正: ターン強制終了を廃止し、次回AP-2のみ付与
             state.updatePlayer(p.id, { penaltyAP: (p.penaltyAP || 0) + 2 });
             logMsg(`<span style="color:#e74c3c">🚓 パトカーに補導！次回AP-2！</span>`); playSfx('fail');
             state.addEventPopup(p.id, "🚓", "パトカー補導", "次回AP-2", "bad");
@@ -23,7 +26,8 @@ export const checkNpcCollision = (playerId) => {
     }
     
     if (p.pos === state.unclePos) {
-        // ▼ 修正: ランダム1枚破棄のみ（ターン終了なし）
+        if (!p.isCPU) useUserStore.getState().incrementNpcEncounter('uncle');
+        
         if (p.hand.length > 0) {
             state.updatePlayer(p.id, prev => {
                 const newHand = [...prev.hand];
@@ -40,9 +44,10 @@ export const checkNpcCollision = (playerId) => {
     }
     
     if (p.pos === state.yakuzaPos) {
+        if (!p.isCPU) useUserStore.getState().incrementNpcEncounter('yakuza');
+        
         if (p.equip?.doll) { state.updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll: false} })); logMsg(`🎎 身代わり人形でヤクザ回避！`); }
         else {
-            // ▼ 修正: 15〜20のランダムダメージ
             const dmg = 15 + Math.floor(Math.random() * 6);
             dealDamage(p.id, dmg, "ヤクザ");
             if (p.hand.length > 0) {
@@ -56,9 +61,10 @@ export const checkNpcCollision = (playerId) => {
     }
     
     if (p.pos === state.loansharkPos) {
+        if (!p.isCPU) useUserStore.getState().incrementNpcEncounter('loanshark');
+        
         if (p.equip?.doll) { state.updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll: false} })); logMsg(`🎎 身代わり人形で闇金回避！`); }
         else {
-            // ▼ 修正: 所持Pの20%（最大20P）没収
             const lostP = Math.min(20, Math.floor(p.p * 0.2));
             state.updatePlayer(p.id, { p: p.p - lostP });
             logMsg(`<span style="color:#e74c3c">💀 闇金に遭遇！${lostP}P没収！</span>`); playSfx('fail');
@@ -68,6 +74,8 @@ export const checkNpcCollision = (playerId) => {
     }
     
     if (p.pos === state.friendPos) {
+        if (!p.isCPU) useUserStore.getState().incrementNpcEncounter('friend');
+        
         state.updatePlayer(p.id, { cans: p.cans + 1 });
         logMsg(`🤝 仲間のホームレスから空き缶をもらった！`); playSfx('coin');
         state.addEventPopup(p.id, "🤝", "仲間", "缶ゲット！", "good");

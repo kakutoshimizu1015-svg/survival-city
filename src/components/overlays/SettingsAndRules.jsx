@@ -10,6 +10,7 @@ export const SettingsAndRules = () => {
 
     const { 
         playerName, wins, totalEarnedP, showSmoke, setShowSmoke,
+        totalTilesMoved, totalCardsUsed, totalCansCollected, totalTrashCollected, totalPSpentAtShop, npcEncounters,
         liteMode, volume, layoutMode, showSkipButton, autoScrollToPlayer, setUserData 
     } = useUserStore();
     
@@ -241,7 +242,7 @@ export const SettingsAndRules = () => {
 
     return (
         <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={() => setGameState({ settingsActive: false })}>
-            <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723', padding: '15px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723', padding: '15px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
                 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', borderBottom: '2px solid #8d6e63', paddingBottom: '10px' }}>
                     <ClayButton 
@@ -283,6 +284,27 @@ export const SettingsAndRules = () => {
                             <div>
                                 <div style={{ fontSize: '13px', color: '#bdc3c7' }}>💰 累計稼いだP</div>
                                 <div style={{ fontSize: '26px', fontWeight: 'bold', color: '#f1c40f' }}>{totalEarnedP} <span style={{fontSize: '14px', color: '#fdf5e6'}}>P</span></div>
+                            </div>
+                        </div>
+
+                        {/* ▼ 追加: 累計スタッツとNPC遭遇回数の表示グリッド */}
+                        <div style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '8px', marginTop: '15px' }}>
+                            <h4 style={{ margin: '0 0 10px 0', color: '#bdc3c7', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '5px' }}>📊 累計スタッツ</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', textAlign: 'left' }}>
+                                <div>🚶 移動マス: <span style={{color:'#f1c40f', fontWeight:'bold'}}>{totalTilesMoved}</span></div>
+                                <div>🎴 使用カード: <span style={{color:'#f1c40f', fontWeight:'bold'}}>{totalCardsUsed}</span></div>
+                                <div>🥫 集めた缶: <span style={{color:'#f1c40f', fontWeight:'bold'}}>{totalCansCollected}</span></div>
+                                <div>🗑️ 漁ったゴミ: <span style={{color:'#f1c40f', fontWeight:'bold'}}>{totalTrashCollected}</span></div>
+                                <div>🛒 Shop消費P: <span style={{color:'#f1c40f', fontWeight:'bold'}}>{totalPSpentAtShop}</span></div>
+                            </div>
+                            
+                            <h4 style={{ margin: '15px 0 10px 0', color: '#bdc3c7', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '5px' }}>⚠️ NPC遭遇回数</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', textAlign: 'left' }}>
+                                <div>🚓 パトカー: <span style={{color:'#f1c40f', fontWeight:'bold'}}>{npcEncounters?.police || 0}</span></div>
+                                <div>😎 ヤクザ: <span style={{color:'#f1c40f', fontWeight:'bold'}}>{npcEncounters?.yakuza || 0}</span></div>
+                                <div>💀 闇金: <span style={{color:'#f1c40f', fontWeight:'bold'}}>{npcEncounters?.loanshark || 0}</span></div>
+                                <div>🧓 おじさん: <span style={{color:'#f1c40f', fontWeight:'bold'}}>{npcEncounters?.uncle || 0}</span></div>
+                                <div>🤝 仲間: <span style={{color:'#f1c40f', fontWeight:'bold'}}>{npcEncounters?.friend || 0}</span></div>
                             </div>
                         </div>
                     </div>

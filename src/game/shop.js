@@ -1,4 +1,5 @@
 import { useGameStore } from '../store/useGameStore';
+import { useUserStore } from '../store/useUserStore'; // ▼ 追加
 import { deckData } from '../constants/cards';
 import { logMsg } from './actions';
 
@@ -10,7 +11,6 @@ export const generateShopStock = () => {
     if (shopStockTurn !== currentTurnKey) {
         const pool = [0,1,2,3,4,5,6,7,8,9,10,11,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
         const newStock = [];
-        // ▼ 修正：在庫上限を6枚に変更
         for (let i = 0; i < 6; i++) {
             newStock.push(pool[Math.floor(Math.random() * pool.length)]);
         }
@@ -59,6 +59,12 @@ export const shopCartBuy = () => {
 
     state.updateCurrentPlayer(p => ({ p: p.p - totalCost, hand: newHand }));
     logMsg(`🛒 一括購入！${names.join('・')} (合計 -${totalCost}P)`);
+    
+    // ▼ 追加: ショップで使ったPのスタッツ更新
+    if (!cp.isCPU) {
+        useUserStore.getState().incrementStat('totalPSpentAtShop', totalCost);
+    }
+    
     useGameStore.setState({ shopCart: [] });
 };
 
