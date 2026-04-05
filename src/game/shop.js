@@ -1,5 +1,5 @@
 import { useGameStore } from '../store/useGameStore';
-import { useUserStore } from '../store/useUserStore'; // ▼ 追加
+import { useUserStore } from '../store/useUserStore'; 
 import { deckData } from '../constants/cards';
 import { logMsg } from './actions';
 
@@ -60,7 +60,8 @@ export const shopCartBuy = () => {
     state.updateCurrentPlayer(p => ({ p: p.p - totalCost, hand: newHand }));
     logMsg(`🛒 一括購入！${names.join('・')} (合計 -${totalCost}P)`);
     
-    // ▼ 追加: ショップで使ったPのスタッツ更新
+    // ▼ スタッツ更新
+    state.incrementGameStat(cp.id, 'shopP', totalCost);
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalPSpentAtShop', totalCost);
     }

@@ -17,6 +17,7 @@ import { ShopOverlay } from '../components/overlays/ShopOverlay';
 import { TurnOrderOverlay } from '../components/overlays/TurnOrderOverlay';
 import { GameEffectsOverlay } from '../components/overlays/GameEffectsOverlay';
 import { TeamActionOverlay } from '../components/overlays/TeamActionOverlay'; 
+import { AwardsOverlay } from '../components/overlays/AwardsOverlay'; // ▼ 追加
 
 export const GameMain = () => {
     const { turn, players, gameOver, gamePhase, turnBannerActive } = useGameStore();
@@ -47,7 +48,6 @@ export const GameMain = () => {
         }
     }, [turn, players, gameOver, gamePhase, status, isHost, turnBannerActive]);
 
-    // ▼ 修正：再マウント時やリサイズ時に確実にクラスを当て直すようにリスナーを復活・強化
     useEffect(() => {
         const updateLayout = () => {
             if (window.innerWidth <= 768) {
@@ -76,6 +76,9 @@ export const GameMain = () => {
             <ShopOverlay />
             <TurnOrderOverlay />
             <TeamActionOverlay />
+            
+            {/* ▼ 追加: 表彰式のオーバーレイ */}
+            <AwardsOverlay />
 
             <div id="top-bar" className="top-bar">
                 <div id="left-status-area" className="left-status-area">

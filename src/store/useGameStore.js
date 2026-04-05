@@ -25,6 +25,12 @@ const initialState = {
     acquiredCard: null,
     territorySelectOptions: null,
     gameResult: null,
+    
+    // ▼ 追加: 表彰式（アワード）用のステート
+    awardsActive: false,
+    awardsData: null,
+    pendingGameResult: null,
+
     toastMsg: null,
     centerWarning: null,
     tooltipData: null,
@@ -60,6 +66,17 @@ export const useGameStore = create((set, get) => ({
             ...p, 
             ...(typeof updater === 'function' ? updater(p) : updater) 
         } : p)
+    })),
+
+    // ▼ 追加: 1ゲーム内の成績（ゲームスタッツ）を安全にカウントアップする関数
+    incrementGameStat: (playerId, key, amount) => set((state) => ({
+        players: state.players.map(p => {
+            if (p.id === playerId) {
+                const currentStats = p.gameStats || { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0 };
+                return { ...p, gameStats: { ...currentStats, [key]: (currentStats[key] || 0) + amount } };
+            }
+            return p;
+        })
     })),
     
     resetGame: () => set(initialState),

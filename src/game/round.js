@@ -24,15 +24,71 @@ const getDestRandom = (start, steps, mapData) => {
 const endGame = () => {
     const state = useGameStore.getState();
     useGameStore.setState({ gameOver: true });
-    
-    let results = state.players.map(p => {
+
+    // ▼ 表彰の判定用にプレイヤー情報を安全にコピー
+    let updatedPlayers = state.players.map(p => ({
+        ...p,
+        gameStats: p.gameStats || { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0 }
+    }));
+
+    // 表彰する5つの部門
+    const categories = [
+        { key: 'tiles', name: '🏃 最多移動賞', desc: '最も多くマスを移動した' },
+        { key: 'cards', name: '🃏 カードマスター賞', desc: '最も多くカードを使用した' },
+        { key: 'cans', name: '🥫 空き缶王', desc: '最も多く空き缶を拾った' },
+        { key: 'trash', name: '🗑️ ゴミ漁り名人', desc: '最も多くゴミを漁った' },
+        { key: 'shopP', name: '🛍️ 爆買い王', desc: 'ショップで最もPを消費した' }
+    ];
+
+    const awards = [];
+
+    // 各部門の1位を計算
+    categories.forEach(cat => {
+        let maxVal = -1;
+        let winners = [];
+
+        updatedPlayers.forEach(p => {
+            const val = p.gameStats[cat.key] || 0;
+            if (val > maxVal) {
+                maxVal = val;
+                winners = [p];
+            } else if (val === maxVal && val > 0) {
+                winners.push(p);
+            }
+        });
+
+        // トッププレイヤーの所持Pに +50Pを加算
+        if (maxVal > 0) {
+            awards.push({
+                ...cat,
+                value: maxVal,
+                winners: winners.map(w => w.id),
+                winnerNames: winners.map(w => w.name).join(' と ')
+            });
+            winners.forEach(w => {
+                const idx = updatedPlayers.findIndex(p => p.id === w.id);
+                updatedPlayers[idx].p += 50; 
+                logMsg(`🌟 ${w.name}が【${cat.name}】を獲得！ ボーナス+50P！`);
+            });
+        } else {
+            awards.push({ ...cat, value: 0, winners: [], winnerNames: '該当者なし' });
+        }
+    });
+
+    // ▼ ボーナスが反映されたプレイヤー状態をストアに一旦上書き保存
+    useGameStore.setState({ players: updatedPlayers });
+
+    // そのボーナスが加わった最終的なPを用いて、ゲームのスコアを計算
+    let results = updatedPlayers.map(p => {
         let terrValue = 0;
         Object.keys(state.territories).filter(k => state.territories[k] === p.id).forEach(tId => {
             let area = state.mapData.find(t => t.id == tId).area;
             terrValue += (area === "slum" ? 3 : area === "commercial" ? 6 : 10);
         });
         let resourceValue = p.cans * state.canPrice + p.trash * state.trashPrice;
-        let scaledP = Math.round(p.p * 2.0);
+        
+        // Pは2倍の価値を持つため、+50Pのボーナスは最終スコアでは実質+100点になります
+        let scaledP = Math.round(p.p * 2.0); 
         let killBonus = (p.kills || 0) * 3;
         let deathPenalty = (p.deaths || 0) * 5;
         let totalScore = scaledP + terrValue + resourceValue + killBonus - deathPenalty;
@@ -41,7 +97,7 @@ const endGame = () => {
     
     let isTeamGame = false;
     let sortedTeams = null;
-    const hasTeams = state.players.some(p => p.teamColor !== 'none');
+    const hasTeams = updatedPlayers.some(p => p.teamColor !== 'none');
     
     const netState = useNetworkStore.getState();
     const isOnline = netState.status === 'connected';
@@ -62,18 +118,23 @@ const endGame = () => {
             teamScores[tk].members.push(r);
         });
         sortedTeams = Object.values(teamScores).sort((a, b) => b.total - a.total);
-        logMsg(`🏆 優勝は ${sortedTeams[0].color !== 'none' ? sortedTeams[0].color+'チーム' : sortedTeams[0].members[0].name}！`);
+        logMsg(`🏆 総合優勝は ${sortedTeams[0].color !== 'none' ? sortedTeams[0].color+'チーム' : sortedTeams[0].members[0].name}！`);
         const winningTeamMembers = sortedTeams[0].members;
         if (winningTeamMembers.some(p => isMe(p))) {
              const myResult = winningTeamMembers.find(p => isMe(p));
              if(myResult) { recordWin(myResult.totalScore); console.log(`[戦績セーブ] チーム優勝！`); }
         }
     } else {
-        logMsg(`🏆 優勝は ${results[0].name}！`);
+        logMsg(`🏆 総合優勝は ${results[0].name}！`);
         if (isMe(results[0])) { recordWin(results[0].totalScore); console.log(`[戦績セーブ] 優勝！`); }
     }
-    useGameStore.setState({ gameResult: { results, isTeamGame, sortedTeams } });
-    playSfx('win');
+    
+    // ▼ 修正: 直接リザルトを出すのではなく、表彰式をアクティブにして最終結果は pending に保留する
+    useGameStore.setState({ 
+        awardsActive: true, 
+        awardsData: awards, 
+        pendingGameResult: { results, isTeamGame, sortedTeams } 
+    });
 };
 
 export const processRoundEnd = async () => {
@@ -134,7 +195,6 @@ export const processRoundEnd = async () => {
         const md = state.mapData;
         let nextNpcState = {};
 
-        // ▼ 追加: テレポート廃止・隣接移動＆クールタイムロジック
         const moveOrRespawn = (posKey, cdKey, filterCondition = null) => {
             let cd = state[cdKey] || 0;
             let pos = state[posKey];
@@ -205,7 +265,6 @@ export const processRoundEnd = async () => {
         await sleep(800);
         useGameStore.setState({ horrorMode: false });
 
-        // ▼ パトカーの移動とパトロール
         let pCd = state.policeCd || 0;
         let newPolicePos = state.policePos;
 
@@ -215,7 +274,7 @@ export const processRoundEnd = async () => {
         } else if (newPolicePos !== 999) {
             if (newRound % 2 === 0) {
                 logMsg(`🚓 パトカーがパトロール中！`);
-                let policeRoll = Math.floor(Math.random()*6)+1 + Math.floor(Math.random()*6)+1; // 2d6に変更
+                let policeRoll = Math.floor(Math.random()*6)+1 + Math.floor(Math.random()*6)+1;
                 let pMove = getDestRandom(newPolicePos, policeRoll, md);
                 newPolicePos = pMove.finalPos;
                 let hitSomeone = false;
@@ -267,13 +326,11 @@ export const processRoundEnd = async () => {
             await sleep(300);
         }
 
-        // ステートをまとめて適用
         useGameStore.setState({ 
             roundCount: newRound, weatherState: weather, isRainy: weather === "rainy", isNight, canPrice, trashPrice, 
             ...nextNpcState 
         });
 
-        // ▼ 追加: 移動してきたNPCがプレイヤーにぶつかった場合の判定
         useGameStore.getState().players.forEach(p => {
             if (p.hp > 0) checkNpcCollision(p.id);
         });

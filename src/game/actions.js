@@ -1,6 +1,6 @@
 import { useGameStore, isSameTeam } from '../store/useGameStore';
 import { useNetworkStore } from '../store/useNetworkStore';
-import { useUserStore } from '../store/useUserStore'; // ▼ 追加
+import { useUserStore } from '../store/useUserStore';
 import { checkNpcCollision } from './npc';
 import { processRoundEnd } from './round';
 import { playSfx } from '../utils/audio';
@@ -84,7 +84,8 @@ export const executeMove = (targetTileId) => {
     
     logMsg(`🚶 「${tile.name}」に移動。`); playSfx('move');
     
-    // ▼ 追加: 移動したマスのスタッツ更新
+    // ▼ スタッツ更新（ゲーム内成績 ＆ 永続成績）
+    state.incrementGameStat(cp.id, 'tiles', 1);
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalTilesMoved', 1);
     }
@@ -135,10 +136,14 @@ export const executeMove = (targetTileId) => {
     if (tile.fieldCans > 0 || tile.fieldTrash > 0) {
         state.updateCurrentPlayer(p => ({ cans: p.cans + (tile.fieldCans||0), trash: p.trash + (tile.fieldTrash||0) }));
         
-        // ▼ 追加: 落ちているアイテムを回収したときのスタッツ更新
-        if (!cp.isCPU) {
-            if (tile.fieldCans > 0) useUserStore.getState().incrementStat('totalCansCollected', tile.fieldCans);
-            if (tile.fieldTrash > 0) useUserStore.getState().incrementStat('totalTrashCollected', tile.fieldTrash);
+        // ▼ 落ちているアイテムを回収したときのスタッツ更新
+        if (tile.fieldCans > 0) {
+            state.incrementGameStat(cp.id, 'cans', tile.fieldCans);
+            if (!cp.isCPU) useUserStore.getState().incrementStat('totalCansCollected', tile.fieldCans);
+        }
+        if (tile.fieldTrash > 0) {
+            state.incrementGameStat(cp.id, 'trash', tile.fieldTrash);
+            if (!cp.isCPU) useUserStore.getState().incrementStat('totalTrashCollected', tile.fieldTrash);
         }
         
         useGameStore.setState(s => ({ mapData: s.mapData.map(t => t.id === targetTileId ? { ...t, fieldCans: 0, fieldTrash: 0 } : t) }));
@@ -158,12 +163,13 @@ export const executeMove = (targetTileId) => {
 
 export const actionCan = () => { 
     const s = useGameStore.getState();
-    const cp = s.players[s.turn]; // ▼ 追加: cpの取得
+    const cp = s.players[s.turn]; 
     
     s.updateCurrentPlayer(p => ({ ap: p.ap - 1, cans: p.cans + 1 })); 
     useGameStore.setState(st => ({ canPickedThisTurn: st.canPickedThisTurn + 1 })); 
     
-    // ▼ 追加: 缶を拾ったスタッツ更新
+    // ▼ スタッツ更新
+    s.incrementGameStat(cp.id, 'cans', 1);
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalCansCollected', 1);
     }
@@ -201,7 +207,8 @@ export const actionTrash = () => {
     gain += nightBonus;
     s.updateCurrentPlayer(p => ({ trash: p.trash + gain }));
     
-    // ▼ 追加: ゴミを拾ったスタッツ更新
+    // ▼ スタッツ更新
+    s.incrementGameStat(cp.id, 'trash', gain);
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalTrashCollected', gain);
     }
