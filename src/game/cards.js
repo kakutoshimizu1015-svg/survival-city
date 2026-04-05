@@ -14,27 +14,34 @@ export const actionUseCard = (handIndex, cardId) => {
     const apCost = cardData.type === 'weapon' ? 2 : 0;
     if (cp.ap < apCost) { logMsg("⚡ APが足りません！"); return; }
 
-    // 手札から削除しAP消費
     const newHand = [...cp.hand];
     newHand.splice(handIndex, 1);
     state.updateCurrentPlayer(p => ({ ap: p.ap - apCost, hand: newHand }));
 
     logMsg(`🎴 「${cardData.name}」を使用！`);
     
-    // ▼ スタッツ更新
     state.incrementGameStat(cp.id, 'cards', 1);
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalCardsUsed', 1);
     }
 
-    // 武器は別UIで処理
     if (cardData.type === 'weapon') {
-        const targets = players.filter(op => op.id !== cp.id && op.hp > 0);
+        const playerTargets = players.filter(op => op.id !== cp.id && op.hp > 0);
+        
+        // ▼ 武器の対象にNPCを追加
+        const npcs = [
+            { id: 'npc_police', name: 'パトカー', pos: state.policePos, hp: state.policeHp, type: 'npc' },
+            { id: 'npc_uncle', name: '厄介なおじさん', pos: state.unclePos, hp: state.uncleHp, type: 'npc' },
+            { id: 'npc_yakuza', name: 'ヤクザ', pos: state.yakuzaPos, hp: state.yakuzaHp, type: 'npc' },
+            { id: 'npc_loanshark', name: '闇金', pos: state.loansharkPos, hp: state.loansharkHp, type: 'npc' },
+            { id: 'npc_friend', name: '仲間のホームレス', pos: state.friendPos, hp: state.friendHp, type: 'npc' }
+        ].filter(n => n.hp > 0 && n.pos !== 999);
+
+        const targets = [...playerTargets, ...npcs];
         useGameStore.setState({ weaponArcData: { cardData, targets, attacker: cp } });
         return;
     }
 
-    // --- 各カードの固有効果 ---
     switch (cardId) {
         case 0: state.updateCurrentPlayer(p => ({ stealth: true })); logMsg(`🔵 ステルス発動！次の敵をやり過ごす`); break;
         case 1: state.updateCurrentPlayer(p => ({ rainGear: true })); logMsg(`🌂 雨具装備！次の雨ペナルティを無効化`); break;
@@ -156,7 +163,6 @@ export const actionCancelWeapon = (cardId) => {
     const cardData = deckData.find(c => c.id === cardId);
     if (!cardData || cardData.type !== 'weapon') return;
 
-    // 手札の末尾に戻し、消費したAP(2)を回復
     state.updateCurrentPlayer(p => ({
         ap: p.ap + 2,
         hand: [...p.hand, cardId]

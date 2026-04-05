@@ -84,7 +84,6 @@ export const executeMove = (targetTileId) => {
     
     logMsg(`🚶 「${tile.name}」に移動。`); playSfx('move');
     
-    // ▼ スタッツ更新（ゲーム内成績 ＆ 永続成績）
     state.incrementGameStat(cp.id, 'tiles', 1);
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalTilesMoved', 1);
@@ -136,7 +135,6 @@ export const executeMove = (targetTileId) => {
     if (tile.fieldCans > 0 || tile.fieldTrash > 0) {
         state.updateCurrentPlayer(p => ({ cans: p.cans + (tile.fieldCans||0), trash: p.trash + (tile.fieldTrash||0) }));
         
-        // ▼ 落ちているアイテムを回収したときのスタッツ更新
         if (tile.fieldCans > 0) {
             state.incrementGameStat(cp.id, 'cans', tile.fieldCans);
             if (!cp.isCPU) useUserStore.getState().incrementStat('totalCansCollected', tile.fieldCans);
@@ -168,7 +166,6 @@ export const actionCan = () => {
     s.updateCurrentPlayer(p => ({ ap: p.ap - 1, cans: p.cans + 1 })); 
     useGameStore.setState(st => ({ canPickedThisTurn: st.canPickedThisTurn + 1 })); 
     
-    // ▼ スタッツ更新
     s.incrementGameStat(cp.id, 'cans', 1);
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalCansCollected', 1);
@@ -207,7 +204,6 @@ export const actionTrash = () => {
     gain += nightBonus;
     s.updateCurrentPlayer(p => ({ trash: p.trash + gain }));
     
-    // ▼ スタッツ更新
     s.incrementGameStat(cp.id, 'trash', gain);
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalTrashCollected', gain);
@@ -234,13 +230,28 @@ export const actionJob = () => {
 };
 
 export const actionOccupy = () => { 
-    const s = useGameStore.getState(), cp = s.players[s.turn];
-    const cost = s.territories[cp.pos] !== undefined ? 6 : 3; 
+    const s = useGameStore.getState();
+    const cp = s.players[s.turn];
+    const currentOwner = s.territories[cp.pos];
+    
+    // ▼ 乗っ取りコストの1.5倍計算ロジック
+    let cost = 3; // 初回の占領コスト
+    if (currentOwner !== undefined && currentOwner !== cp.id) {
+        const prevCost = s.territoryCosts?.[cp.pos] || 3;
+        cost = Math.round(prevCost * 1.5);
+    }
+
     if (cp.p >= cost) { 
         s.updateCurrentPlayer(p => ({ p: p.p - cost })); 
-        useGameStore.setState(st => ({ territories: { ...st.territories, [cp.pos]: cp.id } })); 
+        useGameStore.setState(st => ({ 
+            territories: { ...st.territories, [cp.pos]: cp.id },
+            territoryCosts: { ...(st.territoryCosts || {}), [cp.pos]: cost } 
+        })); 
+        logMsg(`🚩 ${cp.name}が${cost}P支払って陣地を占領しました！`);
         playSfx('success'); 
-    } 
+    } else {
+        logMsg(`❌ Pが足りません（必要: ${cost}P）`);
+    }
 };
 
 export const actionExchange = () => { const s = useGameStore.getState(), cp = s.players[s.turn], tot = cp.cans * s.canPrice + cp.trash * s.trashPrice; s.updateCurrentPlayer(p => ({ p: p.p + tot, cans: 0, trash: 0 })); playSfx('coin'); };

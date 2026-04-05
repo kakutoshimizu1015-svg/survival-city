@@ -5,14 +5,33 @@ import { logMsg } from './actions';
 
 export const generateShopStock = () => {
     const state = useGameStore.getState();
-    const { roundCount, turn, shopStockTurn } = state;
+    const { roundCount, maxRounds, turn, players, shopStockTurn } = state;
     const currentTurnKey = roundCount * 1000 + turn;
 
     if (shopStockTurn !== currentTurnKey) {
-        const pool = [0,1,2,3,4,5,6,7,8,9,10,11,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
+        const cp = players[turn];
+        
+        // 所持Pで仮の順位を計算
+        const scores = players.map(p => ({ id: p.id, p: p.p })).sort((a, b) => b.p - a.p);
+        const rank = scores.findIndex(s => s.id === cp.id);
+        const isBottom2 = players.length >= 2 && rank >= players.length - 2;
+        const isLateGame = (maxRounds - roundCount) <= 4;
+        
+        // ▼ レアカード確率の動的調整
+        let rareChance = 0.05; // 序盤・基本確率は5%
+        if (isLateGame && isBottom2) rareChance = 0.30; // 終了4ターン前＆下位2名は30%にアップ
+
+        // 12:大暴落, 13:下剋上, 35:弁護士の盾, 36:裏取引, 37:反撃の一撃
+        const rarePool = [12, 13, 35, 36, 37];
+        const normalPool = [0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
+
         const newStock = [];
         for (let i = 0; i < 6; i++) {
-            newStock.push(pool[Math.floor(Math.random() * pool.length)]);
+            if (Math.random() < rareChance) {
+                newStock.push(rarePool[Math.floor(Math.random() * rarePool.length)]);
+            } else {
+                newStock.push(normalPool[Math.floor(Math.random() * normalPool.length)]);
+            }
         }
         useGameStore.setState({ shopStock: newStock, shopStockTurn: currentTurnKey, shopCart: [] });
     }
@@ -60,7 +79,6 @@ export const shopCartBuy = () => {
     state.updateCurrentPlayer(p => ({ p: p.p - totalCost, hand: newHand }));
     logMsg(`🛒 一括購入！${names.join('・')} (合計 -${totalCost}P)`);
     
-    // ▼ スタッツ更新
     state.incrementGameStat(cp.id, 'shopP', totalCost);
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalPSpentAtShop', totalCost);

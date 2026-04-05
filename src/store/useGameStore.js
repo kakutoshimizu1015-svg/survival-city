@@ -26,7 +26,6 @@ const initialState = {
     territorySelectOptions: null,
     gameResult: null,
     
-    // ▼ 追加: 表彰式（アワード）用のステート
     awardsActive: false,
     awardsData: null,
     pendingGameResult: null,
@@ -37,17 +36,17 @@ const initialState = {
     _roundEndInProgress: false,
 
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
-    mapData: [], territories: {}, isRainy: false, weatherState: 'sunny', isNight: false,
+    mapData: [], territories: {}, territoryCosts: {}, isRainy: false, weatherState: 'sunny', isNight: false,
     roundCount: 1, maxRounds: 20, canPrice: 1, trashPrice: 2, destTile: -1,
     
-    // ▼ NPCの位置とクールタイム
+    // ▼ NPCの位置、クールタイム、HP(新設)、再スポーンタイマー(新設)
     truckPos: 0, 
-    policePos: 0, policeCd: 0,
-    unclePos: 0, uncleCd: 0,
-    animalPos: 0, animalCd: 0,
-    yakuzaPos: 0, yakuzaCd: 0,
-    loansharkPos: 0, loansharkCd: 0,
-    friendPos: 0, friendCd: 0,
+    policePos: 0, policeCd: 0, policeHp: 10, policeRespawn: 0,
+    unclePos: 0, uncleCd: 0, uncleHp: 10, uncleRespawn: 0,
+    animalPos: 0, animalCd: 0, animalHp: 10, animalRespawn: 0,
+    yakuzaPos: 0, yakuzaCd: 0, yakuzaHp: 10, yakuzaRespawn: 0,
+    loansharkPos: 0, loansharkCd: 0, loansharkHp: 10, loansharkRespawn: 0,
+    friendPos: 0, friendCd: 0, friendHp: 10, friendRespawn: 0,
 };
 
 export const useGameStore = create((set, get) => ({
@@ -68,7 +67,6 @@ export const useGameStore = create((set, get) => ({
         } : p)
     })),
 
-    // ▼ 追加: 1ゲーム内の成績（ゲームスタッツ）を安全にカウントアップする関数
     incrementGameStat: (playerId, key, amount) => set((state) => ({
         players: state.players.map(p => {
             if (p.id === playerId) {

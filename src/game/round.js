@@ -25,13 +25,11 @@ const endGame = () => {
     const state = useGameStore.getState();
     useGameStore.setState({ gameOver: true });
 
-    // ▼ 表彰の判定用にプレイヤー情報を安全にコピー
     let updatedPlayers = state.players.map(p => ({
         ...p,
         gameStats: p.gameStats || { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0 }
     }));
 
-    // 表彰する5つの部門
     const categories = [
         { key: 'tiles', name: '🏃 最多移動賞', desc: '最も多くマスを移動した' },
         { key: 'cards', name: '🃏 カードマスター賞', desc: '最も多くカードを使用した' },
@@ -42,7 +40,6 @@ const endGame = () => {
 
     const awards = [];
 
-    // 各部門の1位を計算
     categories.forEach(cat => {
         let maxVal = -1;
         let winners = [];
@@ -57,7 +54,6 @@ const endGame = () => {
             }
         });
 
-        // トッププレイヤーの所持Pに +50Pを加算
         if (maxVal > 0) {
             awards.push({
                 ...cat,
@@ -75,10 +71,8 @@ const endGame = () => {
         }
     });
 
-    // ▼ ボーナスが反映されたプレイヤー状態をストアに一旦上書き保存
     useGameStore.setState({ players: updatedPlayers });
 
-    // そのボーナスが加わった最終的なPを用いて、ゲームのスコアを計算
     let results = updatedPlayers.map(p => {
         let terrValue = 0;
         Object.keys(state.territories).filter(k => state.territories[k] === p.id).forEach(tId => {
@@ -87,7 +81,6 @@ const endGame = () => {
         });
         let resourceValue = p.cans * state.canPrice + p.trash * state.trashPrice;
         
-        // Pは2倍の価値を持つため、+50Pのボーナスは最終スコアでは実質+100点になります
         let scaledP = Math.round(p.p * 2.0); 
         let killBonus = (p.kills || 0) * 3;
         let deathPenalty = (p.deaths || 0) * 5;
@@ -129,7 +122,6 @@ const endGame = () => {
         if (isMe(results[0])) { recordWin(results[0].totalScore); console.log(`[戦績セーブ] 優勝！`); }
     }
     
-    // ▼ 修正: 直接リザルトを出すのではなく、表彰式をアクティブにして最終結果は pending に保留する
     useGameStore.setState({ 
         awardsActive: true, 
         awardsData: awards, 
@@ -265,42 +257,79 @@ export const processRoundEnd = async () => {
         await sleep(800);
         useGameStore.setState({ horrorMode: false });
 
-        let pCd = state.policeCd || 0;
-        let newPolicePos = state.policePos;
-
-        if (pCd > 0) {
-            pCd--;
-            if (pCd === 0) newPolicePos = md[Math.floor(Math.random() * md.length)].id;
-        } else if (newPolicePos !== 999) {
-            if (newRound % 2 === 0) {
-                logMsg(`🚓 パトカーがパトロール中！`);
-                let policeRoll = Math.floor(Math.random()*6)+1 + Math.floor(Math.random()*6)+1;
-                let pMove = getDestRandom(newPolicePos, policeRoll, md);
-                newPolicePos = pMove.finalPos;
-                let hitSomeone = false;
-
-                useGameStore.getState().players.forEach(p => {
-                    if (p.hp > 0 && pMove.hitList.includes(p.pos)) {
-                        if (p.equip?.doll) {
-                            useGameStore.getState().updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll:false} }));
-                            logMsg(`🎎 身代わり人形でパトカー回避！`);
-                            useGameStore.getState().addEventPopup(p.id, "🎎", "回避", "身代わり人形で守った", "good");
-                        } else if (!p.stealth && !p.hasID && p.charType !== "survivor") {
-                            useGameStore.getState().updatePlayer(p.id, { penaltyAP: (p.penaltyAP||0)+2 });
-                            logMsg(`🚓 パトカーが${p.name}を補導！次回AP-2`);
-                            useGameStore.getState().addEventPopup(p.id, "🚓", "補導", "次回AP-2", "bad");
-                            hitSomeone = true;
-                        }
-                    }
-                });
-                if (hitSomeone) {
-                    pCd = 2;
-                    newPolicePos = 999;
+        // ▼ NPCの再スポーン処理
+        const npcKeys = ['police', 'uncle', 'yakuza', 'loanshark', 'friend'];
+        const npcDisplayNames = { police: 'パトカー', uncle: '厄介なおじさん', yakuza: 'ヤクザ', loanshark: '闇金', friend: '仲間のホームレス' };
+        
+        npcKeys.forEach(npc => {
+            let rTimer = useGameStore.getState()[`${npc}Respawn`];
+            if (rTimer > 0) {
+                rTimer--;
+                if (rTimer === 0) {
+                    const randomTile = md[Math.floor(Math.random() * md.length)].id;
+                    useGameStore.setState({ [`${npc}Respawn`]: 0, [`${npc}Hp`]: 10, [`${npc}Pos`]: randomTile });
+                    logMsg(`✨ ${npcDisplayNames[npc]}がマップに再スポーンした！`);
+                } else {
+                    useGameStore.setState({ [`${npc}Respawn`]: rTimer });
                 }
-            } else {
-                const tile = md.find(t => t.id === newPolicePos);
-                if (tile && tile.next && tile.next.length > 0) {
-                    newPolicePos = tile.next[Math.floor(Math.random() * tile.next.length)];
+            }
+        });
+        await sleep(500);
+
+        // ▼ パトカーの巡回ターン (偶数ラウンドのみ発動)
+        let pCd = state.policeCd || 0;
+        let newPolicePos = useGameStore.getState().policePos;
+        const policeHp = useGameStore.getState().policeHp;
+
+        if (policeHp > 0) {
+            if (pCd > 0) {
+                pCd--;
+                if (pCd === 0) newPolicePos = md[Math.floor(Math.random() * md.length)].id;
+            } else if (newPolicePos !== 999) {
+                if (newRound % 2 === 0) {
+                    logMsg(`<span style="color:#2980b9">🚓 パトカーの巡回ターン！</span>`);
+                    await sleep(1000);
+
+                    let policeRoll = Math.floor(Math.random() * 6) + 1 + Math.floor(Math.random() * 6) + 1;
+                    logMsg(`🚓 パトカーは ${policeRoll} マス移動する...`);
+                    await sleep(800);
+
+                    let pMove = getDestRandom(newPolicePos, policeRoll, md);
+                    let hitSomeone = false;
+
+                    for (let stepId of pMove.hitList) {
+                        newPolicePos = stepId;
+                        useGameStore.setState({ policePos: newPolicePos });
+
+                        const s = useGameStore.getState();
+                        s.players.forEach(p => {
+                            if (p.hp > 0 && p.pos === newPolicePos) {
+                                if (p.equip?.doll) {
+                                    s.updatePlayer(p.id, prev => ({ equip: { ...prev.equip, doll: false } }));
+                                    logMsg(`🎎 身代わり人形でパトカー回避！`);
+                                    s.addEventPopup(p.id, "🎎", "回避", "身代わり人形で守った", "good");
+                                } else if (!p.stealth && !p.hasID && p.charType !== "survivor") {
+                                    s.updatePlayer(p.id, { penaltyAP: (p.penaltyAP || 0) + 2 });
+                                    logMsg(`<span style="color:#e74c3c">🚓 パトカーが${p.name}を補導！次回AP-2</span>`);
+                                    s.addEventPopup(p.id, "🚓", "補導", "次回AP-2", "bad");
+                                    hitSomeone = true;
+                                }
+                            }
+                        });
+
+                        if (hitSomeone) break;
+                        await sleep(300);
+                    }
+
+                    if (hitSomeone) {
+                        pCd = 2;
+                        newPolicePos = 999;
+                    }
+                } else {
+                    const tile = md.find(t => t.id === newPolicePos);
+                    if (tile && tile.next && tile.next.length > 0) {
+                        newPolicePos = tile.next[Math.floor(Math.random() * tile.next.length)];
+                    }
                 }
             }
         }

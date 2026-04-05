@@ -1,5 +1,5 @@
 import { useGameStore } from '../store/useGameStore';
-import { useUserStore } from '../store/useUserStore'; // ▼ 追加
+import { useUserStore } from '../store/useUserStore';
 import { dealDamage } from './combat';
 import { logMsg } from './actions';
 import { playSfx } from '../utils/audio';
@@ -9,8 +9,7 @@ export const checkNpcCollision = (playerId) => {
     const p = state.players.find(x => x.id === playerId);
     if (!p || p.hp <= 0 || p.respawnShield > 0) return;
 
-    if (p.pos === state.policePos) {
-        // ▼ 追加: NPC遭遇スタッツの更新
+    if (state.policeHp > 0 && p.pos === state.policePos) {
         if (!p.isCPU) useUserStore.getState().incrementNpcEncounter('police');
         
         if (p.equip?.doll) { state.updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll: false} })); logMsg(`🎎 身代わり人形でパトカー回避！`); }
@@ -25,7 +24,7 @@ export const checkNpcCollision = (playerId) => {
         }
     }
     
-    if (p.pos === state.unclePos) {
+    if (state.uncleHp > 0 && p.pos === state.unclePos) {
         if (!p.isCPU) useUserStore.getState().incrementNpcEncounter('uncle');
         
         if (p.hand.length > 0) {
@@ -43,7 +42,7 @@ export const checkNpcCollision = (playerId) => {
         useGameStore.setState({ unclePos: 999, uncleCd: 2 });
     }
     
-    if (p.pos === state.yakuzaPos) {
+    if (state.yakuzaHp > 0 && p.pos === state.yakuzaPos) {
         if (!p.isCPU) useUserStore.getState().incrementNpcEncounter('yakuza');
         
         if (p.equip?.doll) { state.updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll: false} })); logMsg(`🎎 身代わり人形でヤクザ回避！`); }
@@ -60,7 +59,7 @@ export const checkNpcCollision = (playerId) => {
         }
     }
     
-    if (p.pos === state.loansharkPos) {
+    if (state.loansharkHp > 0 && p.pos === state.loansharkPos) {
         if (!p.isCPU) useUserStore.getState().incrementNpcEncounter('loanshark');
         
         if (p.equip?.doll) { state.updatePlayer(p.id, prev => ({ equip: {...prev.equip, doll: false} })); logMsg(`🎎 身代わり人形で闇金回避！`); }
@@ -73,7 +72,7 @@ export const checkNpcCollision = (playerId) => {
         }
     }
     
-    if (p.pos === state.friendPos) {
+    if (state.friendHp > 0 && p.pos === state.friendPos) {
         if (!p.isCPU) useUserStore.getState().incrementNpcEncounter('friend');
         
         state.updatePlayer(p.id, { cans: p.cans + 1 });

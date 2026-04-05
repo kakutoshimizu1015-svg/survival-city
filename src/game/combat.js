@@ -18,6 +18,37 @@ export const getDistance = (posA, posB, mapData) => {
 
 export const dealDamage = (targetId, dmg, source, attackerId = null) => {
     const state = useGameStore.getState();
+
+    // ▼ NPCがターゲットの場合の処理
+    if (String(targetId).startsWith('npc_')) {
+        const npcType = targetId.split('_')[1];
+        const currentHp = state[`${npcType}Hp`];
+        
+        if (currentHp <= 0) return 0;
+
+        const newHp = currentHp - dmg;
+        const npcNames = { police: 'パトカー', uncle: '厄介なおじさん', yakuza: 'ヤクザ', loanshark: '闇金', friend: '仲間のホームレス' };
+        
+        logMsg(`<span style="color:#e74c3c">💥 ${npcNames[npcType] || 'NPC'}に${dmg}ダメージ！</span>`);
+        playSfx('hit');
+
+        if (newHp <= 0) {
+            logMsg(`☠️ 武器で${npcNames[npcType] || 'NPC'}を倒した！`);
+            useGameStore.setState({
+                [`${npcType}Hp`]: 0,
+                [`${npcType}Pos`]: 999, // マップから一時消去
+                [`${npcType}Respawn`]: 1 // 1ターン後に再スポーン
+            });
+            if (attackerId !== null) {
+                state.updatePlayer(attackerId, p => ({ kills: (p.kills || 0) + 1 }));
+            }
+        } else {
+            useGameStore.setState({ [`${npcType}Hp`]: newHp });
+        }
+        return dmg;
+    }
+
+    // 以下、プレイヤーがターゲットの場合の処理
     const target = state.players.find(p => p.id === targetId);
     const attacker = attackerId !== null ? state.players.find(p => p.id === attackerId) : null;
     
@@ -52,7 +83,6 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
     if (attacker && dropP > 0) {
         state.updatePlayer(attackerId, p => ({ p: p.p + dropP })); logMsg(`💰 ${attacker.name}が${dropP}P奪取！`); playSfx('coin');
     } else if (!attacker && dropP > 0) {
-        // ハイエナシステム
         let neighbors = state.players.filter(p => p.id !== target.id && p.hp > 0 && getDistance(p.pos, target.pos, state.mapData) <= 2);
         if (neighbors.length > 0) {
             let share = Math.floor(dropP / neighbors.length);
@@ -66,7 +96,6 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
         const eqKeys = Object.keys(newEquip).filter(k => newEquip[k]);
         if (eqKeys.length > 0) newEquip[eqKeys[Math.floor(Math.random() * eqKeys.length)]] = false;
 
-        // アイテムドロップ
         if (target.cans > 0 || target.trash > 0) {
             useGameStore.setState(s => ({ mapData: s.mapData.map(t => t.id === target.pos ? { ...t, fieldCans: (t.fieldCans||0) + target.cans, fieldTrash: (t.fieldTrash||0) + target.trash } : t) }));
         }
