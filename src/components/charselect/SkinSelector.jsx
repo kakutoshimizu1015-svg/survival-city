@@ -21,13 +21,21 @@ export const SkinSelector = ({ charKey, color }) => {
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         {skins.map(skin => {
-          const isUnlocked = skin.id === 'default' || unlockedSkins.includes(skin.id);
+          // ▼ 修正: 'default' という文字列が含まれていればデフォルトスキンとして扱う
+          const isUnlocked = skin.id.includes('default') || unlockedSkins.includes(skin.id);
           const isSelected = currentSkinId === skin.id;
 
           return (
             <div 
               key={skin.id}
-              onClick={() => isUnlocked && setEquippedSkin(charKey, skin.id)}
+              // ▼ 修正: タップイベントの貫通（伝播）を完全に防ぐ
+              onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (isUnlocked) {
+                      setEquippedSkin(charKey, skin.id);
+                  }
+              }}
               style={{
                 width: 42, height: 42, borderRadius: 8, 
                 border: isSelected ? `2px solid ${color}` : '2px solid transparent',
@@ -37,7 +45,9 @@ export const SkinSelector = ({ charKey, color }) => {
                 cursor: isUnlocked ? 'pointer' : 'not-allowed',
                 opacity: isUnlocked ? 1 : 0.4,
                 position: 'relative',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                // ▼ 修正: モバイル端末でのタップ挙動を最適化
+                touchAction: 'manipulation'
               }}
             >
               <img 

@@ -2,27 +2,28 @@ import React, { useState, useCallback, useEffect } from "react";
 import { useUserStore } from '../store/useUserStore';
 import { useGameStore } from '../store/useGameStore';
 import { GACHA_POOL } from '../constants/characters';
-// ▼ 追加：Firebase同期用の関数をインポート
 import { syncGachaData } from '../utils/userLogic';
 
+// ▼ 修正：ご指定の確率に変更
 const RARITY_CFG = {
-  UR:  { label:"UR",  gold:"#FFFFFF", bg:"#1A0033", border:"#D500F9", rate:1,  glow:"#FF00FF" },
-  SSR: { label:"SSR", gold:"#FFD700", bg:"#3D1500", border:"#FFD700", rate:3,  glow:"#FF8C00" },
-  SR:  { label:"SR",  gold:"#DA70D6", bg:"#1A0040", border:"#CE93D8", rate:12, glow:"#9B59B6" },
-  R:   { label:"R",   gold:"#64B5F6", bg:"#001A4A", border:"#4FC3F7", rate:30, glow:"#2196F3" },
-  N:   { label:"N",   gold:"#B0BEC5", bg:"#1A1A1A", border:"#78909C", rate:54, glow:"#607D8B" },
+  UR:  { label:"UR",  gold:"#FFFFFF", bg:"#1A0033", border:"#D500F9", rate:0.5, glow:"#FF00FF" },
+  SSR: { label:"SSR", gold:"#FFD700", bg:"#3D1500", border:"#FFD700", rate:1.5, glow:"#FF8C00" },
+  SR:  { label:"SR",  gold:"#DA70D6", bg:"#1A0040", border:"#CE93D8", rate:5,   glow:"#9B59B6" },
+  R:   { label:"R",   gold:"#64B5F6", bg:"#001A4A", border:"#4FC3F7", rate:30,  glow:"#2196F3" },
+  N:   { label:"N",   gold:"#B0BEC5", bg:"#1A1A1A", border:"#78909C", rate:63,  glow:"#607D8B" },
 };
 
 const PULL_PHRASES = ["ジャラジャラ…","ガコン！","ガラガラ…","ゴトゴト…","ジャキン！"];
 const PARTICLE_EMOJIS = ["🥫","🗑️","📰","📦","🧤","🪣","🔩","🪝","🧣"];
 
+// ▼ 修正：確率判定ロジックを変更
 function rollRarity() {
   const r = Math.random() * 100;
-  if (r < 1)  return "UR";      
-  if (r < 4)  return "SSR";     
-  if (r < 16) return "SR";      
-  if (r < 46) return "R";       
-  return "N";                   
+  if (r < 0.5)  return "UR";      // 0.5%
+  if (r < 2.0)  return "SSR";     // 0.5 + 1.5 = 2.0%
+  if (r < 7.0)  return "SR";      // 2.0 + 5.0 = 7.0%
+  if (r < 37.0) return "R";       // 7.0 + 30.0 = 37.0%
+  return "N";                     // 残り 63%
 }
 
 function pullSkins(count) {
@@ -288,7 +289,6 @@ export default function GachaScreen() {
     const pulledIds = pulled.map(s => s.id);
     unlockMultipleSkins(pulledIds);
 
-    // ▼ 追加：Firebase にガチャの消費結果と獲得スキンを同期
     await syncGachaData();
 
     setPhase("done");
@@ -486,7 +486,7 @@ export default function GachaScreen() {
             <button
               onClick={async () => { 
                   addGachaAssets(500, 500); 
-                  await syncGachaData(); // ▼ 追加: 開発用ボタンを押したときもFirebaseに同期
+                  await syncGachaData();
                   notify("🔧 開発者モード: 空き缶・P +500！", "ok"); 
               }}
               style={{ background: "transparent", border: `1px dashed ${BORD}`, borderRadius: 8, padding: "7px 14px", color: MUTED, fontSize: 11, cursor: "pointer" }}
@@ -512,9 +512,10 @@ export default function GachaScreen() {
               <div style={{ display:"flex", flexWrap:"wrap", gap:9, justifyContent:"center", marginBottom:14 }}>
                 {results.map((skin, i) => <CardboardReveal key={i} skin={skin} index={i} revealed={revealed.has(i)} onReveal={() => revealOne(i)} />)}
               </div>
+              
+              {/* ▼ 修正：「もう一度引く」ボタンを削除 */}
               <div style={{ display:"flex", gap:10 }}>
                 {!allRev && <button onClick={revealAll} style={{ flex:1, background:"#3D1F00", border:`2px solid ${GOLD}`, borderRadius:10, padding:"12px", color:GOLD, fontWeight:"bold", fontSize:13, cursor:"pointer" }}>📦 全て開封</button>}
-                <button onClick={() => setView("machine")} style={{ flex:1, background:"linear-gradient(135deg,#5C1A00,#8B2500)", border:`2px solid ${ACC}`, borderRadius:10, padding:"12px", color:"#fff", fontWeight:"bold", fontSize:13, cursor:"pointer" }}>🔥 もう一度引く</button>
               </div>
             </>
           )}
