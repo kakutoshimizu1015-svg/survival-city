@@ -4,6 +4,9 @@ import { CharacterGrid } from '../components/charselect/CharacterGrid';
 import { CharacterPreview } from '../components/charselect/CharacterPreview';
 import { useUserStore } from '../store/useUserStore';
 
+/* ──────────────────────────────────────────────
+   定数データをマージして統一的なキャラクターリストを生成
+   ────────────────────────────────────────────── */
 const CHAR_KEYS = Object.keys(charInfo);
 
 const mergeCharacterData = () =>
@@ -22,15 +25,20 @@ const CHAR_COLORS = {
   hacker:'#9b59b6', musician:'#f1c40f', doctor:'#1abc9c', gambler:'#e91e8c', detective:'#6c5ce7',
 };
 
+/* ──────────────────────────────────────────────
+   メインコンポーネント（独立したポップアップモーダル）
+   ────────────────────────────────────────────── */
 export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, targetName }) => {
   const characters = useMemo(() => mergeCharacterData(), []);
   const { equippedSkins } = useUserStore();
   
+  // UI状態
   const [hoveredKey, setHoveredKey] = useState(null);
   const [selectedKey, setSelectedKey] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const prevKey = useRef(null);
 
+  // モーダルが開かれたら初期キャラをセット
   useEffect(() => {
     if (isOpen) {
         setSelectedKey(initialCharKey || 'athlete');
@@ -38,6 +46,7 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
     }
   }, [isOpen, initialCharKey]);
 
+  /* ──── キャラ選択時のプレビュー切替アニメーション ──── */
   useEffect(() => {
     if (selectedKey && selectedKey !== prevKey.current) {
       setShowPreview(false);
@@ -48,12 +57,13 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
     if (selectedKey) setShowPreview(true);
   }, [selectedKey]);
 
+  /* ──── 表示するキャラデータ（ホバー優先 → 選択中） ──── */
   const previewChar = useMemo(() => {
     const key = hoveredKey ?? selectedKey;
     return characters.find(c => c.key === key) || null;
   }, [hoveredKey, selectedKey, characters]);
 
-  // ▼ 追加：決定時に charKey と skinId の両方を親に返す
+  // 決定時に charKey と skinId の両方を親に返す
   const handleConfirm = () => {
     const activeSkinId = equippedSkins[selectedKey] || "default";
     onConfirm(selectedKey, activeSkinId);
@@ -73,8 +83,20 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
         @keyframes charPreviewSlide { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeInUp { from { transform: translateY(15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
+        
+        /* ▼ 追加: スマホ（タッチデバイス）でのみ表示する注釈のCSS */
+        .mobile-double-tap-notice {
+            display: none;
+        }
+        @media (hover: none) and (pointer: coarse), (max-width: 768px) {
+            .mobile-double-tap-notice {
+                display: block;
+                animation: fadeInUp 0.4s ease;
+            }
+        }
       `}</style>
 
+      {/* 背景エフェクト */}
       <div style={{
         position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.04,
         backgroundImage: 'linear-gradient(rgba(253,245,230,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(253,245,230,0.3) 1px, transparent 1px)',
@@ -84,6 +106,7 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
         <div style={{ width: '100%', height: 1, background: 'linear-gradient(90deg, transparent, rgba(253,245,230,0.03), transparent)', animation: 'scanline 6s linear infinite' }} />
       </div>
 
+      {/* ──── ヘッダー ──── */}
       <div style={{ textAlign: 'center', padding: '24px 0 8px', position: 'relative', zIndex: 2, width: '100%' }}>
         <h1 style={{
           fontSize: 26, fontWeight: 900, letterSpacing: 6, margin: 0,
@@ -94,6 +117,7 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
         </h1>
       </div>
 
+      {/* ──── 現在のプレイヤー表示 ──── */}
       <div style={{
         background: 'rgba(241,196,15,0.1)', border: '1px solid rgba(241,196,15,0.25)',
         borderRadius: 8, padding: '8px 24px', marginBottom: 12,
@@ -103,11 +127,22 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
         🎮 {targetName} のキャラクターを選択
       </div>
 
+      {/* ▼ 追加: スマホ用注釈（PCでは非表示） */}
+      <div className="mobile-double-tap-notice" style={{
+        fontSize: 12, color: '#e67e22', fontWeight: 700, marginBottom: 15,
+        textAlign: 'center', background: 'rgba(230, 126, 34, 0.15)', padding: '6px 16px', borderRadius: 20,
+        border: '1px solid rgba(230, 126, 34, 0.3)'
+      }}>
+        📱 キャラをダブルタップしてね！スキン変更できるようになります
+      </div>
+
+      {/* ──── メインレイアウト ──── */}
       <div style={{
         display: 'flex', maxWidth: 880, width: '100%', padding: '0 16px', gap: 20,
         flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start',
         position: 'relative', zIndex: 2,
       }}>
+        {/* グリッド */}
         <CharacterGrid
           characters={characters}
           selectedKey={selectedKey}
@@ -116,9 +151,12 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
           onHover={setHoveredKey}
           onLeave={() => setHoveredKey(null)}
         />
+
+        {/* プレビュー */}
         <CharacterPreview character={previewChar} show={showPreview} />
       </div>
 
+      {/* ──── 下部ボタンエリア ──── */}
       <div style={{
         display: 'flex', gap: 15, marginTop: 30, marginBottom: 24, flexWrap: 'wrap', justifyContent: 'center',
         position: 'relative', zIndex: 2,
