@@ -3,7 +3,6 @@ import { useUserStore } from '../store/useUserStore';
 import { useGameStore } from '../store/useGameStore';
 import { GACHA_POOL } from '../constants/characters';
 
-// ▼ 追加：URレアリティの定義と確率調整（合計100%）
 const RARITY_CFG = {
   UR:  { label:"UR",  gold:"#FFFFFF", bg:"#1A0033", border:"#D500F9", rate:1,  glow:"#FF00FF" },
   SSR: { label:"SSR", gold:"#FFD700", bg:"#3D1500", border:"#FFD700", rate:3,  glow:"#FF8C00" },
@@ -15,14 +14,13 @@ const RARITY_CFG = {
 const PULL_PHRASES = ["ジャラジャラ…","ガコン！","ガラガラ…","ゴトゴト…","ジャキン！"];
 const PARTICLE_EMOJIS = ["🥫","🗑️","📰","📦","🧤","🪣","🔩","🪝","🧣"];
 
-// ▼ 修正：URを含む確率計算ロジック
 function rollRarity() {
   const r = Math.random() * 100;
-  if (r < 1)  return "UR";      // 1%
-  if (r < 4)  return "SSR";     // 1 + 3 = 4%
-  if (r < 16) return "SR";      // 4 + 12 = 16%
-  if (r < 46) return "R";       // 16 + 30 = 46%
-  return "N";                   // 残り 54%
+  if (r < 1)  return "UR";      
+  if (r < 4)  return "SSR";     
+  if (r < 16) return "SR";      
+  if (r < 46) return "R";       
+  return "N";                   
 }
 
 function pullSkins(count) {
@@ -159,7 +157,6 @@ function CardboardReveal({ skin, revealed, onReveal, index }) {
         <div style={{
           height:122, position:"relative", background:`linear-gradient(145deg, ${cfg.bg}, ${cfg.bg}ee)`, border:`2px solid ${cfg.border}`, borderRadius:10, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, padding:"6px 4px", boxShadow:`0 0 16px ${cfg.glow}55`, animation:"revealPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
         }}>
-          {/* ▼ 修正：UR用の強力な光エフェクト追加 */}
           {(skin.rarity === "UR" || skin.rarity === "SSR" || skin.rarity === "SR") && <div style={{ position:"absolute", inset:0, borderRadius:8, background:`radial-gradient(ellipse at 50% 0%, ${cfg.glow}55 0%, transparent 70%)`, animation:"shimmer 2s ease-in-out infinite" }}/>}
           <div style={{ background:cfg.gold, color:"#000", fontSize:8, fontWeight:"bold", padding:"1px 10px", borderRadius:20, position:"relative", zIndex:1 }}>{skin.rarity}</div>
           <div style={{
@@ -182,7 +179,6 @@ function CinematicReveal({ skins, onDone }) {
   const [best,    setBest]    = useState(null);
 
   useEffect(() => {
-    // ▼ 修正：URのランク付けを追加
     const rankOf = r => ({UR:4,SSR:3,SR:2,R:1,N:0})[r];
     const topSkin = skins.reduce((b,s) => rankOf(s.rarity) > rankOf(b.rarity) ? s : b, skins[0]);
     setBest(topSkin);
@@ -480,6 +476,15 @@ export default function GachaScreen() {
               );
             })()}
           </div>
+          
+          <div style={{ width: "100%", maxWidth: 330, marginTop: 10, display: "flex", justifyContent: "center" }}>
+            <button
+              onClick={() => { addGachaAssets(500, 0); notify("🔧 開発者モード: 空き缶+500！", "ok"); }}
+              style={{ background: "transparent", border: `1px dashed ${BORD}`, borderRadius: 8, padding: "7px 14px", color: MUTED, fontSize: 11, cursor: "pointer" }}
+            >
+              🔧 開発者モード: 缶+500
+            </button>
+          </div>
         </div>
       )}
 
@@ -509,7 +514,6 @@ export default function GachaScreen() {
 
       {view === "collection" && (
         <div style={{ flex:1, padding:14, background:BG }}>
-          {/* ▼ 修正：URを追加したマッピング */}
           {["UR","SSR","SR","R","N"].map(rarity => {
             const cfg  = RARITY_CFG[rarity];
             const pool = GACHA_POOL.filter(s=>s.rarity===rarity);
