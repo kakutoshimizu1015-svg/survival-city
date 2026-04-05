@@ -34,13 +34,12 @@ export const actionRollDice = async (isCpuCall = false) => {
     const d1 = Math.floor(Math.random() * 6) + 1;
     const d2 = Math.floor(Math.random() * 6) + 1;
     
-    // ▼ 追加：ギャンブラーの第3のサイコロ判定 (25%の確率)
     const isGamblerBonus = cp.charType === 'gambler' && Math.random() < 0.25;
     const d3 = isGamblerBonus ? Math.floor(Math.random() * 6) + 1 : 0;
 
     let totalAP = d1 + d2 + d3;
     const isZorome = d1 === d2;
-    if (isZorome) totalAP *= 2; // ゾロ目判定はd1とd2のみ。2倍化の恩恵は全体にかかる
+    if (isZorome) totalAP *= 2; 
     if (cp.equip?.bicycle) totalAP += 2; 
 
     if (isZorome && cp.charType === 'gambler') {
@@ -55,6 +54,8 @@ export const actionRollDice = async (isCpuCall = false) => {
     if (isGamblerBonus) {
         logMsg(`🎲 <span style="color:#f1c40f">大勝負！ギャンブラーの第3のサイコロ発動（+${d3}）！</span>`);
         playSfx('success');
+        // ▼ 追加: 第3サイコロ発動時のポップアップ
+        state.addEventPopup(cp.id, "🎰", "大勝負！", `第3のサイコロ発動(+${d3})`, "good");
     }
     
     playSfx('success'); logMsg(`<span style="color:${cp.color}">${cp.name}</span>は${totalAP}AP獲得！`);
@@ -79,7 +80,6 @@ export const executeMove = (targetTileId) => {
     const moveCost = (state.isRainy && !cp.rainGear && cp.charType !== "athlete") ? 2 : 1;
 
     state.updateCurrentPlayer(p => ({ ap: Math.max(0, p.ap - moveCost), pos: targetTileId, rainGear: state.isRainy ? false : p.rainGear }));
-    // ▼ 追加：ダッシュのフラグもクリアする
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [], isDashPicking: false });
     logMsg(`🚶 「${tile.name}」に移動。`); playSfx('move');
 
@@ -120,7 +120,6 @@ export const executeMove = (targetTileId) => {
     const terrOwnerId = state.territories[targetTileId];
     if (terrOwnerId !== undefined && terrOwnerId !== cp.id) {
         const det = state.players.find(p => p.id === terrOwnerId && p.charType === 'detective' && p.hp > 0 && !isSameTeam(p, cp));
-        // ▼ 修正：完全に止まった時（executeMove）のみ、かつ30%の確率で没収
         if (det && cp.hand.length > 0 && Math.random() < 0.3) {
             state.updateCurrentPlayer(p => { const h = [...p.hand]; const stolen = h.splice(Math.floor(Math.random() * h.length), 1)[0]; state.updatePlayer(det.id, dp => ({ hand: [...dp.hand, stolen] })); return { hand: h }; });
             logMsg(`🕵️ ${det.name}が張り込みで${cp.name}の手札を没収！`);
@@ -195,7 +194,6 @@ export const actionJob = () => {
     useGameStore.setState({ jobResult: { active: true, isSuccess: win, points: win ? 12 : 0 } });
 };
 
-// ▼ 修正：領土上書きコストを5から6に変更
 export const actionOccupy = () => { 
     const s = useGameStore.getState(), cp = s.players[s.turn];
     const cost = s.territories[cp.pos] !== undefined ? 6 : 3; 
@@ -220,7 +218,6 @@ export const actionEndTurn = async () => {
 
         state.updateCurrentPlayer(p => ({ ap: 0, stealth: false, _katsuage: 0, equip: newEquip, equipTimer: newTimer, cannotMove: false })); 
         
-        // ▼ 追加：新規追加したモードのフラグもクリアする
         useGameStore.setState({ 
             isBranchPicking: false, isDashPicking: false, 
             isSalesVisiting: false, salesTargetId: null, npcSelectActive: false,

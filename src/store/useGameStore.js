@@ -1,36 +1,36 @@
 import { create } from 'zustand';
 
 const initialState = {
-    // ▼ 画面遷移フェーズ
-    // 'title' | 'mode_select' | 'setup_offline' | 'online_lobby' | 'playing'
     gamePhase: 'title', diceAnim: { active: false, d1: 1, d2: 1, text: '' },
     turnOrderActive: false, turnOrderData: null, gameOver: false, 
-    isBranchPicking: false, currentBranchOptions: [],
+    
+    // ▼ 今回追加・修正したアクション用フラグ群
+    isBranchPicking: false, 
+    currentBranchOptions: [],
+    isDashPicking: false,    // アスリートのダッシュ発光用
+    isSalesVisiting: false,  // 営業マンのカード選択用
+    salesTargetId: null,     // 営業マンのターゲット
+    npcSelectActive: false,  // 探偵のNPC選択モーダル用
+    npcMovePick: null,       // 探偵の移動対象NPC
+    
     shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
     mgActive: false, mgType: "", mgValue: 0, mgResult: null, storyActive: false,
     settingsActive: false, rulesActive: false, tutorialActive: false, teamActionActive: false,
     layoutMode: 'auto', volume: 1.0, tutorialStep: 0, sandboxActive: false, sandboxScenario: -1, sandboxStep: 0,
     turnBanner: null, turnBannerActive: false, eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,
-    npcMovePick: null, 
     
     jobResult: null,
     logs: [],
-
     charInfoModal: null,
     roundSummary: null,
     acquiredCard: null,
     territorySelectOptions: null,
     showSkipButton: false,
     gameResult: null,
-
     toastMsg: null,
     centerWarning: null,
     tooltipData: null,
-
-    // ▼ マップ自動スクロール設定（デフォルトON）
     autoScrollToPlayer: true,
-
-    // ▼ ラウンド終了処理中フラグ
     _roundEndInProgress: false,
 
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,

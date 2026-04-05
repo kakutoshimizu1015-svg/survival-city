@@ -5,9 +5,11 @@ import { ClayButton } from '../common/ClayButton';
 import { logMsg } from '../../game/actions';
 import { deckData } from '../../constants/cards'; 
 import { dealDamage } from '../../game/combat';
+import { setupNpcMove } from '../../game/skills'; // ▼ 探偵スキル用の関数をインポート
 
 export const GameEventOverlays = () => {
-    const { mgActive, mgType, mgValue, mgResult, storyActive, storyIndex, players, turn, jobResult } = useGameStore();
+    // ▼ npcSelectActive をStoreから取得
+    const { mgActive, mgType, mgValue, mgResult, storyActive, storyIndex, players, turn, jobResult, npcSelectActive } = useGameStore();
     const { myUserId, status } = useNetworkStore();
     const cp = players[turn];
 
@@ -90,11 +92,9 @@ export const GameEventOverlays = () => {
         }
     }, [mgActive, mgType, mgResult, slotStopped]);
 
-    // ▼ 修正：第3引数に出た数字（resultNum）を受け取るように変更
     const handleResult = (isWin, msg, resultNum) => {
         if (!isMyTurn) return;
         
-        // ▼ 修正：失敗時に出た数字をモーダルテキストに組み込む
         const failureText = resultNum !== undefined ? `失敗... (出た数字: ${resultNum})` : '失敗...';
         useGameStore.setState({ mgResult: isWin ? '大成功！' : failureText });
         logMsg(`🎲 ${msg}`);
@@ -114,6 +114,26 @@ export const GameEventOverlays = () => {
 
     return (
         <>
+            {/* ▼ 追加：探偵の情報操作用 NPC選択モーダル */}
+            {npcSelectActive && isMyTurn && (
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }}>
+                    <div className="modal-box" style={{ background: '#2c3e50', color: 'white', maxWidth: '400px' }}>
+                        <h2 style={{ color: '#f1c40f', marginTop: 0 }}>🕵️ 情報操作</h2>
+                        <p style={{ fontSize: '14px', marginBottom: '15px' }}>動かしたいNPCを選んでください</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+                            <ClayButton onClick={() => setupNpcMove('policePos')} style={{ width: '130px', padding: '10px' }}>🚓 警察</ClayButton>
+                            <ClayButton onClick={() => setupNpcMove('truckPos')} style={{ width: '130px', padding: '10px' }}>🛻 収集車</ClayButton>
+                            <ClayButton onClick={() => setupNpcMove('unclePos')} style={{ width: '130px', padding: '10px' }}>🧓 おじさん</ClayButton>
+                            <ClayButton onClick={() => setupNpcMove('yakuzaPos')} style={{ width: '130px', padding: '10px' }}>😎 ヤクザ</ClayButton>
+                            <ClayButton onClick={() => setupNpcMove('loansharkPos')} style={{ width: '130px', padding: '10px' }}>💀 闇金</ClayButton>
+                            <ClayButton onClick={() => setupNpcMove('animalPos')} style={{ width: '130px', padding: '10px' }}>🐀 野良動物</ClayButton>
+                            <ClayButton onClick={() => setupNpcMove('friendPos')} style={{ width: '130px', padding: '10px' }}>🤝 仲間</ClayButton>
+                        </div>
+                        <ClayButton onClick={() => useGameStore.setState({ npcSelectActive: false })} style={{ width: '100%', marginTop: '20px', background: '#7f8c8d' }}>キャンセル</ClayButton>
+                    </div>
+                </div>
+            )}
+
             {storyActive && activeStory && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }}>
                     <div className="modal-box" style={{ background: '#2c3e50', color: 'white', maxWidth: '450px' }}>
@@ -157,12 +177,10 @@ export const GameEventOverlays = () => {
                                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                                             <button className="mg-btn high" onClick={() => {
                                                 const result = Math.floor(Math.random() * 14); 
-                                                // ▼ 修正：第3引数に result を渡す
                                                 handleResult(result >= mgValue, `出目【${result}】${result >= mgValue ? "正解！" : "ハズレ..."}`, result);
                                             }}>High</button>
                                             <button className="mg-btn low" onClick={() => {
                                                 const result = Math.floor(Math.random() * 14); 
-                                                // ▼ 修正：第3引数に result を渡す
                                                 handleResult(result < mgValue, `出目【${result}】${result < mgValue ? "正解！" : "ハズレ..."}`, result);
                                             }}>Low</button>
                                         </div>
