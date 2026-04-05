@@ -7,30 +7,23 @@ export const useUserStore = create(
       uid: null,
       isLoggedIn: false,
       
-      // 保存対象のデータ
       playerName: '名無しサバイバー',
-      gachaPoints: 0,      // 現在持っているガチャ用P
-      wins: 0,             // 優勝数
-      totalEarnedP: 0,     // 今まで優勝したときの総Pポイント
+      gachaPoints: 0,
+      wins: 0,
+      totalEarnedP: 0,
       
-      // ▼ 追加：ガチャ資産とスキンデータ
-      gachaCans: 0,        // 現在持っているガチャ用空き缶
-      unlockedSkins: [],   // 獲得したスキンのID配列
-      equippedSkins: {},   // キャラクターごとの装備中スキン { charKey: skinId }
+      // ガチャ資産とスキンデータ
+      gachaCans: 0,
+      unlockedSkins: [],
+      equippedSkins: {}, // { charKey: skinId }
       
       // スタッツ（累計データ）
-      totalTilesMoved: 0,       // 移動したマス
-      totalCardsUsed: 0,        // 使ったカード数
-      totalCansCollected: 0,    // 集めた缶
-      totalTrashCollected: 0,   // 漁ったゴミ
-      totalPSpentAtShop: 0,     // Shopで使ったP
-      npcEncounters: {          // 各NPC遭遇回数
-          police: 0,
-          uncle: 0,
-          yakuza: 0,
-          loanshark: 0,
-          friend: 0
-      },
+      totalTilesMoved: 0,
+      totalCardsUsed: 0,
+      totalCansCollected: 0,
+      totalTrashCollected: 0,
+      totalPSpentAtShop: 0,
+      npcEncounters: { police: 0, uncle: 0, yakuza: 0, loanshark: 0, friend: 0 },
       
       // 永続化する環境設定
       showSmoke: true,
@@ -43,7 +36,6 @@ export const useUserStore = create(
       setUserData: (data) => set((state) => ({ ...state, ...data })),
       setShowSmoke: (show) => set({ showSmoke: show }), 
       
-      // スタッツのカウントアップ用関数
       incrementStat: (key, amount = 1) => set((state) => ({ 
           [key]: (state[key] || 0) + amount 
       })),
@@ -54,24 +46,27 @@ export const useUserStore = create(
           }
       })),
 
-      // ▼ 追加：ガチャ資産の付与と消費
-      addGachaAssets: (cans, points) => set((state) => ({
-          gachaCans: Math.max(0, (state.gachaCans || 0) + cans),
-          gachaPoints: Math.max(0, (state.gachaPoints || 0) + points)
-      })),
+      // ▼ 修正：リロードバグ対策。計算結果を確実に反映させるため状態をディープコピーして更新
+      addGachaAssets: (cansAmount, pointsAmount) => set((state) => {
+          const newCans = Math.max(0, (state.gachaCans || 0) + cansAmount);
+          const newPoints = Math.max(0, (state.gachaPoints || 0) + pointsAmount);
+          return { gachaCans: newCans, gachaPoints: newPoints };
+      }),
 
-      // ▼ 追加：スキンの獲得と装備
-      unlockMultipleSkins: (skinIds) => set((state) => ({
-          unlockedSkins: [...(state.unlockedSkins || []), ...skinIds]
-      })),
+      unlockMultipleSkins: (skinIds) => set((state) => {
+          // 重複を防ぎながら追加
+          const currentSkins = state.unlockedSkins || [];
+          const newSkins = skinIds.filter(id => !currentSkins.includes(id));
+          return { unlockedSkins: [...currentSkins, ...newSkins] };
+      }),
+
       setEquippedSkin: (charKey, skinId) => set((state) => ({
           equippedSkins: { ...state.equippedSkins, [charKey]: skinId }
       }))
     }),
     {
-      name: 'homeless-survival-user-storage', // ローカルストレージのキー名
+      name: 'homeless-survival-user-storage',
       storage: createJSONStorage(() => localStorage),
-      // 端末に保存（永続化）したい値だけを指定
       partialize: (state) => ({
         playerName: state.playerName,
         gachaPoints: state.gachaPoints,

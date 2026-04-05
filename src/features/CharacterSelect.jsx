@@ -2,10 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { charEmoji, charInfo, charDetailData } from '../constants/characters';
 import { CharacterGrid } from '../components/charselect/CharacterGrid';
 import { CharacterPreview } from '../components/charselect/CharacterPreview';
+import { useUserStore } from '../store/useUserStore';
 
-/* ──────────────────────────────────────────────
-   定数データをマージして統一的なキャラクターリストを生成
-   ────────────────────────────────────────────── */
 const CHAR_KEYS = Object.keys(charInfo);
 
 const mergeCharacterData = () =>
@@ -24,19 +22,15 @@ const CHAR_COLORS = {
   hacker:'#9b59b6', musician:'#f1c40f', doctor:'#1abc9c', gambler:'#e91e8c', detective:'#6c5ce7',
 };
 
-/* ──────────────────────────────────────────────
-   メインコンポーネント（独立したポップアップモーダル）
-   ────────────────────────────────────────────── */
 export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, targetName }) => {
   const characters = useMemo(() => mergeCharacterData(), []);
+  const { equippedSkins } = useUserStore();
   
-  // UI状態
   const [hoveredKey, setHoveredKey] = useState(null);
   const [selectedKey, setSelectedKey] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const prevKey = useRef(null);
 
-  // モーダルが開かれたら初期キャラをセット
   useEffect(() => {
     if (isOpen) {
         setSelectedKey(initialCharKey || 'athlete');
@@ -44,7 +38,6 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
     }
   }, [isOpen, initialCharKey]);
 
-  /* ──── キャラ選択時のプレビュー切替アニメーション ──── */
   useEffect(() => {
     if (selectedKey && selectedKey !== prevKey.current) {
       setShowPreview(false);
@@ -55,11 +48,16 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
     if (selectedKey) setShowPreview(true);
   }, [selectedKey]);
 
-  /* ──── 表示するキャラデータ（ホバー優先 → 選択中） ──── */
   const previewChar = useMemo(() => {
     const key = hoveredKey ?? selectedKey;
     return characters.find(c => c.key === key) || null;
   }, [hoveredKey, selectedKey, characters]);
+
+  // ▼ 追加：決定時に charKey と skinId の両方を親に返す
+  const handleConfirm = () => {
+    const activeSkinId = equippedSkins[selectedKey] || "default";
+    onConfirm(selectedKey, activeSkinId);
+  };
 
   if (!isOpen) return null;
 
@@ -77,7 +75,6 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
         @keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
       `}</style>
 
-      {/* 背景エフェクト */}
       <div style={{
         position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.04,
         backgroundImage: 'linear-gradient(rgba(253,245,230,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(253,245,230,0.3) 1px, transparent 1px)',
@@ -87,7 +84,6 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
         <div style={{ width: '100%', height: 1, background: 'linear-gradient(90deg, transparent, rgba(253,245,230,0.03), transparent)', animation: 'scanline 6s linear infinite' }} />
       </div>
 
-      {/* ──── ヘッダー ──── */}
       <div style={{ textAlign: 'center', padding: '24px 0 8px', position: 'relative', zIndex: 2, width: '100%' }}>
         <h1 style={{
           fontSize: 26, fontWeight: 900, letterSpacing: 6, margin: 0,
@@ -98,7 +94,6 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
         </h1>
       </div>
 
-      {/* ──── 現在のプレイヤー表示 ──── */}
       <div style={{
         background: 'rgba(241,196,15,0.1)', border: '1px solid rgba(241,196,15,0.25)',
         borderRadius: 8, padding: '8px 24px', marginBottom: 12,
@@ -108,13 +103,11 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
         🎮 {targetName} のキャラクターを選択
       </div>
 
-      {/* ──── メインレイアウト ──── */}
       <div style={{
         display: 'flex', maxWidth: 880, width: '100%', padding: '0 16px', gap: 20,
         flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start',
         position: 'relative', zIndex: 2,
       }}>
-        {/* グリッド */}
         <CharacterGrid
           characters={characters}
           selectedKey={selectedKey}
@@ -123,12 +116,9 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
           onHover={setHoveredKey}
           onLeave={() => setHoveredKey(null)}
         />
-
-        {/* プレビュー */}
         <CharacterPreview character={previewChar} show={showPreview} />
       </div>
 
-      {/* ──── 下部ボタンエリア ──── */}
       <div style={{
         display: 'flex', gap: 15, marginTop: 30, marginBottom: 24, flexWrap: 'wrap', justifyContent: 'center',
         position: 'relative', zIndex: 2,
@@ -145,7 +135,7 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
         </button>
 
         <button
-          onClick={() => onConfirm(selectedKey)}
+          onClick={handleConfirm}
           style={{
             padding: '12px 40px', borderRadius: 8, border: 'none',
             background: `linear-gradient(135deg, ${CHAR_COLORS[selectedKey] || '#f1c40f'}, ${CHAR_COLORS[selectedKey] ? CHAR_COLORS[selectedKey] + 'cc' : '#e67e22'})`,
