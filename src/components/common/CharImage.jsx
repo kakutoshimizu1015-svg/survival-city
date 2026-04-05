@@ -1,7 +1,10 @@
 import React from 'react';
 import { charEmoji, charImages, npcImages } from '../../constants/characters';
+import { useGameStore } from '../../store/useGameStore'; // ▼ 追加
 
 export const CharImage = ({ charType, size = 40, style = {}, imgStyle = {}, className = '' }) => {
+    const liteMode = useGameStore(state => state.liteMode); // ▼ 追加
+
     // プレイヤー画像またはNPC画像からデータを取得
     const playerImgData = charImages && charImages[charType];
     const npcImgData = npcImages && npcImages[charType];
@@ -23,12 +26,12 @@ export const CharImage = ({ charType, size = 40, style = {}, imgStyle = {}, clas
                         // ▼ 修正: プレイヤー画像(ドット絵前提)はくっきり、NPC画像は滑らかに表示を切り替える
                         imageRendering: playerImgData ? 'pixelated' : 'auto',
                         WebkitFontSmoothing: playerImgData ? 'none' : 'auto',
-                        filter: 'drop-shadow(0px 4px 4px rgba(0,0,0,0.4))',
+                        filter: liteMode ? 'none' : 'drop-shadow(0px 4px 4px rgba(0,0,0,0.4))', // ▼ 軽量モード考慮
                         ...imgStyle 
                     }} 
                 />
             ) : (
-                <span style={{ fontSize: size * 0.75, filter: 'drop-shadow(0px 2px 2px rgba(0,0,0,0.4))' }}>
+                <span style={{ fontSize: size * 0.75, filter: liteMode ? 'none' : 'drop-shadow(0px 2px 2px rgba(0,0,0,0.4))' }}>
                     {charEmoji[charType] || '❓'}
                 </span>
             )}

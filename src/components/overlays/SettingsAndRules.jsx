@@ -5,7 +5,7 @@ import { useUserStore } from '../../store/useUserStore';
 import { savePlayerName } from '../../utils/userLogic';
 
 export const SettingsAndRules = () => {
-    const { settingsActive, rulesActive, layoutMode, volume, showSkipButton, autoScrollToPlayer, setGameState, resetGame } = useGameStore();
+    const { settingsActive, rulesActive, layoutMode, volume, showSkipButton, autoScrollToPlayer, liteMode, setGameState, resetGame } = useGameStore();
     const [confirmOpen, setConfirmOpen] = useState(false);
 
     const { playerName, wins, totalEarnedP, showSmoke, setShowSmoke } = useUserStore();
@@ -119,7 +119,7 @@ export const SettingsAndRules = () => {
                             
                             <div style={{ background: '#fce4ec', borderLeft: '4px solid #e91e63', padding: '10px', borderRadius: '0 8px 8px 0', marginBottom: '10px' }}>
                                 <p style={{ margin: 0, fontSize: '12px', color: '#880e4f', fontWeight: 'bold' }}>【NPCの行動ルール】</p>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#333' }}>各NPC（収集車以外）は、毎ラウンド<b>隣接するマスへ1歩ずつ移動</b>します。また、プレイヤーに効果を発動したNPCは<b>1ラウンドの間マップから消滅</b>し、その後ランダムな場所に再出現します。</p>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#333' }}>各NPC（収集車以外）は、毎ラウンド<b>隣接するマスへ1歩ずつ移動</b>します。また、プレイヤーに効果を発 পিতNPCは<b>1ラウンドの間マップから消滅</b>し、その後ランダムな場所に再出現します。</p>
                             </div>
 
                             <ul style={{ fontSize: '13px', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
@@ -286,6 +286,17 @@ export const SettingsAndRules = () => {
 
                 {activeTab === 'settings' && (
                     <>
+                        {/* ▼ 追加: 軽量モードのトグルスイッチ */}
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px', border: '2px solid #e74c3c' }}>
+                            <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={liteMode} onChange={(e) => setGameState({ liteMode: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
+                                🍃 軽量モード（発熱・バッテリー消費を抑える）
+                            </label>
+                            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '6px', marginLeft: '28px', lineHeight: 1.4 }}>
+                                ONにすると、影や発光エフェクト、一部のアニメーションを無効化し、スマホやPCの動作を軽くします。
+                            </div>
+                        </div>
+
                         <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
                             <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>🔊 音量: {Math.round(volume * 100)}%</label>
                             <input type="range" min="0" max="2" step="0.1" value={volume} onChange={(e) => setGameState({ volume: parseFloat(e.target.value) })} style={{ width: '100%' }} />

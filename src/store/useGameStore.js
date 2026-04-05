@@ -44,6 +44,9 @@ const initialState = {
     yakuzaPos: 0, yakuzaCd: 0,
     loansharkPos: 0, loansharkCd: 0,
     friendPos: 0, friendCd: 0,
+
+    // ▼ 追加: 軽量モードの設定状態
+    liteMode: false,
 };
 
 export const useGameStore = create((set, get) => ({

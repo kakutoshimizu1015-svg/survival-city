@@ -41,6 +41,7 @@ export const Tile = React.memo(({
 
     // ▼ 追加: アスリートのダッシュなど、白く強く光らせるための判定用ステート
     const isDashPicking = useGameStore(state => state.isDashPicking);
+    const liteMode = useGameStore(state => state.liteMode); // ▼ 追加
 
     const touchTimer = useRef(null);
 
@@ -118,8 +119,12 @@ export const Tile = React.memo(({
         opacity: horrorMode ? 1 : TOKEN_CONFIG.npc.truckOpacity,
     };
 
-    // ▼ 修正: isDashPicking が true の場合は白く強く光らせる
+    // ▼ 修正: isDashPicking が true の場合は白く強く光らせる（軽量モード対応）
     const clickableStyle = isClickable ? (
+        liteMode ? {
+            border: `3px solid ${isDashPicking ? 'white' : '#ffe066'}`,
+            backgroundColor: isDashPicking ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 224, 102, 0.3)'
+        } : (
         isDashPicking ? {
             boxShadow: `
                 inset 0 0 20px rgba(255, 255, 255, 0.8),
@@ -136,7 +141,7 @@ export const Tile = React.memo(({
             `,
             border: '2px solid rgba(255, 224, 102, 0.9)',
             animation: 'tilePulse 1.5s infinite alternate'
-        }
+        })
     ) : {};
 
     return (
@@ -161,16 +166,18 @@ export const Tile = React.memo(({
                 ...clickableStyle 
             }}
         >
-            <style>{`
-                @keyframes tilePulse {
-                    from { filter: brightness(1); }
-                    to { filter: brightness(1.4) drop-shadow(0 0 8px rgba(255,224,102,0.6)); }
-                }
-                @keyframes tilePulseDash {
-                    from { filter: brightness(1); filter: drop-shadow(0 0 5px rgba(255,255,255,0.8)); }
-                    to { filter: brightness(1.6) drop-shadow(0 0 15px rgba(255,255,255,1)); }
-                }
-            `}</style>
+            {!liteMode && (
+                <style>{`
+                    @keyframes tilePulse {
+                        from { filter: brightness(1); }
+                        to { filter: brightness(1.4) drop-shadow(0 0 8px rgba(255,224,102,0.6)); }
+                    }
+                    @keyframes tilePulseDash {
+                        from { filter: brightness(1); filter: drop-shadow(0 0 5px rgba(255,255,255,0.8)); }
+                        to { filter: brightness(1.6) drop-shadow(0 0 15px rgba(255,255,255,1)); }
+                    }
+                `}</style>
+            )}
 
             <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
             
