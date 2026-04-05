@@ -7,7 +7,7 @@ import { syncGachaData } from '../utils/userLogic';
 // ==========================================
 // ▼ 開発者設定：本番公開時はここを false にするtrue
 // ==========================================
-const SHOW_DEV_CONTROLS = true; 
+const SHOW_DEV_CONTROLS = false; 
 
 const RARITY_CFG = {
   UR:  { label:"UR",  gold:"#FFFFFF", bg:"#1A0033", border:"#D500F9", rate:0.5, glow:"#FF00FF" },
