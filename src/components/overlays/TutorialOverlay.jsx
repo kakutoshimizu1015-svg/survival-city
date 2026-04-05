@@ -261,7 +261,7 @@ export const TutorialOverlay = () => {
                             <div className="tut-tile-grid">
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#78c6ff,#1565c0)' }}>🔵</div><div className="tut-tile-info"><div className="tut-tile-name">道（通常マス）</div><div className="tut-tile-desc">通過するだけ。分岐点になることも</div></div></div>
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#4dd0e1,#006064)' }}>🥫</div><div className="tut-tile-info"><div className="tut-tile-name">空き缶マス</div><div className="tut-tile-desc">1APで缶を拾える（1ターン3回まで）</div></div></div>
-                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#ef9a9a,#b71c1c)' }}>🗑️</div><div className="tut-tile-info"><div className="tut-tile-name">ゴミ山マス</div><div className="tut-tile-desc">2APでゴミ漁り。約16%で補導(次AP-2&終了)。夜にボーナス</div></div></div>
+                                <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#ef9a9a,#b71c1c)' }}>🗑️</div><div className="tut-tile-info"><div className="tut-tile-name">ゴミ山マス</div><div className="tut-tile-desc">2APでゴミ漁り。約16%で失敗しパトカーに見つかり次回AP-2ペナルティ。夜にボーナス</div></div></div>
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#ce93d8,#6a1b9a)' }}>❓</div><div className="tut-tile-info"><div className="tut-tile-name">イベントマス</div><div className="tut-tile-desc">到着時にランダムイベント発生</div></div></div>
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#81c784,#1b5e20)' }}>💼</div><div className="tut-tile-info"><div className="tut-tile-name">バイトマス</div><div className="tut-tile-desc">3APで働いてPを稼ぐ</div></div></div>
                                 <div className="tut-tile-item"><div className="tut-tile-dot" style={{ background: 'radial-gradient(circle,#ffee58,#f9a825)' }}>🛒</div><div className="tut-tile-info"><div className="tut-tile-name">ショップマス</div><div className="tut-tile-desc">Pを払ってカードを購入・売却</div></div></div>
@@ -334,15 +334,21 @@ export const TutorialOverlay = () => {
                         <div className="tut-card">
                             <h3>👥 マップ上のNPC</h3>
                             <p>マップには複数のNPCが巡回しています。近づくと自動的にイベントが発生します。</p>
+
+                            <div style={{ background: '#fce4ec', borderLeft: '4px solid #e91e63', padding: '10px', borderRadius: '0 8px 8px 0', marginBottom: '10px' }}>
+                                <p style={{ margin: 0, fontSize: '12px', color: '#880e4f', fontWeight: 'bold' }}>【NPCの行動ルール】</p>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#333' }}>各NPC（収集車以外）は、毎ラウンド<b>隣接するマスへ1歩ずつ移動</b>します。また、プレイヤーに効果を発動したNPCは<b>1ラウンドの間マップから消滅</b>し、その後ランダムな場所に再出現します。</p>
+                            </div>
+
                             <div className="tut-npc-list">
-                                <div className="tut-npc-item"><div className="tut-npc-icon">🚓</div><div className="tut-npc-info"><div className="tut-npc-name">警察</div><div className="tut-npc-desc">同マスに止まると<b>次回AP-2 ＆ ターン強制終了！</b><br/>偶数ラウンド終了時には広範囲をパトロール巡回します。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">🚓</div><div className="tut-npc-info"><div className="tut-npc-name">パトカー</div><div className="tut-npc-desc">遭遇すると補導され<b>次回AP-2</b>のペナルティ！<br/>偶数ラウンド終了時には広範囲をパトロール巡回します。</div></div></div>
                                 <div className="tut-npc-item"><div className="tut-npc-icon">🛻</div><div className="tut-npc-info"><div className="tut-npc-name">ごみ収集車（ホラー）</div><div className="tut-npc-desc">毎ラウンド終了時にランダムでエリアを暴走。<br/>轢かれると<b>55%の確率で50の大ダメージ！</b>事前に危険エリアが予告されます。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">👴</div><div className="tut-npc-info"><div className="tut-npc-name">厄介なおじさん</div><div className="tut-npc-desc">絡まれると<b>カード1枚破棄 ＆ ターン強制終了！</b></div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">😎</div><div className="tut-npc-info"><div className="tut-npc-name">ヤクザ</div><div className="tut-npc-desc">遭遇すると30ダメージ＋手札1枚ランダム強奪。</div></div></div>
-                                <div className="tut-npc-item"><div className="tut-npc-icon">💰</div><div className="tut-npc-info"><div className="tut-npc-name">闇金</div><div className="tut-npc-desc">遭遇すると所持金から最大10P強制没収。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">👴</div><div className="tut-npc-info"><div className="tut-npc-name">厄介なおじさん</div><div className="tut-npc-desc">絡まれると<b>手札をランダムに1枚破棄</b>されます。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">😎</div><div className="tut-npc-info"><div className="tut-npc-name">ヤクザ</div><div className="tut-npc-desc">遭遇すると<b>15〜20のランダムダメージ</b>＋手札1枚ランダム強奪。</div></div></div>
+                                <div className="tut-npc-item"><div className="tut-npc-icon">💰</div><div className="tut-npc-info"><div className="tut-npc-name">闇金</div><div className="tut-npc-desc">遭遇すると<b>所持Pの20%（最大20P）</b>を強制没収。</div></div></div>
                                 <div className="tut-npc-item"><div className="tut-npc-icon">🤝</div><div className="tut-npc-info"><div className="tut-npc-name">仲間</div><div className="tut-npc-desc">同マスに止まると空き缶を1つもらえる有益なNPC。</div></div></div>
                             </div>
-                            <div className="tut-highlight"><p><strong>回避方法：</strong>「身代わり人形」を装備していれば1回だけNPCの妨害を無効化できます。警察は「身分証明書」「ステルス行動」等のカードでも回避可能です。</p></div>
+                            <div className="tut-highlight"><p><strong>回避方法：</strong>「身代わり人形」を装備していれば1回だけNPCの妨害を無効化できます。パトカーは「身分証明書」「ステルス行動」等のカードでも回避可能です。</p></div>
                         </div>
                         <div className="tut-card">
                             <h3>💀 死亡とリスポーン</h3>
@@ -395,13 +401,13 @@ export const TutorialOverlay = () => {
                         <div className="tut-char-grid">
                             <CharCard emoji="🏃" name="元アスリート" role="機動力特化型" passive="移動が常に1AP＆雨の影響なし" action="疾風ダッシュ（3AP）:3マス先へ跳躍。候補が白く光る" strategy="序盤から積極的に動き回り、缶拾い→換金のサイクルを素早く回すのが基本。雨の日は他プレイヤーが動けない中で独走できるため、雨の日にイベントマスや遠方の買取所を狙う。疾風ダッシュは危険なNPCからの脱出にも有効。陣地は通り道沿いに確保し、高回転の移動で稼ぐスタイル。" color="#e74c3c" />
                             <CharCard emoji="💼" name="元営業マン" role="金策特化型" passive="バイト成功率80%＆ショップ2P割引" action="訪問販売（2AP）:手札を1枚選んで相手に押し付け3P徴収" strategy="バイトマスに居座って安定収入を稼ぐのが基本。ショップも2P割引で使えるため、装備品を早めに揃えやすい。訪問販売は「不要カード→3P」に変換するスキルとして非常に強力。手札をあえて多く持ち、不要カードを押し付けて稼ぐ「カード回転型」の立ち回りが強い。" color="#3498db" />
-                            <CharCard emoji="🌿" name="サバイバー" role="耐久型" passive="ゴミ漁り失敗の警察ペナ無効" action="野宿（2AP）:HP+15回復" strategy="ゴミ山マスでノーリスクにゴミを集めて換金する。ゴミ漁りは通常リスクがあるが、サバイバーなら失敗してもダメージなし。野宿でHP管理も容易なので、前線に出続けられる。安全靴を装備するとゴミ漁り1APになり、効率が劇的に向上。序盤はゴミ漁り→換金→陣地確保のルートが安定。" color="#2ecc71" />
+                            <CharCard emoji="🌿" name="サバイバー" role="耐久型" passive="ゴミ漁り失敗のパトカーペナ無効" action="野宿（2AP）:HP+15回復" strategy="ゴミ山マスでノーリスクにゴミを集めて換金する。ゴミ漁りは通常リスクがあるが、サバイバーなら失敗してもペナルティなし。野宿でHP管理も容易なので、前線に出続けられる。安全靴を装備するとゴミ漁り1APになり、効率が劇的に向上。序盤はゴミ漁り→換金→陣地確保のルートが安定。" color="#2ecc71" />
                             <CharCard emoji="👊" name="元ヤン" role="PvP特化型" passive="同マス/すれ違いで自動1Pカツアゲ（1ターン2P上限）" action="殴る（2AP）:同マスの相手に10ダメージ" strategy="他プレイヤーの多いルートを歩き回り、すれ違いカツアゲで稼ぐ。序盤は移動しながらカツアゲ→中盤以降は武器カードで本格PvP。殴るスキルは低コストで使えるため、HPの減った相手を仕留めてキルポイントを稼ぐのも有効。ただし集中攻撃されやすいため、段ボールの盾やヘルメットの装備が重要。" color="#e67e22" />
                             <CharCard emoji="💻" name="元ハッカー" role="戦略型" passive="手札上限+2（9枚）" action="遠隔ハッキング（3AP）:どこからでもショップ入替え＆1枚購入" strategy="手札上限9枚を活かし、多種多様なカードをストック。遠隔ハッキングでショップ品を吟味し、最適なカードだけ購入する。大量のカードを持てるため、攻撃カード+リアクションカード+装備を同時に保持可能。状況に応じたカードを選んで使い分ける戦略的プレイが求められる。" color="#3498db" />
                             <CharCard emoji="🎸" name="ストリートミュージシャン" role="支援＆制圧型" passive="他者が同マスor隣接にいると銀行+3P" action="路上ライブ（4AP）:周囲2マスの全員を自分のマスに引き寄せ" strategy="人が集まりやすい交差点や中央付近に陣取り、投げ銭パッシブで稼ぐのが基本。路上ライブで強制的にプレイヤーを集めることで、投げ銭の機会を作りつつ、元ヤンなどの戦闘キャラと組み合わせると凶悪。ただしAPコストが重いので、自転車装備やスケボーカードとの併用が重要。" color="#9b59b6" />
                             <CharCard emoji="🩺" name="闇医者" role="持久＆金策型" passive="毎ターン開始時HP+5自動回復" action="闇診療（2AP）:同マスの相手HP+30→5P強制徴収" strategy="自己回復で常にHP満タン近くを維持し、長期戦に強い。闇診療は「相手を回復させて5P奪う」という独特なスキル。HPの減った味方を見つけたら近寄って闇診療→5P稼ぎつつ、お互いにWin-Win（相手はHP回復するが金は失う）。前線で戦う元ヤンの近くに居座ると、診療の機会が増える。" color="#1abc9c" />
                             <CharCard emoji="🎲" name="ギャンブラー" role="ハイリスク・ハイリターン型" passive="ゾロ目でAP2倍＋HP+10回復。25%の確率で3ダイス発動" action="イカサマ勝負（2AP）:1d6対決・勝者が5P奪取" strategy="ゾロ目パッシブが発動すると爆発的なAPで一気に行動可能。25%でサイコロが3つに増えるため、上振れたときの行動量は圧倒的。イカサマ勝負は期待値的にはイーブンだが、スキルとして常時使えるため、Pが少ない相手に仕掛けるとローリスク。安定感には欠けるが爆発力はNo.1。" color="#f1c40f" />
-                            <CharCard emoji="🕵️" name="元探偵" role="防衛＆コントロール型" passive="自陣地に相手が完全に止まると30%の確率で手札1枚没収" action="情報操作（3AP）:好きなNPC1体を任意のマスへ移動(CD:3R)" strategy="陣地を多めに確保し、張り込みパッシブで他プレイヤーのカードを奪う防衛型。人気ルート上の陣地を取ると、止まった相手からカードを没収できる。情報操作はヤクザや警察を他プレイヤーのマスに送り込む妨害技。守りを固めつつ、NPCで遠隔から嫌がらせする陰湿プレイが真骨頂。" color="#95a5a6" />
+                            <CharCard emoji="🕵️" name="元探偵" role="防衛＆コントロール型" passive="自陣地に相手が完全に止まると30%の確率で手札1枚没収" action="情報操作（3AP）:好きなNPC1体を任意のマスへ移動(CD:3R)" strategy="陣地を多めに確保し、張り込みパッシブで他プレイヤーのカードを奪う防衛型。人気ルート上の陣地を取ると、止まった相手からカードを没収できる。情報操作はヤクザやパトカーを他プレイヤーのマスに送り込む妨害技。守りを固めつつ、NPCで遠隔から嫌がらせする陰湿プレイが真骨頂。" color="#95a5a6" />
                         </div>
                     </div>
                 )}

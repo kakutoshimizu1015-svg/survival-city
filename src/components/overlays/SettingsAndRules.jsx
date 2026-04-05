@@ -83,7 +83,7 @@ export const SettingsAndRules = () => {
                             <ul style={{ fontSize: '13px', lineHeight: '1.7', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🏃</span><b>元アスリート —【健脚】</b>移動常に1AP・雨無効 ／ <b>【疾風ダッシュ】</b>3AP: ピッタリ3マス先へ跳躍（候補マスが白く光ります）</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💼</span><b>元営業マン —【コミュ力】</b>バイト成功率80%・ショップ<b>2P割引</b> ／ <b>【訪問販売】</b>2AP: 手札を1枚選んで相手に強制購入させ3P徴収</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🌿</span><b>サバイバー —【危機察知】</b>ゴミ漁り失敗の警察ペナ無効 ／ <b>【野宿】</b>2AP: その場でHP+15回復</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🌿</span><b>サバイバー —【危機察知】</b>ゴミ漁り失敗のパトカーペナ無効 ／ <b>【野宿】</b>2AP: その場でHP+15回復</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>👊</span><b>元ヤン —【威圧】</b>同マス/すれ違いで自動1Pカツアゲ（1ターン2P上限）／ <b>【殴る】</b>2AP: 同マス相手に10ダメージ</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💻</span><b>元ハッカー —【クラウドストレージ】</b>手札上限+2（デフォルト9枚）／ <b>【遠隔ハッキング】</b>3AP: どこからでもショップ在庫を強制入替え＆1枚購入</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🎸</span><b>ストリートミュージシャン —【投げ銭】</b>他者が同マスor隣接に来るたび銀行から+3P ／ <b>【路上ライブ】</b>4AP: 周囲2マス以内の全員を強制引き寄せ</li>
@@ -99,7 +99,7 @@ export const SettingsAndRules = () => {
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🏥</span><b>病院(開始地点):</b> 通過・停止すると<b>無料でHPが最大30回復</b>する。HP0で搬送されると、最大15P没収・装備1つ喪失・所持資源をその場に全ドロップする。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🛣️</span><b>通常の道:</b> 特別な効果なし。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🥫</span><b>空き缶:</b> 1APで缶を拾う（1ターン3回まで）。雨の日は雨具が必要。</li>
-                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🗑️</span><b>ゴミ山:</b> 2APでゴミを漁る。約16%の確率で失敗し次回AP-2ペナルティ。<b>夜に漁ると発見量にボーナス</b>がつく。</li>
+                                <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🗑️</span><b>ゴミ山:</b> 2APでゴミを漁る。約16%の確率で失敗し<b>パトカー</b>に見つかり次回AP-2ペナルティ。<b>夜に漁ると発見量にボーナス</b>がつく。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>💱</span><b>買取所:</b> 缶・ゴミを現在の相場でP換金（0AP）。相場はラウンドごとに変動。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>💼</span><b>バイト:</b> 3APで挑戦。成功率60%（営業マンは80%）で12P獲得。</li>
                                 <li><span style={{ display: 'inline-block', width: '20px', textAlign: 'center' }}>🛒</span><b>ショップ:</b> カード購入（毎ターン在庫が刷新）や手札の売却（2P）ができる。</li>
@@ -116,11 +116,17 @@ export const SettingsAndRules = () => {
                         <div style={{ background: 'rgba(0,0,0,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #e74c3c' }}>
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#e74c3c', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>⚠️ NPC（敵）と危険なイベント</h3>
                             <p style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>「身代わり人形」を装備していると1回だけ無効化可能。探偵の【情報操作】でNPCを移動させることもできます。</p>
+                            
+                            <div style={{ background: '#fce4ec', borderLeft: '4px solid #e91e63', padding: '10px', borderRadius: '0 8px 8px 0', marginBottom: '10px' }}>
+                                <p style={{ margin: 0, fontSize: '12px', color: '#880e4f', fontWeight: 'bold' }}>【NPCの行動ルール】</p>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#333' }}>各NPC（収集車以外）は、毎ラウンド<b>隣接するマスへ1歩ずつ移動</b>します。また、プレイヤーに効果を発動したNPCは<b>1ラウンドの間マップから消滅</b>し、その後ランダムな場所に再出現します。</p>
+                            </div>
+
                             <ul style={{ fontSize: '13px', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🚓</span><b>警察:</b> 遭遇すると補導され<b>「次回AP-2 ＆ その場でターン強制終了」</b>（身分証・ステルス等で回避可）。偶数ラウンド終了時には必ずパトロール巡回が発生。</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>😎</span><b>ヤクザ:</b> 遭遇すると30ダメージ＋手札1枚ランダム強奪。</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💀</span><b>闇金:</b> 遭遇すると所持金から最大10P強制没収。</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🧓</span><b>厄介なおじさん:</b> 絡まれると<b>「カード1枚破棄 ＆ その場でターン強制終了」</b>。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🚓</span><b>パトカー:</b> 遭遇すると補導され<b>「次回AP-2」</b>（ターンは継続）。偶数ラウンド終了時には広範囲をパトロール巡回します。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>😎</span><b>ヤクザ:</b> 遭遇すると<b>15〜20のランダムダメージ</b>＋手札1枚ランダム強奪。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💀</span><b>闇金:</b> 遭遇すると<b>所持Pの20%（最大20P）</b>を強制没収。</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🧓</span><b>厄介なおじさん:</b> 絡まれると<b>手札をランダムに1枚破棄</b>（ターンは継続）。</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🐀</span><b>野良動物:</b> 同マスにいる間、缶拾い・ゴミ漁りが不可能になる。</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🤝</span><b>仲間のホームレス:</b> 出会うと空き缶を1つもらえる有益なNPC。</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🛻</span><b>ごみ収集車（毎ラウンド末）:</b> マップを暴走。轢かれると<b>50の大ダメージ</b>（55%の確率で命中）。次のラウンド開始前に「予兆」として危険エリアが予告される。</li>
@@ -168,7 +174,7 @@ export const SettingsAndRules = () => {
                             <p style={{ fontSize: '11px', color: '#888', margin: '0 0 4px 0' }}>※ 武器カードは使用に2AP必要。その他のカード（バフ・回復・装備・リアクション等）はAP消費なしで使用可能。</p>
                             <ul style={{ fontSize: '12px', marginTop: 0, paddingLeft: '20px', color: '#333' }}>
                                 <li><b>ステルス行動:</b> 次に遭遇する敵・NPCを回避 <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
-                                <li><b>身分証明書:</b> +1P ＆ 次の警察を回避 <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
+                                <li><b>身分証明書:</b> +1P ＆ 次のパトカーを回避 <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
                                 <li><b>通報:</b> 他のプレイヤー1人に次回AP-2 <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
                                 <li><b>缶泥棒:</b> 他人から最大2Pを奪う <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
                                 <li><b>領土挑戦状:</b> サイコロ4以上で他人の陣地を<em>選んで</em>乗っ取る <span style={{ color: '#2ecc71' }}>[0AP]</span></li>
