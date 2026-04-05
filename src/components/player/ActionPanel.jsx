@@ -23,7 +23,8 @@ const ActionBtn = ({ action, condition, failMsg, highlight, color, style, childr
 
 export const ActionPanel = () => {
     const state = useGameStore();
-    const { turn, players, mapData, diceRolled, isBranchPicking, mgActive, storyActive, canPickedThisTurn, territories, animalPos, turnBannerActive, showSkipButton } = state;
+    // ▼ 修正: _roundEndInProgress をStoreから取得するように追加
+    const { turn, players, mapData, diceRolled, isBranchPicking, mgActive, storyActive, canPickedThisTurn, territories, animalPos, turnBannerActive, showSkipButton, _roundEndInProgress } = state;
     const cp = players[turn];
     const { myUserId, status } = useNetworkStore();
 
@@ -36,7 +37,8 @@ export const ActionPanel = () => {
         isMyTurn = !cp.isCPU && cp.userId === myUserId; 
     }
 
-    const isBusy = isBranchPicking || mgActive || storyActive || turnBannerActive;
+    // ▼ 修正: isBusy の条件に _roundEndInProgress (ラウンド終了演出中) を追加し、操作を完全ブロック
+    const isBusy = isBranchPicking || mgActive || storyActive || turnBannerActive || _roundEndInProgress;
     const hasAP = (cost) => cp.ap >= cost;
     const othersOnTile = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
 
@@ -46,7 +48,7 @@ export const ActionPanel = () => {
     
     const canDoCan = isMyTurn && diceRolled && hasAP(1) && tileType === 'can' && canPickedThisTurn < 3 && !isBlockedByAnimal && !isBusy;
     const canDoTrash = isMyTurn && diceRolled && hasAP(cp.equip?.shoes ? 1 : 2) && tileType === 'trash' && !isBlockedByAnimal && !isBusy;
-    const canDoOccupy = isMyTurn && diceRolled && ["normal","can","trash","job","exchange","shelter"].includes(tileType) && territories[cp.pos] !== cp.id && !isBusy && cp.p >= (territories[cp.pos] !== undefined ? 5 : 3);
+    const canDoOccupy = isMyTurn && diceRolled && ["normal","can","trash","job","exchange","shelter"].includes(tileType) && territories[cp.pos] !== cp.id && !isBusy && cp.p >= (territories[cp.pos] !== undefined ? 6 : 3); // ※上書きコスト6P反映済み
     const canDoJob = isMyTurn && diceRolled && hasAP(3) && tileType === 'job' && !isBusy;
     const canDoExchange = isMyTurn && diceRolled && (cp.cans > 0 || cp.trash > 0) && tileType === 'exchange' && !isBusy;
     const canDoShop = isMyTurn && diceRolled && tileType === 'shop' && !isBusy;

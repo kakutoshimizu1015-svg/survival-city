@@ -54,7 +54,6 @@ export const actionRollDice = async (isCpuCall = false) => {
     if (isGamblerBonus) {
         logMsg(`🎲 <span style="color:#f1c40f">大勝負！ギャンブラーの第3のサイコロ発動（+${d3}）！</span>`);
         playSfx('success');
-        // ▼ 追加: 第3サイコロ発動時のポップアップ
         state.addEventPopup(cp.id, "🎰", "大勝負！", `第3のサイコロ発動(+${d3})`, "good");
     }
     
@@ -208,8 +207,11 @@ export const actionExchange = () => { const s = useGameStore.getState(), cp = s.
 export const actionManhole = () => { const s = useGameStore.getState(), cp = s.players[s.turn], mh = s.mapData.filter(t => t.type === "manhole" && t.id !== cp.pos); if (mh.length > 0) { s.updateCurrentPlayer(p => ({ ap: p.ap - 1, pos: mh[Math.floor(Math.random() * mh.length)].id })); playSfx('move'); checkNpcCollision(cp.id); } };
 
 export const actionEndTurn = async () => {
+    const state = useGameStore.getState();
+    // ▼ 修正: すでにラウンド終了処理が走っている場合はここで強制ブロック
+    if (state._roundEndInProgress) return;
+
     try {
-        const state = useGameStore.getState();
         const cp = state.players[state.turn];
         
         let newEquip = { ...cp.equip }, newTimer = { ...cp.equipTimer };
