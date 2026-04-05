@@ -18,6 +18,10 @@ import gamblerBack from '../assets/images/gambler_back.png';
 import detectiveFront from '../assets/images/detective_front.png';
 import detectiveBack from '../assets/images/detective_back.png';
 
+// ▼ 追加：生成されたスキン画像のインポート
+import hackerCyberImg from '../assets/images/skins/Gemini_Generated_Image_2sgbe02sgbe02sgb.jpg';
+import yankeeBossImg from '../assets/images/skins/Gemini_Generated_Image_gevc4ggevc4ggevc.jpg';
+
 // NPC画像のインポート
 import policeImg from '../assets/images/NPC/police.png';
 import truckImg from '../assets/images/NPC/truck.png';
@@ -38,6 +42,18 @@ export const charImages = {
     doctor:   { front: doctorFront,   back: doctorBack },
     gambler:  { front: gamblerFront,  back: gamblerBack },
     detective:{ front: detectiveFront,back: detectiveBack },
+};
+
+// ▼ 追加：スキンデータのマッピング
+export const charSkins = {
+    hacker: [
+        { id: "default", name: "デフォルト", front: hackerFront, back: hackerBack, rarity: "N" },
+        { id: "ssr_hacker_cyber", name: "サイバーハッカー", front: hackerCyberImg, back: hackerCyberImg, rarity: "SSR" }
+    ],
+    yankee: [
+        { id: "default", name: "デフォルト", front: yankeeFront, back: yankeeBack, rarity: "N" },
+        { id: "ssr_yankee_boss", name: "特攻服の鬼", front: yankeeBossImg, back: yankeeBossImg, rarity: "SSR" }
+    ]
 };
 
 // NPC画像のマッピング

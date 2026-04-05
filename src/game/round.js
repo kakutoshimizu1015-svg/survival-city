@@ -122,6 +122,13 @@ const endGame = () => {
         if (isMe(results[0])) { recordWin(results[0].totalScore); console.log(`[戦績セーブ] 優勝！`); }
     }
     
+    // ▼ 追加：自分のリザルトからガチャ資産を付与
+    const myResult = results.find(p => isMe(p));
+    if (myResult) {
+        useUserStore.getState().addGachaAssets(myResult.cans, myResult.totalScore);
+        logMsg(`💰 ゲーム終了報酬: ガチャ用空き缶 ${myResult.cans}個、ガチャ ${myResult.totalScore}P を獲得しました！`);
+    }
+
     useGameStore.setState({ 
         awardsActive: true, 
         awardsData: awards, 
@@ -285,7 +292,6 @@ export const processRoundEnd = async () => {
                 if (pCd === 0) newPolicePos = md[Math.floor(Math.random() * md.length)].id;
             } else if (newPolicePos !== 999) {
                 if (newRound % 2 === 0) {
-                    // ▼ 修正: パトカー巡回中のメッセージに変更
                     logMsg(`<span style="color:#2980b9">🚓 パトカー巡回中！</span>`);
                     await sleep(1000);
 

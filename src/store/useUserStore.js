@@ -13,7 +13,12 @@ export const useUserStore = create(
       wins: 0,             // 優勝数
       totalEarnedP: 0,     // 今まで優勝したときの総Pポイント
       
-      // ▼ 追加：スタッツ（累計データ）
+      // ▼ 追加：ガチャ資産とスキンデータ
+      gachaCans: 0,        // 現在持っているガチャ用空き缶
+      unlockedSkins: [],   // 獲得したスキンのID配列
+      equippedSkins: {},   // キャラクターごとの装備中スキン { charKey: skinId }
+      
+      // スタッツ（累計データ）
       totalTilesMoved: 0,       // 移動したマス
       totalCardsUsed: 0,        // 使ったカード数
       totalCansCollected: 0,    // 集めた缶
@@ -38,7 +43,7 @@ export const useUserStore = create(
       setUserData: (data) => set((state) => ({ ...state, ...data })),
       setShowSmoke: (show) => set({ showSmoke: show }), 
       
-      // ▼ 追加：スタッツのカウントアップ用関数
+      // スタッツのカウントアップ用関数
       incrementStat: (key, amount = 1) => set((state) => ({ 
           [key]: (state[key] || 0) + amount 
       })),
@@ -47,6 +52,20 @@ export const useUserStore = create(
               ...state.npcEncounters, 
               [npcType]: (state.npcEncounters[npcType] || 0) + 1 
           }
+      })),
+
+      // ▼ 追加：ガチャ資産の付与と消費
+      addGachaAssets: (cans, points) => set((state) => ({
+          gachaCans: Math.max(0, (state.gachaCans || 0) + cans),
+          gachaPoints: Math.max(0, (state.gachaPoints || 0) + points)
+      })),
+
+      // ▼ 追加：スキンの獲得と装備
+      unlockMultipleSkins: (skinIds) => set((state) => ({
+          unlockedSkins: [...(state.unlockedSkins || []), ...skinIds]
+      })),
+      setEquippedSkin: (charKey, skinId) => set((state) => ({
+          equippedSkins: { ...state.equippedSkins, [charKey]: skinId }
       }))
     }),
     {
@@ -58,6 +77,10 @@ export const useUserStore = create(
         gachaPoints: state.gachaPoints,
         wins: state.wins,
         totalEarnedP: state.totalEarnedP,
+        
+        gachaCans: state.gachaCans,
+        unlockedSkins: state.unlockedSkins,
+        equippedSkins: state.equippedSkins,
         
         totalTilesMoved: state.totalTilesMoved,
         totalCardsUsed: state.totalCardsUsed,

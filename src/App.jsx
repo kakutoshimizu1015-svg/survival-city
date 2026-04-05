@@ -10,6 +10,8 @@ import { OnlineLobby } from './features/OnlineLobby';
 import { SettingsAndRules } from './components/overlays/SettingsAndRules';
 import { TutorialOverlay } from './components/overlays/TutorialOverlay';
 import { SandboxGuide } from './components/overlays/SandboxGuide';
+// ▼ 追加：ガチャ画面コンポーネントのインポート
+import GachaScreen from './features/GachaScreen';
 
 function App() {
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode } = useGameStore();
@@ -61,7 +63,7 @@ function App() {
         </div>
       )}
 
-      {gamePhase !== 'title' && (
+      {gamePhase !== 'title' && gamePhase !== 'gacha' && (
         <button id="settings-btn" onClick={() => useGameStore.setState({ settingsActive: true })}>⚙️</button>
       )}
 
@@ -115,12 +117,16 @@ function App() {
           <h2>モード選択</h2>
           <button className="btn-large btn-brown" onClick={() => useGameStore.setState({ gamePhase: 'setup_offline' })}>🎮 オフライン</button>
           <button className="btn-large btn-blue" onClick={() => useGameStore.setState({ gamePhase: 'online_lobby' })}>🌐 オンライン</button>
+          {/* ▼ 追加：ガチャ画面への遷移ボタン */}
+          <button className="btn-large" style={{ background: '#e67e22', color: '#fff' }} onClick={() => useGameStore.setState({ gamePhase: 'gacha' })}>🔥 ガチャ屋台へ行く</button>
         </div>
       )}
 
       {gamePhase === 'setup_offline' && <SetupOffline />}
       {gamePhase === 'online_lobby' && <OnlineLobby />}
       {gamePhase === 'playing' && <GameMain />}
+      {/* ▼ 追加：ガチャコンポーネントのマウント */}
+      {gamePhase === 'gacha' && <GachaScreen />}
 
       <SettingsAndRules />
       <TutorialOverlay />
