@@ -12,13 +12,25 @@ export const loadUserData = async (uid) => {
     if (snapshot.exists()) {
       // 既存データがあればStoreに反映
       const data = snapshot.val();
-      useUserStore.getState().setUserData(data);
-      console.log("ユーザーデータ読み込み成功:", data);
+      
+      // ▼ 修正: DBに無い可能性がある新しいキー（ガチャ資産・スキン）のデフォルト値ケア
+      const mergedData = {
+          ...data,
+          gachaCans: data.gachaCans || 0,
+          unlockedSkins: data.unlockedSkins || [],
+          equippedSkins: data.equippedSkins || {}
+      };
+      
+      useUserStore.getState().setUserData(mergedData);
+      console.log("ユーザーデータ読み込み成功:", mergedData);
     } else {
       // 新規ユーザーなら初期データをDBに作成
       const initialData = {
         playerName: '名無しサバイバー',
         gachaPoints: 0,
+        gachaCans: 0,
+        unlockedSkins: [],
+        equippedSkins: {},
         wins: 0,
         totalEarnedP: 0
       };
@@ -57,4 +69,26 @@ export const recordWin = async (earnedP) => {
 
   await update(ref(db, `users/${uid}`), newData);
   useUserStore.getState().setUserData(newData);
+};
+
+/**
+ * ▼ 新規追加: ガチャ資産やスキンの変動をFirebaseに同期する
+ */
+export const syncGachaData = async () => {
+  const { uid, gachaCans, gachaPoints, unlockedSkins, equippedSkins } = useUserStore.getState();
+  if (!uid) return;
+
+  const syncData = {
+      gachaCans,
+      gachaPoints,
+      unlockedSkins,
+      equippedSkins
+  };
+
+  try {
+      await update(ref(db, `users/${uid}`), syncData);
+      console.log("ガチャデータ同期成功");
+  } catch (error) {
+      console.error("ガチャデータ同期失敗:", error);
+  }
 };

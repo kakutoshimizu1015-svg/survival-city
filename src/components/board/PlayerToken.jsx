@@ -1,27 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { charEmoji, charImages, TOKEN_CONFIG } from '../../constants/characters';
+import { charEmoji, TOKEN_CONFIG } from '../../constants/characters';
 import { useUserStore } from '../../store/useUserStore';
 import { getDepthScale } from '../../utils/gameLogic';
+// ▼ 追加：CharImageコンポーネントをインポート
+import { CharImage } from '../common/CharImage';
 
 export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
-    const isImage = charImages && charImages[player.charType] !== undefined;
-    
-    // ▼ 修正: liteMode も useUserStore から取得するように変更
     const showSmoke = useUserStore(state => state.showSmoke);
     const liteMode = useUserStore(state => state.liteMode); 
 
     const [dustTrail, setDustTrail] = useState([]);
     
-    // DOM要素を直接操作するための参照
     const wrapRef = useRef(null);
     const tokenWrapperRef = useRef(null);
     const scaleRef = useRef(null);
-    const frontImgRef = useRef(null);
-    const backImgRef = useRef(null);
-    const emojiRef = useRef(null);
+    const innerTokenRef = useRef(null); // ▼ 画像と絵文字を両方操作するためのラッパー
     const shadowRef = useRef(null);
 
-    const facingRef = useRef(1); // 1 = 右向き, -1 = 左向き
+    const facingRef = useRef(1);
     const isAnimatingRef = useRef(false);
     const idleRafRef = useRef(null);
     const prevPosRef = useRef(player.pos);
@@ -30,15 +26,12 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const currentTile = mapData.find(t => t.id === player.pos) || mapData[0];
     const zIndexBase = 50 + currentTile.row * 10;
     
-    // 遠近法スケールの取得と、カスタマイズ用倍率の適用
     const baseScale = getDepthScale(currentTile.row, maxRow);
     const ds = baseScale * TOKEN_CONFIG.player.scaleMultiplier;
 
-    // 設定パラメータからサイズを適用
-    const tokenWidth = isImage ? TOKEN_CONFIG.player.imageSize : TOKEN_CONFIG.player.emojiBgSize;
-    const tokenHeight = isImage ? TOKEN_CONFIG.player.imageSize : TOKEN_CONFIG.player.emojiBgSize;
+    const tokenWidth = TOKEN_CONFIG.player.imageSize;
+    const tokenHeight = TOKEN_CONFIG.player.imageSize;
 
-    // 土埃のクリーンアップ
     useEffect(() => {
         if (dustTrail.length > 0) {
             const timer = setTimeout(() => setDustTrail(t => t.slice(1)), 400);
@@ -46,10 +39,9 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         }
     }, [dustTrail]);
 
-    // 待機時のフワフワ上下運動
     const startIdle = () => {
         if (isAnimatingRef.current) return;
-        if (liteMode) return; // 軽量モード時はフワフワさせない
+        if (liteMode) return; 
         const now = performance.now();
         const idleBob = Math.sin(now * 0.005) * -3; 
         
@@ -71,7 +63,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         };
     }, [liteMode]); 
 
-    // 移動＆回転アニメーション
     useEffect(() => {
         if (prevPosRef.current === player.pos) return;
         const startTile = mapData.find(t => t.id === prevPosRef.current);
@@ -98,18 +89,13 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         let spinRaf, moveRaf;
 
         const updateFacingDOM = (f) => {
-            if (frontImgRef.current && backImgRef.current) {
-                frontImgRef.current.style.opacity = 1;
-                backImgRef.current.style.opacity = 0;
-                frontImgRef.current.style.transform = `scaleX(${f})`;
-                backImgRef.current.style.transform = `scaleX(${f})`;
-            }
-            if (emojiRef.current) emojiRef.current.style.transform = `scaleX(${f})`;
+            // ▼ 修正: innerTokenRef全体を反転させる
+            if (innerTokenRef.current) innerTokenRef.current.style.transform = `scaleX(${f})`;
         };
 
         const triggerSpin = () => {
             return new Promise((resolve) => {
-                if (!isImage || newFacing === facingRef.current) {
+                if (newFacing === facingRef.current) {
                     facingRef.current = newFacing;
                     updateFacingDOM(newFacing);
                     resolve();
@@ -125,16 +111,9 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                     const angle = eased * Math.PI * 2;
                     const spinWidth = Math.max(0.02, Math.abs(Math.cos(angle)));
                     const spinHop = Math.sin(angle) * -12;
-                    const showBack = angle > Math.PI * 0.45 && angle < Math.PI * 1.55;
-
                     const curFacing = t >= 0.5 ? newFacing : facingRef.current;
                     
-                    if (frontImgRef.current && backImgRef.current) {
-                        frontImgRef.current.style.opacity = showBack ? 0 : 1;
-                        backImgRef.current.style.opacity = showBack ? 1 : 0;
-                        frontImgRef.current.style.transform = `scaleX(${curFacing})`;
-                        backImgRef.current.style.transform = `scaleX(${curFacing})`;
-                    }
+                    if (innerTokenRef.current) innerTokenRef.current.style.transform = `scaleX(${curFacing})`;
                     if (scaleRef.current) scaleRef.current.style.transform = `scaleX(${spinWidth}) rotate(0deg)`;
                     if (tokenWrapperRef.current) tokenWrapperRef.current.style.transform = `translate(-50%, calc(-100% + ${spinHop}px))`;
                     if (wrapRef.current) wrapRef.current.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
@@ -200,15 +179,11 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
             if (spinRaf) cancelAnimationFrame(spinRaf);
             if (moveRaf) cancelAnimationFrame(moveRaf);
         };
-    }, [player.pos, mapData, isImage, showSmoke, liteMode]);
+    }, [player.pos, mapData, showSmoke, liteMode]);
 
     const playerGlowFilter = liteMode 
         ? (isActiveTurn ? `drop-shadow(0 0 4px ${player.color})` : 'none')
         : (isActiveTurn ? `drop-shadow(0 0 12px #ffe066) drop-shadow(0 0 4px ${player.color})` : `drop-shadow(0 0 8px ${player.color}) drop-shadow(0 4px 6px rgba(0,0,0,0.6))`);
-
-    const playerGlowBoxShadow = liteMode
-        ? (isActiveTurn ? `0 0 5px ${player.color}` : 'none')
-        : (isActiveTurn ? `0 0 20px #ffe066, 0 0 10px ${player.color}` : `0 0 15px ${player.color}`);
 
     return (
         <div style={{
@@ -218,7 +193,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
             width: '100%', height: '100%',
             zIndex: zIndexBase + 10,
             pointerEvents: 'none',
-            // 遠近法スケールの適用
             transform: `scale(${ds})`,
             transformOrigin: 'center center'
         }}>
@@ -234,7 +208,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                 display: 'flex', flexDirection: 'column', alignItems: 'center'
             }}>
                 
-                {/* 煙エフェクト */}
                 {showSmoke && dustTrail.map(d => (
                     <div key={d.id} style={{
                         position: 'absolute', left: `calc(50% + ${d.x}px)`, top: `calc(${FOOT_Y}px + ${d.y}px)`,
@@ -244,14 +217,12 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                     }} />
                 ))}
 
-                {/* 落ち影 */}
                 <div ref={shadowRef} style={{
                     position: 'absolute', left: '50%', top: FOOT_Y, width: 32, height: 10, background: 'rgba(0,0,0,0.5)', borderRadius: '50%',
                     transform: 'translate(-50%, -50%)', opacity: 0.7, zIndex: zIndexBase - 1, pointerEvents: 'none',
-                    display: liteMode ? 'none' : 'block' // 軽量モード時は影をオフ
+                    display: liteMode ? 'none' : 'block' 
                 }} />
 
-                {/* キャラクター本体ラッパー */}
                 <div ref={tokenWrapperRef} style={{
                     position: 'absolute', left: '50%', top: `${FOOT_Y}px`, transform: 'translate(-50%, -100%)',
                     zIndex: zIndexBase, display: 'flex', flexDirection: 'column', alignItems: 'center', pointerEvents: 'none'
@@ -259,31 +230,18 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                     <div ref={scaleRef} style={{
                         width: tokenWidth, height: tokenHeight,
                         position: 'relative', transformOrigin: 'bottom center',
-                        background: isImage ? 'transparent' : 'rgba(0,0,0,0.6)',
-                        border: isImage ? 'none' : `3px solid ${isActiveTurn ? '#ffe066' : player.color}`,
-                        borderRadius: isImage ? '0' : '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: isImage ? 'none' : playerGlowBoxShadow,
+                        background: 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                        {isImage ? (
-                            <>
-                                <img ref={frontImgRef} src={charImages[player.charType].front} alt=""
-                                    style={{
-                                        position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', bottom: 0, 
-                                        imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
-                                        transform: `scaleX(${facingRef.current})`, 
-                                        filter: playerGlowFilter
-                                    }} />
-                                <img ref={backImgRef} src={charImages[player.charType].back} alt=""
-                                    style={{
-                                        position: 'absolute', width: '100%', height: '100%', objectFit: 'contain', bottom: 0, 
-                                        imageRendering: 'pixelated', WebkitFontSmoothing: 'none',
-                                        transform: `scaleX(${facingRef.current})`, opacity: 0, 
-                                        filter: playerGlowFilter
-                                    }} />
-                            </>
-                        ) : (
-                            <span ref={emojiRef} style={{ fontSize: TOKEN_CONFIG.player.emojiFontSize, transform: `scaleX(${facingRef.current})` }}>{charEmoji[player.charType]}</span>
-                        )}
+                        {/* ▼ 修正: CharImageコンポーネントで描画し、それをまとめて反転させる */}
+                        <div ref={innerTokenRef} style={{ width: '100%', height: '100%', transform: `scaleX(${facingRef.current})` }}>
+                            <CharImage 
+                                charType={player.charType} 
+                                skinId={player.skinId} // プレイヤーデータ内のスキンIDを渡す
+                                size="100%" 
+                                imgStyle={{ filter: playerGlowFilter, bottom: 0, position: 'absolute' }}
+                            />
+                        </div>
                     </div>
 
                     <div style={{

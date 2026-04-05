@@ -14,9 +14,10 @@ export const SetupOffline = () => {
     const setGameState = useGameStore(state => state.setGameState);
     const globalPlayerName = useUserStore(state => state.playerName);
     
+    // ▼ 修正: selectedSkin も初期ステートに持たせる（後で上書きするため初期値は仮）
     const [players, setPlayers] = useState([
-        { id: 0, name: globalPlayerName || 'P1', charType: 'athlete', isCPU: false, teamColor: 'none' }, 
-        { id: 1, name: 'CPU1', charType: 'sales', isCPU: true, teamColor: 'none' }
+        { id: 0, name: globalPlayerName || 'P1', charType: 'athlete', isCPU: false, teamColor: 'none', selectedSkin: null }, 
+        { id: 1, name: 'CPU1', charType: 'sales', isCPU: true, teamColor: 'none', selectedSkin: null }
     ]);
     
     const [mapSize, setMapSize] = useState('medium'); 
@@ -44,7 +45,7 @@ export const SetupOffline = () => {
 
     const addPlayer = (isCPU) => {
         if (players.length >= 8) return;
-        setPlayers([...players, { id: players.length, name: isCPU ? `CPU${players.length + 1}` : `P${players.length + 1}`, charType: 'survivor', isCPU, teamColor: 'none' }]);
+        setPlayers([...players, { id: players.length, name: isCPU ? `CPU${players.length + 1}` : `P${players.length + 1}`, charType: 'survivor', isCPU, teamColor: 'none', selectedSkin: null }]);
     };
     
     const updatePlayer = (id, key, value) => {
@@ -55,7 +56,6 @@ export const SetupOffline = () => {
         if (players.length > 2) setPlayers(players.filter(p => p.id !== id).map((p, idx) => ({ ...p, id: idx }))); 
     };
 
-    // ▼ 新規追加: 5%のレア確率を適用したカードドロー関数
     const drawInitialCard = () => {
         const rarePool = [12, 13, 35, 36, 37];
         const normalPool = [0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
@@ -75,17 +75,16 @@ export const SetupOffline = () => {
 
         if (isTestMode) {
             mapData = mapData.map(t => ({
-                ...t,
-                type: 'normal',
-                name: '道',
-                fieldCans: 0,
-                fieldTrash: 0
+                ...t, type: 'normal', name: '道', fieldCans: 0, fieldTrash: 0
             }));
         }
 
         let finalPlayers = [...players];
         const allChars = Object.keys(charInfo);
         
+        // ▼ 追加: 装備中のスキンをStoreから取得（CPUがランダムに選ばれたとき用）
+        const { equippedSkins } = useUserStore.getState();
+
         if (charAssignMode === 'random') { 
             finalPlayers.forEach(p => p.charType = allChars[Math.floor(Math.random() * allChars.length)]); 
         } else if (charAssignMode === 'cpu_random') { 
@@ -99,12 +98,12 @@ export const SetupOffline = () => {
         else if (rmapStart) startPos = randomizeStartPosition(mapData);
 
         const creativeHand = Array.from({length: 38}, (_, i) => i);
+        
+        // ▼ 修正: p.skinId にプレイヤーが選択したスキン、またはStoreのスキンを入れる
         finalPlayers = finalPlayers.map((p, i) => ({
             ...p, color: colors[i % colors.length], pos: rmapScatter ? scatterPos[i] : startPos, 
-            hp: isTestMode ? 9999 : 100, 
-            p: 15, 
-            ap: isTestMode ? 9999 : 0,   
-            // ▼ 修正: drawInitialCard()を使って5%レア確率を適用した初期手札を配る
+            skinId: p.selectedSkin || equippedSkins[p.charType] || "default",
+            hp: isTestMode ? 9999 : 100, p: 15, ap: isTestMode ? 9999 : 0,   
             hand: isCreative ? [...creativeHand] : [drawInitialCard(), drawInitialCard(), drawInitialCard()], 
             maxHand: isCreative ? 99 : (p.charType === 'hacker' ? 9 : 7),
             cans: 0, trash: 0, kills: 0, deaths: 0, equip: {}
@@ -172,7 +171,8 @@ export const SetupOffline = () => {
                                 <span style={{ fontSize: '12px', color: '#b0a090' }}>🤖 ランダム</span>
                             ) : (
                                 <>
-                                    <CharImage charType={p.charType} size={30} />
+                                    {/* ▼ 修正: CharImageコンポーネントに skinId を渡す */}
+                                    <CharImage charType={p.charType} skinId={p.selectedSkin} size={30} />
                                     <button onClick={() => setCharSelectTarget(p.id)} className="btn-clay" style={{ padding: '4px 8px', fontSize: '12px', background: '#3498db' }}>変更</button>
                                 </>
                             )}
@@ -233,8 +233,9 @@ export const SetupOffline = () => {
             <CharacterSelect 
                 isOpen={charSelectTarget !== null}
                 onClose={() => setCharSelectTarget(null)}
-                onConfirm={(charKey) => {
-                    updatePlayer(charSelectTarget, 'charType', charKey);
+                // ▼ 修正: skinId も受け取ってステートに保存する
+                onConfirm={(charKey, skinId) => {
+                    setPlayers(prev => prev.map(p => p.id === charSelectTarget ? { ...p, charType: charKey, selectedSkin: skinId } : p));
                     setCharSelectTarget(null);
                 }}
                 initialCharKey={players.find(p => p.id === charSelectTarget)?.charType || 'athlete'}

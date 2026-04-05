@@ -2,6 +2,8 @@ import React, { useState, useCallback, useEffect } from "react";
 import { useUserStore } from '../store/useUserStore';
 import { useGameStore } from '../store/useGameStore';
 import { GACHA_POOL } from '../constants/characters';
+// ▼ 追加：Firebase同期用の関数をインポート
+import { syncGachaData } from '../utils/userLogic';
 
 const RARITY_CFG = {
   UR:  { label:"UR",  gold:"#FFFFFF", bg:"#1A0033", border:"#D500F9", rate:1,  glow:"#FF00FF" },
@@ -286,6 +288,9 @@ export default function GachaScreen() {
     const pulledIds = pulled.map(s => s.id);
     unlockMultipleSkins(pulledIds);
 
+    // ▼ 追加：Firebase にガチャの消費結果と獲得スキンを同期
+    await syncGachaData();
+
     setPhase("done");
     setTotalPulls(t => t + count);
     
@@ -479,10 +484,14 @@ export default function GachaScreen() {
           
           <div style={{ width: "100%", maxWidth: 330, marginTop: 10, display: "flex", justifyContent: "center" }}>
             <button
-              onClick={() => { addGachaAssets(500, 0); notify("🔧 開発者モード: 空き缶+500！", "ok"); }}
+              onClick={async () => { 
+                  addGachaAssets(500, 500); 
+                  await syncGachaData(); // ▼ 追加: 開発用ボタンを押したときもFirebaseに同期
+                  notify("🔧 開発者モード: 空き缶・P +500！", "ok"); 
+              }}
               style={{ background: "transparent", border: `1px dashed ${BORD}`, borderRadius: 8, padding: "7px 14px", color: MUTED, fontSize: 11, cursor: "pointer" }}
             >
-              🔧 開発者モード: 缶+500
+              🔧 開発者モード: 資産+500
             </button>
           </div>
         </div>

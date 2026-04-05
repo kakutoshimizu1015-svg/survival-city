@@ -6,6 +6,7 @@ import { charEmoji, charInfo } from '../constants/characters';
 import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatterPlayerPositions } from '../utils/mapRandomizer';
 import { useUserStore } from '../store/useUserStore';
 import { CharacterSelect } from './CharacterSelect';
+import { CharImage } from '../components/common/CharImage';
 
 const TEAM_COLORS = { 
     none: { label:'ソロ', color:'transparent', icon:'⚪' }, 
@@ -17,6 +18,8 @@ const TEAM_COLORS = {
 
 export const OnlineLobby = () => {
     const globalPlayerName = useUserStore(state => state.playerName);
+    const equippedSkins = useUserStore(state => state.equippedSkins); // ▼ 追加: 自分のスキンを取得
+
     const [playerName, setPlayerName] = useState(globalPlayerName || 'Player' + Math.floor(Math.random() * 1000));
     const [roomInput, setRoomInput] = useState('');
     
@@ -31,7 +34,6 @@ export const OnlineLobby = () => {
     const [rmapScatter, setRmapScatter] = useState(false);
     const [charAssignMode, setCharAssignMode] = useState('choose'); 
 
-    // ▼ 追加: キャラ選択モーダルのターゲット(userId)
     const [charSelectTarget, setCharSelectTarget] = useState(null);
     
     const { 
@@ -48,6 +50,14 @@ export const OnlineLobby = () => {
         }
     }, [globalPlayerName]);
 
+    // ▼ 追加: ロビーに入った際に、自分が現在装備中のスキンをネットワークに乗せる
+    useEffect(() => {
+        if (status === 'connected' && myUserId) {
+             const myChar = lobbyPlayers.find(p => p.userId === myUserId)?.charType || 'athlete';
+             updateMyInfo({ skinId: equippedSkins[myChar] || 'default' });
+        }
+    }, [status, myUserId, equippedSkins]);
+
     useEffect(() => {
         subscribeToRooms();
         return () => {
@@ -59,7 +69,6 @@ export const OnlineLobby = () => {
     const handleCreate = () => createRoom(Math.random().toString(36).substring(2, 6).toUpperCase(), playerName);
     const handleJoin = (targetRoomId) => { const code = targetRoomId || roomInput; if (code.length > 0) joinRoom(code.toUpperCase(), playerName); };
 
-    // ▼ 新規追加: 5%のレア確率を適用したカードドロー関数
     const drawInitialCard = () => {
         const rarePool = [12, 13, 35, 36, 37];
         const normalPool = [0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
@@ -78,7 +87,6 @@ export const OnlineLobby = () => {
         let finalPlayers = [...lobbyPlayers];
         const allChars = Object.keys(charInfo);
         
-        // ▼ 変更: ランダム生成時は全キャラから完全ランダムで割り当て
         if (charAssignMode === 'random') { 
             finalPlayers.forEach(p => p.charType = allChars[Math.floor(Math.random() * allChars.length)]); 
         } else if (charAssignMode === 'cpu_random') { 
@@ -94,8 +102,9 @@ export const OnlineLobby = () => {
         const creativeHand = Array.from({length: 38}, (_, i) => i);
         finalPlayers = finalPlayers.map((p, i) => ({
             ...p, id: i, color: ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e91e8c'][i % 8],
-            pos: rmapScatter ? scatterPos[i] : startPos, hp: 100, p: 15, ap: 0,
-            // ▼ 修正: drawInitialCard()を使って5%レア確率を適用した初期手札を配る
+            pos: rmapScatter ? scatterPos[i] : startPos, 
+            skinId: p.skinId || 'default', // ▼ 修正: ロビーで選ばれたスキンIDを本編へ引き継ぐ
+            hp: 100, p: 15, ap: 0,
             hand: isCreative ? [...creativeHand] : [drawInitialCard(), drawInitialCard(), drawInitialCard()], 
             maxHand: isCreative ? 99 : (p.charType === 'hacker' ? 9 : 7), cans: 0, trash: 0, kills: 0, deaths: 0, equip: {}
         }));
@@ -142,20 +151,18 @@ export const OnlineLobby = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {lobbyPlayers.map(p => (
                             <div key={p.userId} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(92, 74, 68, 0.4)', padding: '10px', borderRadius: '8px', borderLeft: p.teamColor !== 'none' ? `5px solid ${TEAM_COLORS[p.teamColor]?.color}` : 'none' }}>
-                                <div style={{ fontSize: '24px' }}>{charEmoji[p.charType] || '🏃'}</div>
+                                {/* ▼ 修正: リストのアイコンもCharImageに置き換え */}
+                                <CharImage charType={p.charType} skinId={p.skinId} size={30} />
+                                
                                 <div style={{ fontWeight: 'bold', color: TEAM_COLORS[p.teamColor]?.color || '#fff' }}>{p.name}</div>
                                 {p.isHost && <span style={{ background: '#e74c3c', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px' }}>HOST</span>}
                                 {p.isCPU && <span style={{ background: '#95a5a6', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px' }}>CPU</span>}
                                 {p.userId === myUserId && <span style={{ color: '#f1c40f', fontSize: '11px' }}>(あなた)</span>}
                                 
-                                {/* ホストによるCPUの直接編集 */}
                                 {isHost && p.isCPU && (
                                     <div style={{ marginLeft: 'auto', display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center' }}>
                                         <input type="text" value={p.name} onChange={e => updateCpu(p.userId, { name: e.target.value })} style={{ padding: '4px', borderRadius: '4px', width: '70px', fontSize: '12px' }} />
-                                        
-                                        {/* ▼ 変更: CPUのキャラクター変更ボタン */}
                                         <button onClick={() => setCharSelectTarget(p.userId)} className="btn-clay" style={{ padding: '4px 8px', fontSize: '12px', background: '#e67e22' }}>変更</button>
-                                        
                                         <select value={p.teamColor} onChange={e => updateCpu(p.userId, { teamColor: e.target.value })} style={{ padding: '4px', borderRadius: '4px', fontSize: '12px' }}>
                                             {Object.entries(TEAM_COLORS).map(([k, t]) => <option key={k} value={k}>{t.icon} {t.label}</option>)}
                                         </select>
@@ -167,16 +174,15 @@ export const OnlineLobby = () => {
                     </div>
                 </div>
 
-                {/* ▼ 全員共通：自分の設定 */}
                 <div className="panel" style={{ width: '100%', maxWidth: '650px', marginBottom: '20px' }}>
                     <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px', color: '#fdf5e6', marginTop: 0 }}>🎭 自分の設定を変更する</h3>
                     <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
                         <label style={{ fontWeight: 'bold' }}>名前: <input type="text" value={myInfo.name || ''} readOnly style={{ padding: '8px', borderRadius: '4px', width: '100px', background: '#d7ccc8', color: '#5c4a44', cursor: 'not-allowed' }} title="名前の変更はモード選択画面で行ってください" /></label>
                         
-                        {/* ▼ 変更: 自分のキャラクター変更ボタン */}
                         <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
                             キャラ: 
-                            <span style={{ fontSize: '20px', marginLeft: '5px' }}>{charEmoji[myInfo.charType] || '🏃'}</span>
+                            {/* ▼ 修正: ここもCharImageに */}
+                            <CharImage charType={myInfo.charType} skinId={myInfo.skinId} size={30} style={{ marginLeft: 5 }} />
                             <button onClick={() => setCharSelectTarget(myUserId)} className="btn-clay" style={{ padding: '4px 8px', fontSize: '12px', background: '#3498db' }}>キャラ変更</button>
                         </label>
                         
@@ -189,19 +195,16 @@ export const OnlineLobby = () => {
                     <div style={{ fontSize: '12px', color: '#bdc3c7', marginTop: '10px' }}>{charInfo[myInfo.charType]?.desc}</div>
                 </div>
 
-                {/* ▼ ホスト専用設定 */}
                 {isHost ? (
                     <div className="panel" style={{ width: '100%', maxWidth: '650px', marginBottom: '20px', background: '#8d6e63', borderColor: '#4a3b32' }}>
                         <h3 style={{ margin: '0 0 15px 0', color: '#fdf5e6' }}>👑 ホスト専用コントロール</h3>
 
-                        {/* CPUとチームの操作 */}
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
                             <button onClick={addCpu} className="btn-clay btn-blue" style={{ padding: '8px 15px' }}>＋ CPUを追加</button>
                             <button onClick={randomizeTeams} className="btn-clay" style={{ background: '#8e44ad', color: 'white', padding: '8px 15px' }}>🎲 ランダムチーム分け</button>
                             <button onClick={clearTeams} className="btn-clay" style={{ background: '#95a5a6', color: 'white', padding: '8px 15px' }}>⚪ チームリセット</button>
                         </div>
 
-                        {/* 以下マップ設定 */}
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', marginBottom: '15px' }}>
                             <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>マップ: <select value={mapSize} onChange={e => setMapSize(e.target.value)} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}><option value="small">小(12)</option><option value="medium">中(48)</option><option value="large">大(75)</option></select></label>
                             <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>ラウンド: <select value={maxRounds} onChange={e => setMaxRounds(Number(e.target.value))} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}>{[1, 5, 10, 15, 20, 30].map(r => <option key={r} value={r}>{r}R</option>)}</select></label>
@@ -220,7 +223,6 @@ export const OnlineLobby = () => {
                             </div>
                         </div>
 
-                        {/* ▼ 追加: ランダムキャラ割り当てモードUI */}
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
                             <button onClick={() => setCharAssignMode('choose')} className="btn-clay" style={{ background: charAssignMode === 'choose' ? '#2ecc71' : '', opacity: charAssignMode === 'choose' ? 1 : 0.6, padding: '8px 12px' }}>🎭 各自選択</button>
                             <button onClick={() => setCharAssignMode('cpu_random')} className="btn-clay" style={{ background: charAssignMode === 'cpu_random' ? '#e67e22' : '', opacity: charAssignMode === 'cpu_random' ? 1 : 0.6, padding: '8px 12px' }}>🤖 CPUのみ🎲</button>
@@ -234,15 +236,15 @@ export const OnlineLobby = () => {
                 )}
                 <button className="btn-large" style={{ marginTop: '20px', background: '#e74c3c' }} onClick={() => { leaveRoom(); setGameState({ gamePhase: 'mode_select' }); }}>🚪 退室する</button>
 
-                {/* ▼ 追加: キャラクター選択モーダル */}
                 <CharacterSelect 
                     isOpen={charSelectTarget !== null}
                     onClose={() => setCharSelectTarget(null)}
-                    onConfirm={(charKey) => {
+                    // ▼ 修正: skinIdも同期ステートに渡す
+                    onConfirm={(charKey, skinId) => {
                         if (charSelectTarget === myUserId) {
-                            updateMyInfo({ charType: charKey });
+                            updateMyInfo({ charType: charKey, skinId });
                         } else {
-                            updateCpu(charSelectTarget, { charType: charKey });
+                            updateCpu(charSelectTarget, { charType: charKey, skinId });
                         }
                         setCharSelectTarget(null);
                     }}
@@ -253,7 +255,6 @@ export const OnlineLobby = () => {
         );
     }
 
-    // --- 部屋を作る/探す画面 ---
     return (
         <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px', color: '#fdf5e6', width: '100vw' }}>
             <h2 style={{ fontSize: '32px' }}>🌐 オンライン対戦</h2>
@@ -262,10 +263,7 @@ export const OnlineLobby = () => {
                     <div>
                         <label>プレイヤー名:</label>
                         <input 
-                            type="text" 
-                            value={playerName} 
-                            readOnly
-                            title="名前の変更はモード選択画面で行ってください"
+                            type="text" value={playerName} readOnly title="名前の変更はモード選択画面で行ってください"
                             style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '4px', background: '#d7ccc8', color: '#5c4a44', cursor: 'not-allowed' }} 
                         />
                     </div>
