@@ -13,11 +13,15 @@ export const useUserStore = create(
       wins: 0,             // 優勝数
       totalEarnedP: 0,     // 今まで優勝したときの総Pポイント
       
-      // ▼ 追加：煙エフェクトの表示設定（デフォルトON）
+      // ▼ 追加：永続化する環境設定
       showSmoke: true,
+      liteMode: false,
+      volume: 1.0,
+      layoutMode: 'auto',
+      showSkipButton: false,
+      autoScrollToPlayer: true,
 
       setUserData: (data) => set((state) => ({ ...state, ...data })),
-      // ▼ 追加：設定切り替え用アクション
       setShowSmoke: (show) => set({ showSmoke: show }), 
     }),
     {
@@ -30,6 +34,11 @@ export const useUserStore = create(
         wins: state.wins,
         totalEarnedP: state.totalEarnedP,
         showSmoke: state.showSmoke,
+        liteMode: state.liteMode,
+        volume: state.volume,
+        layoutMode: state.layoutMode,
+        showSkipButton: state.showSkipButton,
+        autoScrollToPlayer: state.autoScrollToPlayer,
       }),
     }
   )

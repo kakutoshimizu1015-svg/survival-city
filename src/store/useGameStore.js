@@ -15,7 +15,7 @@ const initialState = {
     shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
     mgActive: false, mgType: "", mgValue: 0, mgResult: null, storyActive: false,
     settingsActive: false, rulesActive: false, tutorialActive: false, teamActionActive: false,
-    layoutMode: 'auto', volume: 1.0, tutorialStep: 0, sandboxActive: false, sandboxScenario: -1, sandboxStep: 0,
+    tutorialStep: 0, sandboxActive: false, sandboxScenario: -1, sandboxStep: 0,
     turnBanner: null, turnBannerActive: false, eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,
     
     jobResult: null,
@@ -24,12 +24,10 @@ const initialState = {
     roundSummary: null,
     acquiredCard: null,
     territorySelectOptions: null,
-    showSkipButton: false,
     gameResult: null,
     toastMsg: null,
     centerWarning: null,
     tooltipData: null,
-    autoScrollToPlayer: true,
     _roundEndInProgress: false,
 
     players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
@@ -44,9 +42,6 @@ const initialState = {
     yakuzaPos: 0, yakuzaCd: 0,
     loansharkPos: 0, loansharkCd: 0,
     friendPos: 0, friendCd: 0,
-
-    // ▼ 追加: 軽量モードの設定状態
-    liteMode: false,
 };
 
 export const useGameStore = create((set, get) => ({

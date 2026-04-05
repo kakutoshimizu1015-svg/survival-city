@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { charEmoji, charImages, TOKEN_CONFIG } from '../../constants/characters';
 import { useUserStore } from '../../store/useUserStore';
-import { useGameStore } from '../../store/useGameStore'; // ▼ 追加
 import { getDepthScale } from '../../utils/gameLogic';
 
 export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const isImage = charImages && charImages[player.charType] !== undefined;
+    
+    // ▼ 修正: liteMode も useUserStore から取得するように変更
     const showSmoke = useUserStore(state => state.showSmoke);
-    const liteMode = useGameStore(state => state.liteMode); // ▼ 追加
+    const liteMode = useUserStore(state => state.liteMode); 
 
     const [dustTrail, setDustTrail] = useState([]);
     
@@ -48,7 +49,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     // 待機時のフワフワ上下運動
     const startIdle = () => {
         if (isAnimatingRef.current) return;
-        if (liteMode) return; // ▼ 追加: 軽量モード時はフワフワさせない
+        if (liteMode) return; // 軽量モード時はフワフワさせない
         const now = performance.now();
         const idleBob = Math.sin(now * 0.005) * -3; 
         
@@ -68,7 +69,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         return () => {
             if (idleRafRef.current) cancelAnimationFrame(idleRafRef.current);
         };
-    }, [liteMode]); // ▼ 依存配列に追加
+    }, [liteMode]); 
 
     // 移動＆回転アニメーション
     useEffect(() => {
@@ -187,7 +188,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
 
                     prevPosRef.current = player.pos;
                     isAnimatingRef.current = false;
-                    if (!liteMode) idleRafRef.current = requestAnimationFrame(startIdle); // ▼ 軽量モード考慮
+                    if (!liteMode) idleRafRef.current = requestAnimationFrame(startIdle); 
                 }
             };
             moveRaf = requestAnimationFrame(animateMove);
@@ -201,7 +202,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         };
     }, [player.pos, mapData, isImage, showSmoke, liteMode]);
 
-    // ▼ 修正: プレイヤー色に基づいた発光スタイルの生成（軽量モード対応）
     const playerGlowFilter = liteMode 
         ? (isActiveTurn ? `drop-shadow(0 0 4px ${player.color})` : 'none')
         : (isActiveTurn ? `drop-shadow(0 0 12px #ffe066) drop-shadow(0 0 4px ${player.color})` : `drop-shadow(0 0 8px ${player.color}) drop-shadow(0 4px 6px rgba(0,0,0,0.6))`);
@@ -248,7 +248,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                 <div ref={shadowRef} style={{
                     position: 'absolute', left: '50%', top: FOOT_Y, width: 32, height: 10, background: 'rgba(0,0,0,0.5)', borderRadius: '50%',
                     transform: 'translate(-50%, -50%)', opacity: 0.7, zIndex: zIndexBase - 1, pointerEvents: 'none',
-                    display: liteMode ? 'none' : 'block' // ▼ 軽量モード時は影をオフ
+                    display: liteMode ? 'none' : 'block' // 軽量モード時は影をオフ
                 }} />
 
                 {/* キャラクター本体ラッパー */}

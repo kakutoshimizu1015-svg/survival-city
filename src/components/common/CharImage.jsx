@@ -1,9 +1,9 @@
 import React from 'react';
 import { charEmoji, charImages, npcImages } from '../../constants/characters';
-import { useGameStore } from '../../store/useGameStore'; // ▼ 追加
+import { useUserStore } from '../../store/useUserStore'; // ▼ 修正: useUserStore をインポート
 
 export const CharImage = ({ charType, size = 40, style = {}, imgStyle = {}, className = '' }) => {
-    const liteMode = useGameStore(state => state.liteMode); // ▼ 追加
+    const liteMode = useUserStore(state => state.liteMode); // ▼ 修正: useUserStore から取得
 
     // プレイヤー画像またはNPC画像からデータを取得
     const playerImgData = charImages && charImages[charType];
@@ -23,10 +23,9 @@ export const CharImage = ({ charType, size = 40, style = {}, imgStyle = {}, clas
                         width: '100%', 
                         height: '100%', 
                         objectFit: 'contain', 
-                        // ▼ 修正: プレイヤー画像(ドット絵前提)はくっきり、NPC画像は滑らかに表示を切り替える
                         imageRendering: playerImgData ? 'pixelated' : 'auto',
                         WebkitFontSmoothing: playerImgData ? 'none' : 'auto',
-                        filter: liteMode ? 'none' : 'drop-shadow(0px 4px 4px rgba(0,0,0,0.4))', // ▼ 軽量モード考慮
+                        filter: liteMode ? 'none' : 'drop-shadow(0px 4px 4px rgba(0,0,0,0.4))',
                         ...imgStyle 
                     }} 
                 />

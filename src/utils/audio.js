@@ -1,10 +1,10 @@
-import { useGameStore } from '../store/useGameStore';
+import { useUserStore } from '../store/useUserStore';
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 export const playSfx = (type) => {
     try {
-        const volume = useGameStore.getState().volume ?? 1.0;
+        const volume = useUserStore.getState().volume ?? 1.0;
         if (volume <= 0) return;
 
         const o = audioCtx.createOscillator();

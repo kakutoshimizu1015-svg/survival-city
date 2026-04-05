@@ -15,11 +15,13 @@ export const GameBoard = () => {
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
         roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
-        autoScrollToPlayer, horrorMode,
+        horrorMode,
         isDashPicking // ▼ 追加: ダッシュ中かどうかのフラグを取得
     } = useGameStore();
 
+    // ▼ 修正: autoScrollToPlayer の取得元を useUserStore に変更
     const showSmoke = useUserStore(state => state.showSmoke);
+    const autoScrollToPlayer = useUserStore(state => state.autoScrollToPlayer); 
 
     const cp = players[turn];
     const scale = useRef(1.0);

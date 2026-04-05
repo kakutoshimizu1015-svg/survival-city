@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useUserStore } from '../../store/useUserStore'; // ▼ 追加
 import { getDepthScale } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
@@ -38,8 +39,8 @@ export const Tile = React.memo(({
     const horrorMode = useGameStore(state => state.horrorMode);
     const isHorrorTruckTile = horrorMode && isTruck;
     
-    // 軽量モード判定
-    const liteMode = useGameStore(state => state.liteMode); 
+    // ▼ 修正: liteMode を useUserStore から取得
+    const liteMode = useUserStore(state => state.liteMode); 
 
     const touchTimer = useRef(null);
 
@@ -101,7 +102,6 @@ export const Tile = React.memo(({
     let classNameStr = `tile ${tile.type} ${tile.area}`;
     if (isFog && !isHorrorTruckTile) classNameStr += ' night-fog';
     
-    // ▼ 修正: 直接スタイルを書くのではなく、CSSクラスを追加するだけにしました
     if (isClickable) {
         if (isDashTarget) {
             classNameStr += liteMode ? ' tile-highlight-dash-lite' : ' tile-highlight-dash';
@@ -126,8 +126,6 @@ export const Tile = React.memo(({
         opacity: horrorMode ? 1 : TOKEN_CONFIG.npc.truckOpacity,
     };
 
-    // ▼ 長かった「clickableStyle」のオブジェクト定義は、CSS側に移動したため完全に不要になり削除しました
-
     return (
         <div 
             id={`tile-${tile.id}`} 
@@ -149,8 +147,6 @@ export const Tile = React.memo(({
                 zIndex: isHorrorTruckTile ? 9999 : tile.row
             }}
         >
-            {/* ▼ ここにあった <style> タグの定義も、index.cssに移動したため完全に不要になり削除しました */}
-
             <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
             
             {SHOW_TILE_TEXT && (
