@@ -14,7 +14,7 @@ export const CharacterIcon = ({ charKey, name, isSelected, isHovered, onClick, o
       onClick={() => onClick(charKey)}
       onMouseEnter={() => onHover(charKey)}
       onMouseLeave={() => onLeave()}
-      onTouchStart={() => onHover(charKey)}
+      // ▼ 修正: スマホでホバー判定になりダブルタップが必要になるバグを防ぐため onTouchStart を削除
       style={{
         width: 90, height: 110, borderRadius: 10, border: 'none', cursor: 'pointer',
         background: isSelected ? `linear-gradient(145deg, ${color}33, ${color}11)` : isHovered ? 'rgba(253,245,230,0.06)' : 'rgba(253,245,230,0.03)',
@@ -24,6 +24,8 @@ export const CharacterIcon = ({ charKey, name, isSelected, isHovered, onClick, o
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
         transform: isHovered ? 'scale(1.08)' : isSelected ? 'scale(1.03)' : 'scale(1)',
         zIndex: isHovered ? 5 : 1,
+        // ▼ 修正: スマホでのタップ操作の遅延を無くし、即座に反応させる
+        touchAction: 'manipulation'
       }}
     >
       <div style={{
