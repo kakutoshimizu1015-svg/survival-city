@@ -21,14 +21,13 @@ export const SkinSelector = ({ charKey, color }) => {
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         {skins.map(skin => {
-          // ▼ 修正: 'default' という文字列が含まれていればデフォルトスキンとして扱う
           const isUnlocked = skin.id.includes('default') || unlockedSkins.includes(skin.id);
           const isSelected = currentSkinId === skin.id;
 
           return (
             <div 
               key={skin.id}
-              // ▼ 修正: タップイベントの貫通（伝播）を完全に防ぐ
+              // ▼ 修正: イベントの伝播を完全に停止し、スマホの誤作動を防止
               onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -37,7 +36,7 @@ export const SkinSelector = ({ charKey, color }) => {
                   }
               }}
               style={{
-                width: 42, height: 42, borderRadius: 8, 
+                width: 44, height: 44, borderRadius: 8, 
                 border: isSelected ? `2px solid ${color}` : '2px solid transparent',
                 background: isSelected ? `linear-gradient(135deg, ${color}44, ${color}22)` : 'rgba(30,25,20,0.6)',
                 boxShadow: isSelected ? `0 0 10px ${color}33` : 'none',
@@ -46,8 +45,9 @@ export const SkinSelector = ({ charKey, color }) => {
                 opacity: isUnlocked ? 1 : 0.4,
                 position: 'relative',
                 overflow: 'hidden',
-                // ▼ 修正: モバイル端末でのタップ挙動を最適化
-                touchAction: 'manipulation'
+                // ▼ 修正: スマホでのタップ操作を最適化
+                touchAction: 'manipulation',
+                zIndex: 10 // ボタンが確実に前面に来るように設定
               }}
             >
               <img 
