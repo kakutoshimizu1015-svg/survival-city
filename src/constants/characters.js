@@ -1,12 +1,12 @@
-// 全キャラクターの画像をインポート
+// =========================================================
+// ▼ 基本キャラクター画像のインポート（元ヤン以外）
+// =========================================================
 import athleteFront from '../assets/images/athlete_front.png';
 import athleteBack from '../assets/images/athlete_back.png';
 import salesFront from '../assets/images/sales_front.png';
 import salesBack from '../assets/images/sales_back.png';
 import survivorFront from '../assets/images/survivor_front.png';
 import survivorBack from '../assets/images/survivor_back.png';
-import yankeeFront from '../assets/images/yankee_front.png';
-import yankeeBack from '../assets/images/yankee_back.png';
 import hackerFront from '../assets/images/hacker_front.png';
 import hackerBack from '../assets/images/hacker_back.png';
 import musicianFront from '../assets/images/musician_front.png';
@@ -18,11 +18,29 @@ import gamblerBack from '../assets/images/gambler_back.png';
 import detectiveFront from '../assets/images/detective_front.png';
 import detectiveBack from '../assets/images/detective_back.png';
 
-// ▼ 追加：生成されたスキン画像のインポート
-import hackerCyberImg from '../assets/images/skins/Gemini_Generated_Image_2sgbe02sgbe02sgb.jpg';
-import yankeeBossImg from '../assets/images/skins/Gemini_Generated_Image_gevc4ggevc4ggevc.jpg';
+// =========================================================
+// ▼ 元ヤン スキン画像群のインポート（新フォルダ構造）
+// =========================================================
+import yankee_N_default from '../assets/images/skins/yankee/N_default.png';
+import yankee_N_sweat_white from '../assets/images/skins/yankee/N_sweat_white.png';
+import yankee_N_tokkou_red from '../assets/images/skins/yankee/N_tokkou_red.png';
+import yankee_N_tokkou_red_meganenashi from '../assets/images/skins/yankee/N_tokkou_red_meganenashi.png';
+import yankee_R_biker from '../assets/images/skins/yankee/R_biker.png';
+import yankee_R_chain from '../assets/images/skins/yankee/R_chain.png';
+import yankee_R_Jacket_ryu from '../assets/images/skins/yankee/R_Jacket_ryu.png';
+import yankee_SR_can_pompadour from '../assets/images/skins/yankee/SR_can_pompadour.png';
+import yankee_SR_cardboard from '../assets/images/skins/yankee/SR_cardboard.png';
+import yankee_SR_cardboard_scratch from '../assets/images/skins/yankee/SR_cardboard_scratch.png';
+import yankee_SR_IntellectualPresident from '../assets/images/skins/yankee/SR_IntellectualPresident.png';
+import yankee_SSR_boss from '../assets/images/skins/yankee/SSR_boss.png';
+import yankee_SSR_legendarypresident from '../assets/images/skins/yankee/SSR_legendarypresident.png';
+import yankee_SSR_Thelegendaryyoungleader from '../assets/images/skins/yankee/SSR_Thelegendaryyoungleader.png';
+import yankee_UR_Demoninaspecialattackuniform from '../assets/images/skins/yankee/UR_Demoninaspecialattackuniform.png';
+import yankee_UR_Demoninaspecialattackuniform_bloodsoaked from '../assets/images/skins/yankee/UR_Demoninaspecialattackuniform_bloodsoaked.png';
 
-// NPC画像のインポート
+// =========================================================
+// ▼ NPC画像のインポート
+// =========================================================
 import policeImg from '../assets/images/NPC/police.png';
 import truckImg from '../assets/images/NPC/truck.png';
 import uncleImg from '../assets/images/NPC/uncle.png';
@@ -31,12 +49,12 @@ import loansharkImg from '../assets/images/NPC/loanshark.png';
 import friendImg from '../assets/images/NPC/friend.png';
 import animalImg from '../assets/images/NPC/animal.png';
 
-// キャラクターキーと画像のマッピング
+// キャラクターキーと基本画像のマッピング（_backは徐々に廃止予定）
 export const charImages = {
     athlete:  { front: athleteFront,  back: athleteBack },
     sales:    { front: salesFront,    back: salesBack },
     survivor: { front: survivorFront, back: survivorBack },
-    yankee:   { front: yankeeFront,   back: yankeeBack },
+    yankee:   { front: yankee_N_default, back: yankee_N_default }, // ▼ デフォルトを新パスに置き換え
     hacker:   { front: hackerFront,   back: hackerBack },
     musician: { front: musicianFront, back: musicianBack },
     doctor:   { front: doctorFront,   back: doctorBack },
@@ -44,19 +62,40 @@ export const charImages = {
     detective:{ front: detectiveFront,back: detectiveBack },
 };
 
-// ▼ 追加：スキンデータのマッピング
+// =========================================================
+// ▼ 全スキンマスターデータ（ガチャ・選択画面で共通利用）
+// =========================================================
 export const charSkins = {
-    hacker: [
-        { id: "default", name: "デフォルト", front: hackerFront, back: hackerBack, rarity: "N" },
-        { id: "ssr_hacker_cyber", name: "サイバーハッカー", front: hackerCyberImg, back: hackerCyberImg, rarity: "SSR" }
-    ],
     yankee: [
-        { id: "default", name: "デフォルト", front: yankeeFront, back: yankeeBack, rarity: "N" },
-        { id: "ssr_yankee_boss", name: "特攻服の鬼", front: yankeeBossImg, back: yankeeBossImg, rarity: "SSR" }
-    ]
+        // N (Normal)
+        { id: "yankee_default", charKey: "yankee", name: "元ヤン（デフォルト）", rarity: "N", front: yankee_N_default, pieceColor: "#0A3070", ring: "#64B5F6", desc: "ツッパリ路上デビューのデフォルト姿。" },
+        { id: "yankee_sweat_white", charKey: "yankee", name: "色違いの白スウェット", rarity: "N", front: yankee_N_sweat_white, pieceColor: "#D0D0D0", ring: "#9E9E9E", desc: "膝が抜け、泥がはねた白いスウェット上下。" },
+        { id: "yankee_tokkou_red", charKey: "yankee", name: "色違いの赤特攻服", rarity: "N", front: yankee_N_tokkou_red, pieceColor: "#8B0000", ring: "#EF5350", desc: "汚れで黒ずんだ赤い特攻服。" },
+        { id: "yankee_tokkou_red_nomegane", charKey: "yankee", name: "色違いの赤特攻服（眼鏡なし）", rarity: "N", front: yankee_N_tokkou_red_meganenashi, pieceColor: "#8B0000", ring: "#EF5350", desc: "汚れで黒ずんだ赤い特攻服の眼鏡なしバージョン。" },
+        // R (Rare)
+        { id: "yankee_biker", charKey: "yankee", name: "バイカー", rarity: "R", front: yankee_R_biker, pieceColor: "#5C0000", ring: "#EF5350", desc: "お金がないがバイクに乗りたい！夜露死苦。" },
+        { id: "yankee_chain", charKey: "yankee", name: "チェーン巻きジャージ", rarity: "R", front: yankee_R_chain, pieceColor: "#2C3E50", ring: "#7F8C8D", desc: "威嚇のために拾った自転車のチェーンを巻いている。" },
+        { id: "yankee_jacket_ryu", charKey: "yankee", name: "破れたスカジャン", rarity: "R", front: yankee_R_Jacket_ryu, pieceColor: "#1A252F", ring: "#3498DB", desc: "虎の刺繍が半分ほつれて見えなくなったスカジャン。" },
+        // SR (Super Rare)
+        { id: "yankee_can_pompadour", charKey: "yankee", name: "空き缶リーゼント", rarity: "SR", front: yankee_SR_can_pompadour, pieceColor: "#7F8C8D", ring: "#BDC3C7", desc: "潰した空き缶を髪に編み込んでリーゼントを維持している姿。" },
+        { id: "yankee_cardboard", charKey: "yankee", name: "ダンボール将軍", rarity: "SR", front: yankee_SR_cardboard, pieceColor: "#D35400", ring: "#F39C12", desc: "ダンボールで武装！ツッパリの肩パッドを再現した姿。" },
+        { id: "yankee_cardboard_scratch", charKey: "yankee", name: "傷ついたダンボール将軍", rarity: "SR", front: yankee_SR_cardboard_scratch, pieceColor: "#A04000", ring: "#E67E22", desc: "ダンボールで武装！しかしぼろぼろに、ツッパリの肩パッドを再現した姿。" },
+        { id: "yankee_intellectual", charKey: "yankee", name: "別世界線のインテリヤンキー", rarity: "SR", front: yankee_SR_IntellectualPresident, pieceColor: "#1abc9c", ring: "#16a085", desc: "頭脳を高め成り上がった姿！拳でなく脳。" },
+        // SSR (Double Super Rare)
+        { id: "yankee_boss", charKey: "yankee", name: "ヤクザの組長", rarity: "SSR", front: yankee_SSR_boss, pieceColor: "#000000", ring: "#FFD700", desc: "ホームレスにならなければこうなっていたかも、、、" },
+        { id: "yankee_legendary_president", charKey: "yankee", name: "伝説の総長", rarity: "SSR", front: yankee_SSR_legendarypresident, pieceColor: "#FFFFFF", ring: "#FFD700", desc: "高級ヤクザ顔負けの白スーツに和柄のシャツ。" },
+        { id: "yankee_legendary_young", charKey: "yankee", name: "若き日の伝説の総長", rarity: "SSR", front: yankee_SSR_Thelegendaryyoungleader, pieceColor: "#FDF5E6", ring: "#F39C12", desc: "高級ヤクザ顔負けの白スーツに和柄のシャツ。" },
+        // UR (Ultimate Rare)
+        { id: "yankee_ur_demon", charKey: "yankee", name: "特攻服の鬼", rarity: "UR", front: yankee_UR_Demoninaspecialattackuniform, pieceColor: "#1A0033", ring: "#D500F9", desc: "刺繍が輝く完全無欠の豪華な特攻服。" },
+        { id: "yankee_ur_demon_blood", charKey: "yankee", name: "血濡れ特攻服の鬼", rarity: "UR", front: yankee_UR_Demoninaspecialattackuniform_bloodsoaked, pieceColor: "#330000", ring: "#FF0044", desc: "返り血を浴び続けた刺繍が輝く完全無欠の豪華な特攻服。" }
+    ],
+    // 他キャラクターの拡張枠
+    hacker: [], athlete: [], sales: [], survivor: [], musician: [], doctor: [], gambler: [], detective: []
 };
 
-// NPC画像のマッピング
+// ▼ ガチャ排出プール（"default" を含むスキンを除外）
+export const GACHA_POOL = Object.values(charSkins).flat().filter(skin => !skin.id.includes("default"));
+
 export const npcImages = {
     police:    policeImg,
     truck:     truckImg,
@@ -67,15 +106,11 @@ export const npcImages = {
     animal:    animalImg,
 };
 
-// =========================================================
-// ▼ 駒とNPCのサイズ調整用パラメータ
-// =========================================================
 export const TOKEN_CONFIG = {
     player: { scaleMultiplier: 1.15, imageSize: 125, emojiBgSize: 64, emojiFontSize: 34, nameFontSize: 12 },
     npc: { baseSize: 120, truckSize: 250, truckOpacity: 0.65, policeSize: 200, uncleSize: 130, yakuzaSize: 130, loansharkSize: 130, friendSize: 130, animalSize: 120 }
 };
 
-// 画像がない場合のフォールバック用絵文字
 export const charEmoji = { athlete:'🏃', sales:'💼', survivor:'🌿', yankee:'👊', hacker:'💻', musician:'🎸', doctor:'🩺', gambler:'🎲', detective:'🕵️' };
 
 export const charInfo = {
