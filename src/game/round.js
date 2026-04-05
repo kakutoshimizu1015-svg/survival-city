@@ -27,7 +27,7 @@ const endGame = () => {
 
     let updatedPlayers = state.players.map(p => ({
         ...p,
-        gameStats: p.gameStats || { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0 }
+        gameStats: p.gameStats || { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0, jobs: 0, territories: 0, minigames: 0 }
     }));
 
     const categories = [
@@ -35,7 +35,11 @@ const endGame = () => {
         { key: 'cards', name: '🃏 カードマスター賞', desc: '最も多くカードを使用した' },
         { key: 'cans', name: '🥫 空き缶王', desc: '最も多く空き缶を拾った' },
         { key: 'trash', name: '🗑️ ゴミ漁り名人', desc: '最も多くゴミを漁った' },
-        { key: 'shopP', name: '🛍️ 爆買い王', desc: 'ショップで最もPを消費した' }
+        { key: 'shopP', name: '🛍️ 爆買い王', desc: 'ショップで最もPを消費した' },
+        // ▼ 新しく追加された3つの賞
+        { key: 'jobs', name: '💼 バイト王', desc: '最も多くバイトに成功した' },
+        { key: 'territories', name: '🏢 不動産王', desc: '最も多く陣地を獲得した' },
+        { key: 'minigames', name: '🎮 ミニゲーム王', desc: '最も多くミニゲームに勝利した' }
     ];
 
     const awards = [];
@@ -122,7 +126,6 @@ const endGame = () => {
         if (isMe(results[0])) { recordWin(results[0].totalScore); console.log(`[戦績セーブ] 優勝！`); }
     }
     
-    // ▼ 追加：自分のリザルトからガチャ資産を付与
     const myResult = results.find(p => isMe(p));
     if (myResult) {
         useUserStore.getState().addGachaAssets(myResult.cans, myResult.totalScore);

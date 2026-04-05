@@ -41,8 +41,8 @@ export const GameEffectsOverlay = () => {
     const isMyTurn = status === 'connected' ? (cp?.userId === myUserId) : !cp?.isCPU;
     const isHandOverLimit = cp && cp.hand.length > cp.maxHand;
 
+    // ▼ 修正：「優勝！」のみの文を削除
     const victoryPhrases = [
-        "優勝！",
         "空き缶拾って成り上がり！見事、人生カンストだ！！",
         "過酷なサバイバル完了！見事、路上卒業（路卒）だ！！",
         "勝った！勝った！今日の炊き出しは特上ステーキだ！",
@@ -116,6 +116,9 @@ export const GameEffectsOverlay = () => {
         logMsg(`🎲 ${msg}`);
         
         if (isWin) {
+            // ▼ 修正：ミニゲーム勝利のスタッツ（ミニゲーム王）をカウントアップ
+            useGameStore.getState().incrementGameStat(cp.id, 'minigames', 1);
+
             const cardId = Math.floor(Math.random() * 38);
             useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
             

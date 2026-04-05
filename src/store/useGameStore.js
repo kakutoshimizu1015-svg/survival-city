@@ -39,7 +39,6 @@ const initialState = {
     mapData: [], territories: {}, territoryCosts: {}, isRainy: false, weatherState: 'sunny', isNight: false,
     roundCount: 1, maxRounds: 20, canPrice: 1, trashPrice: 2, destTile: -1,
     
-    // ▼ NPCの位置、クールタイム、HP(新設)、再スポーンタイマー(新設)
     truckPos: 0, 
     policePos: 0, policeCd: 0, policeHp: 10, policeRespawn: 0,
     unclePos: 0, uncleCd: 0, uncleHp: 10, uncleRespawn: 0,
@@ -60,7 +59,6 @@ export const useGameStore = create((set, get) => ({
         } : p)
     })),
     
-    // 修正: p.id ではなく第二引数の index と state.turn を比較する
     updateCurrentPlayer: (updater) => set((state) => ({
         players: state.players.map((p, index) => index === state.turn ? { 
             ...p, 
@@ -71,7 +69,8 @@ export const useGameStore = create((set, get) => ({
     incrementGameStat: (playerId, key, amount) => set((state) => ({
         players: state.players.map(p => {
             if (p.id === playerId) {
-                const currentStats = p.gameStats || { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0 };
+                // ▼ 新しい「王」のための初期値項目を追加
+                const currentStats = p.gameStats || { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0, jobs: 0, territories: 0, minigames: 0 };
                 return { ...p, gameStats: { ...currentStats, [key]: (currentStats[key] || 0) + amount } };
             }
             return p;

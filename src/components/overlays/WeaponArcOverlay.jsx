@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom'; // ▼ 画面最前面にUIを引き出すために追加
+import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store/useGameStore';
 import { dealDamage } from '../../game/combat';
 import { logMsg } from '../../game/actions';
-import { actionCancelWeapon } from '../../game/cards'; // ▼ 追加：キャンセル処理の関数をインポート
+import { actionCancelWeapon } from '../../game/cards';
 
 export const WeaponArcOverlay = () => {
     const weaponArcData = useGameStore(state => state.weaponArcData);
@@ -12,9 +12,11 @@ export const WeaponArcOverlay = () => {
     const [attackerPos, setAttackerPos] = useState({ x: 0, y: 0 });
     const [radius, setRadius] = useState(0);
 
+    // ▼ 新規追加: ターゲット選択用のステート
+    const [selectedTargetId, setSelectedTargetId] = useState(null);
+
     const panelRef = useRef(null);
 
-    // マップ上のマスの相対位置を計算し、SVGの描画位置をぴったり追従させる
     useEffect(() => {
         if (!weaponArcData) return;
         
@@ -34,7 +36,6 @@ export const WeaponArcOverlay = () => {
         return () => window.removeEventListener('resize', updatePos);
     }, [weaponArcData]);
 
-    // ▼ 修正：パネルをドラッグして移動させる処理（画面全体に対する座標計算）
     useEffect(() => {
         const el = panelRef.current;
         if (!el || !weaponArcData) return;
@@ -42,12 +43,12 @@ export const WeaponArcOverlay = () => {
         let ox = 0, oy = 0, startX = 0, startY = 0;
         
         const onDown = (e) => {
-            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT') return;
+            // ▼ 修正: LABEL タグもドラッグの除外対象にしてクリック可能にする
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
             
             startX = (e.touches ? e.touches[0].clientX : e.clientX);
             startY = (e.touches ? e.touches[0].clientY : e.clientY);
             
-            // transform適用前の正確な画面上の座標を取得
             const rect = el.getBoundingClientRect();
             ox = rect.left; 
             oy = rect.top;
@@ -68,7 +69,7 @@ export const WeaponArcOverlay = () => {
             el.style.top = ny + 'px';
             el.style.bottom = 'auto'; 
             el.style.right = 'auto';
-            el.style.transform = 'none'; // ドラック時に中央固定のtransformを解除
+            el.style.transform = 'none'; 
             
             if (e.cancelable) e.preventDefault();
         };
@@ -115,17 +116,32 @@ export const WeaponArcOverlay = () => {
         return diff <= spreadDeg || dist === 0;
     });
 
+    // ▼ 新規追加: ターゲットリストが更新されたら、自動的に先頭の人を選ぶ処理
+    useEffect(() => {
+        if (hitTargets.length > 0 && !hitTargets.find(t => t.id === selectedTargetId)) {
+            setSelectedTargetId(hitTargets[0].id);
+        } else if (hitTargets.length === 0) {
+            setSelectedTargetId(null);
+        }
+    }, [hitTargets, selectedTargetId]);
+
     const fireWeapon = () => {
         useGameStore.setState({ weaponArcData: null });
         if (hitTargets.length === 0) {
             logMsg(`⚔️ ${cardData.name}発射！しかし射程内に敵がいなかった...`);
             return;
         }
+
         if (cardData.aoe) {
             hitTargets.forEach(t => dealDamage(t.id, cardData.dmg, cardData.name, attacker.id));
             logMsg(`💥 広範囲攻撃！ ${hitTargets.length}人に命中！`);
         } else {
-            dealDamage(hitTargets[0].id, cardData.dmg, cardData.name, attacker.id);
+            // ▼ 修正: 選択されたターゲットにのみダメージを与える
+            if (selectedTargetId !== null) {
+                dealDamage(selectedTargetId, cardData.dmg, cardData.name, attacker.id);
+            } else {
+                dealDamage(hitTargets[0].id, cardData.dmg, cardData.name, attacker.id);
+            }
         }
     };
 
@@ -137,7 +153,6 @@ export const WeaponArcOverlay = () => {
     const y2 = attackerPos.y + radius * Math.sin(endRad);
     const pathData = `M ${attackerPos.x} ${attackerPos.y} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`;
 
-    // ▼ 操作パネルのUI定義（後でPortalを使って画面中央に出す）
     const panelContent = (
         <div ref={panelRef} style={{
             position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -158,14 +173,34 @@ export const WeaponArcOverlay = () => {
                 スライダーで方向を調整（枠をドラッグで移動）
             </div>
 
-            <div style={{ fontSize: '13px', color: '#f1c40f', marginBottom: '15px', minHeight: '20px', pointerEvents: 'none', fontWeight: 'bold' }}>
-                {hitTargets.length > 0 ? `🎯 射程内: ${hitTargets.map(t => t.name).join(', ')}` : '射程内に対象なし'}
+            {/* ▼ 修正: ターゲット選択UI（ラジオボタン）の追加 */}
+            <div style={{ fontSize: '13px', color: '#f1c40f', marginBottom: '15px', pointerEvents: 'auto', fontWeight: 'bold', textAlign: 'left' }}>
+                {hitTargets.length > 0 ? (
+                    cardData.aoe ? (
+                        <div style={{textAlign: 'center'}}>🎯 射程内(全員に命中):<br/>{hitTargets.map(t => t.name).join(', ')}</div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                            <div style={{color: '#fff', textAlign: 'center', marginBottom: '5px'}}>🎯 攻撃対象を選んでください</div>
+                            {hitTargets.map(t => (
+                                <label key={t.id} style={{cursor: 'pointer', background: selectedTargetId === t.id ? 'rgba(231,76,60,0.5)' : 'rgba(0,0,0,0.3)', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center'}}>
+                                    <input 
+                                        type="radio" 
+                                        name="target" 
+                                        value={t.id} 
+                                        checked={selectedTargetId === t.id} 
+                                        onChange={() => setSelectedTargetId(t.id)} 
+                                        style={{marginRight: '8px', cursor: 'pointer', accentColor: '#e74c3c'}}
+                                    />
+                                    {t.name} (HP: {t.hp})
+                                </label>
+                            ))}
+                        </div>
+                    )
+                ) : <div style={{textAlign: 'center'}}>射程内に対象なし</div>}
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="btn-large" style={{ background: '#e74c3c', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} onClick={fireWeapon}>💥 攻撃！</button>
-                
-                {/* ▼ 修正：actionCancelWeapon を呼び出すように変更 */}
                 <button 
                     className="btn-large" 
                     style={{ background: '#7f8c8d', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} 
@@ -179,7 +214,6 @@ export const WeaponArcOverlay = () => {
 
     return (
         <>
-            {/* SVG部分はマップ内部に絶対配置してピッタリくっつける */}
             <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1400 }}>
                 {radius > 0 && (
                     <>
@@ -215,7 +249,6 @@ export const WeaponArcOverlay = () => {
                 )}
             </svg>
 
-            {/* ▼ パネル部分をマップコンテナから脱出させ、ブラウザの body 直下に描画する */}
             {createPortal(panelContent, document.body)}
         </>
     );
