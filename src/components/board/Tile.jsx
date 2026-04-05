@@ -24,7 +24,7 @@ export const tileTooltipData = {
 };
 
 export const Tile = React.memo(({ 
-    tile, owner, isFog, isClickable, isDashTarget, onClick, maxRow, // ▼ 修正: isDashTarget を追加
+    tile, owner, isFog, isClickable, isDashTarget, onClick, maxRow,
     isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass
 }) => {
     const setTooltipData = useGameStore(state => state.setTooltipData);
@@ -37,8 +37,8 @@ export const Tile = React.memo(({
     
     const horrorMode = useGameStore(state => state.horrorMode);
     const isHorrorTruckTile = horrorMode && isTruck;
-
-    // ▼ 修正: Storeから直接 isDashPicking を読み取るのをやめました
+    
+    // 軽量モード判定
     const liteMode = useGameStore(state => state.liteMode); 
 
     const touchTimer = useRef(null);
@@ -100,8 +100,16 @@ export const Tile = React.memo(({
 
     let classNameStr = `tile ${tile.type} ${tile.area}`;
     if (isFog && !isHorrorTruckTile) classNameStr += ' night-fog';
-    // ▼ 修正: isDashTarget の場合は `tile-highlight-branch` (黄色く光るCSS) を付与しないようにし、競合を防ぎます
-    if (isClickable && !isDashTarget) classNameStr += ' tile-highlight-branch';
+    
+    // ▼ 修正: 直接スタイルを書くのではなく、CSSクラスを追加するだけにしました
+    if (isClickable) {
+        if (isDashTarget) {
+            classNameStr += liteMode ? ' tile-highlight-dash-lite' : ' tile-highlight-dash';
+        } else {
+            classNameStr += liteMode ? ' tile-highlight-branch-lite' : ' tile-highlight-branch';
+        }
+    }
+    
     if (pathClass) classNameStr += ` ${pathClass}`;
 
     const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
@@ -118,30 +126,7 @@ export const Tile = React.memo(({
         opacity: horrorMode ? 1 : TOKEN_CONFIG.npc.truckOpacity,
     };
 
-    // ▼ 修正: 親から渡された isDashTarget を使ってスタイルを適用する
-    const clickableStyle = isClickable ? (
-        liteMode ? {
-            border: `3px solid ${isDashTarget ? 'white' : '#ffe066'}`,
-            backgroundColor: isDashTarget ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 224, 102, 0.3)'
-        } : (
-        isDashTarget ? {
-            boxShadow: `
-                inset 0 0 20px rgba(255, 255, 255, 0.8),
-                0 0 35px rgba(255, 255, 255, 1),
-                0 0 15px rgba(255, 255, 255, 0.6)
-            `,
-            border: '3px solid rgba(255, 255, 255, 1)',
-            animation: 'tilePulseDash 0.8s infinite alternate'
-        } : {
-            boxShadow: `
-                inset 0 0 15px rgba(255, 224, 102, 0.6),
-                0 0 25px rgba(255, 224, 102, 0.8),
-                0 0 10px rgba(255, 255, 255, 0.4)
-            `,
-            border: '2px solid rgba(255, 224, 102, 0.9)',
-            animation: 'tilePulse 1.5s infinite alternate'
-        })
-    ) : {};
+    // ▼ 長かった「clickableStyle」のオブジェクト定義は、CSS側に移動したため完全に不要になり削除しました
 
     return (
         <div 
@@ -161,22 +146,10 @@ export const Tile = React.memo(({
                 transform: `scale(${ds})`,
                 transformOrigin: 'center center',
                 opacity: (isFog && !isHorrorTruckTile) ? 0.2 : 1,
-                zIndex: isHorrorTruckTile ? 9999 : tile.row,
-                ...clickableStyle 
+                zIndex: isHorrorTruckTile ? 9999 : tile.row
             }}
         >
-            {!liteMode && (
-                <style>{`
-                    @keyframes tilePulse {
-                        from { filter: brightness(1); }
-                        to { filter: brightness(1.4) drop-shadow(0 0 8px rgba(255,224,102,0.6)); }
-                    }
-                    @keyframes tilePulseDash {
-                        from { filter: brightness(1); }
-                        to { filter: brightness(1.6) drop-shadow(0 0 15px rgba(255,255,255,1)); }
-                    }
-                `}</style>
-            )}
+            {/* ▼ ここにあった <style> タグの定義も、index.cssに移動したため完全に不要になり削除しました */}
 
             <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
             
@@ -194,12 +167,7 @@ export const Tile = React.memo(({
             )}
             
             {(!isFog || isHorrorTruckTile) && isTruck && (
-                <CharImage 
-                    charType="truck" 
-                    size={TOKEN_CONFIG.npc.truckSize} 
-                    style={truckStyle} 
-                    className="truck-token" 
-                />
+                <CharImage charType="truck" size={TOKEN_CONFIG.npc.truckSize} style={truckStyle} className="truck-token" />
             )}
             
             {!isFog && isPolice    && <CharImage charType="police"    size={TOKEN_CONFIG.npc.policeSize}    style={npcStyle} />}
@@ -215,7 +183,7 @@ export const Tile = React.memo(({
     if (prev.tile.id !== next.tile.id) return false;
     if (prev.isFog !== next.isFog) return false;
     if (prev.isClickable !== next.isClickable) return false;
-    if (prev.isDashTarget !== next.isDashTarget) return false; // ▼ 追加: 比較対象に含める
+    if (prev.isDashTarget !== next.isDashTarget) return false; 
     if (prev.pathClass !== next.pathClass) return false;
     if (prev.isTruck !== next.isTruck) return false;
     if (prev.isPolice !== next.isPolice) return false;
