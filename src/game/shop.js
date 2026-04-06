@@ -76,21 +76,22 @@ export const shopCartBuy = () => {
         names.push(deckData.find(c => c.id === item.cardId).name);
     });
 
-    // ▼ 修正: 状態更新が競合しないよう、購入・スタッツカウント(shopP)・カートクリアを1回にまとめる（アトミック更新）
     useGameStore.setState(prev => ({
         players: prev.players.map(p => {
             if (p.id === cp.id) {
-                const currentStats = p.gameStats || { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0, jobs: 0, territories: 0, minigames: 0 };
+                // ▼ 修正: 既存のスタッツと初期値テンプレートを完全にマージして欠落を防ぐ
+                const baseStats = { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0, jobs: 0, territories: 0, minigames: 0 };
+                const currentStats = { ...baseStats, ...(p.gameStats || {}) };
                 return {
                     ...p,
                     p: p.p - totalCost,
                     hand: newHand,
-                    gameStats: { ...currentStats, shopP: (currentStats.shopP || 0) + totalCost }
+                    gameStats: { ...currentStats, shopP: currentStats.shopP + totalCost }
                 };
             }
             return p;
         }),
-        shopCart: [] // カートも同時にクリアする
+        shopCart: [] 
     }));
 
     logMsg(`🛒 一括購入！${names.join('・')} (合計 -${totalCost}P)`);

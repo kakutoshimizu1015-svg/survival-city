@@ -46,6 +46,8 @@ const initialState = {
     yakuzaPos: 0, yakuzaCd: 0, yakuzaHp: 10, yakuzaRespawn: 0,
     loansharkPos: 0, loansharkCd: 0, loansharkHp: 10, loansharkRespawn: 0,
     friendPos: 0, friendCd: 0, friendHp: 10, friendRespawn: 0,
+    
+    layoutMode: 'auto',
 };
 
 export const useGameStore = create((set, get) => ({
@@ -69,9 +71,11 @@ export const useGameStore = create((set, get) => ({
     incrementGameStat: (playerId, key, amount) => set((state) => ({
         players: state.players.map(p => {
             if (p.id === playerId) {
-                // ▼ 新しい「王」のための初期値項目を追加
-                const currentStats = p.gameStats || { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0, jobs: 0, territories: 0, minigames: 0 };
-                return { ...p, gameStats: { ...currentStats, [key]: (currentStats[key] || 0) + amount } };
+                // ▼ 修正: 既存のスタッツと初期値テンプレートを完全にマージして欠落を防ぐ
+                const baseStats = { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0, jobs: 0, territories: 0, minigames: 0 };
+                const currentStats = { ...baseStats, ...(p.gameStats || {}) };
+                const newStats = { ...currentStats, [key]: currentStats[key] + amount };
+                return { ...p, gameStats: newStats };
             }
             return p;
         })
