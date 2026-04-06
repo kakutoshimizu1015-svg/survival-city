@@ -154,7 +154,9 @@ export const executeMove = (targetTileId) => {
         if (Math.random() < 0.3) {
             useGameStore.setState({ storyActive: true, storyIndex: Math.floor(Math.random() * 4) });
         } else {
-            useGameStore.setState({ mgActive: true, mgType: ["highlow", "boxes", "slot"][Math.floor(Math.random() * 3)], mgValue: Math.floor(Math.random() * 14) });
+            // ▼ 修正: 仮の3種から、実装済みの全15種から抽選するように変更
+            const mgTypes = ['box', 'vend', 'scratch', 'hl', 'slot', 'oxo', 'tetris', 'fly', 'rat', 'drunk', 'rain', 'kashi', 'beg', 'music', 'nego'];
+            useGameStore.setState({ mgActive: true, mgType: mgTypes[Math.floor(Math.random() * mgTypes.length)] });
         }
     }
 };
@@ -223,7 +225,6 @@ export const actionJob = () => {
     
     if (win) {
         playSfx('success');
-        // ▼ 修正: バイト成功時のカウントアップ処理を確実に追加
         s.incrementGameStat(cp.id, 'jobs', 1);
     } else {
         playSfx('fail');
@@ -236,7 +237,6 @@ export const actionJob = () => {
     useGameStore.setState({ jobResult: { active: true, isSuccess: win, points: win ? 12 : 0 } });
 };
 
-// ▼ 新規追加: 指定マスの現在の「占拠コスト（動的P）」を返す関数
 export const getOccupyCost = (tileId) => {
     const s = useGameStore.getState();
     const currentOwner = s.territories[tileId];
@@ -253,8 +253,6 @@ export const getOccupyCost = (tileId) => {
 export const actionOccupy = () => { 
     const s = useGameStore.getState();
     const cp = s.players[s.turn];
-    
-    // ▼ 修正: 関数を利用して動的コストを取得
     const cost = getOccupyCost(cp.pos);
 
     if (cp.p >= cost) { 
@@ -263,8 +261,6 @@ export const actionOccupy = () => {
             territories: { ...st.territories, [cp.pos]: cp.id },
             territoryCosts: { ...(st.territoryCosts || {}), [cp.pos]: cost } 
         })); 
-        
-        // ▼ 修正: 陣地獲得時のカウントアップ処理を確実に追加
         s.incrementGameStat(cp.id, 'territories', 1);
         
         logMsg(`🚩 ${cp.name}が${cost}P支払って陣地を占領しました！`);

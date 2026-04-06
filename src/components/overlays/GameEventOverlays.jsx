@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { ClayButton } from '../common/ClayButton';
@@ -7,20 +7,37 @@ import { deckData } from '../../constants/cards';
 import { dealDamage } from '../../game/combat';
 import { setupNpcMove } from '../../game/skills'; 
 
+// ▼ 追加: 15種類のミニゲームコンポーネントをすべてインポート
+import { BoxGame, VendGame, ScratchGame, HLGame } from '../../features/minigames/MiniGamesPart1';
+import { SlotGame, OxoGame, TetrisGame, FlyGame } from '../../features/minigames/MiniGamesPart2';
+import { RatGame, DrunkGame, RainGame, KashiGame } from '../../features/minigames/MiniGamesPart3';
+import { BegGame, MusicGame, NegoGame } from '../../features/minigames/MiniGamesPart4';
+
+// ▼ 追加: コンポーネントのマッピング
+const MINIGAME_COMPONENTS = {
+    box: BoxGame, vend: VendGame, scratch: ScratchGame, hl: HLGame,
+    slot: SlotGame, oxo: OxoGame, tetris: TetrisGame, fly: FlyGame,
+    rat: RatGame, drunk: DrunkGame, rain: RainGame, kashi: KashiGame,
+    beg: BegGame, music: MusicGame, nego: NegoGame
+};
+
 export const GameEventOverlays = () => {
-    const { mgActive, mgType, mgValue, mgResult, storyActive, storyIndex, players, turn, jobResult, npcSelectActive } = useGameStore();
+    const { mgActive, mgType, storyActive, storyIndex, players, turn, jobResult, npcSelectActive } = useGameStore();
     const { myUserId, status } = useNetworkStore();
     const cp = players[turn];
-
-    const [slotReels, setSlotReels] = useState([0, 0, 0]);
-    const [slotStopped, setSlotStopped] = useState([false, false, false]);
-    const slotReelsRef = useRef([0, 0, 0]);
-    const marks = ["🍒", "🔔", "🍇"];
 
     const isMyTurn = status === 'connected' ? (cp?.userId === myUserId) : true;
     
     const { charInfoModal, roundSummary, acquiredCard, territorySelectOptions, mapData, territories, gameResult } = useGameStore();
     const [confirmEnd, setConfirmEnd] = useState(false);
+    
+    // ▼ 追加: リトライ等で何度も報酬を受け取れないようにするためのフラグ
+    const [mgRewardGiven, setMgRewardGiven] = useState(false);
+
+    useEffect(() => {
+        // ミニゲーム起動時に報酬受け取りフラグをリセット
+        if (mgActive) setMgRewardGiven(false);
+    }, [mgActive]);
 
     const victoryPhrases = [
         "優勝！",
@@ -69,50 +86,6 @@ export const GameEventOverlays = () => {
         }
     ];
     const activeStory = storyActive ? storyEvents[storyIndex || 0] : null;
-
-    useEffect(() => {
-        if (mgActive && !mgResult) {
-            setSlotStopped([false, false, false]);
-            setSlotReels([0, 0, 0]);
-            slotReelsRef.current = [0, 0, 0];
-        }
-    }, [mgActive, mgResult]);
-
-    useEffect(() => {
-        if (mgActive && mgType === 'slot' && !mgResult) {
-            const interval = setInterval(() => {
-                setSlotReels(prev => {
-                    const next = prev.map((r, i) => slotStopped[i] ? r : Math.floor(Math.random() * 3));
-                    slotReelsRef.current = next; 
-                    return next;
-                });
-            }, 100);
-            return () => clearInterval(interval);
-        }
-    }, [mgActive, mgType, mgResult, slotStopped]);
-
-    const handleResult = (isWin, msg, resultNum) => {
-        if (!isMyTurn) return;
-        
-        const failureText = resultNum !== undefined ? `失敗... (出た数字: ${resultNum})` : '失敗...';
-        useGameStore.setState({ mgResult: isWin ? '大成功！' : failureText });
-        logMsg(`🎲 ${msg}`);
-        
-        if (isWin) {
-            // ▼ 修正: ミニゲーム勝利時のカウントアップ処理を確実に追加
-            useGameStore.getState().incrementGameStat(cp.id, 'minigames', 1);
-
-            const cardId = Math.floor(Math.random() * 38);
-            useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
-            
-            const cardData = deckData.find(c => c.id === cardId) || { name: '謎のカード', icon: '🃏', color: '#fff', desc: '詳細不明' };
-            useGameStore.setState({ acquiredCard: cardData });
-            setTimeout(() => useGameStore.setState({ acquiredCard: null }), 2500); 
-            logMsg(`🎁 ${cp.name}は「${cardData.name}」を手に入れた！`);
-        }
-        
-        setTimeout(() => useGameStore.setState({ mgActive: false, mgResult: null }), 2500);
-    };
 
     return (
         <>
@@ -165,57 +138,43 @@ export const GameEventOverlays = () => {
                 </div>
             )}
 
-            {mgActive && (
-                <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }}>
-                    <div className="modal-box" style={{ background: '#2c3e50', color: 'white' }}>
-                        <h2>🎲 ミニゲーム {!isMyTurn && "(待機中...)"}</h2>
-                        {!mgResult ? (
-                            <div style={{ pointerEvents: isMyTurn ? 'auto' : 'none', opacity: isMyTurn ? 1 : 0.7 }}>
-                                {mgType === 'highlow' && (
-                                    <>
-                                        <p>基準：<span style={{ fontSize: '36px', color: '#f1c40f' }}>{mgValue}</span></p>
-                                        <p style={{ fontSize: '14px' }}>次の数(0〜13)はHighかLowか？</p> 
-                                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                            <button className="mg-btn high" onClick={() => {
-                                                const result = Math.floor(Math.random() * 14); 
-                                                handleResult(result >= mgValue, `出目【${result}】${result >= mgValue ? "正解！" : "ハズレ..."}`, result);
-                                            }}>High</button>
-                                            <button className="mg-btn low" onClick={() => {
-                                                const result = Math.floor(Math.random() * 14); 
-                                                handleResult(result < mgValue, `出目【${result}】${result < mgValue ? "正解！" : "ハズレ..."}`, result);
-                                            }}>Low</button>
-                                        </div>
-                                    </>
-                                )}
-                                {mgType === 'boxes' && (
-                                    <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', fontSize: '40px' }}>
-                                        {[0,1,2].map(i => <div key={i} onClick={() => handleResult(Math.random()>0.6, "宝箱判定")} style={{cursor:'pointer'}}>📦</div>)}
-                                    </div>
-                                )}
-                                {mgType === 'slot' && (
-                                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                        {[0,1,2].map(i => (
-                                            <div key={i}>
-                                                <div style={{ fontSize: '40px', background: '#fff', color: '#000', padding: '10px', borderRadius: '10px' }}>{marks[slotReels[i]]}</div>
-                                                <ClayButton disabled={slotStopped[i]} onClick={() => {
-                                                    const ns = [...slotStopped]; 
-                                                    ns[i] = true; 
-                                                    setSlotStopped(ns);
-                                                    if(ns.every(s => s)) {
-                                                        setTimeout(() => {
-                                                            const finalReels = slotReelsRef.current;
-                                                            const isWin = finalReels[0] === finalReels[1] && finalReels[1] === finalReels[2];
-                                                            handleResult(isWin, "スロット判定");
-                                                        }, 150);
-                                                    }
-                                                }}>STOP</ClayButton>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ) : <h2>{mgResult}</h2>}
-                    </div>
+            {/* ▼ 修正: 古いHTML版ミニゲーム用UIを完全に削除し、新コンポーネントをフルスクリーンで呼び出す */}
+            {mgActive && mgType && MINIGAME_COMPONENTS[mgType] && (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#0c0a07' }}>
+                    {!isMyTurn && (
+                        <div style={{ position: 'absolute', top: 20, width: '100%', textAlign: 'center', color: 'white', zIndex: 10001, fontSize: '1.2rem', fontWeight: 'bold' }}>
+                            (他プレイヤーがミニゲーム中...)
+                        </div>
+                    )}
+                    {React.createElement(MINIGAME_COMPONENTS[mgType], {
+                        pts: cp?.p || 0,
+                        addPts: (pts) => {
+                            if (!isMyTurn || mgRewardGiven) return;
+                            setMgRewardGiven(true); // 報酬は1マスにつき1回のみ付与
+                            
+                            useGameStore.getState().updateCurrentPlayer(p => ({ p: p.p + pts }));
+                            useGameStore.getState().incrementGameStat(cp.id, 'minigames', 1);
+                            
+                            // ボードゲーム本編のボーナス: 勝ったらカードを引く
+                            const cardId = Math.floor(Math.random() * 38);
+                            useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
+                            
+                            const cardData = deckData.find(c => c.id === cardId) || { name: '謎のカード', icon: '🃏', color: '#fff', desc: '詳細不明' };
+                            useGameStore.setState({ acquiredCard: cardData });
+                            setTimeout(() => useGameStore.setState({ acquiredCard: null }), 2500); 
+                            
+                            logMsg(`🎲 ミニゲーム大成功！ +${pts}P と「${cardData.name}」を獲得！`);
+                        },
+                        subPts: (pts) => {
+                            if (!isMyTurn) return;
+                            useGameStore.getState().updateCurrentPlayer(p => ({ p: Math.max(0, p.p - pts) }));
+                            logMsg(`🎲 ミニゲームで ${pts}P 失った...`);
+                        },
+                        onBack: () => {
+                            // ミニゲーム画面を終了してマップへ戻る
+                            useGameStore.setState({ mgActive: false, mgType: null });
+                        }
+                    })}
                 </div>
             )}
 
