@@ -5,10 +5,9 @@ import { ClayButton } from '../common/ClayButton';
 import { logMsg } from '../../game/actions';
 import { deckData } from '../../constants/cards'; 
 import { dealDamage } from '../../game/combat';
-import { setupNpcMove } from '../../game/skills'; // ▼ 探偵スキル用の関数をインポート
+import { setupNpcMove } from '../../game/skills'; 
 
 export const GameEventOverlays = () => {
-    // ▼ npcSelectActive をStoreから取得
     const { mgActive, mgType, mgValue, mgResult, storyActive, storyIndex, players, turn, jobResult, npcSelectActive } = useGameStore();
     const { myUserId, status } = useNetworkStore();
     const cp = players[turn];
@@ -100,6 +99,9 @@ export const GameEventOverlays = () => {
         logMsg(`🎲 ${msg}`);
         
         if (isWin) {
+            // ▼ 修正: ミニゲーム勝利時のカウントアップ処理を確実に追加
+            useGameStore.getState().incrementGameStat(cp.id, 'minigames', 1);
+
             const cardId = Math.floor(Math.random() * 38);
             useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
             
@@ -114,7 +116,6 @@ export const GameEventOverlays = () => {
 
     return (
         <>
-            {/* ▼ 追加：探偵の情報操作用 NPC選択モーダル */}
             {npcSelectActive && isMyTurn && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }}>
                     <div className="modal-box" style={{ background: '#2c3e50', color: 'white', maxWidth: '400px' }}>
@@ -214,6 +215,55 @@ export const GameEventOverlays = () => {
                                 )}
                             </div>
                         ) : <h2>{mgResult}</h2>}
+                    </div>
+                </div>
+            )}
+
+            {roundSummary && (
+                <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(92,74,68,0.98)', border: '6px solid #f1c40f', borderRadius: '15px', padding: '25px 40px', zIndex: 280, display: 'flex', flexDirection: 'column', color: '#fdf5e6', boxShadow: '0 0 40px rgba(0,0,0,0.8)', minWidth: '350px', overflow: 'hidden' }}>
+                    <h2 style={{ margin: '0 0 15px 0', color: '#f1c40f', textAlign: 'center', borderBottom: '2px dashed #f1c40f', paddingBottom: '10px' }}>🌙 ラウンド終了レポート</h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', width: 'fit-content', margin: '0 auto' }}>
+                        {roundSummary.map((item, i) => (
+                            <div key={i} style={{ fontSize: '16px', fontWeight: 'bold', animation: `fade-in-right 0.3s forwards ${i * 0.4}s`, opacity: 0, textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: item }} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {acquiredCard && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 5000, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                    <div style={{ background: '#5c4a44', border: '8px solid #f1c40f', borderRadius: '20px', padding: '40px', color: '#fff', boxShadow: '0 0 50px rgba(241,196,15,0.8)', animation: 'card-get-anim 2.5s forwards' }}>
+                        <style>{`@keyframes card-get-anim { 0%{transform:scale(0.1) rotate(-20deg); opacity:0;} 20%{transform:scale(1.2) rotate(10deg); opacity:1;} 40%{transform:scale(1) rotate(0deg); opacity:1;} 80%{transform:scale(1) rotate(0deg); opacity:1;} 100%{transform:scale(1.5); opacity:0;} }`}</style>
+                        <h2 style={{ color: '#f1c40f', marginTop: 0 }}>✨ カードGET! ✨</h2>
+                        <div style={{ fontSize: '80px' }}>{acquiredCard.icon}</div>
+                        <div style={{ fontSize: '28px', fontWeight: 'bold', margin: '15px 0', color: acquiredCard.color, textShadow: '2px 2px 4px #000' }}>{acquiredCard.name}</div>
+                        <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{acquiredCard.desc}</div>
+                    </div>
+                </div>
+            )}
+
+            {territorySelectOptions && territorySelectOptions.length > 0 && (
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 10002 }}>
+                    <div className="modal-box" style={{ maxWidth: '500px' }}>
+                        <h3 style={{ marginTop: 0 }}>🚩 奪う陣地を選択</h3>
+                        <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
+                            {territorySelectOptions.map(tId => {
+                                const tile = mapData.find(t => t.id == tId);
+                                const ownerId = territories[tId];
+                                const owner = players.find(p => p.id == ownerId);
+                                return (
+                                    <button key={tId} onClick={() => {
+                                        useGameStore.setState(s => ({ territories: { ...s.territories, [tId]: cp.id }, territorySelectOptions: null }));
+                                        logMsg(`🚩 マス${tId}「${tile?.name}」を奪取！（${owner?.name}から）`);
+                                        useGameStore.getState().addEventPopup(cp.id, "🚩", "陣地奪取！", `${tile?.name}を乗っ取った`, "good");
+                                    }} style={{ width: '100%', margin: '4px 0', textAlign: 'left', padding: '8px', cursor: 'pointer', borderRadius: '8px', border: '2px solid #8d6e63' }}>
+                                        🚩 マス{tId}「{tile?.name}」<br/>
+                                        <span style={{ fontSize: '10px', color: '#e74c3c' }}>所有者: {owner?.name}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <button className="btn-large" style={{ width: '100%', marginTop: '15px', background: '#7f8c8d', borderColor: '#2c3e50' }} onClick={() => useGameStore.setState({ territorySelectOptions: null })}>キャンセル</button>
                     </div>
                 </div>
             )}

@@ -220,7 +220,14 @@ export const actionJob = () => {
     const win = Math.random() < (cp.charType === "sales" ? 0.8 : 0.6); 
     
     s.updateCurrentPlayer(p => ({ ap: p.ap - 3, p: p.p + (win ? 12 : 0) })); 
-    if (win) playSfx('success'); else playSfx('fail'); 
+    
+    if (win) {
+        playSfx('success');
+        // ▼ 修正: バイト成功時のカウントアップ処理を確実に追加
+        s.incrementGameStat(cp.id, 'jobs', 1);
+    } else {
+        playSfx('fail');
+    }
 
     const msg = win ? `💼 バイト成功！12P獲得！` : `💼 バイト失敗...`;
     logMsg(msg);
@@ -256,6 +263,10 @@ export const actionOccupy = () => {
             territories: { ...st.territories, [cp.pos]: cp.id },
             territoryCosts: { ...(st.territoryCosts || {}), [cp.pos]: cost } 
         })); 
+        
+        // ▼ 修正: 陣地獲得時のカウントアップ処理を確実に追加
+        s.incrementGameStat(cp.id, 'territories', 1);
+        
         logMsg(`🚩 ${cp.name}が${cost}P支払って陣地を占領しました！`);
         playSfx('success'); 
     } else {
