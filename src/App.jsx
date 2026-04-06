@@ -52,7 +52,8 @@ function App() {
 
   return (
     <>
-      {(gamePhase === 'title' || gamePhase === 'mode_select' || gamePhase === 'minigame_menu') && isLoggedIn && !rulesActive && !tutorialActive && !settingsActive && (
+      {/* ▼ 修正: gamePhase === 'minigame_menu' を条件から外し、ミニゲーム画面では非表示にする */}
+      {(gamePhase === 'title' || gamePhase === 'mode_select') && isLoggedIn && !rulesActive && !tutorialActive && !settingsActive && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%',
           background: 'rgba(20,20,30,0.95)', padding: '12px 0', display: 'flex',
