@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep } from './MiniGamesPart1';
 import { useUserStore } from '../../store/useUserStore';
 
-/* ─── Part 2 専用スタイル ─────────────────────────────── */
 export const MiniGameStylesPart2 = () => (
     <style>{`
         /* Slot Game */
@@ -36,14 +35,14 @@ export const MiniGameStylesPart2 = () => (
         .bet-btn { background:#241a0e; border:2px solid #3d2e1a; border-radius:8px; color:#d4c4a0; font-weight:700; padding:.7rem 1.4rem; cursor:pointer; transition:border-color .1s,transform .1s; }
         .bet-btn:active { transform:scale(0.92); border-color:#c97b2a; }
 
-        /* Tetris Game (No Timer) */
+        /* Tetris Game */
         .tet-preview-cell { width:36px; height:36px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; border:2px solid #222; background:#0a0a0a; transition:background .05s; }
         .tet-cell { border-radius:3px; background:#0f0f0f; border:1px solid #1a1a1a; display:flex; align-items:center; justify-content:center; font-size:.8rem; }
         .tet-btn { background:#241a0e; border:2px solid #3d2e1a; border-radius:8px; color:#f0e8d0; font-weight:700; padding:.6rem 1.2rem; cursor:pointer; user-select:none; touch-action:manipulation; transition:transform .1s;}
         .tet-btn:active { transform:scale(0.92); }
         .tet-btn-drop { background:#c97b2a; border:2px solid #e8b84b; color:#000; font-weight:900; }
 
-        /* Fly Game (Easy Mode) */
+        /* Fly Game */
         .fly-arena { width:100%; height:310px; background:linear-gradient(160deg,#1a1208,#0d0a05); border:2px solid #3d2e1a; border-radius:14px; position:relative; overflow:hidden; cursor:crosshair; }
         .fly-start-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem; background:rgba(0,0,0,0.4); z-index: 20; }
         .big-fly { font-size:4rem; animation:flyBuzz .3s ease infinite, bounce 1.5s ease infinite; cursor:pointer; }
@@ -56,35 +55,38 @@ export const MiniGameStylesPart2 = () => (
 );
 
 /* ════════════════════════════════════════
-   Game 5: 🎰 路上スロット
+   Game 5: 🎰 路上スロット (State同期バグ修正)
 ════════════════════════════════════════ */
 export function SlotGame({ pts, addPts, onBack }) {
     const SYMS = ['🥫', '💰', '🍺', '🐀', '💊', '🚬', '🗑️'];
     const SH = 80;
     const TOT = SYMS.length * SH;
     
+    // UI描画用のState
     const [reels, setReels] = useState([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
     const [playing, setPlaying] = useState(false);
     const [result, setResult] = useState(null);
     
+    // ロジック（アニメーション）管理用のRef
     const rafRef = useRef(null);
     const offsets = useRef([0, 0, 0]);
     const innerRefs = useRef([]); 
+    const reelsDataRef = useRef([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
 
     const { time, start, stop } = useTimer(10, () => {
         if (playing) {
-            setReels(prev => {
-                let n = [...prev];
-                n.forEach((r, i) => { if (!r.stop) stopReelLogic(n, i); });
-                return n;
-            });
+            [0, 1, 2].forEach(i => stopReel(i));
         }
     });
 
     const init = useCallback(() => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setResult(null); setPlaying(false); 
-        setReels([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
+        
+        const initial = [{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }];
+        reelsDataRef.current = initial;
+        setReels(initial);
+        
         offsets.current = [0, 0, 0];
         innerRefs.current.forEach(el => {
             if(el) el.style.transform = `translateY(${-TOT}px)`;
@@ -93,9 +95,12 @@ export function SlotGame({ pts, addPts, onBack }) {
 
     const startSlot = () => {
         setPlaying(true); setResult(null); 
-        setReels([{ stop: false, res: null }, { stop: false, res: null }, { stop: false, res: null }]);
-        start(); // 10秒タイマースタート
         
+        // ▼ Stateの同期ズレを防ぐため、Refで直接状態を上書きしてからアニメーション開始
+        reelsDataRef.current = [{ stop: false, res: null }, { stop: false, res: null }, { stop: false, res: null }];
+        setReels([...reelsDataRef.current]);
+        
+        start(); 
         offsets.current = [Math.random() * TOT, Math.random() * TOT, Math.random() * TOT];
         animate();
     };
@@ -104,45 +109,36 @@ export function SlotGame({ pts, addPts, onBack }) {
         let anyMoved = false;
         const speeds = [3.5, 4.2, 3.8];
         
-        setReels(prev => {
-            prev.forEach((r, i) => {
-                if (!r.stop) {
-                    offsets.current[i] = (offsets.current[i] + speeds[i]) % TOT;
-                    if(innerRefs.current[i]) {
-                        innerRefs.current[i].style.transform = `translateY(${-TOT + offsets.current[i]}px)`;
-                    }
-                    anyMoved = true;
+        // ▼ State (prev) ではなく、直接 Ref を参照して動かす
+        reelsDataRef.current.forEach((r, i) => {
+            if (!r.stop) {
+                offsets.current[i] = (offsets.current[i] + speeds[i]) % TOT;
+                if (innerRefs.current[i]) {
+                    innerRefs.current[i].style.transform = `translateY(${-TOT + offsets.current[i]}px)`;
                 }
-            });
-            return prev;
+                anyMoved = true;
+            }
         });
         
         if (anyMoved) rafRef.current = requestAnimationFrame(animate);
     };
 
-    const stopReelLogic = (stateArray, i) => {
-        stateArray[i].stop = true;
-        const iy = SH + TOT - offsets.current[i];
-        stateArray[i].res = SYMS[((Math.floor(iy / SH) % SYMS.length) + SYMS.length) % SYMS.length];
-    };
-
     const stopReel = (i) => {
         if (!playing) return;
-        setReels(prev => {
-            if (prev[i].stop) return prev;
-            let n = [...prev];
-            stopReelLogic(n, i);
-            return n;
-        });
-    };
-
-    useEffect(() => { init(); return () => cancelAnimationFrame(rafRef.current); }, [init]);
-
-    useEffect(() => {
-        if (playing && reels.every(r => r.stop)) {
+        if (reelsDataRef.current[i].stop) return;
+        
+        reelsDataRef.current[i].stop = true;
+        const iy = SH + TOT - offsets.current[i];
+        reelsDataRef.current[i].res = SYMS[((Math.floor(iy / SH) % SYMS.length) + SYMS.length) % SYMS.length];
+        
+        // UI更新のためにStateにセット
+        setReels([...reelsDataRef.current]);
+        
+        // 全て停止したかチェック
+        if (reelsDataRef.current.every(r => r.stop)) {
             setPlaying(false); stop(); cancelAnimationFrame(rafRef.current);
             setTimeout(() => {
-                const rs = reels.map(r => r.res);
+                const rs = reelsDataRef.current.map(r => r.res);
                 const allSame = rs[0] === rs[1] && rs[1] === rs[2];
                 const twoSame = rs[0] === rs[1] || rs[1] === rs[2] || rs[0] === rs[2];
                 
@@ -158,7 +154,9 @@ export function SlotGame({ pts, addPts, onBack }) {
                 }
             }, 150);
         }
-    }, [reels, playing, addPts, stop]);
+    };
+
+    useEffect(() => { init(); return () => cancelAnimationFrame(rafRef.current); }, [init]);
 
     return (
         <div style={S.screen}>
@@ -207,7 +205,6 @@ export function OxoGame({ pts, addPts, onBack }) {
     const [result, setResult] = useState(null);
     const [winCells, setWinCells] = useState([]);
     
-    // CPU考慮中の無効化フラグ
     const isCpuThinking = useRef(false);
 
     const { time, start, stop } = useTimer(5, () => {
@@ -220,7 +217,7 @@ export function OxoGame({ pts, addPts, onBack }) {
 
     const startGame = (b) => {
         if (gachaPoints < b) { alert('Pが足りない！ゲーム本編で稼ごう！'); return; }
-        addGachaAssets(0, -b); // 賭け金を没収
+        addGachaAssets(0, -b);
         setBet(b); setPhase('play'); setTurn('p');
         start(5);
     };
@@ -347,7 +344,7 @@ export function OxoGame({ pts, addPts, onBack }) {
 }
 
 /* ════════════════════════════════════════
-   Game 7: 📦 段ボールパズル (制限時間撤廃)
+   Game 7: 📦 段ボールパズル
 ════════════════════════════════════════ */
 export function TetrisGame({ pts, addPts, onBack }) {
     const TET_COLS = 6, TET_ROWS = 10;
@@ -373,7 +370,7 @@ export function TetrisGame({ pts, addPts, onBack }) {
 
     const slideTick = useCallback(() => {
         const max = TET_COLS - pwRef.current;
-        posRef.current += 0.05 * dirRef.current; // 少しゆっくりに調整
+        posRef.current += 0.05 * dirRef.current; 
         if (posRef.current >= max) { posRef.current = max; dirRef.current = -1; }
         if (posRef.current <= 0) { posRef.current = 0; dirRef.current = 1; }
         pxRef.current = Math.floor(posRef.current); 
@@ -494,7 +491,7 @@ export function TetrisGame({ pts, addPts, onBack }) {
 }
 
 /* ════════════════════════════════════════
-   Game 8: 🪰 ハエ捕まえ (難易度緩和版)
+   Game 8: 🪰 ハエ捕まえ
 ════════════════════════════════════════ */
 export function FlyGame({ pts, addPts, onBack }) {
     const [caught, setCaught] = useState(0);
@@ -523,26 +520,21 @@ export function FlyGame({ pts, addPts, onBack }) {
         const H = arenaRef.current.offsetHeight;
         const p = pos.current;
         
-        // ▼ 難易度緩和：揺らぎを小さく
         p.vx += (Math.random() - .5) * 1.0; 
         p.vy += (Math.random() - .5) * 1.0;
         
-        // ▼ 難易度緩和：ベース速度と加速を落とす
         const spd = Math.hypot(p.vx, p.vy);
         const max = 6 + caughtRef.current * 1.0; 
         if (spd > max) { p.vx = (p.vx / spd) * max; p.vy = (p.vy / spd) * max; }
         
         p.x += p.vx; p.y += p.vy;
         
-        // 当たり判定の枠（幅60px）を考慮して壁で跳ね返る
         const margin = 30;
         if (p.x < margin) { p.x = margin; p.vx = Math.abs(p.vx) + 1; } 
         if (p.x > W - margin) { p.x = W - margin; p.vx = -Math.abs(p.vx) - 1; }
         if (p.y < margin) { p.y = margin; p.vy = Math.abs(p.vy) + 1; } 
         if (p.y > H - margin) { p.y = H - margin; p.vy = -Math.abs(p.vy) - 1; }
         
-        // 直接DOM操作を排除し、Stateで管理するとReactのレンダリング負荷がかかるため、
-        // FlyElは直接スタイル更新する方針を維持しつつ、安全に取得
         const el = document.getElementById('fly-target');
         if (el) {
             el.style.left = p.x + 'px';
@@ -568,7 +560,6 @@ export function FlyGame({ pts, addPts, onBack }) {
         if (caughtRef.current >= 3) {
             endFly(true);
         } else {
-            // 次のハエのスポーン
             if (arenaRef.current) {
                 const W = arenaRef.current.offsetWidth, H = arenaRef.current.offsetHeight;
                 pos.current.x = rnd(40, W - 40); 
@@ -620,7 +611,6 @@ export function FlyGame({ pts, addPts, onBack }) {
                         </div>
                     )}
                     
-                    {/* ▼ 難易度緩和：タップ判定枠を大きく */}
                     {started && !result && (
                         <div id="fly-target" className="fly-el" onPointerDown={catchFly}>🪰</div>
                     )}

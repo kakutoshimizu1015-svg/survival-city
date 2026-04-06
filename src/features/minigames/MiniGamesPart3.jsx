@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep } from './MiniGamesPart1';
 import { useUserStore } from '../../store/useUserStore';
 
-/* ─── Part 3 専用スタイル ─────────────────────────────── */
 export const MiniGameStylesPart3 = () => (
     <style>{`
         /* Rat Game */
@@ -43,7 +42,7 @@ export const MiniGameStylesPart3 = () => (
 );
 
 /* ════════════════════════════════════════
-   Game 9: 🐀 ネズミ追い払い
+   Game 9: 🐀 ネズミ追い払い (スポーンバグ修正版)
 ════════════════════════════════════════ */
 export function RatGame({ pts, addPts, onBack }) {
     const { addGachaAssets } = useUserStore();
@@ -85,7 +84,6 @@ export function RatGame({ pts, addPts, onBack }) {
         
         ratsRef.current.forEach(r => {
             if (!r.alive) return;
-            // アリーナ中央（300x280の想定なら大体 150, 140）
             const cx = (arenaRef.current?.offsetWidth || 300) / 2;
             const cy = (arenaRef.current?.offsetHeight || 280) / 2;
             
@@ -94,28 +92,24 @@ export function RatGame({ pts, addPts, onBack }) {
             const dist = Math.hypot(dx, dy);
             
             if (dist < 25) {
-                // 荷物に到達された（盗まれた）
                 r.alive = false;
                 stolenRef.current += 2;
                 stolenOccurred = true;
                 
-                // リアルタイムP没収
                 addGachaAssets(0, -2);
                 
                 const fid = Date.now() + Math.random();
                 setFxList(prev => [...prev, { id: fid, x: cx, y: cy, t: '-2P', c: '#b52e1e' }]);
                 setTimeout(() => setFxList(prev => prev.filter(f => f.id !== fid)), 600);
                 
-                // 次のネズミを少し遅れて補充
                 setTimeout(() => { if (playingRef.current) spawnRat(); }, 1000);
             } else {
                 r.x += (dx / dist) * r.speed;
                 r.y += (dy / dist) * r.speed;
-                r.flip = dx > 0; // 中央に向かっているので、dx > 0 なら右向き
+                r.flip = dx > 0;
             }
         });
         
-        // 描画用にStateを更新
         setRats(ratsRef.current.filter(r => r.alive).map(r => ({ ...r })));
         if (stolenOccurred) setStolen(stolenRef.current);
         
@@ -134,12 +128,10 @@ export function RatGame({ pts, addPts, onBack }) {
         hitRef.current++;
         setHitCount(hitRef.current);
         
-        // エフェクト
         const fid = Date.now() + Math.random();
         setFxList(prev => [...prev, { id: fid, x: r.x, y: r.y, t: '💥', c: '#e8b84b' }]);
         setTimeout(() => setFxList(prev => prev.filter(f => f.id !== fid)), 400);
         
-        // 補充
         setTimeout(() => { if (playingRef.current) spawnRat(); }, 800);
     };
 
@@ -160,10 +152,11 @@ export function RatGame({ pts, addPts, onBack }) {
         hitRef.current = 0; stolenRef.current = 0; ratsRef.current = []; idRef.current = 0;
         setHitCount(0); setStolen(0); setRats([]); setFxList([]); setResult(null);
         
-        // 初期スポーン
+        // ▼ 修正: フラグを先にtrueにしてからスポーン処理を行う
+        playingRef.current = true; 
         for (let i = 0; i < 4; i++) spawnRat();
         
-        playingRef.current = true; start();
+        start();
         rafRef.current = requestAnimationFrame(animate);
     }, [start, spawnRat, animate]);
 
@@ -199,7 +192,7 @@ export function RatGame({ pts, addPts, onBack }) {
 }
 
 /* ════════════════════════════════════════
-   Game 10: 🍺 酔っ払いバランス
+   Game 10: 🍺 酔っ払いバランス (超速バグ修正版)
 ════════════════════════════════════════ */
 export function DrunkGame({ pts, addPts, onBack }) {
     const [bal, setBal] = useState(50);
@@ -233,13 +226,13 @@ export function DrunkGame({ pts, addPts, onBack }) {
     const animate = useCallback(() => {
         if (!playingRef.current) return;
         
-        driftRef.current += (Math.random() - 0.5) * 0.7; // ランダムなフラつき
-        driftRef.current = Math.max(-2.5, Math.min(2.5, driftRef.current)); // 速度制限
+        // ▼ 修正: 60fpsに合わせてドリフト値(加算量)を約1/15にスケーリング
+        driftRef.current += (Math.random() - 0.5) * 0.06;
+        driftRef.current = Math.max(-0.25, Math.min(0.25, driftRef.current)); 
         
         balRef.current += driftRef.current;
         setBal(balRef.current);
         
-        // 倒れたか判定
         if (balRef.current <= 0 || balRef.current >= 100) {
             endDrunk(false);
             return;
@@ -250,9 +243,9 @@ export function DrunkGame({ pts, addPts, onBack }) {
     const tap = (e, d) => {
         e.preventDefault();
         if (!playingRef.current) return;
-        // タップで姿勢を戻す
-        balRef.current = Math.max(0, Math.min(100, balRef.current - d * 12));
-        driftRef.current -= d * 1.5; // 慣性も打ち消す
+        // ▼ 修正: タップによる戻し量も調整
+        balRef.current = Math.max(0, Math.min(100, balRef.current - d * 10));
+        driftRef.current -= d * 0.15; 
         setBal(balRef.current);
     };
 
@@ -264,7 +257,6 @@ export function DrunkGame({ pts, addPts, onBack }) {
         playingRef.current = true; start();
         rafRef.current = requestAnimationFrame(animate);
         
-        // 1秒ごとに緑ゾーン内（35〜65）か判定
         keepIvRef.current = setInterval(() => {
             if (playingRef.current && balRef.current >= 35 && balRef.current <= 65) {
                 keepRef.current++;
@@ -400,7 +392,6 @@ export function RainGame({ pts, addPts, onBack }) {
         
         playingRef.current = true; start();
         
-        // 自動で濡れていくタイマー
         wetIvRef.current = setInterval(() => {
             if (playingRef.current) {
                 wetRef.current = Math.min(100, wetRef.current + 1.5);
@@ -496,24 +487,20 @@ export function KashiGame({ pts, addPts, onBack }) {
     const animate = useCallback(() => {
         if (!playingRef.current) return;
         
-        // プレイヤー移動（ボタン押下中）
         if (moveDirRef.current !== 0) {
             pxRef.current = Math.max(5, Math.min(95, pxRef.current + moveDirRef.current * 1.5));
             setPlayerX(pxRef.current);
         }
         
-        // 弁当の落下と当たり判定
         for (let i = bentosRef.current.length - 1; i >= 0; i--) {
             const b = bentosRef.current[i];
-            b.y += 1.8; // 落下速度
+            b.y += 1.8; 
             
             if (b.y > 90) {
-                // 画面外
                 bentosRef.current.splice(i, 1);
                 continue;
             }
             if (b.y > 75 && !b.hit) {
-                // キャッチ判定 (許容誤差 約8%)
                 if (Math.abs(b.x - pxRef.current) < 8) {
                     scoreRef.current++; setScore(scoreRef.current);
                     b.hit = true; bentosRef.current.splice(i, 1);
@@ -524,7 +511,6 @@ export function KashiGame({ pts, addPts, onBack }) {
             }
         }
         
-        // ライバルの自動移動（最も低い位置にある弁当を狙う）
         if (bentosRef.current.length > 0) {
             const target = [...bentosRef.current].sort((a, b) => b.y - a.y)[0];
             if (target) {
@@ -549,7 +535,7 @@ export function KashiGame({ pts, addPts, onBack }) {
         setScore(0); setRival(0); setPlayerX(40); setRivalX(68); setBentos([]); setResult(null);
         
         playingRef.current = true; start();
-        bentoIvRef.current = setInterval(spawnBento, 1000); // 1秒ごとに弁当追加
+        bentoIvRef.current = setInterval(spawnBento, 1000);
         rafRef.current = requestAnimationFrame(animate);
     }, [start, spawnBento, animate]);
 
