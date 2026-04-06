@@ -12,8 +12,8 @@ import { TutorialOverlay } from './components/overlays/TutorialOverlay';
 import { SandboxGuide } from './components/overlays/SandboxGuide';
 import GachaScreen from './features/GachaScreen';
 
-// ▼ 追加: コピーして作成した統合版ミニゲームコンポーネントをインポート
-import MinigamesApp from './MinigamesApp';
+// ▼ 修正: 正しいディレクトリパスに変更しました
+import MinigamesApp from './features/minigames/MinigamesApp';
 
 function App() {
   // ▼ チュートリアル等のオーバーレイ状態を取得
