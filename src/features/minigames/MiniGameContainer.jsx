@@ -18,14 +18,14 @@ const GameHeader = ({ title, time, setTime, onEnd, isTimerDanger }) => {
     );
 };
 
-// リザルトコンポーネント
-const ResultBox = ({ win, icon, mainText, subText, pts, onRetry }) => {
+// リザルトコンポーネント (※mainText -> main, subText -> sub へ修正し表示バグを解決)
+const ResultBox = ({ win, icon, main, sub, pts, onRetry }) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '1rem' }}>
             <div className="result-box">
                 <div className={`r-badge ${win ? 'win' : 'fail'}`}>{win ? '✅ SUCCESS' : '❌ FAILED'}</div>
-                <div className={win ? 'r-win' : 'r-lose'}>{icon} {mainText}</div>
-                {subText && <div className="r-sub-dim">{subText}</div>}
+                <div className={win ? 'r-win' : 'r-lose'}>{icon} {main}</div>
+                {sub && <div className="r-sub-dim">{sub}</div>}
                 {pts > 0 && <div className="r-sub">+{pts}P ゲット！</div>}
             </div>
             <button className="btn-prim" onClick={onRetry}>🔁 もう一度</button>
@@ -33,7 +33,7 @@ const ResultBox = ({ win, icon, mainText, subText, pts, onRetry }) => {
     );
 };
 
-// ========== 個別ミニゲームコンポーネント (15種類) ==========
+// ========== 個別ミニゲームコンポーネント ==========
 
 function BoxGame({ handleGameEnd }) {
     const [msg, setMsg] = useState('シャッフル中…');
@@ -49,8 +49,9 @@ function BoxGame({ handleGameEnd }) {
     const winBox = useRef(-1);
 
     const init = useCallback(async () => {
+        if (timerRef.current) clearInterval(timerRef.current);
         setResult(null); setPlaying(false); setTime(10); setMsg('シャッフル中…');
-        setBoxes(boxes.map(b => ({ ...b, state: 'normal', text: '📦' })));
+        setBoxes(prev => prev.map(b => ({ ...b, state: 'normal', text: '📦' })));
         winBox.current = rnd(0, 2);
         
         for (let r = 0; r < 6; r++) {
@@ -62,18 +63,18 @@ function BoxGame({ handleGameEnd }) {
         }
         setMsg('どれだ！10秒以内に選べ！');
         setPlaying(true);
-        timerRef.current = setInterval(() => {
-            setTime(t => {
-                if (t <= 1) { clearInterval(timerRef.current); pickBox(rnd(0, 2)); return 0; }
-                return t - 1;
-            });
-        }, 1000);
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
     }, []);
 
     useEffect(() => { init(); return () => clearInterval(timerRef.current); }, [init]);
 
-    const pickBox = async (idx) => {
-        if (!playing) return;
+    // ▼ 安全なタイムアウト監視（すべてのゲームに適用）
+    useEffect(() => {
+        if (time === 0 && playing) pickBox(rnd(0, 2), true);
+    }, [time, playing]);
+
+    const pickBox = async (idx, isTimeout = false) => {
+        if (!isTimeout && !playing) return;
         setPlaying(false); clearInterval(timerRef.current);
         const win = idx === winBox.current;
         setBoxes(prev => prev.map((b, i) => {
@@ -117,12 +118,13 @@ function VendGame({ handleGameEnd }) {
     const [time, setTime] = useState(10);
     const [playing, setPlaying] = useState(false);
     const timerRef = useRef(null);
-    const VEND_WIN = [{ e: '💰', l: 'コイン大量発見！', p: 15 }, { e: '🥤', l: 'コーヒー缶！', p: 10 }, { e: '🎁', l: '謎のプレゼント！', p: 12 }];
-    const VEND_LOSE = [{ e: '❌', l: '空っぽ…', p: 0 }, { e: '🕷️', l: 'クモが出た！', p: 0 }, { e: '💨', l: '何も出てこない…', p: 0 }];
-    const VEND_STYLES = [['#2a3020', '#3d4a30', '#4a6a38'], ['#2a2010', '#3d3018', '#6a5020'], ['#102030', '#182838', '#204858']];
-
+    
     const init = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
         setResult(null); setPlaying(true); setTime(10);
+        const VEND_WIN = [{ e: '💰', l: 'コイン大量発見！', p: 15 }, { e: '🥤', l: 'コーヒー缶！', p: 10 }, { e: '🎁', l: '謎のプレゼント！', p: 12 }];
+        const VEND_LOSE = [{ e: '❌', l: '空っぽ…', p: 0 }, { e: '🕷️', l: 'クモが出た！', p: 0 }, { e: '💨', l: '何も出てこない…', p: 0 }];
+        const VEND_STYLES = [['#2a3020', '#3d4a30', '#4a6a38'], ['#2a2010', '#3d3018', '#6a5020'], ['#102030', '#182838', '#204858']];
         const winItem = VEND_WIN[rnd(0, VEND_WIN.length - 1)];
         const losers = [...VEND_LOSE].sort(() => Math.random() - 0.5).slice(0, 2);
         const choices = [winItem, ...losers].sort(() => Math.random() - 0.5);
@@ -131,19 +133,14 @@ function VendGame({ handleGameEnd }) {
         setMachines(choices.map((c, i) => ({
             id: i, data: c, style: VEND_STYLES[i], label: labels[i], state: 'normal', screen: '?'
         })));
-
-        timerRef.current = setInterval(() => {
-            setTime(t => {
-                if (t <= 1) { clearInterval(timerRef.current); pickVend(rnd(0, 2)); return 0; }
-                return t - 1;
-            });
-        }, 1000);
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
     }, []);
 
     useEffect(() => { init(); return () => clearInterval(timerRef.current); }, [init]);
+    useEffect(() => { if (time === 0 && playing) pickVend(rnd(0, 2), true); }, [time, playing]);
 
-    const pickVend = async (idx) => {
-        if (!playing) return;
+    const pickVend = async (idx, isTimeout = false) => {
+        if (!isTimeout && !playing) return;
         setPlaying(false); clearInterval(timerRef.current);
         
         for (const f of ['⚙️', '🔄', '⚡', '🔄']) {
@@ -193,20 +190,16 @@ function HLGame({ handleGameEnd }) {
     const timerRef = useRef(null);
 
     const init = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
         setResult(null); setPlaying(true); setTime(10); setStreak(0); setIdx(0); setNextCardVisible(false);
         let d = [];
         for (const s of SUITS) for (let i = 0; i < VALS.length; i++) d.push({ s, v: VALS[i], n: NUMS[i] });
         setDeck(d.sort(() => Math.random() - 0.5));
-        
-        timerRef.current = setInterval(() => {
-            setTime(t => {
-                if (t <= 1) { clearInterval(timerRef.current); endHL(); return 0; }
-                return t - 1;
-            });
-        }, 1000);
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
     }, []);
 
     useEffect(() => { init(); return () => clearInterval(timerRef.current); }, [init]);
+    useEffect(() => { if (time === 0 && playing) endHL(); }, [time, playing]);
 
     const endHL = () => {
         setPlaying(false); clearInterval(timerRef.current);
@@ -281,6 +274,8 @@ function SlotGame({ handleGameEnd }) {
     const offsets = useRef([0, 0, 0]);
 
     const init = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setResult(null); setPlaying(false); setTime(10); setReels([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
         offsets.current = [0, 0, 0];
         document.querySelectorAll('.reel-inner').forEach(el => el.style.transform = `translateY(0px)`);
@@ -288,19 +283,14 @@ function SlotGame({ handleGameEnd }) {
 
     const startSlot = () => {
         setPlaying(true); setResult(null); setReels([{ stop: false, res: null }, { stop: false, res: null }, { stop: false, res: null }]);
-        timerRef.current = setInterval(() => {
-            setTime(t => {
-                if (t <= 1) { clearInterval(timerRef.current); stopAll(); return 0; }
-                return t - 1;
-            });
-        }, 1000);
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
         animate();
     };
 
     const animate = () => {
-        if (!playing) return;
-        let anyMoved = false;
         setReels(prev => {
+            let anyMoved = false;
             let nextReels = [...prev];
             prev.forEach((r, i) => {
                 if (!r.stop) {
@@ -310,9 +300,9 @@ function SlotGame({ handleGameEnd }) {
                     anyMoved = true;
                 }
             });
+            if (anyMoved) rafRef.current = requestAnimationFrame(animate);
             return nextReels;
         });
-        if (anyMoved) rafRef.current = requestAnimationFrame(animate);
     };
 
     const stopReel = (i) => {
@@ -325,7 +315,10 @@ function SlotGame({ handleGameEnd }) {
         });
     };
 
-    const stopAll = () => { [0, 1, 2].forEach(stopReel); };
+    const stopAll = useCallback(() => { [0, 1, 2].forEach(stopReel); }, []);
+
+    useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
+    useEffect(() => { if (time === 0 && playing) stopAll(); }, [time, playing, stopAll]);
 
     useEffect(() => {
         if (playing && reels.every(r => r.stop)) {
@@ -340,8 +333,6 @@ function SlotGame({ handleGameEnd }) {
             }, 150);
         }
     }, [reels, playing, handleGameEnd]);
-
-    useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
         <>
@@ -381,33 +372,30 @@ function FlyGame({ handleGameEnd }) {
     const rafRef = useRef(null);
 
     const init = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setResult(null); setPlaying(false); setTime(10); setCaught(0);
     }, []);
 
     const start = () => {
         setPlaying(true); setCaught(0); setFlyPos({ x: 150, y: 150, vx: 5, vy: 5 });
-        timerRef.current = setInterval(() => {
-            setTime(t => {
-                if (t <= 1) { clearInterval(timerRef.current); end(false); return 0; }
-                return t - 1;
-            });
-        }, 1000);
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
         animate();
     };
 
     const animate = () => {
-        if (!playing) return;
         setFlyPos(p => {
             let { x, y, vx, vy } = p;
             vx += (Math.random() - 0.5) * 1.5; vy += (Math.random() - 0.5) * 1.5;
             x += vx; y += vy;
             if (x < 0 || x > 380) vx *= -1; if (y < 0 || y > 270) vy *= -1;
+            rafRef.current = requestAnimationFrame(animate);
             return { x, y, vx, vy };
         });
-        rafRef.current = requestAnimationFrame(animate);
     };
 
-    const end = (forceWin) => {
+    const end = useCallback((forceWin) => {
         setPlaying(false); clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current);
         setCaught(c => {
             const win = forceWin || c >= 3;
@@ -415,7 +403,10 @@ function FlyGame({ handleGameEnd }) {
             if (win || c > 0) handleGameEnd(win ? 15 : c * 3);
             return c;
         });
-    };
+    }, [handleGameEnd]);
+
+    useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
+    useEffect(() => { if (time === 0 && playing) end(false); }, [time, playing, end]);
 
     const catchFly = (e) => {
         e.stopPropagation();
@@ -427,8 +418,6 @@ function FlyGame({ handleGameEnd }) {
             return nc;
         });
     };
-
-    useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
         <>
@@ -460,17 +449,12 @@ function ScratchGame({ handleGameEnd }) {
     const count = revealed.filter(Boolean).length;
 
     const init = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
         setResult(null); setPlaying(true); setTime(10); setRevealed(Array(9).fill(false));
         const newGrid = Array.from({ length: 9 }, () => SC_SYMS[rnd(0, 5)]);
         if (Math.random() < 0.3) { const sym = SC_SYMS[rnd(0, 5)]; const pos = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(() => Math.random() - 0.5).slice(0, 3); pos.forEach(p => newGrid[p] = sym); }
         setGrid(newGrid);
-        
-        timerRef.current = setInterval(() => {
-            setTime(t => {
-                if (t <= 1) { clearInterval(timerRef.current); check(); return 0; }
-                return t - 1;
-            });
-        }, 1000);
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
     }, []);
 
     const check = useCallback(() => {
@@ -483,9 +467,12 @@ function ScratchGame({ handleGameEnd }) {
             const win = mx >= 2; const p = mx >= 3 ? 20 : mx >= 2 ? 5 : 0;
             setResult({ win, icon: win ? '🎊' : '💀', main: win ? `${ws}×${mx} 揃い！` : '揃わなかった…', sub: `削ったマス: ${rev.join(' ')}`, pts: p });
             if (win) handleGameEnd(p);
-            return prev; // State update shouldn't be here ideally, but fine for quick port
+            return prev;
         });
     }, [grid, handleGameEnd]);
+
+    useEffect(() => { init(); return () => clearInterval(timerRef.current); }, [init]);
+    useEffect(() => { if (time === 0 && playing) check(); }, [time, playing, check]);
 
     const scratch = (idx) => {
         if (!playing || revealed[idx] || count >= 3) return;
@@ -495,8 +482,6 @@ function ScratchGame({ handleGameEnd }) {
             return next;
         });
     };
-
-    useEffect(() => { init(); return () => clearInterval(timerRef.current); }, [init]);
 
     return (
         <>
@@ -535,23 +520,22 @@ function TrashGame({ handleGameEnd }) {
     const timerRef = useRef(null);
 
     const init = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
         setResult(null); setPlaying(true); setTime(10); setStats({ c: 0, f: 0, m: 0, danger: 0 });
         const shuffled = [...TRASH_DATA].sort(() => Math.random() - 0.5).slice(0, 5);
         setCans(shuffled.map((c, i) => ({ id: i, ...c, done: false })));
-        timerRef.current = setInterval(() => {
-            setTime(t => {
-                if (t <= 1) { clearInterval(timerRef.current); end('time'); return 0; }
-                return t - 1;
-            });
-        }, 1000);
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
     }, []);
 
-    const end = (reason, st = stats) => {
+    const end = useCallback((reason, st = stats) => {
         setPlaying(false); clearInterval(timerRef.current);
         const p = st.c * 2 + st.f * 3 + st.m * 4;
         if (reason === 'police') { setResult({ win: false, icon: '🚔', main: '警察に捕まった！', sub: '全て没収…', pts: 0 }); }
         else { const w = p > 0; setResult({ win: w, icon: w ? '🗑️' : '💀', main: w ? '収穫完了！' : '何も見つからなかった…', sub: `缶×${st.c} 食料×${st.f} 金×${st.m}`, pts: p }); if (w) handleGameEnd(p); }
-    };
+    }, [stats, handleGameEnd]);
+
+    useEffect(() => { init(); return () => clearInterval(timerRef.current); }, [init]);
+    useEffect(() => { if (time === 0 && playing) end('time'); }, [time, playing, end]);
 
     const search = async (idx) => {
         if (!playing || cans[idx].done) return;
@@ -567,8 +551,6 @@ function TrashGame({ handleGameEnd }) {
             return n;
         });
     };
-
-    useEffect(() => { init(); return () => clearInterval(timerRef.current); }, [init]);
 
     return (
         <>
@@ -608,21 +590,21 @@ function BegGame({ handleGameEnd }) {
     const [curNpc, setCurNpc] = useState(null);
     const timerRef = useRef(null);
     const rafRef = useRef(null);
+    const playingRef = useRef(false);
 
     const init = useCallback(() => {
-        setResult(null); setPlaying(true); setTime(10); setEarned(0); setCount(6); spawnNpc();
-        timerRef.current = setInterval(() => {
-            setTime(t => {
-                if (t <= 1) { clearInterval(timerRef.current); end(); return 0; }
-                return t - 1;
-            });
-        }, 1000);
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        setResult(null); setPlaying(true); playingRef.current = true; setTime(10); setEarned(0); setCount(6); 
+        spawnNpc();
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
     }, []);
 
     const spawnNpc = () => {
+        if (!playingRef.current) return;
         setCurNpc(NPCS[rnd(0, NPCS.length - 1)]);
         setNpcX(110);
-        cancelAnimationFrame(rafRef.current);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
         const tick = () => {
             setNpcX(x => {
                 if (x < -20) { setCount(c => c - 1); setTimeout(spawnNpc, 500); return -50; }
@@ -636,7 +618,8 @@ function BegGame({ handleGameEnd }) {
     const beg = () => {
         if (!playing || npcX < -10 || npcX > 100) return;
         const inZone = npcX >= 38 && npcX <= 62;
-        cancelAnimationFrame(rafRef.current); setNpcX(-50);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current); 
+        setNpcX(-50);
         if (inZone && curNpc) {
             setEarned(e => Math.max(0, e + curNpc.p));
         }
@@ -644,17 +627,20 @@ function BegGame({ handleGameEnd }) {
         if (count > 1) setTimeout(spawnNpc, 800); else setTimeout(end, 500);
     };
 
-    const end = () => {
-        setPlaying(false); clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current);
+    const end = useCallback(() => {
+        setPlaying(false); playingRef.current = false;
+        if (timerRef.current) clearInterval(timerRef.current); 
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setEarned(e => {
             const win = e >= 5;
             setResult({ win, icon: win ? '💰' : '😔', main: win ? '物乞い成功！' : '稼ぎが足りなかった…', sub: `獲得 ${e}P`, pts: win ? e : 0 });
             if (win) handleGameEnd(e);
             return e;
         });
-    };
+    }, [handleGameEnd]);
 
-    useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
+    useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current); playingRef.current = false; }; }, [init]);
+    useEffect(() => { if (time === 0 && playing) end(); }, [time, playing, end]);
 
     return (
         <>
@@ -684,23 +670,23 @@ function RainGame({ handleGameEnd }) {
     const [obs, setObs] = useState({ x: 120, active: false });
     const timerRef = useRef(null);
     const obsRef = useRef(null);
+    const playingRef = useRef(false);
 
     const init = useCallback(() => {
-        setResult(null); setPlaying(true); setTime(10); setWet(0); setObs({ x: 120, active: false });
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (obsRef.current) cancelAnimationFrame(obsRef.current);
+        setResult(null); setPlaying(true); playingRef.current = true; setTime(10); setWet(0); setObs({ x: 120, active: false });
         timerRef.current = setInterval(() => {
-            setTime(t => {
-                if (t <= 1) { clearInterval(timerRef.current); end(true); return 0; }
-                return t - 1;
-            });
+            setTime(t => Math.max(0, t - 1));
             setWet(w => Math.min(100, w + 1.5));
         }, 1000);
         setTimeout(spawnObs, 1500);
     }, []);
 
     const spawnObs = () => {
-        if (!playing) return;
+        if (!playingRef.current) return;
         setObs({ x: 120, active: true });
-        cancelAnimationFrame(obsRef.current);
+        if (obsRef.current) cancelAnimationFrame(obsRef.current);
         let x = 120;
         const tick = () => {
             x -= 4;
@@ -719,17 +705,20 @@ function RainGame({ handleGameEnd }) {
 
     const doJump = () => { if (!playing || jump) return; setJump(true); setTimeout(() => setJump(false), 500); };
 
-    const end = (win) => {
-        setPlaying(false); clearInterval(timerRef.current); cancelAnimationFrame(obsRef.current);
+    const end = useCallback((win) => {
+        setPlaying(false); playingRef.current = false;
+        if (timerRef.current) clearInterval(timerRef.current); 
+        if (obsRef.current) cancelAnimationFrame(obsRef.current);
         setWet(w => {
             const p = win ? Math.max(2, Math.floor(12 * (1 - w / 100))) : 0;
             setResult({ win, icon: win ? '🏕️' : '💧', main: win ? '雨宿り成功！' : 'びしょ濡れで動けない…', sub: `濡れ度 ${Math.floor(w)}%`, pts: p });
             if (p > 0) handleGameEnd(p);
             return w;
         });
-    };
+    }, [handleGameEnd]);
 
-    useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(obsRef.current); }; }, [init]);
+    useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(obsRef.current); playingRef.current = false; }; }, [init]);
+    useEffect(() => { if (time === 0 && playing) end(true); }, [time, playing, end]);
 
     return (
         <>
@@ -760,19 +749,17 @@ function KashiGame({ handleGameEnd }) {
     const rafRef = useRef(null);
 
     const init = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setResult(null); setPlaying(true); setTime(10); setScore(0); setRival(0); setPx(40); setRx(68); setBentos([]);
         timerRef.current = setInterval(() => {
-            setTime(t => {
-                if (t <= 1) { clearInterval(timerRef.current); end(); return 0; }
-                return t - 1;
-            });
+            setTime(t => Math.max(0, t - 1));
             setBentos(prev => [...prev, { id: Date.now(), x: rnd(10, 90), y: 0 }]);
         }, 1000);
         animate();
     }, []);
 
     const animate = () => {
-        if (!playing) return;
         setBentos(prev => {
             let next = prev.map(b => ({ ...b, y: b.y + 2.5 }));
             next = next.filter(b => {
@@ -783,15 +770,15 @@ function KashiGame({ handleGameEnd }) {
                 }
                 return !b.hit;
             });
+            rafRef.current = requestAnimationFrame(animate);
             return next;
         });
         setRx(cx => { const tgt = bentos[0]?.x || 50; return cx + (tgt > cx ? 1.5 : -1.5); });
-        rafRef.current = requestAnimationFrame(animate);
     };
 
     const move = (d) => { if (playing) setPx(x => Math.max(5, Math.min(95, x + d * 10))); };
 
-    const end = () => {
+    const end = useCallback(() => {
         setPlaying(false); clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current);
         setScore(s => {
             const win = s >= 3; const p = s * 3;
@@ -799,9 +786,10 @@ function KashiGame({ handleGameEnd }) {
             if (p > 0) handleGameEnd(p);
             return s;
         });
-    };
+    }, [handleGameEnd]);
 
     useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
+    useEffect(() => { if (time === 0 && playing) end(); }, [time, playing, end]);
 
     return (
         <>
@@ -831,15 +819,14 @@ function OxoGame({ handleGameEnd }) {
     const [result, setResult] = useState(null);
     const timerRef = useRef(null);
 
-    const init = useCallback(() => { setResult(null); setPhase('bet'); setBoard(Array(9).fill(null)); }, []);
+    const init = useCallback(() => { if (timerRef.current) clearInterval(timerRef.current); setResult(null); setPhase('bet'); setBoard(Array(9).fill(null)); }, []);
 
     const start = (b) => {
         if (gachaPoints < b) { alert('Pが足りない！'); return; }
-        useUserStore.getState().addGachaAssets(0, -b); // 賭け金没収
+        useUserStore.getState().addGachaAssets(0, -b);
         setBet(b); setPhase('play'); setTime(5);
-        timerRef.current = setInterval(() => {
-            setTime(t => { if (t <= 1) { clearInterval(timerRef.current); end('lose'); return 0; } return t - 1; });
-        }, 1000);
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
     };
 
     const checkWin = (brd) => {
@@ -860,18 +847,20 @@ function OxoGame({ handleGameEnd }) {
             if (avail.length === 0) { end('draw'); return; }
             nb[avail[rnd(0, avail.length - 1)]] = 'c'; setBoard(nb);
             res = checkWin(nb); if (res) { end(res); return; }
-            setTime(5); timerRef.current = setInterval(() => { setTime(t => { if (t <= 1) { clearInterval(timerRef.current); end('lose'); return 0; } return t - 1; }); }, 1000);
+            setTime(5); timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
         }, 500);
     };
 
-    const end = (res) => {
-        clearInterval(timerRef.current); setPhase('end');
+    const end = useCallback((res) => {
+        if (timerRef.current) clearInterval(timerRef.current); 
+        setPhase('end');
         if (res === 'p') { setResult({ win: true, icon: '○', main: '勝ち！', sub: `${bet}P→2倍`, pts: bet * 2 }); handleGameEnd(bet * 2); }
         else if (res === 'draw') { setResult({ win: false, icon: '🤝', main: '引き分け', sub: '返還', pts: bet }); handleGameEnd(bet); }
         else { setResult({ win: false, icon: '×', main: '負け…', sub: '没収', pts: 0 }); }
-    };
+    }, [bet, handleGameEnd]);
 
     useEffect(() => { return () => clearInterval(timerRef.current); }, []);
+    useEffect(() => { if (time === 0 && phase === 'play') end('lose'); }, [time, phase, end]);
 
     return (
         <>
@@ -904,11 +893,11 @@ function RatGame({ handleGameEnd }) {
     const rafRef = useRef(null);
 
     const init = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setResult(null); setPlaying(true); setTime(10); setHit(0); setStolen(0);
         setRats(Array.from({ length: 4 }, (_, i) => spawnRat(i)));
-        timerRef.current = setInterval(() => {
-            setTime(t => { if (t <= 1) { clearInterval(timerRef.current); end(); return 0; } return t - 1; });
-        }, 1000);
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
         animate();
     }, []);
 
@@ -920,7 +909,6 @@ function RatGame({ handleGameEnd }) {
     };
 
     const animate = () => {
-        if (!playing) return;
         setRats(prev => {
             let next = [...prev];
             next.forEach(r => {
@@ -929,9 +917,9 @@ function RatGame({ handleGameEnd }) {
                 if (dist < 20) { r.alive = false; setStolen(s => { useUserStore.getState().addGachaAssets(0, -2); return s + 2; }); setTimeout(() => setRats(rr => rr.map(x => x.id === r.id ? spawnRat(x.id) : x)), 1000); }
                 else { r.x += dx / dist * 1.5; r.y += dy / dist * 1.5; }
             });
+            rafRef.current = requestAnimationFrame(animate);
             return next;
         });
-        rafRef.current = requestAnimationFrame(animate);
     };
 
     const tapRat = (id) => {
@@ -941,7 +929,7 @@ function RatGame({ handleGameEnd }) {
         setTimeout(() => setRats(prev => prev.map(r => r.id === id ? spawnRat(id) : r)), 1000);
     };
 
-    const end = () => {
+    const end = useCallback(() => {
         setPlaying(false); clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current);
         setStolen(s => {
             setHit(h => {
@@ -952,9 +940,10 @@ function RatGame({ handleGameEnd }) {
             });
             return s;
         });
-    };
+    }, [handleGameEnd]);
 
     useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
+    useEffect(() => { if (time === 0 && playing) end(); }, [time, playing, end]);
 
     return (
         <>
@@ -982,29 +971,30 @@ function DrunkGame({ handleGameEnd }) {
     const drift = useRef(0);
 
     const init = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setResult(null); setPlaying(true); setTime(10); setBal(50); setKeep(0); drift.current = 0;
         timerRef.current = setInterval(() => {
-            setTime(t => { if (t <= 1) { clearInterval(timerRef.current); end(true); return 0; } return t - 1; });
+            setTime(t => Math.max(0, t - 1));
             setBal(b => { if (b >= 35 && b <= 65) setKeep(k => k + 1); return b; });
         }, 1000);
         animate();
     }, []);
 
     const animate = () => {
-        if (!playing) return;
         setBal(b => {
             drift.current += (Math.random() - 0.5) * 0.5;
             drift.current = Math.max(-1.5, Math.min(1.5, drift.current));
             const nb = b + drift.current;
             if (nb <= 0 || nb >= 100) { end(false); return nb; }
+            rafRef.current = requestAnimationFrame(animate);
             return nb;
         });
-        rafRef.current = requestAnimationFrame(animate);
     };
 
     const tap = (d) => { if (playing) { setBal(b => Math.max(0, Math.min(100, b - d * 15))); drift.current -= d; } };
 
-    const end = (survived) => {
+    const end = useCallback((survived) => {
         setPlaying(false); clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current);
         setKeep(k => {
             const win = survived && k >= 6; const p = Math.floor(k * 1.5);
@@ -1012,9 +1002,10 @@ function DrunkGame({ handleGameEnd }) {
             if (win) handleGameEnd(p);
             return k;
         });
-    };
+    }, [handleGameEnd]);
 
     useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
+    useEffect(() => { if (time === 0 && playing) end(true); }, [time, playing, end]);
 
     return (
         <>
@@ -1026,7 +1017,7 @@ function DrunkGame({ handleGameEnd }) {
                     <div style={{ position: 'absolute', left: '35%', width: '30%', height: '100%', background: 'rgba(78,133,57,0.3)' }}></div>
                     <div style={{ position: 'absolute', left: `${bal}%`, width: '10px', height: '100%', background: 'var(--gold)', transform: 'translateX(-5%)' }}></div>
                 </div>
-                {!result && <div style={{ display: 'flex', width: '100%', gap: '10px' }}><button style={{ flex: 1, padding: '20px' }} onClick={() => tap(-1)}>←左</button><button style={{ flex: 1, padding: '20px' }} onClick={() => tap(1)}>右→</button></div>}
+                {!result && <div style={{ display: 'flex', width: '100%', gap: '10px' }}><button className="btn-prim" style={{ flex: 1, padding: '20px' }} onClick={() => tap(-1)}>←左</button><button className="btn-prim" style={{ flex: 1, padding: '20px' }} onClick={() => tap(1)}>右→</button></div>}
                 {result && <ResultBox {...result} onRetry={init} />}
             </div>
         </>
@@ -1045,30 +1036,36 @@ function MusicGame({ handleGameEnd }) {
     const t0 = useRef(0);
 
     const init = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setResult(null); setPlaying(false); setTime(10); setScore(0); setNotes([]);
     }, []);
 
     const start = () => {
         setPlaying(true); setScore(0); t0.current = performance.now() / 1000;
         setNotes(SEQ.map((n, i) => ({ id: i, ...n, hit: false, missed: false, y: -20 })));
-        timerRef.current = setInterval(() => { setTime(t => { if (t <= 1) { clearInterval(timerRef.current); end(); return 0; } return t - 1; }); }, 1000);
+        if (timerRef.current) clearInterval(timerRef.current);
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
         animate();
     };
 
     const animate = () => {
-        if (!playing) return;
         const now = performance.now() / 1000 - t0.current;
-        setNotes(prev => prev.map(n => {
-            if (n.hit || n.missed) return n;
-            if (now >= n.t) {
-                const elapsed = now - n.t;
-                const y = -20 + (elapsed / 1.5) * 320;
-                if (y > 300) return { ...n, missed: true };
-                return { ...n, y };
-            }
-            return n;
-        }));
-        rafRef.current = requestAnimationFrame(animate);
+        setNotes(prev => {
+            const next = prev.map(n => {
+                if (n.hit || n.missed) return n;
+                if (now >= n.t) {
+                    const elapsed = now - n.t;
+                    const y = -20 + (elapsed / 1.5) * 320;
+                    if (y > 300) return { ...n, missed: true };
+                    return { ...n, y };
+                }
+                return n;
+            });
+            rafRef.current = requestAnimationFrame(animate);
+            return next;
+        });
     };
 
     const tap = (lane) => {
@@ -1084,7 +1081,7 @@ function MusicGame({ handleGameEnd }) {
         });
     };
 
-    const end = () => {
+    const end = useCallback(() => {
         setPlaying(false); clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current);
         setScore(s => {
             const win = s >= 60; const p = Math.round(s / 5);
@@ -1092,20 +1089,21 @@ function MusicGame({ handleGameEnd }) {
             if (win) handleGameEnd(p);
             return s;
         });
-    };
+    }, [handleGameEnd]);
 
     useEffect(() => { init(); return () => { clearInterval(timerRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
+    useEffect(() => { if (time === 0 && playing) end(); }, [time, playing, end]);
 
     return (
         <>
             <GameHeader title="🎸 路上ライブ" time={time} isTimerDanger={time <= 3} />
             <div className="game-body">
-                <div className="music-score-disp">スコア: {score}</div>
+                <div className="stat-box" style={{ color: 'var(--gold)' }}>スコア: {score}</div>
                 <div className="music-arena" style={{ width: '100%', height: '300px', background: '#080608', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ position: 'absolute', bottom: '60px', width: '100%', height: '3px', background: 'var(--amber)' }}></div>
                     {notes.map(n => (!n.hit && !n.missed && n.y >= 0 && <div key={n.id} style={{ position: 'absolute', left: `${n.l * 33.3}%`, top: `${n.y}px`, width: '33%', textAlign: 'center', fontSize: '2rem' }}>{['🎸', '🥁', '🎹'][n.l]}</div>))}
                     <div style={{ position: 'absolute', bottom: 0, display: 'flex', width: '100%', height: '60px' }}>
-                        {[0, 1, 2].map(l => <button key={l} style={{ flex: 1 }} onClick={() => tap(l)}>{['🎸', '🥁', '🎹'][l]}</button>)}
+                        {[0, 1, 2].map(l => <button className="btn-prim" key={l} style={{ flex: 1, margin: '2px', padding: 0 }} onClick={() => tap(l)}>{['🎸', '🥁', '🎹'][l]}</button>)}
                     </div>
                 </div>
                 {!playing && !result && <button className="btn-prim" onClick={start}>スタート</button>}
@@ -1126,10 +1124,24 @@ function NegoGame({ handleGameEnd }) {
     const timerRef = useRef(null);
 
     const init = useCallback(() => {
+        if (timerRef.current) clearInterval(timerRef.current);
         setResult(null); setPlaying(true); setTime(10); setTotal(0); setIdx(0);
         setItems([...ITEMS].sort(() => Math.random() - 0.5));
-        timerRef.current = setInterval(() => { setTime(t => { if (t <= 1) { clearInterval(timerRef.current); end(); return 0; } return t - 1; }); }, 1000);
+        timerRef.current = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
     }, []);
+
+    const end = useCallback(() => {
+        setPlaying(false); clearInterval(timerRef.current);
+        setTotal(t => {
+            const win = t >= 15;
+            setResult({ win, icon: win ? '💰' : '😔', main: win ? '交渉成功！' : '失敗…', sub: `合計${t}P`, pts: win ? t : 0 });
+            if (win) handleGameEnd(t);
+            return t;
+        });
+    }, [handleGameEnd]);
+
+    useEffect(() => { init(); return () => clearInterval(timerRef.current); }, [init]);
+    useEffect(() => { if (time === 0 && playing) end(); }, [time, playing, end]);
 
     const offer = (val) => {
         if (!playing) return;
@@ -1139,18 +1151,6 @@ function NegoGame({ handleGameEnd }) {
         if (idx >= 2) setTimeout(end, 500);
         else setIdx(i => i + 1);
     };
-
-    const end = () => {
-        setPlaying(false); clearInterval(timerRef.current);
-        setTotal(t => {
-            const win = t >= 15;
-            setResult({ win, icon: win ? '💰' : '😔', main: win ? '交渉成功！' : '失敗…', sub: `合計${t}P`, pts: win ? t : 0 });
-            if (win) handleGameEnd(t);
-            return t;
-        });
-    };
-
-    useEffect(() => { init(); return () => clearInterval(timerRef.current); }, [init]);
 
     const cur = items[idx];
     const offers = cur ? [Math.floor(cur.m * 0.4), Math.floor(cur.m * 0.8), Math.floor(cur.m * 1.2)].sort(() => Math.random() - 0.5) : [];
@@ -1164,7 +1164,7 @@ function NegoGame({ handleGameEnd }) {
                     <div style={{ textAlign: 'center', margin: '20px 0' }}>
                         <div style={{ fontSize: '3rem' }}>{cur.e}</div><div>{cur.n}</div>
                         <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                            {offers.map((o, i) => <button key={i} className="btn-prim" onClick={() => offer(o)}>{o}Pで売る</button>)}
+                            {offers.map((o, i) => <button key={i} className="btn-prim" style={{ padding: '10px' }} onClick={() => offer(o)}>{o}Pで売る</button>)}
                         </div>
                     </div>
                 )}
@@ -1227,15 +1227,15 @@ export default function MiniGameContainer() {
                 
                 /* Box */ .boxes-row { display:flex; gap:1rem; justify-content:center; } .box { width:100px; height:110px; background:linear-gradient(145deg,#9b7520,#5c4010); border:3px solid #7a5a18; border-radius:8px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:2.6rem; position:relative; transition:transform .1s; } .box.shake { transform:translateX(5px); } .box.win-box { background:linear-gradient(145deg,#2a5a18,#163a0a); border-color:#4a8a28; } .box.lose-box { background:linear-gradient(145deg,#5a1818,#3a0a0a); border-color:#8a2828; } .box.dim { opacity:0.4; pointer-events:none; } .box-num { position:absolute; bottom:6px; font-size:.75rem; color:rgba(255,255,255,.4); }
                 /* Vend */ .vending-row { display:flex; gap:.8rem; justify-content:center; } .vending { width:110px; height:180px; border-radius:8px 8px 4px 4px; cursor:pointer; display:flex; flex-direction:column; align-items:center; padding:.5rem .4rem; border:3px solid; transition:transform .1s; } .vending.dim { opacity:0.4; } .v-screen { width:85%; height:62px; background:#080f08; border-radius:5px; display:flex; align-items:center; justify-content:center; font-size:1.9rem; margin-bottom:.35rem; } .v-btns { display:grid; grid-template-columns:repeat(3,1fr); gap:2px; width:85%; } .v-btn-dot { height:12px; border-radius:2px; } .v-slot { width:55%; height:16px; background:#050505; border-radius:2px; margin-top:auto; display:flex; align-items:center; justify-content:center; font-size:.6rem; } .v-label { font-size:.6rem; color:rgba(255,255,255,.35); margin-top:3px; }
-                /* HL */ .cards-row { display:flex; gap:1.2rem; align-items:center; justify-content:center; } .playing-card { width:118px; height:168px; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; } .playing-card.face-up { background:#f2eada; border:3px solid #c4a870; color:#1a0a0a; } .playing-card.face-down { background:#1a2a5a; border:3px solid #2a3a6a; } .card-red { color:#cc2222 !important; } .card-val { font-size:3rem; font-weight:900; } .card-suit { font-size:1.8rem; } .card-corner { position:absolute; font-size:.8rem; font-weight:900; } .card-corner.tl { top:7px; left:9px; } .card-corner.br { bottom:7px; right:9px; transform:rotate(180deg); } .hl-btns { display:flex; gap:.8rem; } .btn-high { background:#2a5a1a; padding:.7rem 1.5rem; border-radius:12px; color:#a0e080; } .btn-low { background:#5a1a1a; padding:.7rem 1.5rem; border-radius:12px; color:#e08080; }
-                /* Slot */ .slot-machine { background:#2a1805; padding:1rem; border-radius:18px; width:100%; border:4px solid #5a3a12; } .reels-wrap { display:flex; gap:.5rem; justify-content:center; margin-bottom:.8rem; } .reel-window { width:84px; height:220px; overflow:hidden; position:relative; background:#060402; border:3px solid #3a2208; } .reel-inner { position:absolute; width:100%; } .reel-sym { height:80px; display:flex; align-items:center; justify-content:center; font-size:2.4rem; } .stop-btn { width:84px; background:#5a2808; color:#e0a070; padding:.45rem; border-radius:8px; cursor:pointer; } .stop-btn.stopped { background:#1a3a08; color:#90c060; } .slot-start { width:100%; background:#c97b2a; padding:.8rem; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer; }
+                /* HL */ .cards-row { display:flex; gap:1.2rem; align-items:center; justify-content:center; } .playing-card { width:118px; height:168px; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; } .playing-card.face-up { background:#f2eada; border:3px solid #c4a870; color:#1a0a0a; } .playing-card.face-down { background:#1a2a5a; border:3px solid #2a3a6a; } .card-red { color:#cc2222 !important; } .card-val { font-size:3rem; font-weight:900; } .card-suit { font-size:1.8rem; } .card-corner { position:absolute; font-size:.8rem; font-weight:900; } .card-corner.tl { top:7px; left:9px; } .card-corner.br { bottom:7px; right:9px; transform:rotate(180deg); } .hl-btns { display:flex; gap:.8rem; } .btn-high { background:#2a5a1a; padding:.7rem 1.5rem; border-radius:12px; color:#a0e080; border:none; font-weight:bold; cursor:pointer;} .btn-low { background:#5a1a1a; padding:.7rem 1.5rem; border-radius:12px; color:#e08080; border:none; font-weight:bold; cursor:pointer;}
+                /* Slot */ .slot-machine { background:#2a1805; padding:1rem; border-radius:18px; width:100%; border:4px solid #5a3a12; } .reels-wrap { display:flex; gap:.5rem; justify-content:center; margin-bottom:.8rem; } .reel-window { width:84px; height:220px; overflow:hidden; position:relative; background:#060402; border:3px solid #3a2208; } .reel-inner { position:absolute; width:100%; } .reel-sym { height:80px; display:flex; align-items:center; justify-content:center; font-size:2.4rem; } .stop-btn { width:84px; background:#5a2808; color:#e0a070; padding:.45rem; border-radius:8px; cursor:pointer; border:none; font-weight:bold;} .stop-btn.stopped { background:#1a3a08; color:#90c060; } .slot-start { width:100%; background:#c97b2a; padding:.8rem; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer; border:none;}
                 /* Fly */ .fly-arena { width:100%; height:310px; background:#1a1208; border-radius:14px; position:relative; overflow:hidden; } .fly-start-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; } .big-fly { font-size:4rem; cursor:pointer; } .fly { position:absolute; font-size:2.1rem; cursor:pointer; user-select:none; } .fly-prog-dot { width:18px; height:18px; border-radius:50%; background:#241a0e; display:flex; align-items:center; justify-content:center; font-size:.7rem; } .fly-prog-dot.caught { background:#4e8539; } .fly-timer-box { font-size:2.5rem; color:#e8b84b; }
                 /* Scratch */ .scratch-grid { display:grid; grid-template-columns:repeat(3,84px); gap:.45rem; } .scratch-cell { width:84px; height:84px; position:relative; border-radius:8px; overflow:hidden; border:2px solid #3d2e1a; display:flex; align-items:center; justify-content:center; font-size:2.1rem; }
-                /* Trash */ .gc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.65rem; width:100%; } .gc-can { height:85px; background:#2a2018; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; cursor:pointer; } .gc-can.done { opacity:0.4; pointer-events:none; } .gc-can.danger-can { background:#3a1808; border-color:#6a2010; } .gc-pop { position:absolute; top:-5px; right:-5px; font-size:.7rem; padding:2px 5px; border-radius:6px; color:#fff; } .danger-track { width:100%; height:13px; background:#2e2213; border-radius:7px; } .danger-fill { height:100%; background:linear-gradient(90deg,#4e8539,#c97b2a,#b52e1e); border-radius:7px; transition:width 0.3s; }
+                /* Trash */ .gc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.65rem; width:100%; } .gc-can { height:85px; background:#2a2018; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; cursor:pointer; } .gc-can.done { opacity:0.4; pointer-events:none; } .gc-can.danger-can { background:#3a1808; border-color:#6a2010; } .gc-pop { position:absolute; top:-5px; right:-5px; font-size:.7rem; padding:2px 5px; border-radius:6px; color:#fff; } .danger-track { width:100%; height:13px; background:#2e2213; border-radius:7px; overflow:hidden;} .danger-fill { height:100%; background:linear-gradient(90deg,#4e8539,#c97b2a,#b52e1e); border-radius:7px; transition:width 0.3s; }
                 /* Status Row */ .status-row { display:flex; gap:.8rem; justify-content:center; } .stat-box { background:#241a0e; border-radius:8px; padding:.35rem .9rem; text-align:center; font-size:.85rem; } .stat-label { font-size:.6rem; color:#7a6a4a; display:block; } .stat-val { font-weight:700; color:#f0e8d0; }
                 /* Beg */ .beg-street { width:100%; height:120px; background:#1a1208; position:relative; border-radius:12px; overflow:hidden; } .beg-road { position:absolute; bottom:0; width:100%; height:50px; background:#242018; } .beg-zone { position:absolute; bottom:0; left:38%; width:24%; height:50px; background:rgba(232,184,75,0.2); } .beg-char { position:absolute; bottom:5px; left:50%; transform:translateX(-50%); font-size:1.7rem; } .beg-npc { position:absolute; bottom:6px; font-size:1.7rem; }
-                /* Rain */ .rain-arena { width:100%; height:180px; background:#0d1a2a; position:relative; border-radius:12px; overflow:hidden; } .rain-runner { position:absolute; left:18%; font-size:1.9rem; transition:bottom 0.2s; } .obs-el { position:absolute; bottom:24px; font-size:1.7rem; } .jump-btn-big { background:#2a5a8a; color:#a0d0f0; padding:.8rem 2.5rem; border-radius:14px; font-size:1rem; font-weight:bold; cursor:pointer; } .wet-track { width:100%; height:13px; background:#2e2213; border-radius:7px; } .wet-fill { height:100%; background:#3a7aa0; border-radius:7px; transition:width 0.3s; }
-                /* Kashi */ .kashi-arena { width:100%; height:280px; background:#1a1208; position:relative; border-radius:14px; overflow:hidden; } .kashi-player, .kashi-npc { position:absolute; bottom:10px; font-size:1.9rem; } .bento-el { position:absolute; font-size:1.7rem; } .kashi-btns { display:flex; gap:10px; } .kashi-mv-btn { background:#241a0e; padding:10px 30px; font-size:1.5rem; border-radius:12px; color:#fff; cursor:pointer; }
+                /* Rain */ .rain-arena { width:100%; height:180px; background:#0d1a2a; position:relative; border-radius:12px; overflow:hidden; } .rain-runner { position:absolute; left:18%; font-size:1.9rem; transition:bottom 0.2s; } .obs-el { position:absolute; bottom:24px; font-size:1.7rem; } .jump-btn-big { background:#2a5a8a; color:#a0d0f0; padding:.8rem 2.5rem; border-radius:14px; font-size:1rem; font-weight:bold; cursor:pointer; border:none;} .wet-track { width:100%; height:13px; background:#2e2213; border-radius:7px; overflow:hidden;} .wet-fill { height:100%; background:#3a7aa0; border-radius:7px; transition:width 0.3s; }
+                /* Kashi */ .kashi-arena { width:100%; height:280px; background:#1a1208; position:relative; border-radius:14px; overflow:hidden; } .kashi-player, .kashi-npc { position:absolute; bottom:10px; font-size:1.9rem; } .bento-el { position:absolute; font-size:1.7rem; } .kashi-btns { display:flex; gap:10px; } .kashi-mv-btn { background:#241a0e; padding:10px 30px; font-size:1.5rem; border-radius:12px; color:#fff; cursor:pointer; border:none;}
             `}</style>
             {renderGame()}
         </div>
