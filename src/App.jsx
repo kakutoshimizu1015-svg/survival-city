@@ -12,12 +12,13 @@ import { TutorialOverlay } from './components/overlays/TutorialOverlay';
 import { SandboxGuide } from './components/overlays/SandboxGuide';
 import GachaScreen from './features/GachaScreen';
 
-// ▼ 新規追加
-import MiniGameMenu from './features/minigames/MiniGameMenu';
-import MiniGameContainer from './features/minigames/MiniGameContainer';
+// ▼ 追加: コピーして作成した統合版ミニゲームコンポーネントをインポート
+import MinigamesApp from './MinigamesApp';
 
 function App() {
+  // ▼ チュートリアル等のオーバーレイ状態を取得
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode, rulesActive, tutorialActive, settingsActive } = useGameStore();
+  
   const { isLoggedIn, uid, playerName, wins, totalEarnedP, totalWins, gachaCans, gachaPoints } = useUserStore();
   const [localName, setLocalName] = useState(playerName);
 
@@ -52,7 +53,7 @@ function App() {
 
   return (
     <>
-      {/* ▼ 修正: gamePhase === 'minigame_menu' を条件から外し、ミニゲーム画面では非表示にする */}
+      {/* ▼ オーバーレイ画面が開いていない時だけヘッダーを表示する条件（ミニゲーム中は非表示） */}
       {(gamePhase === 'title' || gamePhase === 'mode_select') && isLoggedIn && !rulesActive && !tutorialActive && !settingsActive && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%',
@@ -68,7 +69,8 @@ function App() {
         </div>
       )}
 
-      {gamePhase !== 'title' && gamePhase !== 'gacha' && gamePhase !== 'minigame_menu' && gamePhase !== 'minigame_playing' && (
+      {/* ▼ ミニゲーム中(minigames)は設定ボタンを隠す */}
+      {gamePhase !== 'title' && gamePhase !== 'gacha' && gamePhase !== 'minigames' && (
         <button id="settings-btn" onClick={() => useGameStore.setState({ settingsActive: true })}>⚙️</button>
       )}
 
@@ -122,8 +124,8 @@ function App() {
           <h2>モード選択</h2>
           <button className="btn-large btn-brown" onClick={() => useGameStore.setState({ gamePhase: 'setup_offline' })}>🎮 オフライン</button>
           <button className="btn-large btn-blue" onClick={() => useGameStore.setState({ gamePhase: 'online_lobby' })}>🌐 オンライン</button>
-          {/* ▼ 追加: ミニゲームモード */}
-          <button className="btn-large" style={{ background: '#27ae60', color: '#fff' }} onClick={() => useGameStore.setState({ gamePhase: 'minigame_menu' })}>🎲 ミニゲームで稼ぐ</button>
+          {/* ▼ 追加: ミニゲームモードへ遷移するボタン */}
+          <button className="btn-large" style={{ background: '#27ae60', color: '#fff' }} onClick={() => useGameStore.setState({ gamePhase: 'minigames' })}>🎲 ミニゲームで稼ぐ</button>
           <button className="btn-large" style={{ background: '#e67e22', color: '#fff' }} onClick={() => useGameStore.setState({ gamePhase: 'gacha' })}>🔥 ガチャ屋台へ行く</button>
         </div>
       )}
@@ -133,9 +135,8 @@ function App() {
       {gamePhase === 'playing' && <GameMain />}
       {gamePhase === 'gacha' && <GachaScreen />}
       
-      {/* ▼ 追加: ミニゲームモードのルーティング */}
-      {gamePhase === 'minigame_menu' && <MiniGameMenu />}
-      {gamePhase === 'minigame_playing' && <MiniGameContainer />}
+      {/* ▼ 追加: ミニゲームモードのコンポーネントを描画 */}
+      {gamePhase === 'minigames' && <MinigamesApp />}
 
       <SettingsAndRules />
       <TutorialOverlay />
