@@ -1,14 +1,6 @@
 // =========================================================
-// ▼ 基本キャラクター画像のインポート（元ヤン以外）
+// ▼ 基本キャラクター画像のインポート（スキン未対応のキャラ）
 // =========================================================
-import athleteFront from '../assets/images/athlete_front.png';
-import athleteBack from '../assets/images/athlete_back.png';
-import salesFront from '../assets/images/sales_front.png';
-import salesBack from '../assets/images/sales_back.png';
-import survivorFront from '../assets/images/survivor_front.png';
-import survivorBack from '../assets/images/survivor_back.png';
-import hackerFront from '../assets/images/hacker_front.png';
-import hackerBack from '../assets/images/hacker_back.png';
 import musicianFront from '../assets/images/musician_front.png';
 import musicianBack from '../assets/images/musician_back.png';
 import doctorFront from '../assets/images/doctor_front.png';
@@ -19,7 +11,7 @@ import detectiveFront from '../assets/images/detective_front.png';
 import detectiveBack from '../assets/images/detective_back.png';
 
 // =========================================================
-// ▼ 元ヤン スキン画像群のインポート（新フォルダ構造）
+// ▼ 元ヤン スキン画像群
 // =========================================================
 import yankee_N_default from '../assets/images/skins/yankee/N_default.png';
 import yankee_N_sweat_white from '../assets/images/skins/yankee/N_sweat_white.png';
@@ -39,6 +31,65 @@ import yankee_UR_Demoninaspecialattackuniform from '../assets/images/skins/yanke
 import yankee_UR_Demoninaspecialattackuniform_bloodsoaked from '../assets/images/skins/yankee/UR_Demoninaspecialattackuniform_bloodsoaked.png';
 
 // =========================================================
+// ▼ 元アスリート スキン画像群
+// =========================================================
+import athlete_N_default from '../assets/images/skins/athlete/N_default.png';
+import athlete_N_jersey_red from '../assets/images/skins/athlete/N_jersey_red.png';
+import athlete_N_jersey_blue from '../assets/images/skins/athlete/N_jersey_blue.png';
+import athlete_R_runningwear from '../assets/images/skins/athlete/R_runningwear.png';
+import athlete_R_morerunningwear from '../assets/images/skins/athlete/R_morerunningwear.png';
+import athlete_R_Patchworkbenchcoat from '../assets/images/skins/athlete/R_Patchworkbenchcoat.png';
+import athlete_SR_CanMarathonRunner from '../assets/images/skins/athlete/SR_CanMarathonRunner.png';
+import athlete_SR_can_pompadour from '../assets/images/skins/athlete/SR_can_pompadour.png';
+import athlete_SSR_GloriousGoldMedalis from '../assets/images/skins/athlete/SSR_Glorious Gold Medalis.png';
+import athlete_SSR_proleaguestar from '../assets/images/skins/athlete/SSR_pro league star.png';
+import athlete_UR_LegendaryDirector from '../assets/images/skins/athlete/UR_Legendary Director.png';
+
+// =========================================================
+// ▼ サバイバー スキン画像群
+// =========================================================
+import survivor_N_default from '../assets/images/skins/survivor/N_default.png';
+import survivor_N_Fadedcamouflageuniform from '../assets/images/skins/survivor/N_Faded camouflage uniform.png';
+import survivor_N_stainedkhakishirt from '../assets/images/skins/survivor/N_stained khaki shirt.png';
+import survivor_R_tatteredponcho from '../assets/images/skins/survivor/R_tattered poncho.png';
+import survivor_R_Patchworktacticalvest from '../assets/images/skins/survivor/R_Patchwork tactical vest.png';
+import survivor_SR_Garbagebagghilliesuit from '../assets/images/skins/survivor/SR_Garbage bag ghillie suit.png';
+import survivor_SR_WarriorinScrapArmor from '../assets/images/skins/survivor/SR_Warrior in Scrap Armor.png';
+import survivor_SSR_BattlehardenedSpecialForcesCommander from '../assets/images/skins/survivor/SSR_Battlehardened Special Forces Commander.png';
+import survivor_SSR_Legendarymercenary from '../assets/images/skins/survivor/SSR_Legendary mercenary.png';
+
+// =========================================================
+// ▼ 元営業マン スキン画像群
+// =========================================================
+import sales_N_default from '../assets/images/skins/sales/N_default.png';
+import sales_N_Wornoutgraysuit from '../assets/images/skins/sales/N_Wornout gray suit.png';
+import sales_N_Sweatstainedsummersuit from '../assets/images/skins/sales/N_Sweatstained summer suit.png';
+import sales_R_DuctTapeRepairAttacheCase from '../assets/images/skins/sales/R_Duct Tape Repair Attache Case.png';
+import sales_R_Torntrenchcoat from '../assets/images/skins/sales/R_Torn trench coat.png';
+import sales_SR_Cardboardarmor from '../assets/images/skins/sales/SR_Cardboard armor.png';
+import sales_SR_TheFlyerMagician from '../assets/images/skins/sales/SR_The Flyer Magician.png';
+import sales_SSR_TopeliteCEO from '../assets/images/skins/sales/SSR_Top elite CEO.png';
+import sales_SSR_legendarytopsales from '../assets/images/skins/sales/SSR_legendary top sales.png';
+import sales_UR_TheWolfofWallStreet from '../assets/images/skins/sales/UR_The Wolf of Wall Street.png';
+import sales_UR_kingsman from '../assets/images/skins/sales/UR_kingsman.png';
+
+// =========================================================
+// ▼ 元ハッカー スキン画像群
+// =========================================================
+import hacker_N_default from '../assets/images/skins/hacker/N_default.png';
+import hacker_N_Blackhoodieinadifferentcolor from '../assets/images/skins/hacker/N_Black hoodie in a different color.png';
+import hacker_N_Grayknitsweaterinadifferentcolor from '../assets/images/skins/hacker/N_Gray knit sweater in a different color.png';
+import hacker_R_LANcablewinding from '../assets/images/skins/hacker/R_LAN cable winding.png';
+import hacker_R_Asmartphonewithacrackedscreen from '../assets/images/skins/hacker/R_A smartphone with a cracked screen.png';
+import hacker_SR_JunkMotherboardArmor from '../assets/images/skins/hacker/SR_Junk Motherboard Armor.png';
+import hacker_SR_keyboardshield from '../assets/images/skins/hacker/SR_keyboard shield.png';
+import hacker_SSR_yanggeniuscyberagent from '../assets/images/skins/hacker/SSR_yanggeniuscyberagent.png';
+import hacker_SSR_Anonymous from '../assets/images/skins/hacker/SSR_Anonymous.png';
+import hacker_SSR_revengeAnonymous from '../assets/images/skins/hacker/SSR_revengeAnonymous.png';
+import hacker_UR_CEOofaglobalITcompany from '../assets/images/skins/hacker/UR_CEO of a global IT company.png';
+import hacker_UR_geniuscyberagent from '../assets/images/skins/hacker/UR_genius cyber agent.png';
+
+// =========================================================
 // ▼ NPC画像のインポート
 // =========================================================
 import policeImg from '../assets/images/NPC/police.png';
@@ -49,17 +100,20 @@ import loansharkImg from '../assets/images/NPC/loanshark.png';
 import friendImg from '../assets/images/NPC/friend.png';
 import animalImg from '../assets/images/NPC/animal.png';
 
-// キャラクターキーと基本画像のマッピング（_backは徐々に廃止予定）
+
+// =========================================================
+// ▼ キャラクターキーと基本画像のマッピング
+// =========================================================
 export const charImages = {
-    athlete:  { front: athleteFront,  back: athleteBack },
-    sales:    { front: salesFront,    back: salesBack },
-    survivor: { front: survivorFront, back: survivorBack },
-    yankee:   { front: yankee_N_default, back: yankee_N_default }, // ▼ デフォルトを新パスに置き換え
-    hacker:   { front: hackerFront,   back: hackerBack },
-    musician: { front: musicianFront, back: musicianBack },
-    doctor:   { front: doctorFront,   back: doctorBack },
-    gambler:  { front: gamblerFront,  back: gamblerBack },
-    detective:{ front: detectiveFront,back: detectiveBack },
+    athlete:  { front: athlete_N_default, back: athlete_N_default },
+    sales:    { front: sales_N_default,   back: sales_N_default },
+    survivor: { front: survivor_N_default,back: survivor_N_default },
+    yankee:   { front: yankee_N_default,  back: yankee_N_default },
+    hacker:   { front: hacker_N_default,  back: hacker_N_default },
+    musician: { front: musicianFront,     back: musicianBack },
+    doctor:   { front: doctorFront,       back: doctorBack },
+    gambler:  { front: gamblerFront,      back: gamblerBack },
+    detective:{ front: detectiveFront,    back: detectiveBack },
 };
 
 // =========================================================
@@ -67,30 +121,75 @@ export const charImages = {
 // =========================================================
 export const charSkins = {
     yankee: [
-        // N (Normal)
         { id: "yankee_default", charKey: "yankee", name: "元ヤン（デフォルト）", rarity: "N", front: yankee_N_default, pieceColor: "#0A3070", ring: "#64B5F6", desc: "ツッパリ路上デビューのデフォルト姿。" },
         { id: "yankee_sweat_white", charKey: "yankee", name: "色違いの白スウェット", rarity: "N", front: yankee_N_sweat_white, pieceColor: "#D0D0D0", ring: "#9E9E9E", desc: "膝が抜け、泥がはねた白いスウェット上下。" },
         { id: "yankee_tokkou_red", charKey: "yankee", name: "色違いの赤特攻服", rarity: "N", front: yankee_N_tokkou_red, pieceColor: "#8B0000", ring: "#EF5350", desc: "汚れで黒ずんだ赤い特攻服。" },
         { id: "yankee_tokkou_red_nomegane", charKey: "yankee", name: "色違いの赤特攻服（眼鏡なし）", rarity: "N", front: yankee_N_tokkou_red_meganenashi, pieceColor: "#8B0000", ring: "#EF5350", desc: "汚れで黒ずんだ赤い特攻服の眼鏡なしバージョン。" },
-        // R (Rare)
         { id: "yankee_biker", charKey: "yankee", name: "バイカー", rarity: "R", front: yankee_R_biker, pieceColor: "#5C0000", ring: "#EF5350", desc: "お金がないがバイクに乗りたい！夜露死苦。" },
         { id: "yankee_chain", charKey: "yankee", name: "チェーン巻きジャージ", rarity: "R", front: yankee_R_chain, pieceColor: "#2C3E50", ring: "#7F8C8D", desc: "威嚇のために拾った自転車のチェーンを巻いている。" },
         { id: "yankee_jacket_ryu", charKey: "yankee", name: "破れたスカジャン", rarity: "R", front: yankee_R_Jacket_ryu, pieceColor: "#1A252F", ring: "#3498DB", desc: "虎の刺繍が半分ほつれて見えなくなったスカジャン。" },
-        // SR (Super Rare)
         { id: "yankee_can_pompadour", charKey: "yankee", name: "空き缶リーゼント", rarity: "SR", front: yankee_SR_can_pompadour, pieceColor: "#7F8C8D", ring: "#BDC3C7", desc: "潰した空き缶を髪に編み込んでリーゼントを維持している姿。" },
         { id: "yankee_cardboard", charKey: "yankee", name: "ダンボール将軍", rarity: "SR", front: yankee_SR_cardboard, pieceColor: "#D35400", ring: "#F39C12", desc: "ダンボールで武装！ツッパリの肩パッドを再現した姿。" },
         { id: "yankee_cardboard_scratch", charKey: "yankee", name: "傷ついたダンボール将軍", rarity: "SR", front: yankee_SR_cardboard_scratch, pieceColor: "#A04000", ring: "#E67E22", desc: "ダンボールで武装！しかしぼろぼろに、ツッパリの肩パッドを再現した姿。" },
         { id: "yankee_intellectual", charKey: "yankee", name: "別世界線のインテリヤンキー", rarity: "SR", front: yankee_SR_IntellectualPresident, pieceColor: "#1abc9c", ring: "#16a085", desc: "頭脳を高め成り上がった姿！拳でなく脳。" },
-        // SSR (Double Super Rare)
         { id: "yankee_boss", charKey: "yankee", name: "ヤクザの組長", rarity: "SSR", front: yankee_SSR_boss, pieceColor: "#000000", ring: "#FFD700", desc: "ホームレスにならなければこうなっていたかも、、、" },
         { id: "yankee_legendary_president", charKey: "yankee", name: "伝説の総長", rarity: "SSR", front: yankee_SSR_legendarypresident, pieceColor: "#FFFFFF", ring: "#FFD700", desc: "高級ヤクザ顔負けの白スーツに和柄のシャツ。" },
         { id: "yankee_legendary_young", charKey: "yankee", name: "若き日の伝説の総長", rarity: "SSR", front: yankee_SSR_Thelegendaryyoungleader, pieceColor: "#FDF5E6", ring: "#F39C12", desc: "高級ヤクザ顔負けの白スーツに和柄のシャツ。" },
-        // UR (Ultimate Rare)
         { id: "yankee_ur_demon", charKey: "yankee", name: "特攻服の鬼", rarity: "UR", front: yankee_UR_Demoninaspecialattackuniform, pieceColor: "#1A0033", ring: "#D500F9", desc: "刺繍が輝く完全無欠の豪華な特攻服。" },
         { id: "yankee_ur_demon_blood", charKey: "yankee", name: "血濡れ特攻服の鬼", rarity: "UR", front: yankee_UR_Demoninaspecialattackuniform_bloodsoaked, pieceColor: "#330000", ring: "#FF0044", desc: "返り血を浴び続けた刺繍が輝く完全無欠の豪華な特攻服。" }
     ],
-    // 他キャラクターの拡張枠
-    hacker: [], athlete: [], sales: [], survivor: [], musician: [], doctor: [], gambler: [], detective: []
+    athlete: [
+        { id: "athlete_default", charKey: "athlete", name: "元アスリート（デフォルト）", rarity: "N", front: athlete_N_default, pieceColor: "#e74c3c", ring: "#c0392b", desc: "現役時代を彷彿とさせる通常のウェア。" },
+        { id: "athlete_jersey_red", charKey: "athlete", name: "色褪せた赤ジャージ", rarity: "N", front: athlete_N_jersey_red, pieceColor: "#c0392b", ring: "#e74c3c", desc: "膝が抜け、泥がはねた白いスウェット上下。" },
+        { id: "athlete_jersey_blue", charKey: "athlete", name: "色褪せた青ジャージ", rarity: "N", front: athlete_N_jersey_blue, pieceColor: "#2980b9", ring: "#3498db", desc: "色落ちしてサイズも合っていない（ぱつぱつ）ジャージ。" },
+        { id: "athlete_runningwear", charKey: "athlete", name: "破れ短距離ウェア", rarity: "R", front: athlete_R_runningwear, pieceColor: "#d35400", ring: "#e67e22", desc: "陸上競技用のウェアだが、あちこちが破けている。" },
+        { id: "athlete_morerunningwear", charKey: "athlete", name: "もっと破れ短距離ウェア", rarity: "R", front: athlete_R_morerunningwear, pieceColor: "#8e44ad", ring: "#9b59b6", desc: "陸上競技用のウェアだが、あちこちが破けている。" },
+        { id: "athlete_patchworkbenchcoat", charKey: "athlete", name: "ツギハギのベンチコート", rarity: "R", front: athlete_R_Patchworkbenchcoat, pieceColor: "#2c3e50", ring: "#34495e", desc: "寒さを凌ぐためにガムテープで補修されたコート。" },
+        { id: "athlete_canmarathonrunner", charKey: "athlete", name: "空き缶マラソンランナー", rarity: "SR", front: athlete_SR_CanMarathonRunner, pieceColor: "#7f8c8d", ring: "#bdc3c7", desc: "空き缶を潰して作ったプロテクターとゼッケンを装備。" },
+        { id: "athlete_tiretrainee", charKey: "athlete", name: "廃タイヤトレーニー", rarity: "SR", front: athlete_SR_can_pompadour, pieceColor: "#34495e", ring: "#7f8c8d", desc: "巨大な廃タイヤを背負って体を鍛え直している姿。" },
+        { id: "athlete_gloriousgold", charKey: "athlete", name: "栄光の金メダリスト", rarity: "SSR", front: athlete_SSR_GloriousGoldMedalis, pieceColor: "#f39c12", ring: "#f1c40f", desc: "現役時代の輝かしい代表ユニフォームと金メダル。" },
+        { id: "athlete_proleaguestar", charKey: "athlete", name: "プロリーグの星", rarity: "SSR", front: athlete_SSR_proleaguestar, pieceColor: "#1abc9c", ring: "#16a085", desc: "スポンサーロゴが輝く最新鋭のプロスポーツウェア。" },
+        { id: "athlete_ur_director", charKey: "athlete", name: "伝説的☆監督", rarity: "UR", front: athlete_UR_LegendaryDirector, pieceColor: "#000000", ring: "#f1c40f", desc: "長念プロリーグの星として活躍し、現在は監督という立場で世界で活躍する選手を育てている。" }
+    ],
+    survivor: [
+        { id: "survivor_default", charKey: "survivor", name: "サバイバー（デフォルト）", rarity: "N", front: survivor_N_default, pieceColor: "#2ecc71", ring: "#27ae60", desc: "生き残るための標準的な服装。" },
+        { id: "survivor_fadedcamo", charKey: "survivor", name: "色落ちした迷彩服", rarity: "N", front: survivor_N_Fadedcamouflageuniform, pieceColor: "#7f8c8d", ring: "#95a5a6", desc: "迷彩の柄が識別できないほど色褪せた服。" },
+        { id: "survivor_khakishirt", charKey: "survivor", name: "泥まみれのカーキシャツ", rarity: "N", front: survivor_N_stainedkhakishirt, pieceColor: "#d35400", ring: "#e67e22", desc: "幾多の夜を越えたであろう泥だらけのシャツ。" },
+        { id: "survivor_tatteredponcho", charKey: "survivor", name: "ボロボロのポンチョ", rarity: "R", front: survivor_R_tatteredponcho, pieceColor: "#16a085", ring: "#1abc9c", desc: "雨風をしのぐための、穴だらけのミリタリーポンチョ。" },
+        { id: "survivor_tacticalvest", charKey: "survivor", name: "ツギハギのタクティカルベスト", rarity: "R", front: survivor_R_Patchworktacticalvest, pieceColor: "#34495e", ring: "#2c3e50", desc: "ポケットが破れ、紐で無理やり固定したベスト。" },
+        { id: "survivor_garbageghillie", charKey: "survivor", name: "ゴミ袋ギリースーツ", rarity: "SR", front: survivor_SR_Garbagebagghilliesuit, pieceColor: "#2c3e50", ring: "#34495e", desc: "黒や青のゴミ袋を細かく切り裂いて作ったカモフラージュ。" },
+        { id: "survivor_scraparmor", charKey: "survivor", name: "廃材アーマーの戦士", rarity: "SR", front: survivor_SR_WarriorinScrapArmor, pieceColor: "#7f8c8d", ring: "#bdc3c7", desc: "トタン板や標識を曲げて作った重装甲サバイバー。" },
+        { id: "survivor_commander", charKey: "survivor", name: "歴戦の特殊部隊長", rarity: "SSR", front: survivor_SSR_BattlehardenedSpecialForcesCommander, pieceColor: "#000000", ring: "#c0392b", desc: "最新鋭のタクティカルギアとナイトビジョンをフル装備。" },
+        { id: "survivor_mercenary", charKey: "survivor", name: "伝説の傭兵", rarity: "SSR", front: survivor_SSR_Legendarymercenary, pieceColor: "#1a252f", ring: "#e74c3c", desc: "完璧な状態の戦闘服と、威圧感のあるフェイスペイント。" }
+    ],
+    sales: [
+        { id: "sales_default", charKey: "sales", name: "元営業マン（デフォルト）", rarity: "N", front: sales_N_default, pieceColor: "#3498db", ring: "#2980b9", desc: "サラリーマン時代の名残であるスーツ姿。" },
+        { id: "sales_graysuit", charKey: "sales", name: "ヨレヨレのグレースーツ", rarity: "N", front: sales_N_Wornoutgraysuit, pieceColor: "#7f8c8d", ring: "#95a5a6", desc: "シワだらけでネクタイが緩んだスーツ。" },
+        { id: "sales_summersuit", charKey: "sales", name: "汗染みの夏用スーツ", rarity: "N", front: sales_N_Sweatstainedsummersuit, pieceColor: "#f39c12", ring: "#f1c40f", desc: "季節外れの半袖ワイシャツと泥だらけのスラックス。" },
+        { id: "sales_attachecase", charKey: "sales", name: "ガムテープ補修アタッシュ", rarity: "R", front: sales_R_DuctTapeRepairAttacheCase, pieceColor: "#8e44ad", ring: "#9b59b6", desc: "持ち手が取れてガムテープでぐるぐる巻きの鞄を持つ。" },
+        { id: "sales_trenchcoat", charKey: "sales", name: "破れたトレンチコート", rarity: "R", front: sales_R_Torntrenchcoat, pieceColor: "#d35400", ring: "#e67e22", desc: "裾が引きちぎれた哀愁漂うコート姿。" },
+        { id: "sales_cardboardarmor", charKey: "sales", name: "ダンボールの鎧（営業版）", rarity: "SR", front: sales_SR_Cardboardarmor, pieceColor: "#e67e22", ring: "#d35400", desc: "配達用ダンボールを切り貼りした防寒スーツ。" },
+        { id: "sales_flyermagician", charKey: "sales", name: "チラシの魔術師", rarity: "SR", front: sales_SR_TheFlyerMagician, pieceColor: "#1abc9c", ring: "#16a085", desc: "全身に拾ったチラシを貼り付けて防寒と迷彩を兼ねた姿。" },
+        { id: "sales_ceo", charKey: "sales", name: "トップエリートCEO", rarity: "SSR", front: sales_SSR_TopeliteCEO, pieceColor: "#2c3e50", ring: "#f1c40f", desc: "高級オーダーメイドスーツに身を包んだ若き社長。" },
+        { id: "sales_topsales", charKey: "sales", name: "伝説のトップセールス", rarity: "SSR", front: sales_SSR_legendarytopsales, pieceColor: "#2980b9", ring: "#3498db", desc: "ビシッとしたスリーピーススーツと高級時計を装備。" },
+        { id: "sales_ur_wolf", charKey: "sales", name: "ウルフ・オブ・ウォールストリート", rarity: "UR", front: sales_UR_TheWolfofWallStreet, pieceColor: "#000000", ring: "#f39c12", desc: "営業と言ったらこの映画の主人公。" },
+        { id: "sales_ur_kingsman", charKey: "sales", name: "キングスマン ハリー・ハート", rarity: "UR", front: sales_UR_kingsman, pieceColor: "#1a252f", ring: "#e74c3c", desc: "Manners maketh man 礼節が人を作る。" }
+    ],
+    hacker: [
+        { id: "hacker_default", charKey: "hacker", name: "元ハッカー（デフォルト）", rarity: "N", front: hacker_N_default, pieceColor: "#9b59b6", ring: "#8e44ad", desc: "ダークウェブを徘徊していた頃のスタイル。" },
+        { id: "hacker_blackhoodie", charKey: "hacker", name: "色違いの黒パーカー", rarity: "N", front: hacker_N_Blackhoodieinadifferentcolor, pieceColor: "#2c3e50", ring: "#34495e", desc: "フードの紐がちぎれた黒パーカー。" },
+        { id: "hacker_grayknit", charKey: "hacker", name: "色違いのグレーニット", rarity: "N", front: hacker_N_Grayknitsweaterinadifferentcolor, pieceColor: "#7f8c8d", ring: "#95a5a6", desc: "虫食い穴だらけのニット帽とセーター。" },
+        { id: "hacker_lancable", charKey: "hacker", name: "LANケーブル巻き", rarity: "R", front: hacker_R_LANcablewinding, pieceColor: "#3498db", ring: "#2980b9", desc: "拾ったLANケーブルをベルトや防寒具代わりに巻き付けている。" },
+        { id: "hacker_crackedphone", charKey: "hacker", name: "バキバキのスマホ持ち", rarity: "R", front: hacker_R_Asmartphonewithacrackedscreen, pieceColor: "#e74c3c", ring: "#c0392b", desc: "画面が粉々のスマホを大事に握りしめているスタイル。" },
+        { id: "hacker_motherboard", charKey: "hacker", name: "ジャンクマザーボード装甲", rarity: "SR", front: hacker_SR_JunkMotherboardArmor, pieceColor: "#1abc9c", ring: "#16a085", desc: "捨てられたPCの基板を繋ぎ合わせたサイバーアーマー。" },
+        { id: "hacker_keyboardshield", charKey: "hacker", name: "キーボードシールド", rarity: "SR", front: hacker_SR_keyboardshield, pieceColor: "#f39c12", ring: "#f1c40f", desc: "大量のキーボードをガムテープで繋ぎ合わせた盾を装備。" },
+        { id: "hacker_younggenius", charKey: "hacker", name: "若き天才サイバーエージェント", rarity: "SSR", front: hacker_SSR_yanggeniuscyberagent, pieceColor: "#00ff00", ring: "#00cc00", desc: "若い時のサイバーパンク風のスタイリッシュな発光ウェア。" },
+        { id: "hacker_anonymous", charKey: "hacker", name: "アノニマス", rarity: "SSR", front: hacker_SSR_Anonymous, pieceColor: "#000000", ring: "#ffffff", desc: "リーダーや固定メンバーが存在しない分散型の国際的ハッカー集団。" },
+        { id: "hacker_revenge", charKey: "hacker", name: "復讐のアノニマス", rarity: "SSR", front: hacker_SSR_revengeAnonymous, pieceColor: "#8b0000", ring: "#000000", desc: "怒りに満ち、社会的制裁を絶対に与えると誓った。" },
+        { id: "hacker_ur_ceo", charKey: "hacker", name: "世界的IT企業CEO", rarity: "UR", front: hacker_UR_CEOofaglobalITcompany, pieceColor: "#2c3e50", ring: "#bdc3c7", desc: "スティーブ・ジョブズ風の洗練されたタートルネックと最新デバイス。" },
+        { id: "hacker_ur_genius", charKey: "hacker", name: "天才サイバーエージェント", rarity: "UR", front: hacker_UR_geniuscyberagent, pieceColor: "#00ffff", ring: "#0088ff", desc: "サイバーパンク風のスタイリッシュな発光ウェア。" }
+    ],
+    musician: [], doctor: [], gambler: [], detective: []
 };
 
 // ▼ ガチャ排出プール（"default" を含むスキンを除外）
