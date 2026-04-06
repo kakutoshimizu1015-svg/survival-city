@@ -3,6 +3,7 @@ import Peer from 'peerjs';
 import { ref, set, get, onDisconnect, remove, onValue, off, update } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useGameStore } from './useGameStore';
+import { useLobbyStore } from './useLobbyStore'; // ▼ 追加: チャット連携用
 import { processRoundEnd } from '../game/round';
 
 let isReceivingNetworkData = false;
@@ -63,7 +64,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                     if (data.type === 'GAME_SYNC') {
                         if (data.lastUpdater !== getStore().myUserId) {
                             isReceivingNetworkData = true;
-                            if (networkReceiveTimer) clearTimeout(networkReceiveTimer); // ▼ 修正: 連続受信時にタイマーをクリア
+                            if (networkReceiveTimer) clearTimeout(networkReceiveTimer);
                             
                             const logger = document.getElementById("log");
                             if (logger && data.gameState.logs) {
@@ -81,7 +82,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
 
                     if (data.type === 'REQUEST_ROUND_END') {
                         const gameState = useGameStore.getState();
-                        // 修正: _roundEndInProgress チェックを追加し、多重実行を防止
                         if (gameState.gamePhase === 'playing' && !gameState.gameOver && !gameState._roundEndInProgress) {
                             (async () => {
                                 try {
@@ -94,6 +94,21 @@ export const useNetworkStore = create((setStore, getStore) => ({
                                 }
                             })();
                         }
+                    }
+
+                    // ▼ 追加: チャットメッセージの受信と転送処理
+                    if (data.type === 'CHAT') {
+                        useLobbyStore.getState().addChatToQueue(data.chat);
+                        const logger = document.getElementById("log");
+                        if (logger) {
+                            const chatHtml = `<div style="color: #007bff; margin: 4px 0;">[チャット] ${data.chat.sender}: ${data.chat.text}</div>`;
+                            logger.insertAdjacentHTML('beforeend', chatHtml);
+                            logger.scrollTop = logger.scrollHeight;
+                        }
+                        // ホストとして他の全員に転送
+                        getStore().connections.forEach(c => {
+                            if (c.peer !== conn.peer && c.open) c.send(data);
+                        });
                     }
                 });
             });
@@ -129,7 +144,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                     if (data.type === 'GAME_SYNC') {
                         if (data.lastUpdater !== getStore().myUserId) {
                             isReceivingNetworkData = true;
-                            if (networkReceiveTimer) clearTimeout(networkReceiveTimer); // ▼ 修正: 連続受信時にタイマーをクリア
+                            if (networkReceiveTimer) clearTimeout(networkReceiveTimer);
                             
                             const logger = document.getElementById("log");
                             if (logger && data.gameState.logs) {
@@ -139,6 +154,17 @@ export const useNetworkStore = create((setStore, getStore) => ({
 
                             useGameStore.setState(data.gameState);
                             networkReceiveTimer = setTimeout(() => { isReceivingNetworkData = false; }, 200);
+                        }
+                    }
+
+                    // ▼ 追加: チャットメッセージの受信処理
+                    if (data.type === 'CHAT') {
+                        useLobbyStore.getState().addChatToQueue(data.chat);
+                        const logger = document.getElementById("log");
+                        if (logger) {
+                            const chatHtml = `<div style="color: #007bff; margin: 4px 0;">[チャット] ${data.chat.sender}: ${data.chat.text}</div>`;
+                            logger.insertAdjacentHTML('beforeend', chatHtml);
+                            logger.scrollTop = logger.scrollHeight;
                         }
                     }
                 });
@@ -218,7 +244,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
     }
 }));
 
-// ▼ 修正: 送信のデバウンス（間引き）処理を追加し、通信フラッドを防ぐ
 let syncTimeout = null;
 
 useGameStore.subscribe((state) => {
@@ -251,5 +276,5 @@ useGameStore.subscribe((state) => {
         } else if (netState.hostConnection && netState.hostConnection.open) {
             netState.hostConnection.send(data);
         }
-    }, 50); // 50ミリ秒のバッファで連続するsetStateをまとめる
+    }, 50); 
 });

@@ -11,6 +11,9 @@ export const useLobbyStore = create((set) => ({
     hostRoomName: "",
     hostPassword: "",
     lobbyPlayers: [],
+    
+    // ▼ 追加: チャット管理用ステート
+    chatQueue: [],
 
     // まとめて状態を更新
     setLobbyState: (newState) => set((state) => ({ ...state, ...newState })),
@@ -22,6 +25,15 @@ export const useLobbyStore = create((set) => ({
         myRoomId: null, 
         hostRoomName: "", 
         hostPassword: "", 
-        lobbyPlayers: [] 
+        lobbyPlayers: [],
+        chatQueue: [] // リセット時にもクリア
     }),
+
+    // ▼ 追加: チャットオーバーレイ用のアクション
+    addChatToQueue: (chat) => set((state) => ({
+        chatQueue: [...state.chatQueue, chat]
+    })),
+    removeChatFromQueue: (id) => set((state) => ({
+        chatQueue: state.chatQueue.filter(c => c.id !== id)
+    })),
 }));

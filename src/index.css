@@ -945,3 +945,51 @@ body.horror-mode #game-board .tile:has(.truck-token) {
     .tsg-body { padding:10px 12px; }
     .tsg-text { font-size:13px; }
 }
+/* =========================================
+   チャットオーバーレイとレイアウト拡張 CSS
+   ========================================= */
+
+/* チャットを下から上に流すアニメーション（ニコニコ動画風縦スクロール） */
+.chat-float-anim {
+    /* 右から左ではなく、下から上へスライドしつつフェードアウト */
+    animation: chatScrollUp 6s ease-in-out forwards;
+    right: 10%; /* 画面の右寄りに配置する場合。左寄りの場合はleftを指定 */
+}
+
+@keyframes chatScrollUp {
+    0% {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    80% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-200px);
+        opacity: 0;
+    }
+}
+
+/* スマホ用のレイアウト調整 */
+.layout-mobile .main-area {
+    display: flex;
+    flex-direction: column;
+    /* 全体の高さを十分に使い切るように */
+    flex-grow: 1;
+}
+
+.layout-mobile .GameBoard-container-class,
+.layout-mobile #board-container, 
+.layout-mobile .game-board {
+    /* マップ領域を広く確保（元の環境のクラス名に合わせて効くように複数指定） */
+    flex-grow: 1;
+    min-height: 45vh;
+}
+
+.layout-mobile #right-side-area {
+    /* スマホ時はアクションパネルとプレイヤーリストを横並び等に調整している場合は維持 */
+    margin-top: 10px;
+}

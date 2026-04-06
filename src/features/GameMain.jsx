@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { useNetworkStore } from '../store/useNetworkStore';
 import { runCpuTurn } from '../game/cpu';
@@ -17,12 +17,17 @@ import { ShopOverlay } from '../components/overlays/ShopOverlay';
 import { TurnOrderOverlay } from '../components/overlays/TurnOrderOverlay';
 import { GameEffectsOverlay } from '../components/overlays/GameEffectsOverlay';
 import { TeamActionOverlay } from '../components/overlays/TeamActionOverlay'; 
-import { AwardsOverlay } from '../components/overlays/AwardsOverlay'; // ▼ 追加
+import { AwardsOverlay } from '../components/overlays/AwardsOverlay';
+import { ChatOverlay } from '../components/overlays/ChatOverlay'; // ▼ 追加
+import { ChatInput } from '../components/common/ChatInput'; // ▼ 追加
 
 export const GameMain = () => {
     const { turn, players, gameOver, gamePhase, turnBannerActive } = useGameStore();
     const { status, isHost } = useNetworkStore();
     const prevTurn = useRef(-1);
+    
+    // ▼ 追加: スマホレイアウト判定用のステート
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
     useEffect(() => {
         if (gamePhase !== 'playing' || gameOver || !players[turn]) return;
@@ -50,7 +55,9 @@ export const GameMain = () => {
 
     useEffect(() => {
         const updateLayout = () => {
-            if (window.innerWidth <= 768) {
+            const mobile = window.innerWidth <= 768;
+            setIsMobile(mobile);
+            if (mobile) {
                 document.body.classList.add('layout-mobile');
             } else {
                 document.body.classList.remove('layout-mobile');
@@ -76,15 +83,17 @@ export const GameMain = () => {
             <ShopOverlay />
             <TurnOrderOverlay />
             <TeamActionOverlay />
-            
-            {/* ▼ 追加: 表彰式のオーバーレイ */}
             <AwardsOverlay />
+            
+            {/* ▼ 追加: 画面を流れるチャット */}
+            <ChatOverlay />
 
             <div id="top-bar" className="top-bar">
                 <div id="left-status-area" className="left-status-area">
                     <StatusPanel />
                 </div>
-                <HandCards />
+                {/* PCレイアウト時は上に配置 */}
+                {!isMobile && <HandCards />}
             </div>
 
             <div id="main-area" className="main-area">
@@ -94,6 +103,12 @@ export const GameMain = () => {
                     <PlayerList />
                 </div>
             </div>
+            
+            {/* スマホレイアウト時はここに手札一覧を配置 */}
+            {isMobile && <HandCards />}
+
+            {/* ▼ 追加: チャット入力欄をログパネルの真上に配置 */}
+            <ChatInput />
             
             <LogPanel />
         </div>
