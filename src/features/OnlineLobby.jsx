@@ -19,11 +19,6 @@ const TEAM_COLORS = {
 export const OnlineLobby = () => {
     const globalPlayerName = useUserStore(state => state.playerName);
     const equippedSkins = useUserStore(state => state.equippedSkins);
-    
-    // ▼ 追加: ヘッダー表示用のユーザーデータを取得
-    const totalWins = useUserStore(state => state.totalWins) || 0;
-    const gachaCans = useUserStore(state => state.gachaCans) || 0;
-    const gachaPoints = useUserStore(state => state.gachaPoints) || 0;
 
     const [playerName, setPlayerName] = useState(globalPlayerName || 'Player' + Math.floor(Math.random() * 1000));
     const [roomInput, setRoomInput] = useState('');
@@ -141,22 +136,11 @@ export const OnlineLobby = () => {
         setGameState({ ...initialGameState, gamePhase: 'playing' });
     };
 
-    // ▼ 新規追加: タイトル画面上部のユーザーステータスタブ
-    const renderHeaderTab = () => (
-        <div style={{ width: '100%', background: 'rgba(20,20,30,0.85)', padding: '12px 0', display: 'flex', justifyContent: 'center', gap: '25px', borderBottom: '3px solid #f1c40f', marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', flexWrap: 'wrap' }}>
-            <div style={{ color: '#ecf0f1' }}>👤 {playerName}</div>
-            <div style={{ color: '#f1c40f' }}>🏆 優勝: {totalWins}回</div>
-            <div style={{ color: '#2ecc71' }}>🥫 ガチャ資産(缶): {gachaCans}</div>
-            <div style={{ color: '#3498db' }}>💰 ガチャ資産(P): {gachaPoints}</div>
-        </div>
-    );
-
     if (status === 'connected') {
         const myInfo = lobbyPlayers.find(p => p.userId === myUserId) || { name: playerName, charType: 'athlete', teamColor: 'none' };
 
         return (
             <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fdf5e6', overflowY: 'auto', height: '100vh', width: '100%' }}>
-                {renderHeaderTab()}
                 <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                     <h2>🌐 ロビー: 部屋コード【 {roomId} 】</h2>
                     
@@ -268,7 +252,6 @@ export const OnlineLobby = () => {
 
     return (
         <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fdf5e6', width: '100vw', height: '100vh' }}>
-            {renderHeaderTab()}
             <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <h2 style={{ fontSize: '32px' }}>🌐 オンライン対戦</h2>
                 <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>

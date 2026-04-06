@@ -14,12 +14,6 @@ export const SetupOffline = () => {
     const setGameState = useGameStore(state => state.setGameState);
     const globalPlayerName = useUserStore(state => state.playerName);
     
-    // ▼ 追加: ヘッダー表示用のユーザーデータを取得
-    const totalWins = useUserStore(state => state.totalWins) || 0;
-    const gachaCans = useUserStore(state => state.gachaCans) || 0;
-    const gachaPoints = useUserStore(state => state.gachaPoints) || 0;
-    
-    // ▼ 修正: selectedSkin も初期ステートに持たせる（後で上書きするため初期値は仮）
     const [players, setPlayers] = useState([
         { id: 0, name: globalPlayerName || 'P1', charType: 'athlete', isCPU: false, teamColor: 'none', selectedSkin: null }, 
         { id: 1, name: 'CPU1', charType: 'sales', isCPU: true, teamColor: 'none', selectedSkin: null }
@@ -87,7 +81,6 @@ export const SetupOffline = () => {
         let finalPlayers = [...players];
         const allChars = Object.keys(charInfo);
         
-        // ▼ 追加: 装備中のスキンをStoreから取得（CPUがランダムに選ばれたとき用）
         const { equippedSkins } = useUserStore.getState();
 
         if (charAssignMode === 'random') { 
@@ -104,7 +97,6 @@ export const SetupOffline = () => {
 
         const creativeHand = Array.from({length: 38}, (_, i) => i);
         
-        // ▼ 修正: p.skinId にプレイヤーが選択したスキン、またはStoreのスキンを入れる
         finalPlayers = finalPlayers.map((p, i) => ({
             ...p, color: colors[i % colors.length], pos: rmapScatter ? scatterPos[i] : startPos, 
             skinId: p.selectedSkin || equippedSkins[p.charType] || "default",
@@ -145,20 +137,8 @@ export const SetupOffline = () => {
         });
     };
 
-    // ▼ 新規追加: タイトル画面上部のユーザーステータスタブ
-    const renderHeaderTab = () => (
-        <div style={{ width: '100%', background: 'rgba(20,20,30,0.85)', padding: '12px 0', display: 'flex', justifyContent: 'center', gap: '25px', borderBottom: '3px solid #f1c40f', marginBottom: '20px', fontSize: '16px', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', flexWrap: 'wrap' }}>
-            <div style={{ color: '#ecf0f1' }}>👤 {globalPlayerName || 'Player'}</div>
-            <div style={{ color: '#f1c40f' }}>🏆 優勝: {totalWins}回</div>
-            <div style={{ color: '#2ecc71' }}>🥫 ガチャ資産(缶): {gachaCans}</div>
-            <div style={{ color: '#3498db' }}>💰 ガチャ資産(P): {gachaPoints}</div>
-        </div>
-    );
-
     return (
         <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fdf5e6', width: '100vw', overflowY: 'auto' }}>
-            {/* ▼ 追加: ヘッダータブを描画 */}
-            {renderHeaderTab()}
             
             <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                 <h2 style={{ fontSize: '32px', textShadow: '2px 2px 4px #000', margin: '10px 0' }}>🏠 ゲーム設定</h2>
@@ -190,7 +170,6 @@ export const SetupOffline = () => {
                                     <span style={{ fontSize: '12px', color: '#b0a090' }}>🤖 ランダム</span>
                                 ) : (
                                     <>
-                                        {/* ▼ 修正: CharImageコンポーネントに skinId を渡す */}
                                         <CharImage charType={p.charType} skinId={p.selectedSkin} size={30} />
                                         <button onClick={() => setCharSelectTarget(p.id)} className="btn-clay" style={{ padding: '4px 8px', fontSize: '12px', background: '#3498db' }}>変更</button>
                                     </>
@@ -252,7 +231,6 @@ export const SetupOffline = () => {
                 <CharacterSelect 
                     isOpen={charSelectTarget !== null}
                     onClose={() => setCharSelectTarget(null)}
-                    // ▼ 修正: skinId も受け取ってステートに保存する
                     onConfirm={(charKey, skinId) => {
                         setPlayers(prev => prev.map(p => p.id === charSelectTarget ? { ...p, charType: charKey, selectedSkin: skinId } : p));
                         setCharSelectTarget(null);

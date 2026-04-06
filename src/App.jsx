@@ -10,13 +10,13 @@ import { OnlineLobby } from './features/OnlineLobby';
 import { SettingsAndRules } from './components/overlays/SettingsAndRules';
 import { TutorialOverlay } from './components/overlays/TutorialOverlay';
 import { SandboxGuide } from './components/overlays/SandboxGuide';
-// ▼ 追加：ガチャ画面コンポーネントのインポート
 import GachaScreen from './features/GachaScreen';
 
 function App() {
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode } = useGameStore();
   
-  const { isLoggedIn, uid, playerName, wins, totalEarnedP } = useUserStore();
+  // ▼ 修正: ガチャ資産のデータも取得するように追加
+  const { isLoggedIn, uid, playerName, wins, totalEarnedP, totalWins, gachaCans, gachaPoints } = useUserStore();
   const [localName, setLocalName] = useState(playerName);
 
   useEffect(() => {
@@ -50,16 +50,19 @@ function App() {
 
   return (
     <>
+      {/* ▼ 修正: タイトルとモード選択画面の時だけ、リッチなタブヘッダーを表示 */}
       {(gamePhase === 'title' || gamePhase === 'mode_select') && isLoggedIn && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '45px',
-          background: 'rgba(0,0,0,0.85)', color: '#f1c40f', display: 'flex',
-          justifyContent: 'center', alignItems: 'center', gap: '30px',
-          zIndex: 99999, fontSize: '16px', fontWeight: 'bold', borderBottom: '2px solid #8d6e63',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.5)'
+          position: 'fixed', top: 0, left: 0, width: '100%',
+          background: 'rgba(20,20,30,0.95)', padding: '12px 0', display: 'flex',
+          justifyContent: 'center', alignItems: 'center', gap: '25px',
+          zIndex: 99999, fontSize: '16px', fontWeight: 'bold', 
+          borderBottom: '3px solid #f1c40f', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', flexWrap: 'wrap'
         }}>
-          <span>🏆 優勝: {wins} 回</span>
-          <span>💰 累計: {totalEarnedP} P</span>
+          <div style={{ color: '#ecf0f1' }}>👤 {playerName || 'Player'}</div>
+          <div style={{ color: '#f1c40f' }}>🏆 優勝: {totalWins || wins}回</div>
+          <div style={{ color: '#2ecc71' }}>🥫 ガチャ資産(缶): {gachaCans || 0}</div>
+          <div style={{ color: '#3498db' }}>💰 ガチャ資産(P): {gachaPoints || 0}</div>
         </div>
       )}
 
@@ -117,7 +120,6 @@ function App() {
           <h2>モード選択</h2>
           <button className="btn-large btn-brown" onClick={() => useGameStore.setState({ gamePhase: 'setup_offline' })}>🎮 オフライン</button>
           <button className="btn-large btn-blue" onClick={() => useGameStore.setState({ gamePhase: 'online_lobby' })}>🌐 オンライン</button>
-          {/* ▼ 追加：ガチャ画面への遷移ボタン */}
           <button className="btn-large" style={{ background: '#e67e22', color: '#fff' }} onClick={() => useGameStore.setState({ gamePhase: 'gacha' })}>🔥 ガチャ屋台へ行く</button>
         </div>
       )}
@@ -125,7 +127,6 @@ function App() {
       {gamePhase === 'setup_offline' && <SetupOffline />}
       {gamePhase === 'online_lobby' && <OnlineLobby />}
       {gamePhase === 'playing' && <GameMain />}
-      {/* ▼ 追加：ガチャコンポーネントのマウント */}
       {gamePhase === 'gacha' && <GachaScreen />}
 
       <SettingsAndRules />
