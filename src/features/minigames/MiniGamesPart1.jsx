@@ -103,7 +103,7 @@ export function useTimer(secs, onEnd) {
 /* ════════════════════════════════════════
    Game 1: 📦 箱選びゲーム
 ════════════════════════════════════════ */
-export function BoxGame({ pts, addPts, onBack }) {
+export function BoxGame({ pts, addPts, onBack, isEventMode }) {
     const [msg, setMsg] = useState('シャッフル中…');
     const [states, setStates] = useState(['', '', '']);
     const [result, setResult] = useState(null);
@@ -169,7 +169,11 @@ export function BoxGame({ pts, addPts, onBack }) {
                     ))}
                 </div>
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
@@ -182,7 +186,7 @@ const VEND_WIN = [{ e: '💰', l: 'コイン大量発見！', p: 15 }, { e: '�
 const VEND_LOSE = [{ e: '❌', l: '空っぽ…', p: 0 }, { e: '🕷️', l: 'クモが出た！', p: 0 }, { e: '💨', l: '何も出てこない…', p: 0 }];
 const VEND_COLORS = [['#2a3020', '#3d4a30', '#4a6a38'], ['#2a2010', '#3d3018', '#6a5020'], ['#102030', '#182838', '#204858']];
 
-export function VendGame({ pts, addPts, onBack }) {
+export function VendGame({ pts, addPts, onBack, isEventMode }) {
     const [choices, setChoices] = useState([]);
     const [screens, setScreens] = useState(['?', '?', '?']);
     const [dimmed, setDimmed] = useState([false, false, false]);
@@ -255,7 +259,11 @@ export function VendGame({ pts, addPts, onBack }) {
                     ))}
                 </div>
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
@@ -312,7 +320,7 @@ function ScratchCell({ sym, onRevealed, disabled }) {
     );
 }
 
-export function ScratchGame({ pts, addPts, onBack }) {
+export function ScratchGame({ pts, addPts, onBack, isEventMode }) {
     const [grid, setGrid] = useState([]);
     const [count, setCount] = useState(0);
     const [result, setResult] = useState(null);
@@ -364,7 +372,11 @@ export function ScratchGame({ pts, addPts, onBack }) {
                     </div>
                 </div>
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
@@ -417,7 +429,7 @@ const PlayingCard = ({ c, isFaceDown }) => {
     );
 };
 
-export function HLGame({ pts, addPts, onBack }) {
+export function HLGame({ pts, addPts, onBack, isEventMode }) {
     const [deck, setDeck] = useState([]);
     const [idx, setIdx] = useState(0);
     const [streak, setStreak] = useState(0);
@@ -501,7 +513,11 @@ export function HLGame({ pts, addPts, onBack }) {
                 )}
                 
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );

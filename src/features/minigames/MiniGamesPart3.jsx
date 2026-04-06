@@ -44,7 +44,7 @@ export const MiniGameStylesPart3 = () => (
 /* ════════════════════════════════════════
    Game 9: 🐀 ネズミ追い払い (スポーンバグ修正版)
 ════════════════════════════════════════ */
-export function RatGame({ pts, addPts, onBack }) {
+export function RatGame({ pts, addPts, onBack, isEventMode }) {
     const { addGachaAssets } = useUserStore();
     const [rats, setRats] = useState([]);
     const [hitCount, setHitCount] = useState(0);
@@ -185,7 +185,11 @@ export function RatGame({ pts, addPts, onBack }) {
                     {fxList.map(f => <div key={f.id} className="rat-fx" style={{ left: f.x, top: f.y, color: f.c }}>{f.t}</div>)}
                 </div>
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
@@ -194,7 +198,7 @@ export function RatGame({ pts, addPts, onBack }) {
 /* ════════════════════════════════════════
    Game 10: 🍺 酔っ払いバランス (超速バグ修正版)
 ════════════════════════════════════════ */
-export function DrunkGame({ pts, addPts, onBack }) {
+export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
     const [bal, setBal] = useState(50);
     const [keep, setKeep] = useState(0);
     const [result, setResult] = useState(null);
@@ -294,7 +298,11 @@ export function DrunkGame({ pts, addPts, onBack }) {
                     </div>
                 )}
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
@@ -303,7 +311,7 @@ export function DrunkGame({ pts, addPts, onBack }) {
 /* ════════════════════════════════════════
    Game 11: ☔ 雨宿りダッシュ
 ════════════════════════════════════════ */
-export function RainGame({ pts, addPts, onBack }) {
+export function RainGame({ pts, addPts, onBack, isEventMode }) {
     const OBS_LIST = [
         { e: '👮', name: '警察', danger: 28 }, 
         { e: '🐕', name: '野良犬', danger: 20 }, 
@@ -432,7 +440,11 @@ export function RainGame({ pts, addPts, onBack }) {
                     {!result && <button onPointerDown={doJump} className="jump-btn-big">⬆️ JUMP！</button>}
                 </div>
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
@@ -441,7 +453,7 @@ export function RainGame({ pts, addPts, onBack }) {
 /* ════════════════════════════════════════
    Game 12: 🍱 炊き出し争奪戦
 ════════════════════════════════════════ */
-export function KashiGame({ pts, addPts, onBack }) {
+export function KashiGame({ pts, addPts, onBack, isEventMode }) {
     const [score, setScore] = useState(0);
     const [rival, setRival] = useState(0);
     const [playerX, setPlayerX] = useState(40);
@@ -565,7 +577,11 @@ export function KashiGame({ pts, addPts, onBack }) {
                     </div>
                 )}
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );

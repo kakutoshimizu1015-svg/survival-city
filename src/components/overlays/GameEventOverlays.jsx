@@ -147,6 +147,7 @@ export const GameEventOverlays = () => {
                         </div>
                     )}
                     {React.createElement(MINIGAME_COMPONENTS[mgType], {
+                        isEventMode: true, // ▼ 追加: イベントモードであることを伝えるフラグ
                         pts: cp?.p || 0,
                         addPts: (pts) => {
                             if (!isMyTurn || mgRewardGiven) return;

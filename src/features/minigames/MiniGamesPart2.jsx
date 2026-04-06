@@ -57,7 +57,7 @@ export const MiniGameStylesPart2 = () => (
 /* ════════════════════════════════════════
    Game 5: 🎰 路上スロット (State同期バグ修正)
 ════════════════════════════════════════ */
-export function SlotGame({ pts, addPts, onBack }) {
+export function SlotGame({ pts, addPts, onBack, isEventMode }) {
     const SYMS = ['🥫', '💰', '🍺', '🐀', '💊', '🚬', '🗑️'];
     const SH = 80;
     const TOT = SYMS.length * SH;
@@ -187,7 +187,11 @@ export function SlotGame({ pts, addPts, onBack }) {
                     {!playing && !result && <button className="slot-start" onPointerDown={startSlot}>🎰 スタート！</button>}
                 </div>
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
@@ -196,7 +200,7 @@ export function SlotGame({ pts, addPts, onBack }) {
 /* ════════════════════════════════════════
    Game 6: ♟️ 路上○×ゲーム
 ════════════════════════════════════════ */
-export function OxoGame({ pts, addPts, onBack }) {
+export function OxoGame({ pts, addPts, onBack, isEventMode }) {
     const { gachaPoints, addGachaAssets } = useUserStore();
     const [board, setBoard] = useState(Array(9).fill(null));
     const [bet, setBet] = useState(0);
@@ -337,7 +341,11 @@ export function OxoGame({ pts, addPts, onBack }) {
                     </>
                 )}
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
@@ -346,7 +354,7 @@ export function OxoGame({ pts, addPts, onBack }) {
 /* ════════════════════════════════════════
    Game 7: 📦 段ボールパズル
 ════════════════════════════════════════ */
-export function TetrisGame({ pts, addPts, onBack }) {
+export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
     const TET_COLS = 6, TET_ROWS = 10;
     const TET_WS = [1, 2, 2, 3, 1, 2];
     const TET_COLORS = ['#c97b2a', '#4e8539', '#2a5a8a', '#8a3a2a', '#6a4a8a', '#3a6a5a'];
@@ -484,7 +492,11 @@ export function TetrisGame({ pts, addPts, onBack }) {
                 )}
                 
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
@@ -493,7 +505,7 @@ export function TetrisGame({ pts, addPts, onBack }) {
 /* ════════════════════════════════════════
    Game 8: 🪰 ハエ捕まえ
 ════════════════════════════════════════ */
-export function FlyGame({ pts, addPts, onBack }) {
+export function FlyGame({ pts, addPts, onBack, isEventMode }) {
     const [caught, setCaught] = useState(0);
     const [started, setStarted] = useState(false);
     const [result, setResult] = useState(null);
@@ -619,7 +631,11 @@ export function FlyGame({ pts, addPts, onBack }) {
                 </div>
                 
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );

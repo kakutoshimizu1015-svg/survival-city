@@ -35,7 +35,7 @@ export const MiniGameStylesPart4 = () => (
 /* ════════════════════════════════════════
    Game 13: 🙏 物乞いゲーム
 ════════════════════════════════════════ */
-export function BegGame({ pts, addPts, subPts, onBack }) {
+export function BegGame({ pts, addPts, subPts, onBack, isEventMode }) {
     const NPCS = [
         { e: '🤵', name: 'サラリーマン', p: 5 }, { e: '👩', name: '主婦', p: 0 }, 
         { e: '🧑‍🎓', name: '学生', p: 2 }, { e: '🕴️', name: 'ヤクザ', p: -3 }, 
@@ -164,7 +164,11 @@ export function BegGame({ pts, addPts, subPts, onBack }) {
                 <div className="beg-feedback" style={{ color: feedback.color }}>{feedback.text}</div>
                 {!result && <BtnPrim onClick={doBeg} style={{ width: '100%' }}>🙏 お恵みを…</BtnPrim>}
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
@@ -173,7 +177,7 @@ export function BegGame({ pts, addPts, subPts, onBack }) {
 /* ════════════════════════════════════════
    Game 14: 🎸 路上ライブ音ゲー (視認性修正版)
 ════════════════════════════════════════ */
-export function MusicGame({ pts, addPts, onBack }) {
+export function MusicGame({ pts, addPts, onBack, isEventMode }) {
     const [score, setScore] = useState(0);
     const [combo, setCombo] = useState(0);
     const [result, setResult] = useState(null);
@@ -355,7 +359,11 @@ export function MusicGame({ pts, addPts, onBack }) {
                 
                 {!playingRef.current && !result && <BtnPrim onClick={startMusic} style={{ width: '100%' }}>🎸 演奏スタート！</BtnPrim>}
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
@@ -364,7 +372,7 @@ export function MusicGame({ pts, addPts, onBack }) {
 /* ════════════════════════════════════════
    Game 15: 💬 闇市交渉ゲーム
 ════════════════════════════════════════ */
-export function NegoGame({ pts, addPts, onBack }) {
+export function NegoGame({ pts, addPts, onBack, isEventMode }) {
     const NEGO_ITEMS = [
         { e: '🥫', name: '缶詰セット×5', desc: '拾い集めた缶詰', max: 20 }, 
         { e: '🔧', name: '謎の工具', desc: '使えるかわからない工具', max: 15 }, 
