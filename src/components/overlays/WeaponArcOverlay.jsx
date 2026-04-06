@@ -12,7 +12,6 @@ export const WeaponArcOverlay = () => {
     const [attackerPos, setAttackerPos] = useState({ x: 0, y: 0 });
     const [radius, setRadius] = useState(0);
 
-    // ▼ 新規追加: ターゲット選択用のステート
     const [selectedTargetId, setSelectedTargetId] = useState(null);
 
     const panelRef = useRef(null);
@@ -43,7 +42,6 @@ export const WeaponArcOverlay = () => {
         let ox = 0, oy = 0, startX = 0, startY = 0;
         
         const onDown = (e) => {
-            // ▼ 修正: LABEL タグもドラッグの除外対象にしてクリック可能にする
             if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.tagName === 'LABEL') return;
             
             startX = (e.touches ? e.touches[0].clientX : e.clientX);
@@ -116,14 +114,10 @@ export const WeaponArcOverlay = () => {
         return diff <= spreadDeg || dist === 0;
     });
 
-    // ▼ 新規追加: ターゲットリストが更新されたら、自動的に先頭の人を選ぶ処理
-    useEffect(() => {
-        if (hitTargets.length > 0 && !hitTargets.find(t => t.id === selectedTargetId)) {
-            setSelectedTargetId(hitTargets[0].id);
-        } else if (hitTargets.length === 0) {
-            setSelectedTargetId(null);
-        }
-    }, [hitTargets, selectedTargetId]);
+    // ▼ 修正: useEffectを削除し、レンダリング時に動的に「現在選択されているターゲット」を決定する
+    const activeTargetId = hitTargets.some(t => t.id === selectedTargetId)
+        ? selectedTargetId
+        : (hitTargets.length > 0 ? hitTargets[0].id : null);
 
     const fireWeapon = () => {
         useGameStore.setState({ weaponArcData: null });
@@ -136,11 +130,9 @@ export const WeaponArcOverlay = () => {
             hitTargets.forEach(t => dealDamage(t.id, cardData.dmg, cardData.name, attacker.id));
             logMsg(`💥 広範囲攻撃！ ${hitTargets.length}人に命中！`);
         } else {
-            // ▼ 修正: 選択されたターゲットにのみダメージを与える
-            if (selectedTargetId !== null) {
-                dealDamage(selectedTargetId, cardData.dmg, cardData.name, attacker.id);
-            } else {
-                dealDamage(hitTargets[0].id, cardData.dmg, cardData.name, attacker.id);
+            // ▼ 修正: activeTargetId を利用して特定の相手にのみダメージを与える
+            if (activeTargetId !== null) {
+                dealDamage(activeTargetId, cardData.dmg, cardData.name, attacker.id);
             }
         }
     };
@@ -173,7 +165,6 @@ export const WeaponArcOverlay = () => {
                 スライダーで方向を調整（枠をドラッグで移動）
             </div>
 
-            {/* ▼ 修正: ターゲット選択UI（ラジオボタン）の追加 */}
             <div style={{ fontSize: '13px', color: '#f1c40f', marginBottom: '15px', pointerEvents: 'auto', fontWeight: 'bold', textAlign: 'left' }}>
                 {hitTargets.length > 0 ? (
                     cardData.aoe ? (
@@ -182,12 +173,12 @@ export const WeaponArcOverlay = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <div style={{color: '#fff', textAlign: 'center', marginBottom: '5px'}}>🎯 攻撃対象を選んでください</div>
                             {hitTargets.map(t => (
-                                <label key={t.id} style={{cursor: 'pointer', background: selectedTargetId === t.id ? 'rgba(231,76,60,0.5)' : 'rgba(0,0,0,0.3)', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center'}}>
+                                <label key={t.id} style={{cursor: 'pointer', background: activeTargetId === t.id ? 'rgba(231,76,60,0.5)' : 'rgba(0,0,0,0.3)', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center'}}>
                                     <input 
                                         type="radio" 
                                         name="target" 
                                         value={t.id} 
-                                        checked={selectedTargetId === t.id} 
+                                        checked={activeTargetId === t.id} 
                                         onChange={() => setSelectedTargetId(t.id)} 
                                         style={{marginRight: '8px', cursor: 'pointer', accentColor: '#e74c3c'}}
                                     />
