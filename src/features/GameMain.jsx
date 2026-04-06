@@ -19,7 +19,7 @@ import { GameEffectsOverlay } from '../components/overlays/GameEffectsOverlay';
 import { TeamActionOverlay } from '../components/overlays/TeamActionOverlay'; 
 import { AwardsOverlay } from '../components/overlays/AwardsOverlay';
 import { ChatOverlay } from '../components/overlays/ChatOverlay'; // ▼ 追加
-import { ChatInput } from '../components/common/ChatInput'; // ▼ 追加
+import { ChatInput } from '../components/overlays/ChatInput'; // ▼ 追加
 
 export const GameMain = () => {
     const { turn, players, gameOver, gamePhase, turnBannerActive } = useGameStore();
