@@ -13,9 +13,9 @@ import { SandboxGuide } from './components/overlays/SandboxGuide';
 import GachaScreen from './features/GachaScreen';
 
 function App() {
-  const { gamePhase, layoutMode, weatherState, isNight, horrorMode } = useGameStore();
+  // ▼ 修正: チュートリアル等のオーバーレイ状態（rulesActive, tutorialActive, settingsActive）を取得
+  const { gamePhase, layoutMode, weatherState, isNight, horrorMode, rulesActive, tutorialActive, settingsActive } = useGameStore();
   
-  // ▼ 修正: ガチャ資産のデータも取得するように追加
   const { isLoggedIn, uid, playerName, wins, totalEarnedP, totalWins, gachaCans, gachaPoints } = useUserStore();
   const [localName, setLocalName] = useState(playerName);
 
@@ -50,8 +50,8 @@ function App() {
 
   return (
     <>
-      {/* ▼ 修正: タイトルとモード選択画面の時だけ、リッチなタブヘッダーを表示 */}
-      {(gamePhase === 'title' || gamePhase === 'mode_select') && isLoggedIn && (
+      {/* ▼ 修正: オーバーレイ画面が開いていない時だけヘッダーを表示する条件を追加 */}
+      {(gamePhase === 'title' || gamePhase === 'mode_select') && isLoggedIn && !rulesActive && !tutorialActive && !settingsActive && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%',
           background: 'rgba(20,20,30,0.95)', padding: '12px 0', display: 'flex',

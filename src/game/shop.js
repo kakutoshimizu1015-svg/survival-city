@@ -17,7 +17,7 @@ export const generateShopStock = () => {
         const isBottom2 = players.length >= 2 && rank >= players.length - 2;
         const isLateGame = (maxRounds - roundCount) <= 4;
         
-        // ▼ レアカード確率の動的調整
+        // レアカード確率の動的調整
         let rareChance = 0.05; // 序盤・基本確率は5%
         if (isLateGame && isBottom2) rareChance = 0.30; // 終了4ターン前＆下位2名は30%にアップ
 
@@ -76,15 +76,28 @@ export const shopCartBuy = () => {
         names.push(deckData.find(c => c.id === item.cardId).name);
     });
 
-    state.updateCurrentPlayer(p => ({ p: p.p - totalCost, hand: newHand }));
+    // ▼ 修正: 状態更新が競合しないよう、購入・スタッツカウント(shopP)・カートクリアを1回にまとめる（アトミック更新）
+    useGameStore.setState(prev => ({
+        players: prev.players.map(p => {
+            if (p.id === cp.id) {
+                const currentStats = p.gameStats || { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0, jobs: 0, territories: 0, minigames: 0 };
+                return {
+                    ...p,
+                    p: p.p - totalCost,
+                    hand: newHand,
+                    gameStats: { ...currentStats, shopP: (currentStats.shopP || 0) + totalCost }
+                };
+            }
+            return p;
+        }),
+        shopCart: [] // カートも同時にクリアする
+    }));
+
     logMsg(`🛒 一括購入！${names.join('・')} (合計 -${totalCost}P)`);
     
-    state.incrementGameStat(cp.id, 'shopP', totalCost);
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalPSpentAtShop', totalCost);
     }
-    
-    useGameStore.setState({ shopCart: [] });
 };
 
 export const shopSellCard = (handIndex) => {
