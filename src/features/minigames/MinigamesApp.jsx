@@ -9,23 +9,23 @@ import { SlotGame, OxoGame, TetrisGame, FlyGame } from './MiniGamesPart2';
 import { RatGame, DrunkGame, RainGame, KashiGame } from './MiniGamesPart3';
 import { BegGame, MusicGame, NegoGame } from './MiniGamesPart4';
 
-//* ─── メニュー画面用データ (全15種) ─────────────────────── */
-export const ALL_GAMES = [ // ← ▼ 修正: 他ファイルからルール文を読めるように export を追加
-  { id: 'box', icon: '📦', name: '箱選びゲーム', desc: '10秒で当たりの箱を選べ！', reward: '最大+10P' },
-  { id: 'vend', icon: '🏧', name: 'ボロ自販機ガチャ', desc: '3台から当たり1台を選べ！', reward: '最大+15P' },
-  { id: 'hl', icon: '🃏', name: 'ハイ＆ロー', desc: '10秒で連続正解を重ねろ！', reward: '最大+25P' },
-  { id: 'slot', icon: '🎰', name: '路上スロット', desc: '10秒以内に全リールを止めろ', reward: '最大+50P' },
-  { id: 'fly', icon: '🪰', name: 'ハエ捕まえ', desc: '10秒で3匹捕まえろ！', reward: '最大+15P' },
-  { id: 'scratch', icon: '🪙', name: 'スクラッチくじ', desc: '10秒で3マス削れ！', reward: '最大+20P' },
-  { id: 'beg', icon: '🙏', name: '物乞いゲーム', desc: '10秒で通行人に物乞い！', reward: '最大+20P' },
-  { id: 'rain', icon: '☔', name: '雨宿りダッシュ', desc: '10秒で障害物を越えろ！', reward: '最大+12P' },
-  { id: 'kashi', icon: '🍱', name: '炊き出し争奪戦', desc: '10秒で弁当を3個キャッチ！', reward: '最大+15P' },
-  { id: 'oxo', icon: '♟️', name: '路上○×ゲーム', desc: '5秒制限！CPUに勝て！', reward: '賭けP×2' },
-  { id: 'tetris', icon: '📦', name: '段ボールパズル', desc: '制限時間なし！パーツを落とせ！', reward: '最大+20P' },
-  { id: 'rat', icon: '🐀', name: 'ネズミ追い払い', desc: '10秒！荷物を守れ！', reward: '最大+12P' },
-  { id: 'drunk', icon: '🍺', name: '酔っ払いバランス', desc: '10秒間バランスを保て！', reward: '最大+15P' },
-  { id: 'music', icon: '🎸', name: '路上ライブ音ゲー', desc: '10秒ライブで投げ銭！', reward: '最大+20P' },
-  { id: 'nego', icon: '💬', name: '闇市交渉ゲーム', desc: '3アイテムを最高値で売れ！', reward: '最大+25P' }
+/* ─── メニュー画面用データ (全15種) ─────────────────────── */
+export const ALL_GAMES = [
+  { id: 'box', icon: '📦', name: '箱選びゲーム', desc: 'シャッフルされる3つの箱から当たりを見つけ出せ！箱を直接タップして選択します。', reward: '最大+10P' },
+  { id: 'vend', icon: '🏧', name: 'ボロ自販機ガチャ', desc: '3台の自販機から当たりを1台引き当てろ！自販機を直接タップして選択します。', reward: '最大+15P' },
+  { id: 'hl', icon: '🃏', name: 'ハイ＆ロー', desc: '次のカードが今の数字より大きい(HIGH)か小さい(LOW)か当てろ！画面下のボタンで操作します。', reward: '最大+25P' },
+  { id: 'slot', icon: '🎰', name: '路上スロット', desc: '3つのリールを絵柄が揃うように止めろ！各リールの下にある「STOP」ボタンを押します。', reward: '最大+50P' },
+  { id: 'fly', icon: '🪰', name: 'ハエ捕まえ', desc: '画面を飛び回るハエを10秒で3匹捕まえろ！ハエを直接タップ(クリック)して捕獲します。', reward: '最大+15P' },
+  { id: 'scratch', icon: '🪙', name: 'スクラッチくじ', desc: '10秒以内に3マス削って絵柄を揃えろ！マスの上をスワイプ(ドラッグ)して削ります。', reward: '最大+20P' },
+  { id: 'beg', icon: '🙏', name: '物乞いゲーム', desc: '通行人が中央の⭐ゾーンを通るタイミングを狙え！画面下の「🙏 お恵みを…」ボタンを押します。', reward: '最大+20P' },
+  { id: 'rain', icon: '☔', name: '雨宿りダッシュ', desc: '迫りくる障害物を避けて走り抜けろ！タイミングよく「⬆️ JUMP！」ボタンを押して飛び越えます。', reward: '最大+12P' },
+  { id: 'kashi', icon: '🍱', name: '炊き出し争奪戦', desc: '落ちてくる弁当をライバルより多く拾え！「◀ 左」「右 ▶」ボタンを押し続けて移動します。', reward: '最大+15P' },
+  { id: 'oxo', icon: '♟️', name: '路上○×ゲーム', desc: 'CPUとの○×ゲーム。5秒以内に空いているマスをタップ！勝てば賭けたPが2倍になります。', reward: '賭けP×2' },
+  { id: 'tetris', icon: '📦', name: '段ボールパズル', desc: '左右に動くパーツを「◀」「▶」で移動し、「⬇ DROP」で落とせ！横一列揃えて2段消せばクリア！', reward: '最大+20P' },
+  { id: 'rat', icon: '🐀', name: 'ネズミ追い払い', desc: '中央の荷物を狙うネズミを撃退しろ！近づいてくるネズミを直接タップして追い払います。', reward: '最大+12P' },
+  { id: 'drunk', icon: '🍺', name: '酔っ払いバランス', desc: '左に傾いたら「右→」、右に傾いたら「←左」ボタンを押し、緑のゾーン(中央)を6秒以上キープしろ！', reward: '最大+15P' },
+  { id: 'music', icon: '🎸', name: '路上ライブ音ゲー', desc: '落ちてくるノーツが下のラインに重なるタイミングで、対応する「🎸」「🥁」「🎹」ボタンをタップ！', reward: '最大+20P' },
+  { id: 'nego', icon: '💬', name: '闇市交渉ゲーム', desc: '提示される3つの価格ボタンから、相手の許容上限ギリギリを狙ってタップ！高く売りつけろ！', reward: '最大+25P' }
 ];
 
 /* ─── タイトル（メニュー）コンポーネント ─────────────────── */

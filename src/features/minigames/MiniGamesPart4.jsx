@@ -492,7 +492,11 @@ export function NegoGame({ pts, addPts, onBack, isEventMode }) {
                     </div>
                 )}
                 <ResultBox result={result} />
-                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
+                {result && (
+                    <BtnPrim onClick={isEventMode ? onBack : init}>
+                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
+                    </BtnPrim>
+                )}
             </div>
         </div>
     );
