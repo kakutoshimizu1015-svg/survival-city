@@ -183,7 +183,7 @@ export default function MinigamesApp() {
   const selectedGameData = ALL_GAMES.find(g => g.id === screen);
 
   return (
-    <div style={{ pointerEvents: isMyTurn ? 'auto' : 'none' }}>
+    <div>
       {!screen && <TitleScreen pts={gachaPoints} onSelect={goGame} />}
       
       {screen && !gameStarted && selectedGameData && (
