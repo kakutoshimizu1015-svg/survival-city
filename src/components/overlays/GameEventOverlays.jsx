@@ -35,17 +35,22 @@ export const GameEventOverlays = () => {
     const [confirmEnd, setConfirmEnd] = useState(false);
     
     // ▼ 追加: リトライ等で何度も報酬を受け取れないようにするためのフラグ
-    const [mgRewardGiven, setMgRewardGiven] = useState(false);
-    // ▼ 追加: ミニゲームのルール画面を管理するフラグ
-    const [mgStarted, setMgStarted] = useState(false);
+        const [mgRewardGiven, setMgRewardGiven] = useState(false);
+        
+        // 修正: useStateでの管理を削除し、上記で追加した useGameStore から mgStarted を読み込むように、
+        // 22行目付近の const { mgActive, mgType... } の中に mgStarted を追加してください。
+        // 例: const { mgActive, mgType, mgStarted, storyActive... } = useGameStore();
 
-    useEffect(() => {
-        // ミニゲーム起動時に状態をリセット
-        if (mgActive) {
-            setMgRewardGiven(false);
-            setMgStarted(false); // 毎回ルール画面からスタートさせる
-        }
-    }, [mgActive]);
+        useEffect(() => {
+            // ミニゲーム起動時に状態をリセット
+            if (mgActive) {
+                setMgRewardGiven(false);
+                // ▼ 修正: プレイヤー本人だけが全体のルール画面状態をリセットする通信を送る
+                if (isMyTurn) {
+                    useGameStore.setState({ mgStarted: false });
+                }
+            }
+        }, [mgActive, isMyTurn]);
 
     const victoryPhrases = [
         "優勝！",
@@ -167,7 +172,8 @@ export const GameEventOverlays = () => {
                                     {ALL_GAMES.find(g => g.id === mgType)?.desc}
                                 </p>
                                 {isMyTurn ? (
-                                    <ClayButton onClick={() => setMgStarted(true)} style={{ width: '100%', fontSize: '1.2rem', padding: '15px' }}>
+                                    // ▼ 修正: プレイヤーが押したとき、Storeに書き込んで全員の画面を切り替える
+                                    <ClayButton onClick={() => useGameStore.setState({ mgStarted: true })} style={{ width: '100%', fontSize: '1.2rem', padding: '15px' }}>
                                         🎮 ゲームスタート！
                                     </ClayButton>
                                 ) : (

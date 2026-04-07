@@ -15,6 +15,7 @@ const initialState = {
     shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
     mgActive: false, mgType: "", mgValue: 0, mgResult: null, storyActive: false,
     mgSyncData: null, // ▼ 追加: ミニゲームのリアルタイム同期用データ（座標やスコア等）
+    mgStarted: false, // ▼ 追加: ミニゲームがスタートしたかを全員で共有するフラグ
     settingsActive: false, rulesActive: false, tutorialActive: false, teamActionActive: false,
     tutorialStep: 0, sandboxActive: false, sandboxScenario: -1, sandboxStep: 0,
     turnBanner: null, turnBannerActive: false, eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,
