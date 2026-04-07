@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { ClayButton } from '../common/ClayButton';
 import { useUserStore } from '../../store/useUserStore';
-import { savePlayerName } from '../../utils/userLogic';
+import { savePlayerName, syncGachaData } from '../../utils/userLogic';
+import { sendGlobalMail } from '../../utils/adminLogic';
 
 export const SettingsAndRules = () => {
     const { settingsActive, rulesActive, setGameState, resetGame } = useGameStore();
@@ -11,11 +12,20 @@ export const SettingsAndRules = () => {
     const { 
         playerName, wins, totalEarnedP, showSmoke, setShowSmoke,
         totalTilesMoved, totalCardsUsed, totalCansCollected, totalTrashCollected, totalPSpentAtShop, npcEncounters,
-        liteMode, volume, layoutMode, showSkipButton, autoScrollToPlayer, setUserData 
+        liteMode, volume, layoutMode, showSkipButton, autoScrollToPlayer, setUserData,
+        addGachaAssets
     } = useUserStore();
     
     const [activeTab, setActiveTab] = useState('player');
     const [editingName, setEditingName] = useState(playerName);
+
+    // ▼ 開発者用ステート
+    const [devCode, setDevCode] = useState("");
+    const [mailTitle, setMailTitle] = useState("");
+    const [mailText, setMailText] = useState("");
+    const [mailP, setMailP] = useState("");
+    const [mailCans, setMailCans] = useState("");
+    const [isSendingMail, setIsSendingMail] = useState(false);
 
     useEffect(() => {
         if (playerName) {
@@ -33,6 +43,24 @@ export const SettingsAndRules = () => {
     const handleNameUpdate = () => {
         if (editingName && editingName.trim() !== '' && editingName !== playerName) {
             savePlayerName(editingName);
+        }
+    };
+
+    // ▼ 開発者用ロジック
+    const isDevAuthenticated = devCode === "DEV_MAIL_2026";
+
+    const handleSendGlobalMail = async () => {
+        if (!mailTitle || !mailText) return alert("タイトルと本文は必須です");
+        setIsSendingMail(true);
+        const result = await sendGlobalMail(devCode, { 
+            title: mailTitle, text: mailText, p: mailP, cans: mailCans 
+        });
+        setIsSendingMail(false);
+        if (result.success) {
+            alert(result.message);
+            setMailTitle(""); setMailText(""); setMailP(""); setMailCans(""); 
+        } else {
+            alert(result.message);
         }
     };
 
@@ -287,7 +315,6 @@ export const SettingsAndRules = () => {
                             </div>
                         </div>
 
-                        {/* ▼ 追加: 累計スタッツとNPC遭遇回数の表示グリッド */}
                         <div style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '8px', marginTop: '15px' }}>
                             <h4 style={{ margin: '0 0 10px 0', color: '#bdc3c7', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '5px' }}>📊 累計スタッツ</h4>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', textAlign: 'left' }}>
@@ -364,6 +391,39 @@ export const SettingsAndRules = () => {
                             <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '4px', marginLeft: '28px' }}>
                                 ONにするとプレイヤー移動時に煙が出ます。動作が重い場合はOFFにしてください。
                             </div>
+                        </div>
+
+                        {/* ▼ 新規追加: 開発者隠しメニュー */}
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#3e2723', color: '#fdf5e6', padding: '10px', borderRadius: '8px', border: '1px solid #5c4a44' }}>
+                            <div style={{ fontSize: '12px', color: '#95a5a6', marginBottom: '5px' }}>開発者オプション</div>
+                            <input 
+                                type="password" placeholder="コードを入力..." 
+                                value={devCode} onChange={e => setDevCode(e.target.value)} 
+                                style={{ width: '100%', padding: '8px', borderRadius: '4px', background: '#000', border: '1px solid #8d6e63', color: '#FFF', fontSize: '12px' }} 
+                            />
+                            
+                            {isDevAuthenticated && (
+                                <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(0,0,0,0.5)', borderRadius: '8px', border: '1px dashed #e74c3c' }}>
+                                    <div style={{ fontSize: '12px', color: '#e74c3c', fontWeight: 'bold', marginBottom: '8px' }}>🔧 全体メール配布</div>
+                                    <input type="text" placeholder="タイトル (例: お詫び)" value={mailTitle} onChange={e => setMailTitle(e.target.value)} style={{ width: '100%', marginBottom: '5px', padding: '6px', fontSize: '12px' }} />
+                                    <textarea placeholder="本文" value={mailText} onChange={e => setMailText(e.target.value)} style={{ width: '100%', marginBottom: '5px', padding: '6px', fontSize: '12px', minHeight: '50px' }} />
+                                    <div style={{ display: 'flex', gap: '5px', marginBottom: '8px' }}>
+                                        <input type="number" placeholder="付与 P" value={mailP} onChange={e => setMailP(e.target.value)} style={{ flex: 1, padding: '6px', fontSize: '12px' }} />
+                                        <input type="number" placeholder="付与 缶" value={mailCans} onChange={e => setMailCans(e.target.value)} style={{ flex: 1, padding: '6px', fontSize: '12px' }} />
+                                    </div>
+                                    <button onClick={handleSendGlobalMail} disabled={isSendingMail} style={{ width: '100%', background: '#c0392b', color: '#fff', border: 'none', padding: '8px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>
+                                        {isSendingMail ? "送信中..." : "🚀 メールを送信"}
+                                    </button>
+                                    
+                                    <button onClick={async () => { 
+                                        addGachaAssets(500, 500); 
+                                        await syncGachaData(); 
+                                        alert("個人用: 資産+500追加しました"); 
+                                    }} style={{ width: '100%', marginTop: '15px', background: 'transparent', color: '#bdc3c7', border: '1px dashed #bdc3c7', padding: '6px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>
+                                        [デバッグ] 資産+500
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </>
                 )}
