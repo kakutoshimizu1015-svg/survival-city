@@ -3,11 +3,11 @@ import Peer from 'peerjs';
 import { ref, set, get, onDisconnect, remove, onValue, off, update } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useGameStore } from './useGameStore';
-import { useLobbyStore } from './useLobbyStore'; // ▼ 追加: チャット連携用
+import { useLobbyStore } from './useLobbyStore';
 import { processRoundEnd } from '../game/round';
 
 let isReceivingNetworkData = false;
-let networkReceiveTimer = null; // ▼ 追加: 受信タイマー管理用
+let networkReceiveTimer = null; 
 
 export const useNetworkStore = create((setStore, getStore) => ({
     myUserId: null,
@@ -96,7 +96,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         }
                     }
 
-                    // ▼ 追加: チャットメッセージの受信と転送処理
                     if (data.type === 'CHAT') {
                         useLobbyStore.getState().addChatToQueue(data.chat);
                         const logger = document.getElementById("log");
@@ -105,7 +104,14 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             logger.insertAdjacentHTML('beforeend', chatHtml);
                             logger.scrollTop = logger.scrollHeight;
                         }
-                        // ホストとして他の全員に転送
+                        getStore().connections.forEach(c => {
+                            if (c.peer !== conn.peer && c.open) c.send(data);
+                        });
+                    }
+
+                    // ★追加: ミニゲームの高速リアルタイム同期（ホストが中継）
+                    if (data.type === 'MINIGAME_LIVE') {
+                        useGameStore.setState({ minigameLiveState: data.state });
                         getStore().connections.forEach(c => {
                             if (c.peer !== conn.peer && c.open) c.send(data);
                         });
@@ -157,7 +163,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         }
                     }
 
-                    // ▼ 追加: チャットメッセージの受信処理
                     if (data.type === 'CHAT') {
                         useLobbyStore.getState().addChatToQueue(data.chat);
                         const logger = document.getElementById("log");
@@ -166,6 +171,11 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             logger.insertAdjacentHTML('beforeend', chatHtml);
                             logger.scrollTop = logger.scrollHeight;
                         }
+                    }
+
+                    // ★追加: ミニゲームの高速リアルタイム同期（クライアント受信）
+                    if (data.type === 'MINIGAME_LIVE') {
+                        useGameStore.setState({ minigameLiveState: data.state });
                     }
                 });
             });
@@ -235,7 +245,20 @@ export const useNetworkStore = create((setStore, getStore) => ({
         const { roomId, isHost } = getStore();
         if (isHost && roomId) await update(ref(db, `rooms/${roomId}`), { status: newStatus });
     },
+
     broadcast: (data) => getStore().connections.forEach(conn => conn.send(data)),
+    
+    // ★追加: ミニゲーム状態の高速ブロードキャスト
+    broadcastMinigameLive: (liveState) => {
+        const state = getStore();
+        const data = { type: 'MINIGAME_LIVE', state: liveState };
+        if (state.isHost) {
+            state.broadcast(data);
+        } else if (state.hostConnection && state.hostConnection.open) {
+            state.hostConnection.send(data);
+        }
+    },
+
     leaveRoom: () => {
         const { peer, isHost, roomId } = getStore();
         if (peer) peer.destroy();
@@ -259,7 +282,7 @@ useGameStore.subscribe((state) => {
             'charInfoModal', 'acquiredCard', 'toastMsg', 'centerWarning', 'tooltipData',
             'settingsActive', 'rulesActive', 'tutorialActive', 'shopActive', 'shopCart',
             'layoutMode', 'autoScrollToPlayer', 'eventPopups', 'bloodAnim', 'turnBanner',
-            'turnBannerActive', 'jobResult', 'volume', 'showSkipButton',
+            'turnBannerActive', 'jobResult', 'volume', 'showSkipButton', 'minigameLiveState' // ★LiveStateは除外してネットワーク負荷を下げる
         ];
 
         const pureState = {};
