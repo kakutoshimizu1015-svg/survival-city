@@ -3,18 +3,19 @@ import Peer from 'peerjs';
 import { ref, set, get, onDisconnect, remove, onValue, off, update } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useGameStore } from './useGameStore';
-import { useLobbyStore } from './useLobbyStore'; // ▼ 追加: チャット連携用
+import { useLobbyStore } from './useLobbyStore';
 import { processRoundEnd } from '../game/round';
 
 let isReceivingNetworkData = false;
-let networkReceiveTimer = null; // ▼ 追加: 受信タイマー管理用
+let networkReceiveTimer = null;
 
-// 無料のSTUNサーバー設定（Google + Twilio）
+// ▼ 修正: index (1).html と完全に同じSTUNサーバーの記述に統一
 const peerConfig = {
     config: {
-        iceServers: [
+        'iceServers': [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478?transport=udp' }
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:global.stun.twilio.com:3478' }
         ]
     }
 };
@@ -49,10 +50,9 @@ export const useNetworkStore = create((setStore, getStore) => ({
     createRoom: async (roomCode, playerName) => {
         setStore({ status: 'connecting', isHost: true, roomId: roomCode });
         
-        // ▼ 修正: STUNサーバー設定を適用
+        // ▼ 修正: 旧バージョンと同じSTUN設定を適用
         const peer = new Peer(peerConfig);
         
-        // ▼ 修正: ホスト側のPeerエラーハンドリングを追加
         peer.on('error', (err) => {
             console.error("Host Peer error:", err);
             setStore({ status: 'error' });
@@ -70,7 +70,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
                 setStore(state => ({ connections: [...state.connections, conn] }));
                 conn.on('data', (data) => {
                     if (data.type === 'JOIN') {
-                        // ▼ 修正: ランダムなPeerIDとFirebase UIDを紐付けるために保存
                         conn.guestUserId = data.user.userId;
 
                         const newPlayer = { ...data.user, isHost: false, isCPU: false };
@@ -118,7 +117,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         }
                     }
 
-                    // ▼ 追加: チャットメッセージの受信と転送処理
                     if (data.type === 'CHAT') {
                         useLobbyStore.getState().addChatToQueue(data.chat);
                         const logger = document.getElementById("log");
@@ -127,7 +125,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             logger.insertAdjacentHTML('beforeend', chatHtml);
                             logger.scrollTop = logger.scrollHeight;
                         }
-                        // ホストとして他の全員に転送
                         getStore().connections.forEach(c => {
                             if (c.peer !== conn.peer && c.open) c.send(data);
                         });
@@ -136,7 +133,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
             });
             conn.on('close', () => {
                 setStore(state => ({ connections: state.connections.filter(c => c.peer !== conn.peer) }));
-                // ▼ 修正: ゲストの退出判定を conn.peer ではなく、保存した guestUserId で行う
                 const currentPlayers = getStore().lobbyPlayers.filter(p => p.userId !== conn.guestUserId);
                 setStore({ lobbyPlayers: currentPlayers });
                 getStore().broadcast({ type: 'LOBBY_UPDATE', players: currentPlayers });
@@ -150,10 +146,9 @@ export const useNetworkStore = create((setStore, getStore) => ({
         const snapshot = await get(roomRef);
         if (!snapshot.exists()) { setStore({ status: 'error' }); return; }
 
-        // ▼ 修正: IDのランダム化とSTUNサーバー設定を適用
+        // ▼ 修正: IDのランダム化と、旧バージョンと同じSTUN設定を適用
         const peer = new Peer(peerConfig); 
         
-        // ▼ 修正: ゲスト側のPeerエラーハンドリングを追加
         peer.on('error', (err) => {
             console.error("Guest Peer error:", err);
             setStore({ status: 'error' });
@@ -188,7 +183,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         }
                     }
 
-                    // ▼ 追加: チャットメッセージの受信処理
                     if (data.type === 'CHAT') {
                         useLobbyStore.getState().addChatToQueue(data.chat);
                         const logger = document.getElementById("log");
