@@ -67,7 +67,7 @@ function App() {
         <MailboxOverlay onClose={() => setShowMailboxModal(false)} />
       )}
 
-      {/* ▼ 修正: トップバーの表示条件に setup_offline を追加し、サイズを少し小さく調整 */}
+      {/* トップバー（タイトル、モード選択、オフライン設定画面で表示） */}
       {(gamePhase === 'title' || gamePhase === 'mode_select' || gamePhase === 'setup_offline') && !rulesActive && !tutorialActive && !settingsActive && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%',
@@ -83,26 +83,28 @@ function App() {
         </div>
       )}
 
+      {/* ゲーム中の設定ボタン */}
       {gamePhase !== 'title' && gamePhase !== 'gacha' && gamePhase !== 'minigames' && gamePhase !== 'mode_select' && (
-        <button id="settings-btn" onClick={() => useGameStore.setState({ settingsActive: true })}>⚙️</button>
+        <button id="settings-btn" onClick={(e) => { e.stopPropagation(); setGameState({ settingsActive: true }); }}>⚙️</button>
       )}
 
+      {/* タイトル画面 */}
       {gamePhase === 'title' && (
-        <div id="title-screen-overlay" onClick={() => useGameStore.setState({ gamePhase: 'mode_select' })}>
+        <div id="title-screen-overlay" onClick={() => setGameState({ gamePhase: 'mode_select' })}>
           <div style={{ fontSize: '80px', marginBottom: '20px', marginTop: '60px' }}>🏠</div>
           <div className="title-logo">脱・ホームレス<br/>サバイバルシティ</div>
           <div className="blink-text">画面をタップしてスタート</div>
           
           <button 
             className="btn-large" 
-            onClick={(e) => { e.stopPropagation(); useGameStore.setState({ rulesActive: true }); }} 
+            onClick={(e) => { e.stopPropagation(); setGameState({ rulesActive: true }); }} 
             style={{ marginTop: '10px', background: '#3498db', color: '#fff' }}
           >
             📖 遊び方・ルールを見る
           </button>
           <button 
             className="btn-large" 
-            onClick={(e) => { e.stopPropagation(); useGameStore.setState({ tutorialActive: true }); }} 
+            onClick={(e) => { e.stopPropagation(); setGameState({ tutorialActive: true }); }} 
             style={{ marginTop: '15px', background: '#8e44ad', color: '#f1c40f' }}
           >
             📚 チュートリアル
@@ -110,6 +112,7 @@ function App() {
         </div>
       )}
 
+      {/* モード選択画面 */}
       {gamePhase === 'mode_select' && (
         <div id="mode-select-overlay" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           
@@ -124,23 +127,24 @@ function App() {
                   maxLength={10}
                 />
                 
-                <button onClick={() => setShowFriendModal(true)} style={{
+                {/* フレンドボタン */}
+                <button onClick={(e) => { e.stopPropagation(); setShowFriendModal(true); }} style={{
                     background: '#2980b9', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', position: 'relative'
                 }}>
                     👥 フレンド
                     {friendRequests?.length > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff' }}>{friendRequests.length}</span>}
                 </button>
 
-                {/* ▼ 修正: メールモーダルを確実に独立化 */}
-                <button onClick={() => setShowMailboxModal(true)} style={{
+                {/* ▼ メールボタン：クリック貫通を防止して確実にモーダルを開く */}
+                <button onClick={(e) => { e.stopPropagation(); setShowMailboxModal(true); }} style={{
                     background: '#e67e22', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', position: 'relative'
                 }}>
                     📮 メール
                     {unreadMailsCount > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff', animation: 'canBounce 1s infinite' }}>{unreadMailsCount}</span>}
                 </button>
 
-                {/* ▼ 修正: モード選択画面にも設定ボタンを追加 */}
-                <button onClick={() => useGameStore.setState({ settingsActive: true })} style={{
+                {/* ▼ 設定ボタン：クリック貫通を防止して確実に設定画面を開く */}
+                <button onClick={(e) => { e.stopPropagation(); setGameState({ settingsActive: true }); }} style={{
                     background: '#7f8c8d', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
                 }}>
                     ⚙️ 設定
@@ -150,12 +154,11 @@ function App() {
           </div>
 
           <h2 style={{ margin: '10px 0' }}>モード選択</h2>
-          <button className="btn-large btn-brown" onClick={() => setGameState({ gamePhase: 'setup_offline' })}>🎮 オフライン</button>
-          <button className="btn-large btn-blue" onClick={() => setGameState({ gamePhase: 'online_lobby' })}>🌐 オンライン</button>
-          
-          {/* ▼ 修正: ミニゲーム遷移を独立化 */}
-          <button className="btn-large" style={{ background: '#27ae60', color: '#fff' }} onClick={() => setGameState({ gamePhase: 'minigames' })}>🎲 ミニゲームで稼ぐ</button>
-          <button className="btn-large" style={{ background: '#c0392b', color: '#fff' }} onClick={() => setGameState({ gamePhase: 'gacha' })}>🔥 ガチャ屋台へ行く</button>
+          {/* 全てのボタンに e.stopPropagation() を追加して混線を防止 */}
+          <button className="btn-large btn-brown" onClick={(e) => { e.stopPropagation(); setGameState({ gamePhase: 'setup_offline' }); }}>🎮 オフライン</button>
+          <button className="btn-large btn-blue" onClick={(e) => { e.stopPropagation(); setGameState({ gamePhase: 'online_lobby' }); }}>🌐 オンライン</button>
+          <button className="btn-large" style={{ background: '#27ae60', color: '#fff' }} onClick={(e) => { e.stopPropagation(); setGameState({ gamePhase: 'minigames' }); }}>🎲 ミニゲームで稼ぐ</button>
+          <button className="btn-large" style={{ background: '#c0392b', color: '#fff' }} onClick={(e) => { e.stopPropagation(); setGameState({ gamePhase: 'gacha' }); }}>🔥 ガチャ屋台へ行く</button>
         </div>
       )}
 
