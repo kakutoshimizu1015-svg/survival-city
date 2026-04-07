@@ -3,12 +3,11 @@ import { db } from '../lib/firebase';
 import { useUserStore } from '../store/useUserStore';
 
 /**
- * ▼ 新規追加: フレンド・招待のリアルタイム監視
+ * フレンド・招待のリアルタイム監視
  */
 export const listenToFriendsAndInvites = (uid) => {
     if (!uid) return;
     
-    // 1. フレンド一覧の監視
     const friendsRef = ref(db, `users/${uid}/friends`);
     onValue(friendsRef, (snapshot) => {
         const data = snapshot.val();
@@ -16,7 +15,6 @@ export const listenToFriendsAndInvites = (uid) => {
         useUserStore.getState().setUserData({ friends: friendsList });
     });
 
-    // 2. フレンドリクエストの監視
     const reqRef = ref(db, `friendRequests/${uid}`);
     onValue(reqRef, (snapshot) => {
         const data = snapshot.val();
@@ -24,7 +22,6 @@ export const listenToFriendsAndInvites = (uid) => {
         useUserStore.getState().setUserData({ friendRequests: requests });
     });
 
-    // 3. 届いた招待の監視
     const invitesRef = ref(db, `invites/${uid}`);
     onValue(invitesRef, (snapshot) => {
         const data = snapshot.val();
@@ -38,6 +35,63 @@ export const listenToFriendsAndInvites = (uid) => {
 };
 
 /**
+ * ▼ 新規追加: グローバルメール（運営からのプレゼント）のリアルタイム監視
+ */
+export const listenToMails = (uid) => {
+    if (!uid) return;
+    const globalMailsRef = ref(db, 'globalMails');
+    
+    onValue(globalMailsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            // 新しい順（降順）にソートしてStoreへ格納
+            const mailsList = Object.entries(data)
+                .map(([id, val]) => ({ id, ...val }))
+                .sort((a, b) => b.timestamp - a.timestamp);
+            useUserStore.getState().setUserData({ inbox: mailsList });
+        } else {
+            useUserStore.getState().setUserData({ inbox: [] });
+        }
+    });
+};
+
+/**
+ * ▼ 新規追加: メールを受け取り、資産を加算する
+ */
+export const claimMail = async (mail) => {
+    const state = useUserStore.getState();
+    if (!state.uid) return false;
+    
+    // 既に受け取り済みの場合はブロック
+    if (state.claimedMails.includes(mail.id)) return false;
+
+    // ガチャ資産の付与
+    const pReward = mail.p || 0;
+    const canReward = mail.cans || 0;
+    if (pReward > 0 || canReward > 0) {
+        state.addGachaAssets(canReward, pReward);
+    }
+
+    // クレーム済みリストを更新
+    const newClaimedMails = [...state.claimedMails, mail.id];
+    state.setUserData({ claimedMails: newClaimedMails });
+
+    try {
+        // 受け取り履歴とガチャ資産の増加を同時にFirebaseへ保存
+        await update(ref(db, `users/${state.uid}`), { 
+            claimedMails: newClaimedMails,
+            gachaCans: state.gachaCans,     // 最新のステート値ではなく加算後を担保するため、即時取得が無難だが、
+            gachaPoints: state.gachaPoints  // addGachaAssetsで同期された直後の値をsyncGachaData経由で送る
+        });
+        await syncGachaData();
+        return true;
+    } catch (error) {
+        console.error("メール受け取りエラー:", error);
+        return false;
+    }
+};
+
+/**
  * ログイン直後にDBからユーザーデータを読み込む
  */
 export const loadUserData = async (uid) => {
@@ -45,27 +99,24 @@ export const loadUserData = async (uid) => {
   try {
     const snapshot = await get(userRef);
     if (snapshot.exists()) {
-      // 既存データがあればStoreに反映
       const data = snapshot.val();
-      
-      // DBに無い可能性がある新しいキー（ガチャ資産・スキン）のデフォルト値ケア
       const mergedData = {
           ...data,
           gachaCans: data.gachaCans || 0,
           unlockedSkins: data.unlockedSkins || [],
-          equippedSkins: data.equippedSkins || {}
+          equippedSkins: data.equippedSkins || {},
+          claimedMails: data.claimedMails || [] // ▼ 追加
       };
-      
       useUserStore.getState().setUserData(mergedData);
       console.log("ユーザーデータ読み込み成功:", mergedData);
     } else {
-      // 新規ユーザーなら初期データをDBに作成
       const initialData = {
         playerName: '名無しサバイバー',
         gachaPoints: 0,
         gachaCans: 0,
         unlockedSkins: [],
         equippedSkins: {},
+        claimedMails: [], // ▼ 追加
         wins: 0,
         totalEarnedP: 0
       };
@@ -73,56 +124,38 @@ export const loadUserData = async (uid) => {
       console.log("新規ユーザーデータ作成完了");
     }
 
-    // ▼ 追加: ログイン完了と同時にフレンド機能の監視を開始
+    // 監視の開始
     listenToFriendsAndInvites(uid);
+    listenToMails(uid); // ▼ 追加
 
   } catch (error) {
     console.error("データ読み込み失敗:", error);
   }
 };
 
-/**
- * プレイヤー名の変更を保存する
- */
 export const savePlayerName = async (newName) => {
   const { uid } = useUserStore.getState();
   if (!uid) return;
-
   await update(ref(db, `users/${uid}`), { playerName: newName });
   useUserStore.getState().setUserData({ playerName: newName });
 };
 
-/**
- * 優勝時の記録更新
- */
 export const recordWin = async (earnedP) => {
   const { uid, wins, totalEarnedP, gachaPoints } = useUserStore.getState();
   if (!uid) return;
-
   const newData = {
     wins: wins + 1,
     totalEarnedP: totalEarnedP + earnedP,
     gachaPoints: gachaPoints + earnedP 
   };
-
   await update(ref(db, `users/${uid}`), newData);
   useUserStore.getState().setUserData(newData);
 };
 
-/**
- * ガチャ資産やスキンの変動をFirebaseに同期する
- */
 export const syncGachaData = async () => {
   const { uid, gachaCans, gachaPoints, unlockedSkins, equippedSkins } = useUserStore.getState();
   if (!uid) return;
-
-  const syncData = {
-      gachaCans,
-      gachaPoints,
-      unlockedSkins,
-      equippedSkins
-  };
-
+  const syncData = { gachaCans, gachaPoints, unlockedSkins, equippedSkins };
   try {
       await update(ref(db, `users/${uid}`), syncData);
       console.log("ガチャデータ同期成功");
@@ -131,15 +164,10 @@ export const syncGachaData = async () => {
   }
 };
 
-// ==========================================
-// ▼ 新規追加: フレンド・招待アクション群
-// ==========================================
-
+// --- 以下、フレンド・招待アクション群 ---
 export const sendFriendRequest = async (targetUid) => {
     const state = useUserStore.getState();
     if (!state.uid || !targetUid || state.uid === targetUid) return;
-    
-    // 相手のリクエストノードに自分の情報を追加
     const reqRef = ref(db, `friendRequests/${targetUid}/${state.uid}`);
     await set(reqRef, { uid: state.uid, name: state.playerName, timestamp: Date.now() });
 };
@@ -147,12 +175,8 @@ export const sendFriendRequest = async (targetUid) => {
 export const acceptFriendRequest = async (requesterUid, requesterName) => {
     const state = useUserStore.getState();
     if (!state.uid) return;
-    
-    // お互いのfriendsノードに追加
     await set(ref(db, `users/${state.uid}/friends/${requesterUid}`), { uid: requesterUid, name: requesterName });
     await set(ref(db, `users/${requesterUid}/friends/${state.uid}`), { uid: state.uid, name: state.playerName });
-    
-    // 承認後はリクエストを削除
     await remove(ref(db, `friendRequests/${state.uid}/${requesterUid}`));
 };
 
@@ -165,16 +189,8 @@ export const removeFriendRequest = async (requesterUid) => {
 export const sendRoomInvite = async (targetUid, roomId) => {
     const state = useUserStore.getState();
     if (!state.uid || !targetUid || !roomId) return;
-    
     const inviteRef = push(ref(db, `invites/${targetUid}`));
-    await set(inviteRef, {
-        fromUid: state.uid,
-        fromName: state.playerName,
-        roomId: roomId,
-        timestamp: Date.now()
-    });
-    
-    // 招待は10分後に自動消滅する簡易的な処理
+    await set(inviteRef, { fromUid: state.uid, fromName: state.playerName, roomId: roomId, timestamp: Date.now() });
     setTimeout(() => remove(inviteRef), 600000);
 };
 

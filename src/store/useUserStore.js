@@ -33,10 +33,14 @@ export const useUserStore = create(
       showSkipButton: false,
       autoScrollToPlayer: true,
 
-      // ▼ 新規追加: フレンド・招待機能用ステート
+      // フレンド・招待機能用ステート
       friends: [], 
       friendRequests: [],
       invites: [],
+
+      // ▼ 新規追加: メール機能用ステート
+      claimedMails: [], // 受け取り済みのメールIDリスト（永続化）
+      inbox: [],        // DBから取得した全メールデータ（揮発性）
 
       setUserData: (data) => set((state) => ({ ...state, ...data })),
       setShowSmoke: (show) => set({ showSmoke: show }), 
@@ -96,8 +100,9 @@ export const useUserStore = create(
         showSkipButton: state.showSkipButton,
         autoScrollToPlayer: state.autoScrollToPlayer,
         
-        // フレンド一覧もキャッシュとして永続化
         friends: state.friends,
+        // ▼ 新規追加: 受け取り済みメールの履歴を永続化
+        claimedMails: state.claimedMails,
       }),
     }
   )
