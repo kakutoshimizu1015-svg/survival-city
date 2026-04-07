@@ -13,7 +13,6 @@ import { SandboxGuide } from './components/overlays/SandboxGuide';
 import GachaScreen from './features/GachaScreen';
 import MinigamesApp from './features/minigames/MinigamesApp';
 
-// ▼ 新規追加: UIパーツのインポート
 import { GlobalInviteModal } from './components/common/GlobalInviteModal';
 import { FriendListModal } from './components/common/FriendListModal';
 import { UserProfileModal } from './components/common/UserProfileModal';
@@ -25,32 +24,24 @@ function App() {
   
   const [localName, setLocalName] = useState(playerName);
   
-  // ▼ モーダル開閉用ステート
   const [showFriendModal, setShowFriendModal] = useState(false);
   const [showMailboxModal, setShowMailboxModal] = useState(false);
   const [selectedProfileUid, setSelectedProfileUid] = useState(null);
 
-  // 未読メール件数の計算
   const unreadMailsCount = (inbox || []).filter(mail => !(claimedMails || []).includes(mail.id)).length;
 
   useEffect(() => {
-    if (!isLoggedIn) {
-      loginAnonymously();
-    }
+    if (!isLoggedIn) loginAnonymously();
   }, [isLoggedIn]);
 
   useEffect(() => {
-    if (playerName) {
-      setLocalName(playerName);
-    }
+    if (playerName) setLocalName(playerName);
   }, [playerName]);
 
   useEffect(() => {
     document.body.classList.remove('layout-pc', 'layout-mobile', 'sunny', 'rainy', 'cloudy', 'night', 'horror-mode');
-    
     if (layoutMode === 'sp') document.body.classList.add('layout-mobile');
     if (layoutMode === 'pc') document.body.classList.add('layout-pc');
-    
     if (weatherState) document.body.classList.add(weatherState);
     if (isNight) document.body.classList.add('night');
     if (horrorMode) document.body.classList.add('horror-mode');
@@ -64,34 +55,26 @@ function App() {
 
   return (
     <>
-      {/* 画面中央に常駐し、招待が来たら強制ポップアップするモーダル */}
       <GlobalInviteModal />
 
-      {/* 手動で開くモーダル群 */}
       {showFriendModal && (
-        <FriendListModal 
-          onClose={() => setShowFriendModal(false)} 
-          onSelectFriend={(targetUid) => setSelectedProfileUid(targetUid)}
-        />
+        <FriendListModal onClose={() => setShowFriendModal(false)} onSelectFriend={(targetUid) => setSelectedProfileUid(targetUid)} />
       )}
       {selectedProfileUid && (
-        <UserProfileModal 
-          uid={selectedProfileUid} 
-          onClose={() => setSelectedProfileUid(null)} 
-        />
+        <UserProfileModal uid={selectedProfileUid} onClose={() => setSelectedProfileUid(null)} />
       )}
       {showMailboxModal && (
         <MailboxOverlay onClose={() => setShowMailboxModal(false)} />
       )}
 
-      {/* ヘッダー */}
+      {/* ▼ 修正: トップバーを少し小さくし、確実に出るようにz-indexを999999に設定 */}
       {(gamePhase === 'title' || gamePhase === 'mode_select') && isLoggedIn && !rulesActive && !tutorialActive && !settingsActive && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%',
-          background: 'rgba(20,20,30,0.95)', padding: '12px 0', display: 'flex',
-          justifyContent: 'center', alignItems: 'center', gap: '25px',
-          zIndex: 9999, fontSize: '16px', fontWeight: 'bold', 
-          borderBottom: '3px solid #f1c40f', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', flexWrap: 'wrap'
+          background: 'rgba(15, 15, 20, 0.98)', padding: '6px 0', display: 'flex',
+          justifyContent: 'center', alignItems: 'center', gap: '15px',
+          zIndex: 999999, fontSize: '13px', fontWeight: 'bold', 
+          borderBottom: '2px solid #f1c40f', boxShadow: '0 2px 8px rgba(0,0,0,0.8)', flexWrap: 'wrap'
         }}>
           <div style={{ color: '#ecf0f1' }}>👤 {playerName || 'Player'}</div>
           <div style={{ color: '#f1c40f' }}>🏆 優勝: {totalWins || wins}回</div>
@@ -100,7 +83,7 @@ function App() {
         </div>
       )}
 
-      {gamePhase !== 'title' && gamePhase !== 'gacha' && gamePhase !== 'minigames' && (
+      {gamePhase !== 'title' && gamePhase !== 'gacha' && gamePhase !== 'minigames' && gamePhase !== 'mode_select' && (
         <button id="settings-btn" onClick={() => useGameStore.setState({ settingsActive: true })}>⚙️</button>
       )}
 
@@ -117,7 +100,6 @@ function App() {
           >
             📖 遊び方・ルールを見る
           </button>
-
           <button 
             className="btn-large" 
             onClick={(e) => { e.stopPropagation(); useGameStore.setState({ tutorialActive: true }); }} 
@@ -131,53 +113,50 @@ function App() {
       {gamePhase === 'mode_select' && (
         <div id="mode-select-overlay" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           
-          {/* ▼ 修正: プレイヤー名入力と、フレンド・メールボックスボタンを統合配置 */}
-          <div className="panel" style={{ marginTop: '40px', marginBottom: '40px', padding: '20px', background: 'rgba(92, 74, 68, 0.95)', textAlign: 'center', borderRadius: '12px', border: '2px solid #8d6e63', boxShadow: '0 4px 8px rgba(0,0,0,0.3)' }}>
-            <div style={{ color: '#fdf5e6', marginBottom: '10px', fontSize: '16px', fontWeight: 'bold' }}>👤 プレイヤー設定 & ソーシャル</div>
+          <div className="panel" style={{ marginTop: '30px', marginBottom: '20px', padding: '15px 20px', background: 'rgba(92, 74, 68, 0.95)', textAlign: 'center', borderRadius: '12px', border: '2px solid #8d6e63', boxShadow: '0 4px 8px rgba(0,0,0,0.5)' }}>
+            <div style={{ color: '#fdf5e6', marginBottom: '10px', fontSize: '15px', fontWeight: 'bold' }}>👤 プレイヤー設定 & ソーシャル</div>
             
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
                 <input 
-                  type="text" 
-                  value={localName} 
-                  onChange={(e) => setLocalName(e.target.value)}
-                  onBlur={handleNameBlur}
+                  type="text" value={localName} onChange={(e) => setLocalName(e.target.value)} onBlur={handleNameBlur}
                   placeholder="名前を入力..."
-                  style={{ padding: '12px', borderRadius: '8px', border: 'none', textAlign: 'center', width: '180px', fontSize: '18px', fontWeight: 'bold', color: '#333' }}
+                  style={{ padding: '10px', borderRadius: '8px', border: 'none', textAlign: 'center', width: '160px', fontSize: '16px', fontWeight: 'bold', color: '#333' }}
                   maxLength={10}
                 />
                 
+                {/* 独立したフレンドボタン */}
                 <button onClick={() => setShowFriendModal(true)} style={{
-                    background: '#2980b9', color: '#FFF', border: 'none', padding: '12px 16px', borderRadius: '8px',
-                    fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', position: 'relative'
+                    background: '#2980b9', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', position: 'relative'
                 }}>
                     👥 フレンド
-                    {friendRequests?.length > 0 && (
-                        <span style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#e74c3c', color: '#FFF', fontSize: '12px', padding: '2px 6px', borderRadius: '50%', fontWeight: 'bold', border: '2px solid #fff' }}>
-                            {friendRequests.length}
-                        </span>
-                    )}
+                    {friendRequests?.length > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff' }}>{friendRequests.length}</span>}
                 </button>
 
+                {/* 独立したメールボタン */}
                 <button onClick={() => setShowMailboxModal(true)} style={{
-                    background: '#e67e22', color: '#FFF', border: 'none', padding: '12px 16px', borderRadius: '8px',
-                    fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', position: 'relative'
+                    background: '#e67e22', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', position: 'relative'
                 }}>
                     📮 メール
-                    {unreadMailsCount > 0 && (
-                        <span style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#e74c3c', color: '#FFF', fontSize: '12px', padding: '2px 6px', borderRadius: '50%', fontWeight: 'bold', border: '2px solid #fff', animation: 'canBounce 1s infinite' }}>
-                            {unreadMailsCount}
-                        </span>
-                    )}
+                    {unreadMailsCount > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff', animation: 'canBounce 1s infinite' }}>{unreadMailsCount}</span>}
+                </button>
+
+                {/* モード選択画面用の設定ボタン */}
+                <button onClick={() => useGameStore.setState({ settingsActive: true })} style={{
+                    background: '#7f8c8d', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
+                }}>
+                    ⚙️ 設定
                 </button>
             </div>
-            <div style={{ fontSize: '12px', color: '#bdc3c7', marginTop: '8px' }}>※名前は入力後、枠外をタップで自動保存</div>
+            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '8px' }}>※名前は入力後、枠外をタップで自動保存</div>
           </div>
 
-          <h2>モード選択</h2>
+          <h2 style={{ margin: '10px 0' }}>モード選択</h2>
+          
+          {/* 独立した各モードへの遷移ボタン */}
           <button className="btn-large btn-brown" onClick={() => useGameStore.setState({ gamePhase: 'setup_offline' })}>🎮 オフライン</button>
           <button className="btn-large btn-blue" onClick={() => useGameStore.setState({ gamePhase: 'online_lobby' })}>🌐 オンライン</button>
           <button className="btn-large" style={{ background: '#27ae60', color: '#fff' }} onClick={() => useGameStore.setState({ gamePhase: 'minigames' })}>🎲 ミニゲームで稼ぐ</button>
-          <button className="btn-large" style={{ background: '#e67e22', color: '#fff' }} onClick={() => useGameStore.setState({ gamePhase: 'gacha' })}>🔥 ガチャ屋台へ行く</button>
+          <button className="btn-large" style={{ background: '#c0392b', color: '#fff' }} onClick={() => useGameStore.setState({ gamePhase: 'gacha' })}>🔥 ガチャ屋台へ行く</button>
         </div>
       )}
 
