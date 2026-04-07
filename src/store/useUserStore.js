@@ -8,6 +8,7 @@ export const useUserStore = create(
       isLoggedIn: false,
       
       playerName: '名無しサバイバー',
+      friendCode: null, // ▼ 新規追加: 8桁の簡単なフレンドコード
       gachaPoints: 0,
       wins: 0,
       totalEarnedP: 0,
@@ -38,9 +39,9 @@ export const useUserStore = create(
       friendRequests: [],
       invites: [],
 
-      // ▼ 新規追加: メール機能用ステート
-      claimedMails: [], // 受け取り済みのメールIDリスト（永続化）
-      inbox: [],        // DBから取得した全メールデータ（揮発性）
+      // メール機能用ステート
+      claimedMails: [], 
+      inbox: [],        
 
       setUserData: (data) => set((state) => ({ ...state, ...data })),
       setShowSmoke: (show) => set({ showSmoke: show }), 
@@ -78,6 +79,7 @@ export const useUserStore = create(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         playerName: state.playerName,
+        friendCode: state.friendCode, // ▼ 新規追加
         gachaPoints: state.gachaPoints,
         wins: state.wins,
         totalEarnedP: state.totalEarnedP,
@@ -101,7 +103,6 @@ export const useUserStore = create(
         autoScrollToPlayer: state.autoScrollToPlayer,
         
         friends: state.friends,
-        // ▼ 新規追加: 受け取り済みメールの履歴を永続化
         claimedMails: state.claimedMails,
       }),
     }
