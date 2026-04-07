@@ -4,13 +4,13 @@ import { useGameStore } from '../store/useGameStore';
 import { GACHA_POOL } from '../constants/characters';
 import { syncGachaData } from '../utils/userLogic';
 
-
 // ==========================================
-// ▼ 開発者設定：全体メールフォームを表示するために true にしています
+// ▼ 開発者設定
 // ==========================================
+// 開発者モードボタン（資産+500）を表示するかどうか
+const SHOW_DEV_CONTROLS = true; 
 
-
-// ▼ 修正：ガチャの排出確率とUI設定
+// ガチャの排出確率とUI設定
 // 開発者はここの `rate` の数値を変更するだけで、自動的に実際の抽選確率に反映されます。
 // （※合計が100になるように設定してください）
 const RARITY_CFG = {
@@ -20,11 +20,12 @@ const RARITY_CFG = {
   R:   { label:"R",   gold:"#64B5F6", bg:"#001A4A", border:"#4FC3F7", rate:30, glow:"#2196F3" },
   N:   { label:"N",   gold:"#B0BEC5", bg:"#1A1A1A", border:"#78909C", rate:61, glow:"#607D8B" },
 };
+// ==========================================
 
 const PULL_PHRASES = ["ジャラジャラ…","ガコン！","ガラガラ…","ゴトゴト…","ジャキン！"];
 const PARTICLE_EMOJIS = ["🥫","🗑️","📰","📦","🧤","🪣","🔩","🪝","🧣"];
 
-// ▼ 修正：設定値(RARITY_CFG)から動的に確率を計算・判定するロジックに変更
+// ▼ 設定値(RARITY_CFG)から動的に確率を計算・判定するロジック
 function rollRarity() {
   const r = Math.random() * 100;
   let cumulative = 0;
@@ -267,14 +268,6 @@ export default function GachaScreen() {
   
   const [selectedSkinDetail, setSelectedSkinDetail] = useState(null);
 
-  // 全体メールフォーム用のステート
-  const [devCode, setDevCode] = useState("");
-  const [mailTitle, setMailTitle] = useState("");
-  const [mailText, setMailText] = useState("");
-  const [mailP, setMailP] = useState("");
-  const [mailCans, setMailCans] = useState("");
-  const [isSendingMail, setIsSendingMail] = useState(false);
-
   const collection = {};
   GACHA_POOL.forEach(s => {
       collection[s.id] = unlockedSkins.filter(id => id === s.id).length;
@@ -337,31 +330,6 @@ export default function GachaScreen() {
     setRevealed(new Set(results.map((_, i) => i)));
     if (results.some(s => s.rarity==="UR"||s.rarity==="SSR"||s.rarity==="SR")) setCanTick(p=>p+1);
   }, [results]);
-
-  const handleSendGlobalMail = async () => {
-    if (!devCode) { notify("開発者コードを入力してください", "err"); return; }
-    if (!mailTitle || !mailText) { notify("タイトルと本文は必須です", "err"); return; }
-
-    setIsSendingMail(true);
-    // TODO: 実際の送信処理を追加してください
-    /*
-    const result = await sendGlobalMail(devCode, { 
-        title: mailTitle, 
-        text: mailText, 
-        p: mailP, 
-        cans: mailCans 
-    });
-    */
-    const result = { success: true, message: "メールを送信しました" };
-    setIsSendingMail(false);
-
-    if (result.success) {
-        notify(result.message, "ok");
-        setMailTitle(""); setMailText(""); setMailP(""); setMailCans(""); 
-    } else {
-        notify(result.message, "err");
-    }
-  };
 
   const owned  = Object.values(collection).filter(v=>v>0).length;
   const allRev = results.length > 0 && revealed.size === results.length;
@@ -525,41 +493,21 @@ export default function GachaScreen() {
             })()}
           </div>
           
-          {/* ▼ 全体メールフォーム追加部分 */}
-          <div style={{ width:"100%", maxWidth:330, marginTop: 20, background:PANEL, border:`2px solid #5C3A15`, borderRadius:12, padding:"12px 14px" }}>
-            <div style={{ fontSize:12, color:"#f1c40f", textAlign:"center", marginBottom:10, fontWeight:"bold" }}>✉️ 全体プレゼント送信</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                <input 
-                    type="password" placeholder="開発者コード" value={devCode} onChange={(e) => setDevCode(e.target.value)}
-                    style={{ padding: "8px", borderRadius: "6px", border: "none", background: "#3A2A1A", color: "#fff" }}
-                />
-                <input 
-                    type="text" placeholder="タイトル" value={mailTitle} onChange={(e) => setMailTitle(e.target.value)}
-                    style={{ padding: "8px", borderRadius: "6px", border: "none", background: "#3A2A1A", color: "#fff" }}
-                />
-                <textarea 
-                    placeholder="本文" value={mailText} onChange={(e) => setMailText(e.target.value)} rows={3}
-                    style={{ padding: "8px", borderRadius: "6px", border: "none", background: "#3A2A1A", color: "#fff", resize: "none" }}
-                />
-                <div style={{ display: "flex", gap: 8 }}>
-                    <input 
-                        type="number" placeholder="付与 P" value={mailP} onChange={(e) => setMailP(e.target.value)}
-                        style={{ flex: 1, padding: "8px", borderRadius: "6px", border: "none", background: "#3A2A1A", color: "#fff" }}
-                    />
-                    <input 
-                        type="number" placeholder="付与 缶" value={mailCans} onChange={(e) => setMailCans(e.target.value)}
-                        style={{ flex: 1, padding: "8px", borderRadius: "6px", border: "none", background: "#3A2A1A", color: "#fff" }}
-                    />
-                </div>
-                <button 
-                    onClick={handleSendGlobalMail} disabled={isSendingMail}
-                    style={{ background: "#e67e22", color: "#fff", padding: "10px", borderRadius: "6px", border: "none", fontWeight: "bold", cursor: isSendingMail ? "not-allowed" : "pointer", opacity: isSendingMail ? 0.7 : 1 }}
-                >
-                    {isSendingMail ? "送信中..." : "一斉送信する"}
-                </button>
+          {/* ▼ 開発者モードボタンの制御 */}
+          {SHOW_DEV_CONTROLS && (
+            <div style={{ width: "100%", maxWidth: 330, marginTop: 10, display: "flex", justifyContent: "center" }}>
+              <button
+                onClick={async () => { 
+                    addGachaAssets(500, 500); 
+                    await syncGachaData();
+                    notify("🔧 開発者モード: 空き缶・P +500！", "ok"); 
+                }}
+                style={{ background: "transparent", border: `1px dashed ${BORD}`, borderRadius: 8, padding: "7px 14px", color: MUTED, fontSize: 11, cursor: "pointer" }}
+              >
+                🔧 開発者モード: 資産+500
+              </button>
             </div>
-          </div>
-          
+          )}
         </div>
       )}
 
