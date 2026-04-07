@@ -25,7 +25,8 @@ const MINIGAME_COMPONENTS = {
 };
 
 export const GameEventOverlays = () => {
-    const { mgActive, mgType, storyActive, storyIndex, players, turn, jobResult, npcSelectActive } = useGameStore();
+    // ▼ 修正: この行に「mgStarted」を追加して、Storeから引っ張り出します！
+    const { mgActive, mgType, mgStarted, storyActive, storyIndex, players, turn, jobResult, npcSelectActive } = useGameStore();
     const { myUserId, status } = useNetworkStore();
     const cp = players[turn];
 
