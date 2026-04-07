@@ -211,6 +211,10 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
     const rafRef = useRef(null);
     const keepIvRef = useRef(null);
 
+    // ▼ 追加: 親からの関数が再生成されても初期化ループを引き起こさないようにRefへ退避
+    const fnsRef = useRef({ addPts });
+    useEffect(() => { fnsRef.current = { addPts }; }, [addPts]);
+
     const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endDrunk(true); });
 
     const endDrunk = useCallback((survived) => {
@@ -224,8 +228,8 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
             win, icon: win ? '🎉' : '🌀', main: win ? 'バランスキープ成功！' : '倒れた！', 
             sub: `緑ゾーン内 ${keepRef.current}秒 / 6秒以上で成功`, pts: p 
         });
-        if (p > 0) addPts(p);
-    }, [stop, addPts]);
+        if (p > 0) fnsRef.current.addPts(p); // ▼ 修正: Ref経由で実行する
+    }, [stop]); // ▼ 修正: 依存配列から addPts を削除してループを断ち切る
 
     const animate = useCallback(() => {
         if (!playingRef.current) return;

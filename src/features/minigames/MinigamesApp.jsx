@@ -29,9 +29,15 @@ export const ALL_GAMES = [
 ];
 
 /* ─── タイトル（メニュー）コンポーネント ─────────────────── */
-function TitleScreen({ pts, onSelect }) {
+function TitleScreen({ pts, onSelect, scrollRef }) {
+  // ▼ 追加: 画面表示時に前回のスクロール位置を復元
+  React.useEffect(() => {
+    const el = document.getElementById('minigames-scroll-area');
+    if (el && scrollRef.current) el.scrollTop = scrollRef.current;
+  }, [scrollRef]);
+
   return (
-    <div style={{
+    <div id="minigames-scroll-area" onScroll={(e) => scrollRef.current = e.target.scrollTop} style={{
       position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', 
       overflowY: 'auto', overflowX: 'hidden', background: 'radial-gradient(ellipse 120% 80% at 50% 20%,#2a1a08 0%,#0c0a07 65%)', 
       color: '#d4c4a0', fontFamily: "'Noto Sans JP',sans-serif", zIndex: 1000, 
@@ -47,6 +53,20 @@ function TitleScreen({ pts, onSelect }) {
       <div style={{ background: '#241a0e', border: '1px solid #5a4228', borderRadius: 50, padding: '.4rem 1.4rem', fontSize: '1rem', color: '#e8b84b', fontWeight: 700, marginBottom: '1.2rem', boxShadow: '0 0 15px rgba(232,184,75,.15)' }}>
         💰 所持P: {pts}
       </div>
+
+      {/* ▼ 追加: 画面上部にも戻るボタンを配置 */}
+      <button
+        onClick={() => useGameStore.setState({ gamePhase: 'mode_select' })}
+        style={{
+            marginBottom: '1.2rem', padding: '10px 24px', borderRadius: '8px',
+            background: '#241a0e', border: '2px solid #5a4228', color: '#d4c4a0',
+            cursor: 'pointer', fontWeight: 'bold', fontSize: '.9rem', transition: 'background .1s'
+        }}
+        onPointerDown={(e) => e.currentTarget.style.background = '#3d2e1a'}
+        onPointerUp={(e) => e.currentTarget.style.background = '#241a0e'}
+      >
+        ← モード選択へ戻る
+      </button>
       
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '.65rem', padding: '0 .8rem', width: '100%', maxWidth: 500 }}>
         {ALL_GAMES.map(g => (
@@ -95,6 +115,7 @@ export default function MinigamesApp() {
   // ▼ ユーザーの永続化データ（ガチャP）を取得
   const { gachaPoints, addGachaAssets } = useUserStore();
   const [screen, setScreen] = useState(null); // null = タイトル画面, 文字列 = ゲームID
+  const scrollRef = useRef(0); // ▼ 追加: スクロール位置の記憶用
 
   // Pを加算し、即座にFirebaseへセーブするラッパー関数
   const addPts = useCallback(async (n) => { 
@@ -137,7 +158,8 @@ export default function MinigamesApp() {
 
   return (
     <>
-      {!screen && <TitleScreen pts={gachaPoints} onSelect={goGame} />}
+      {/* ▼ 修正: scrollRefを渡すように変更 */}
+      {!screen && <TitleScreen pts={gachaPoints} onSelect={goGame} scrollRef={scrollRef} />}
       {screen && GameComponent && <GameComponent key={screen} {...gameProps} />}
     </>
   );
