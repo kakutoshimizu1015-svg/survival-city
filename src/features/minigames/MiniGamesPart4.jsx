@@ -35,7 +35,7 @@ export const MiniGameStylesPart4 = () => (
 /* ════════════════════════════════════════
    Game 13: 🙏 物乞いゲーム
 ════════════════════════════════════════ */
-export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }) {
+export function BegGame({ pts, addPts, subPts, onBack, isEventMode }) {
     const NPCS = [
         { e: '🤵', name: 'サラリーマン', p: 5 }, { e: '👩', name: '主婦', p: 0 }, 
         { e: '🧑‍🎓', name: '学生', p: 2 }, { e: '🕴️', name: 'ヤクザ', p: -3 }, 
@@ -71,8 +71,8 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }
             win, icon: win ? '💰' : '😔', main: win ? '物乞い成功！' : '稼ぎが足りなかった…', 
             sub: `獲得 ${p}P / 5P以上で成功`, pts: win ? p : 0 
         });
-        if (win && p > 0 && !isObserver) addPts(p);
-    }, [stop, addPts, isObserver]);
+        if (win && p > 0) addPts(p);
+    }, [stop, addPts]);
 
     const spawnNpc = useCallback(() => {
         if (!playingRef.current || countRef.current <= 0) return;
@@ -103,7 +103,7 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }
     }, [endBeg]);
 
     const doBeg = () => {
-        if (!playingRef.current || npcXRef.current < -18 || npcXRef.current > 112 || isObserver) return;
+        if (!playingRef.current || npcXRef.current < -18 || npcXRef.current > 112) return;
         cancelAnimationFrame(rafRef.current);
         
         // 当たり判定 (中央38%〜62%を少し緩く)
@@ -162,15 +162,12 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }
                 </div>
                 
                 <div className="beg-feedback" style={{ color: feedback.color }}>{feedback.text}</div>
-                {!result && !isObserver && <BtnPrim onClick={doBeg} style={{ width: '100%' }}>🙏 お恵みを…</BtnPrim>}
+                {!result && <BtnPrim onClick={doBeg} style={{ width: '100%' }}>🙏 お恵みを…</BtnPrim>}
                 <ResultBox result={result} />
-                {result && !isObserver && (
+                {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
-                )}
-                {result && isObserver && (
-                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -180,7 +177,7 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }
 /* ════════════════════════════════════════
    Game 14: 🎸 路上ライブ音ゲー (視認性修正版)
 ════════════════════════════════════════ */
-export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+export function MusicGame({ pts, addPts, onBack, isEventMode }) {
     const [score, setScore] = useState(0);
     const [combo, setCombo] = useState(0);
     const [result, setResult] = useState(null);
@@ -225,9 +222,9 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
             win, icon: win ? '🎸' : '😔', main: win ? `ランク ${rank}！${pct}%成功！` : `ランク ${rank}…${pct}%しか合わなかった`, 
             sub: `ヒット ${hit}/${total} / スコア ${scoreRef.current}`, pts: p 
         });
-        if (p > 0 && !isObserver) addPts(p);
+        if (p > 0) addPts(p);
         setNotes([]);
-    }, [stop, addPts, SEQ.length, isObserver]);
+    }, [stop, addPts, SEQ.length]);
 
     const animate = useCallback(() => {
         if (!playingRef.current) return;
@@ -258,7 +255,7 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         if (missedOccurred) {
             setCombo(0);
             showJudge('MISS', '#ff8070');
-            if (!isObserver) beep(220, 0.1);
+            beep(220, 0.1);
         }
         
         setNotes(notesRef.current.filter(n => !n.hit && !n.missed && n.y > -40).map(n => ({ ...n })));
@@ -268,11 +265,11 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
             return;
         }
         rafRef.current = requestAnimationFrame(animate);
-    }, [endMusic, showJudge, isObserver]);
+    }, [endMusic, showJudge]);
 
     const tap = (e, lane) => {
         e.preventDefault();
-        if (!playingRef.current || isObserver) return;
+        if (!playingRef.current) return;
         
         const hitY = 240;
         const target = notesRef.current.find(n => n.l === lane && !n.hit && !n.missed && n.y > 0);
@@ -297,7 +294,6 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     };
 
     const startMusic = useCallback(() => {
-        if (isObserver) return;
         playingRef.current = true; t0.current = performance.now() / 1000;
         notesRef.current = SEQ.map((n, i) => ({ id: i, ...n, hit: false, missed: false, y: -40 }));
         scoreRef.current = 0; comboRef.current = 0;
@@ -305,7 +301,7 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         
         start(); 
         rafRef.current = requestAnimationFrame(animate);
-    }, [start, animate, SEQ, isObserver]);
+    }, [start, animate, SEQ]);
 
     const init = useCallback(() => {
         playingRef.current = false; cancelAnimationFrame(rafRef.current);
@@ -361,15 +357,12 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                     </div>
                 </div>
                 
-                {!playingRef.current && !result && !isObserver && <BtnPrim onClick={startMusic} style={{ width: '100%' }}>🎸 演奏スタート！</BtnPrim>}
+                {!playingRef.current && !result && <BtnPrim onClick={startMusic} style={{ width: '100%' }}>🎸 演奏スタート！</BtnPrim>}
                 <ResultBox result={result} />
-                {result && !isObserver && (
+                {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
-                )}
-                {result && isObserver && (
-                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -379,7 +372,7 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
 /* ════════════════════════════════════════
    Game 15: 💬 闇市交渉ゲーム
 ════════════════════════════════════════ */
-export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+export function NegoGame({ pts, addPts, onBack, isEventMode }) {
     const NEGO_ITEMS = [
         { e: '🥫', name: '缶詰セット×5', desc: '拾い集めた缶詰', max: 20 }, 
         { e: '🔧', name: '謎の工具', desc: '使えるかわからない工具', max: 15 }, 
@@ -417,8 +410,8 @@ export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
             win, icon: win ? '💰' : '😔', main: win ? `合計${totalRef.current}P 交渉成功！` : `合計${totalRef.current}P 稼ぎが足りなかった`, 
             sub: `15P以上で成功`, pts: p 
         });
-        if (p > 0 && !isObserver) addPts(p);
-    }, [stop, addPts, isObserver]);
+        if (p > 0) addPts(p);
+    }, [stop, addPts]);
 
     const showItem = useCallback((i, its) => {
         if (doneRef.current) return;
@@ -434,7 +427,6 @@ export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     }, []);
 
     const makeOffer = useCallback(({ v, item, npc: n }) => {
-        if (isObserver) return; // 観戦者はブロック
         setOffers([]); // ボタンを隠す
         const accepted = v <= item.max; 
         const gain = accepted ? v : 0; 
@@ -452,7 +444,7 @@ export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         } else {
             setTimeout(() => showItem(next, itemsRef.current), 1200);
         }
-    }, [endNego, showItem, isObserver]);
+    }, [endNego, showItem]);
 
     const init = useCallback(() => {
         doneRef.current = false; totalRef.current = 0; idxRef.current = 0;
@@ -492,7 +484,7 @@ export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                 
                 {history.length > 0 && <div className="nego-history">{history.join(' | ')}</div>}
                 
-                {!isObserver && offers.length > 0 && (
+                {offers.length > 0 && (
                     <div style={{ display: 'flex', gap: '.8rem', width: '100%', marginTop: '10px' }}>
                         {offers.map((o, i) => (
                             <button key={i} className="nego-offer-btn" onPointerDown={() => makeOffer(o)}>{o.v}P</button>
@@ -500,14 +492,7 @@ export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                     </div>
                 )}
                 <ResultBox result={result} />
-                {result && !isObserver && (
-                    <BtnPrim onClick={isEventMode ? onBack : init}>
-                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
-                    </BtnPrim>
-                )}
-                {result && isObserver && (
-                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
-                )}
+                {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
             </div>
         </div>
     );

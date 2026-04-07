@@ -103,92 +103,55 @@ export function useTimer(secs, onEnd) {
 /* ════════════════════════════════════════
    Game 1: 📦 箱選びゲーム
 ════════════════════════════════════════ */
-export function BoxGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+export function BoxGame({ pts, addPts, onBack, isEventMode }) {
     const [msg, setMsg] = useState('シャッフル中…');
     const [states, setStates] = useState(['', '', '']);
     const [result, setResult] = useState(null);
-    const [playing, setPlaying] = useState(false);
-    const [time, setTime] = useState(10);
     const doneRef = useRef(false);
     const winRef = useRef(-1);
+    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current) pick(rnd(0, 2)); });
 
-    // タイマー管理
-    useEffect(() => {
-        if (!playing) return;
-        const timer = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
-        return () => clearInterval(timer);
-    }, [playing]);
-
-    // 時間切れ監視
-    useEffect(() => {
-        if (time === 0 && playing) pickBox(rnd(0, 2), true);
-    }, [time, playing]);
+    const pick = useCallback(async (idx) => {
+        if (doneRef.current) return;
+        doneRef.current = true; stop();
+        const win = idx === winRef.current;
+        setStates(prev => { const n = [...prev]; n[idx] = win ? 'win' : 'lose'; return n; });
+        await sleep(400);
+        if (!win) setStates(prev => { const n = [...prev]; n[winRef.current] = 'win'; return n; });
+        await sleep(200);
+        setStates(prev => prev.map((s, i) => (i === idx || i === winRef.current) ? s : 'dim'));
+        
+        const prizes = [{ e: '🥫', l: '空き缶発見！', p: 3 }, { e: '💰', l: 'お金を見つけた！', p: 10 }, { e: '🍺', l: 'ビール缶ゲット！', p: 5 }];
+        const pr = prizes[rnd(0, 2)];
+        if (win) { addPts(pr.p); setResult({ win: true, icon: pr.e, main: pr.l, pts: pr.p }); }
+        else setResult({ win: false, icon: '💀', main: 'ハズレ…', sub: 'また挑戦しな', pts: 0 });
+    }, [stop, addPts]);
 
     const init = useCallback(async () => {
-        doneRef.current = false;
-        setResult(null); setPlaying(false); setTime(10); setMsg('シャッフル中…');
-        setStates(['normal', 'normal', 'normal']);
-        winRef.current = rnd(0, 2);
-        
+        doneRef.current = false; winRef.current = rnd(0, 2);
+        setResult(null); setMsg('シャッフル中…'); setStates(['', '', '']);
         for (let r = 0; r < 6; r++) {
             const a = rnd(0, 2), b = (a + 1 + rnd(0, 1)) % 3;
-            setStates(prev => prev.map((s, i) => i === a || i === b ? 'shake' : s));
+            setStates(prev => { const n = [...prev]; n[a] = 'shake'; n[b] = 'shake'; return n; });
             await sleep(300);
-            setStates(prev => prev.map(s => s === 'shake' ? 'normal' : s));
+            setStates(prev => { const n = [...prev]; if (n[a] === 'shake') n[a] = ''; if (n[b] === 'shake') n[b] = ''; return n; });
             await sleep(70);
         }
         setMsg('どれだ！10秒以内に選べ！');
-        setPlaying(true);
-    }, []);
+        start();
+    }, [start]);
 
     useEffect(() => { init(); }, [init]);
 
-    const pickBox = async (idx, isTimeout = false) => {
-        if (!isTimeout && (!playing || isObserver)) return; // 観戦者はブロック
-        setPlaying(false);
-        doneRef.current = true;
-        const win = idx === winRef.current;
-        
-        setStates(prev => prev.map((s, i) => {
-            if (i === idx) return win ? 'win-box' : 'lose-box';
-            return s;
-        }));
-        await sleep(400);
-        
-        if (!win) {
-            setStates(prev => prev.map((s, i) => i === winRef.current ? 'win-box' : s));
-        }
-        setStates(prev => prev.map((s, i) => i !== idx && i !== winRef.current ? 'dim' : s));
-        await sleep(200);
-        
-        const prizes = [{ e: '🥫', l: '空き缶発見！', p: 3 }, { e: '💰', l: 'お金を見つけた！', p: 10 }, { e: '🍺', l: 'ビール缶ゲット！', p: 5 }];
-        const pz = prizes[rnd(0, 2)];
-        
-        if (win) { 
-            setResult({ win: true, icon: pz.e, main: pz.l, sub: '', pts: pz.p }); 
-            addPts(pz.p); 
-        } else { 
-            setResult({ win: false, icon: '💀', main: 'ハズレ…', sub: 'また挑戦しな', pts: 0 }); 
-        }
-    };
-
-    const getBoxProps = (state, index) => {
-        let text = '📦';
-        let num = `BOX ${index + 1}`;
-        if (state === 'win-box') { text = '✅'; num = '当たり！'; }
-        if (state === 'lose-box') { text = '❌'; num = 'ハズレ'; }
-        return { text, num };
-    };
-
     const boxStyle = (s) => ({
         width: 100, height: 110,
-        background: s === 'win-box' ? 'linear-gradient(145deg,#2a5a18,#163a0a)' : s === 'lose-box' ? 'linear-gradient(145deg,#5a1818,#3a0a0a)' : 'linear-gradient(145deg,#9b7520,#5c4010)',
-        border: `3px solid ${s === 'win-box' ? '#4a8a28' : s === 'lose-box' ? '#8a2828' : '#7a5a18'}`,
-        borderRadius: 8, cursor: doneRef.current || isObserver ? 'default' : 'pointer',
+        background: s === 'win' ? 'linear-gradient(145deg,#2a5a18,#163a0a)' : s === 'lose' ? 'linear-gradient(145deg,#5a1818,#3a0a0a)' : 'linear-gradient(145deg,#9b7520,#5c4010)',
+        border: `3px solid ${s === 'win' ? '#4a8a28' : s === 'lose' ? '#8a2828' : '#7a5a18'}`,
+        borderRadius: 8, cursor: doneRef.current ? 'default' : 'pointer',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         fontSize: '2.6rem', position: 'relative', boxShadow: '0 6px 20px rgba(0,0,0,.6)',
         opacity: s === 'dim' ? 0.4 : 1, transition: 'transform .18s',
-        animation: s === 'shake' ? 'shake .35s ease' : s === 'win-box' ? 'glow 1.5s ease infinite' : 'none',
+        animation: s === 'shake' ? 'shake .35s ease' : s === 'win' ? 'glow 1.5s ease infinite' : 'none',
         userSelect: 'none'
     });
 
@@ -198,23 +161,18 @@ export function BoxGame({ pts, addPts, onBack, isEventMode, isObserver }) {
             <div style={S.body}>
                 <Instr>{msg}</Instr>
                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                    {states.map((s, i) => {
-                        const props = getBoxProps(s, i);
-                        return (
-                            <div key={i} style={boxStyle(s)} onClick={() => pickBox(i)}>
-                                {props.text}<span style={{ position: 'absolute', bottom: 6, fontFamily: "'Bebas Neue',sans-serif", fontSize: '.75rem', color: 'rgba(255,255,255,.4)' }}>{props.num}</span>
-                            </div>
-                        );
-                    })}
+                    {states.map((s, i) => (
+                        <div key={i} style={boxStyle(s)} onClick={() => !doneRef.current && s !== 'dim' && pick(i)}>
+                            {s === 'win' ? '✅' : s === 'lose' ? '❌' : '📦'}
+                            <span style={{ position: 'absolute', bottom: 6, fontFamily: "'Bebas Neue',sans-serif", fontSize: '.75rem', color: 'rgba(255,255,255,.4)' }}>BOX {i + 1}</span>
+                        </div>
+                    ))}
                 </div>
                 <ResultBox result={result} />
-                {result && !isObserver && (
+                {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
-                )}
-                {result && isObserver && (
-                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -228,59 +186,51 @@ const VEND_WIN = [{ e: '💰', l: 'コイン大量発見！', p: 15 }, { e: '�
 const VEND_LOSE = [{ e: '❌', l: '空っぽ…', p: 0 }, { e: '🕷️', l: 'クモが出た！', p: 0 }, { e: '💨', l: '何も出てこない…', p: 0 }];
 const VEND_COLORS = [['#2a3020', '#3d4a30', '#4a6a38'], ['#2a2010', '#3d3018', '#6a5020'], ['#102030', '#182838', '#204858']];
 
-export function VendGame({ pts, addPts, onBack, isEventMode, isObserver }) {
-    const [machines, setMachines] = useState([]);
+export function VendGame({ pts, addPts, onBack, isEventMode }) {
+    const [choices, setChoices] = useState([]);
+    const [screens, setScreens] = useState(['?', '?', '?']);
+    const [dimmed, setDimmed] = useState([false, false, false]);
     const [result, setResult] = useState(null);
-    const [time, setTime] = useState(10);
-    const [playing, setPlaying] = useState(false);
-    
-    useEffect(() => {
-        if (!playing) return;
-        const timer = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
-        return () => clearInterval(timer);
-    }, [playing]);
+    const [showCoin, setShowCoin] = useState(-1);
+    const doneRef = useRef(false);
+    const choicesRef = useRef([]);
+    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current) pick(rnd(0, 2)); });
 
-    useEffect(() => {
-        if (time === 0 && playing) pickVend(rnd(0, 2), true);
-    }, [time, playing]);
-
-    const init = useCallback(() => {
-        setResult(null); setPlaying(true); setTime(10);
-        
-        const winItem = VEND_WIN[rnd(0, VEND_WIN.length - 1)];
-        const losers = [...VEND_LOSE].sort(() => Math.random() - .5).slice(0, 2);
-        const choices = [winItem, ...losers].sort(() => Math.random() - .5);
-        const labels = ['缶ジュース', 'エナジー', 'ビール'];
-        
-        setMachines(choices.map((c, i) => ({
-            id: i, data: c, style: VEND_COLORS[i], label: labels[i], state: 'normal', screen: '?', showCoin: false
-        })));
-    }, []);
-
-    useEffect(() => { init(); }, [init]);
-
-    const pickVend = async (idx, isTimeout = false) => {
-        if (!isTimeout && (!playing || isObserver)) return; // 観戦者はブロック
-        setPlaying(false);
-        
+    const pick = useCallback(async (idx) => {
+        if (doneRef.current) return;
+        doneRef.current = true; stop();
+        const ch = choicesRef.current;
         for (const f of ['⚙️', '🔄', '⚡', '🔄']) {
-            setMachines(prev => prev.map(m => m.id === idx ? { ...m, screen: f } : m));
+            setScreens(prev => { const n = [...prev]; n[idx] = f; return n; });
             await sleep(130);
         }
+        setScreens(prev => { const n = [...prev]; n[idx] = ch[idx].e; return n; });
+        if (ch[idx].p > 0) { setShowCoin(idx); setTimeout(() => setShowCoin(-1), 600); }
+        await sleep(250);
         
-        const pr = machines[idx].data;
-        const isWin = pr.p > 0;
-        
-        setMachines(prev => prev.map(m => m.id === idx ? { ...m, screen: pr.e, showCoin: isWin } : { ...m, screen: m.data.e, state: 'dim' }));
-        await sleep(600);
-        
-        if (isWin) { 
-            setResult({ win: true, icon: pr.e, main: pr.l, sub: '当たり1台を引き当てた！', pts: pr.p }); 
-            addPts(pr.p); 
-        } else { 
-            setResult({ win: false, icon: '💀', main: '空っぽ…', sub: '3台のうちハズレを選んだ', pts: 0 }); 
+        for (let i = 0; i < 3; i++) {
+            if (i !== idx) {
+                setScreens(prev => { const n = [...prev]; n[i] = ch[i].e; return n; });
+                setDimmed(prev => { const n = [...prev]; n[i] = true; return n; });
+                await sleep(250);
+            }
         }
-    };
+        const pr = ch[idx];
+        if (pr.p > 0) { addPts(pr.p); setResult({ win: true, icon: pr.e, main: pr.l, pts: pr.p }); }
+        else setResult({ win: false, icon: '💀', main: '空っぽ…', sub: '3台のうちハズレを選んだ', pts: 0 });
+    }, [stop, addPts]);
+
+    const init = useCallback(() => {
+        doneRef.current = false;
+        const win = VEND_WIN[rnd(0, VEND_WIN.length - 1)];
+        const losers = [...VEND_LOSE].sort(() => Math.random() - .5).slice(0, 2);
+        const ch = [win, ...losers].sort(() => Math.random() - .5);
+        choicesRef.current = ch; setChoices(ch);
+        setScreens(['?', '?', '?']); setDimmed([false, false, false]); setResult(null); setShowCoin(-1);
+        start();
+    }, [start]);
+
+    useEffect(() => { init(); }, [init]);
 
     return (
         <div style={S.screen}>
@@ -288,34 +238,31 @@ export function VendGame({ pts, addPts, onBack, isEventMode, isObserver }) {
             <div style={S.body}>
                 <Instr>3台のうち当たりは1台だけ！はずれ2台は空っぽ！</Instr>
                 <div style={{ display: 'flex', gap: '.8rem', justifyContent: 'center' }}>
-                    {machines.map((m, i) => (
-                        <div key={m.id} onClick={() => pickVend(m.id)} style={{
-                            width: 110, height: 180, borderRadius: '8px 8px 4px 4px', cursor: m.state === 'dim' || !playing || isObserver ? 'default' : 'pointer',
+                    {choices.map((ch, i) => (
+                        <div key={i} onClick={() => !doneRef.current && !dimmed[i] && pick(i)} style={{
+                            width: 110, height: 180, borderRadius: '8px 8px 4px 4px', cursor: dimmed[i] || doneRef.current ? 'default' : 'pointer',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '.5rem .4rem',
-                            position: 'relative', border: `3px solid ${m.style[2]}`,
-                            background: `linear-gradient(180deg,${m.style[0]},${m.style[1]})`,
-                            opacity: m.state === 'dim' ? 0.4 : 1, transition: 'transform .18s,opacity .3s', boxShadow: '-4px 4px 15px rgba(0,0,0,.7)', userSelect: 'none'
+                            position: 'relative', border: `3px solid ${VEND_COLORS[i][2]}`,
+                            background: `linear-gradient(180deg,${VEND_COLORS[i][0]},${VEND_COLORS[i][1]})`,
+                            opacity: dimmed[i] ? 0.4 : 1, transition: 'transform .18s,opacity .3s', boxShadow: '-4px 4px 15px rgba(0,0,0,.7)', userSelect: 'none'
                         }}>
                             <div style={{ width: '85%', height: 62, background: '#080f08', border: '2px solid #1a2a1a', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.9rem', marginBottom: '.35rem' }}>
-                                <span style={{ opacity: m.screen === '?' ? 0.45 : 1, fontSize: m.screen === '?' ? '1.5rem' : '1.9rem' }}>{m.screen}</span>
+                                {screens[i] === '?' ? <span style={{ opacity: .45, fontSize: '1.5rem' }}>?</span> : <span>{screens[i]}</span>}
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 2, width: '85%', marginBottom: '.25rem' }}>
-                                {[0, 1, 2].map(j => <div key={j} style={{ height: 12, borderRadius: 2, border: '1px solid rgba(255,255,255,.1)', background: m.style[2] }} />)}
+                                {[0, 1, 2].map(j => <div key={j} style={{ height: 12, borderRadius: 2, border: '1px solid rgba(255,255,255,.1)', background: VEND_COLORS[i][2] }} />)}
                             </div>
                             <div style={{ width: '55%', height: 16, background: '#050505', border: '2px solid #1a1a1a', borderRadius: 2, marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '.6rem', color: '#444' }}>↓</div>
-                            <div style={{ fontSize: '.6rem', color: 'rgba(255,255,255,.35)', marginTop: 3, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: '.1em' }}>{m.label}</div>
-                            {m.showCoin && <div style={{ position: 'absolute', bottom: 22, left: '50%', transform: 'translateX(-50%)', fontSize: '1.1rem' }}>🪙</div>}
+                            <div style={{ fontSize: '.6rem', color: 'rgba(255,255,255,.35)', marginTop: 3, fontFamily: "'Bebas Neue',sans-serif", letterSpacing: '.1em' }}>{['缶ジュース', 'エナジー', 'ビール'][i]}</div>
+                            {showCoin === i && <div style={{ position: 'absolute', bottom: 22, left: '50%', fontSize: '1.1rem', animation: 'coinDrop .5s ease-in forwards', pointerEvents: 'none' }}>🪙</div>}
                         </div>
                     ))}
                 </div>
                 <ResultBox result={result} />
-                {result && !isObserver && (
+                {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
-                )}
-                {result && isObserver && (
-                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -327,178 +274,108 @@ export function VendGame({ pts, addPts, onBack, isEventMode, isObserver }) {
 ════════════════════════════════════════ */
 const SC_SYMS = ['🥫', '💰', '🍺', '🐀', '💊', '🎁'];
 
-function ScratchCell({ sym, isRevealed, onReveal, disabled }) {
-    const canvasRef = useRef(null);
-    const [scratched, setScratched] = useState(false);
-    const isDrawing = useRef(false);
+function ScratchCell({ sym, onRevealed, disabled }) {
+    const cvRef = useRef(null);
+    const revealedRef = useRef(false);
+    const scratchRef = useRef(false);
 
     useEffect(() => {
-        const cv = canvasRef.current;
-        if (!cv) return;
+        const cv = cvRef.current; if (!cv) return;
         const ctx = cv.getContext('2d');
-
         const g = ctx.createLinearGradient(0, 0, 84, 84);
-        g.addColorStop(0, '#4a3520'); g.addColorStop(0.5, '#3a2818'); g.addColorStop(1, '#2e1e10');
+        g.addColorStop(0, '#4a3520'); g.addColorStop(.5, '#3a2818'); g.addColorStop(1, '#2e1e10');
         ctx.fillStyle = g; ctx.fillRect(0, 0, 84, 84);
-
         ctx.strokeStyle = 'rgba(180,130,70,.15)'; ctx.lineWidth = 1;
-        for (let y = 8; y < 84; y += 13) {
-            ctx.beginPath();
-            ctx.moveTo(0, y + (Math.random() - 0.5) * 3);
-            ctx.lineTo(84, y + (Math.random() - 0.5) * 3);
-            ctx.stroke();
-        }
+        for (let y = 8; y < 84; y += 13) { ctx.beginPath(); ctx.moveTo(0, y + (Math.random() - .5) * 3); ctx.lineTo(84, y + (Math.random() - .5) * 3); ctx.stroke(); }
         ctx.font = 'bold 26px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = 'rgba(220,170,80,.6)'; ctx.fillText('？', 42, 40);
         ctx.font = '8px sans-serif'; ctx.fillStyle = 'rgba(180,140,70,.45)'; ctx.fillText('¥100', 42, 68);
     }, []);
 
-    const scratch = (clientX, clientY) => {
-        if (scratched || disabled || isRevealed) return;
-        const cv = canvasRef.current;
+    const doScratch = useCallback((cx, cy) => {
+        if (revealedRef.current || disabled) return;
+        const cv = cvRef.current; if (!cv) return;
         const ctx = cv.getContext('2d');
-        const rect = cv.getBoundingClientRect();
-        const x = clientX - rect.left;
-        const y = clientY - rect.top;
-
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(x, y, 18, 0, Math.PI * 2);
-        ctx.fill();
-
-        const data = ctx.getImageData(0, 0, 84, 84).data;
-        let transparentPixels = 0;
-        for (let p = 3; p < data.length; p += 4) {
-            if (data[p] < 50) transparentPixels++;
+        ctx.globalCompositeOperation = 'destination-out'; ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
+        const data = ctx.getImageData(0, 0, 84, 84).data; let tr = 0;
+        for (let p = 3; p < data.length; p += 4) if (data[p] < 50) tr++;
+        if (tr / (84 * 84) > .5 && !revealedRef.current) {
+            revealedRef.current = true; cv.style.pointerEvents = 'none'; onRevealed();
         }
-        
-        if (transparentPixels / (84 * 84) > 0.5) {
-            setScratched(true);
-            onReveal();
-        }
+    }, [disabled, onRevealed]);
+
+    const handlers = {
+        onMouseDown: e => { scratchRef.current = true; const r = cvRef.current.getBoundingClientRect(); doScratch(e.clientX - r.left, e.clientY - r.top); },
+        onMouseMove: e => { if (!scratchRef.current) return; const r = cvRef.current.getBoundingClientRect(); doScratch(e.clientX - r.left, e.clientY - r.top); },
+        onMouseUp: () => scratchRef.current = false, onMouseLeave: () => scratchRef.current = false,
+        onTouchStart: e => { e.preventDefault(); const r = cvRef.current.getBoundingClientRect(); const t = e.touches[0]; doScratch(t.clientX - r.left, t.clientY - r.top); },
+        onTouchMove: e => { e.preventDefault(); const r = cvRef.current.getBoundingClientRect(); const t = e.touches[0]; doScratch(t.clientX - r.left, t.clientY - r.top); },
     };
 
-    const handleStart = (e) => { isDrawing.current = true; scratch(e.clientX || e.touches[0].clientX, e.clientY || e.touches[0].clientY); };
-    const handleMove = (e) => { if (!isDrawing.current) return; scratch(e.clientX || e.touches[0].clientX, e.clientY || e.touches[0].clientY); };
-    const handleEnd = () => { isDrawing.current = false; };
-
-    const showFace = scratched || isRevealed;
-
     return (
-        <div style={{ width: 84, height: 84, position: 'relative', borderRadius: 8, overflow: 'hidden', border: '2px solid #3d2e1a', background: showFace ? '#241a0e' : '#4a3520' }}>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.1rem', opacity: showFace ? 1 : 0, transition: 'opacity 0.2s' }}>{sym}</div>
-            <canvas
-                ref={canvasRef}
-                width={84}
-                height={84}
-                style={{ position: 'absolute', inset: 0, touchAction: 'none', cursor: 'crosshair', opacity: showFace ? 0 : 1, pointerEvents: showFace ? 'none' : 'auto' }}
-                onMouseDown={handleStart}
-                onMouseMove={handleMove}
-                onMouseUp={handleEnd}
-                onMouseLeave={handleEnd}
-                onTouchStart={handleStart}
-                onTouchMove={handleMove}
-                onTouchEnd={handleEnd}
-            />
+        <div style={{ width: 84, height: 84, position: 'relative', borderRadius: 8, overflow: 'hidden', border: '2px solid #3d2e1a' }}>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.1rem', background: '#241a0e' }}>{sym}</div>
+            <canvas ref={cvRef} width={84} height={84} style={{ position: 'absolute', inset: 0, touchAction: 'none', cursor: 'crosshair' }} {...handlers} />
         </div>
     );
 }
 
-export function ScratchGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+export function ScratchGame({ pts, addPts, onBack, isEventMode }) {
     const [grid, setGrid] = useState([]);
-    const [revealed, setRevealed] = useState(Array(9).fill(false));
-    const [time, setTime] = useState(10);
-    const [playing, setPlaying] = useState(false);
+    const [count, setCount] = useState(0);
     const [result, setResult] = useState(null);
+    const countRef = useRef(0);
+    const revRef = useRef([]);
+    const gridRef = useRef([]);
+    const doneRef = useRef(false);
     const [gameKey, setGameKey] = useState(0);
-    
-    const count = revealed.filter(Boolean).length;
+    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current) checkScratch(); });
 
-    useEffect(() => {
-        if (!playing) return;
-        const timer = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
-        return () => clearInterval(timer);
-    }, [playing]);
-
-    const checkResult = useCallback(() => {
-        setPlaying(false);
-        const rev = grid.filter((_, i) => revealed[i]);
-        const counts = {};
-        rev.forEach(s => counts[s] = (counts[s] || 0) + 1);
+    const checkScratch = useCallback(() => {
+        if (doneRef.current) return; doneRef.current = true; stop();
+        const revSyms = gridRef.current.filter((_, i) => revRef.current[i]);
+        const counts = {}; revSyms.forEach(s => counts[s] = (counts[s] || 0) + 1);
         const mx = Math.max(0, ...Object.values(counts));
         const ws = Object.keys(counts).find(k => counts[k] === mx) || '';
-        
-        const win = mx >= 2; 
-        const p = mx >= 3 ? 20 : mx >= 2 ? 5 : 0;
-        
-        setResult({ 
-            win, 
-            icon: win ? '🎊' : '💀', 
-            main: win ? `${ws}×${mx} 揃い！` : '揃わなかった…', 
-            sub: `削ったマス: ${rev.join(' ')}`, 
-            pts: p 
-        });
-        
-        if (win) addPts(p);
-    }, [grid, revealed, addPts]);
+        const win = mx >= 2; const p = mx >= 3 ? 20 : mx >= 2 ? 5 : 0;
+        if (p > 0) addPts(p);
+        setResult({ win, icon: win ? '🎊' : '💀', main: win ? `${ws}×${mx} 揃い！` : '揃わなかった…', sub: `削ったマス: ${revSyms.join(' ')}`, pts: p });
+    }, [stop, addPts]);
 
-    useEffect(() => {
-        if (playing && (count >= 3 || time === 0)) {
-            checkResult();
-        }
-    }, [count, time, playing, checkResult]);
+    const onRevealed = useCallback((i) => {
+        if (revRef.current[i]) return;
+        revRef.current[i] = true; countRef.current++;
+        setCount(countRef.current);
+        if (countRef.current >= 3) { stop(); setTimeout(checkScratch, 600); }
+    }, [stop, checkScratch]);
 
     const init = useCallback(() => {
-        setResult(null); setPlaying(true); setTime(10); setRevealed(Array(9).fill(false));
-        setGameKey(k => k + 1); 
-        
-        const newGrid = Array.from({ length: 9 }, () => SC_SYMS[rnd(0, 5)]);
-        if (Math.random() < 0.3) { 
-            const sym = SC_SYMS[rnd(0, 5)]; 
-            const pos = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(() => Math.random() - 0.5).slice(0, 3); 
-            pos.forEach(p => newGrid[p] = sym); 
-        }
-        setGrid(newGrid);
-    }, []);
+        doneRef.current = false; countRef.current = 0; revRef.current = Array(9).fill(false);
+        let g = Array.from({ length: 9 }, () => SC_SYMS[rnd(0, 5)]);
+        if (Math.random() < .25) { const sym = SC_SYMS[rnd(0, 5)]; const pos = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(() => Math.random() - .5).slice(0, 3); pos.forEach(p => g[p] = sym); }
+        gridRef.current = g; setGrid(g); setCount(0); setResult(null);
+        setGameKey(k => k + 1);
+        start();
+    }, [start]);
 
     useEffect(() => { init(); }, [init]);
 
-    const handleReveal = (idx) => {
-        if (!playing || revealed[idx] || count >= 3 || isObserver) return; // 観戦者はブロック
-        setRevealed(prev => {
-            const next = [...prev]; 
-            next[idx] = true;
-            return next;
-        });
-    };
-
     return (
         <div style={S.screen}>
-            <GameHeader title="🪙 スクラッチ" pts={pts} timer={time} onBack={onBack} />
+            <GameHeader title="🪙 スクラッチくじ" pts={pts} timer={time} onBack={onBack} />
             <div style={S.body}>
                 <Instr>10秒以内に3マス削れ！2つ以上揃えば成功！</Instr>
                 <div style={{ fontSize: '.95rem', fontWeight: 700, color: '#c97b2a', textAlign: 'center' }}>あと {Math.max(0, 3 - count)} マス削れます</div>
                 <div style={{ background: 'linear-gradient(145deg,#1a1308,#0d0a05)', border: '2px solid #3d2e1a', borderRadius: 14, padding: '.9rem', display: 'inline-block' }}>
                     <div key={gameKey} style={{ display: 'grid', gridTemplateColumns: 'repeat(3,84px)', gridTemplateRows: 'repeat(3,84px)', gap: '.45rem' }}>
-                        {grid.map((sym, i) => (
-                            <ScratchCell 
-                                key={i} 
-                                sym={sym} 
-                                isRevealed={revealed[i] || (!playing && result)} 
-                                onReveal={() => handleReveal(i)} 
-                                disabled={!playing || count >= 3 || isObserver} 
-                            />
-                        ))}
+                        {grid.map((sym, i) => <ScratchCell key={`${i}-${sym}`} sym={sym} disabled={count >= 3 || doneRef.current} onRevealed={() => onRevealed(i)} />)}
                     </div>
                 </div>
                 <ResultBox result={result} />
-                {result && !isObserver && (
+                {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
-                )}
-                {result && isObserver && (
-                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -506,12 +383,13 @@ export function ScratchGame({ pts, addPts, onBack, isEventMode, isObserver }) {
 }
 
 /* ════════════════════════════════════════
-   Game 4: 🃏 ハイ＆ロー
+   Game 4: 🃏 ハイ＆ロー (UI・バグ修正版)
 ════════════════════════════════════════ */
 const SUITS = ['♠', '♥', '♦', '♣'];
 const CVALS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const CNUMS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
+// 本物のトランプらしいUIに修正
 const PlayingCard = ({ c, isFaceDown }) => {
     if (isFaceDown || !c) {
         return (
@@ -551,73 +429,64 @@ const PlayingCard = ({ c, isFaceDown }) => {
     );
 };
 
-export function HLGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+export function HLGame({ pts, addPts, onBack, isEventMode }) {
     const [deck, setDeck] = useState([]);
     const [idx, setIdx] = useState(0);
     const [streak, setStreak] = useState(0);
-    const [revealedNext, setRevealedNext] = useState(null); 
+    const [revealedNext, setRevealedNext] = useState(null); // 次のカード（めくった状態を保持）
     const [result, setResult] = useState(null);
-    const [time, setTime] = useState(10);
-    const [playing, setPlaying] = useState(false);
-    
+    const doneRef = useRef(false);
     const streakRef = useRef(0);
     const idxRef = useRef(0);
     const deckRef = useRef([]);
     const guessing = useRef(false);
-
-    useEffect(() => {
-        if (!playing) return;
-        const timer = setInterval(() => setTime(t => Math.max(0, t - 1)), 1000);
-        return () => clearInterval(timer);
-    }, [playing]);
+    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current) endHL(); });
 
     const endHL = useCallback(() => {
-        setPlaying(false);
+        if (doneRef.current) return;
+        doneRef.current = true; stop();
         const p = streakRef.current * 5;
         const win = streakRef.current >= 3;
         if (win) addPts(p);
         setResult({ win, icon: win ? '🎉' : '💀', main: win ? `${streakRef.current}連続正解！` : '連続3回に届かず…', sub: `${streakRef.current}連続 × 5P`, pts: win ? p : 0 });
-    }, [addPts]);
-
-    useEffect(() => {
-        if (time === 0 && playing) endHL();
-    }, [time, playing, endHL]);
+    }, [stop, addPts]);
 
     const guess = useCallback(async (dir) => {
-        if (guessing.current || !playing || isObserver) return; // 観戦者はブロック
+        if (doneRef.current || guessing.current) return;
         guessing.current = true;
         const cur = deckRef.current[idxRef.current];
         const nxt = deckRef.current[idxRef.current + 1];
         if (!nxt) { endHL(); guessing.current = false; return; }
 
-        setRevealedNext(nxt); 
+        setRevealedNext(nxt); // 次のカードを表にして表示
 
         const ok = (dir === 'h' && nxt.n >= cur.n) || (dir === 'l' && nxt.n <= cur.n);
         
-        await sleep(800); 
+        await sleep(800); // プレイヤーに結果を見せるための待機時間
 
         if (ok) {
             streakRef.current++;
             idxRef.current++;
+            // ▼ 同時に更新することで「チラ見えバグ」を完全に解消
             setStreak(streakRef.current);
             setIdx(idxRef.current);
-            setRevealedNext(null); 
+            setRevealedNext(null); // 左側にスライド＆右側を裏面に戻す
             guessing.current = false;
         } else {
-            setPlaying(false);
+            doneRef.current = true; stop();
             setResult({ win: false, icon: '💀', main: 'ハズレ…', sub: `${streakRef.current}連続で止まった`, pts: 0 });
             guessing.current = false;
         }
-    }, [endHL, playing, isObserver]);
+    }, [endHL, stop]);
 
     const init = useCallback(() => {
-        streakRef.current = 0; idxRef.current = 0; guessing.current = false;
+        doneRef.current = false; streakRef.current = 0; idxRef.current = 0; guessing.current = false;
         const d = [];
         for (const s of SUITS) for (let i = 0; i < CVALS.length; i++) d.push({ s, v: CVALS[i], n: CNUMS[i] });
         d.sort(() => Math.random() - .5);
         deckRef.current = d; setDeck(d); setIdx(0); setStreak(0); setRevealedNext(null); setResult(null);
-        setTime(10); setPlaying(true);
-    }, []);
+        start();
+    }, [start]);
 
     useEffect(() => { init(); }, [init]);
 
@@ -636,7 +505,7 @@ export function HLGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                     <PlayingCard c={revealedNext} isFaceDown={!revealedNext} />
                 </div>
 
-                {!result && !isObserver && (
+                {!result && (
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '10px' }}>
                         <button onClick={() => guess('h')} style={{ background: 'linear-gradient(135deg,#2a5a1a,#183a0a)', border: '2px solid #4a8a2a', borderRadius: 12, color: '#a0e080', font: "700 1.1rem 'Noto Sans JP',sans-serif", padding: '.8rem 2rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(74,138,42,.3)', transition: 'transform .1s' }} onMouseDown={e=>e.currentTarget.style.transform='scale(0.95)'} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'}>▲ HIGH</button>
                         <button onClick={() => guess('l')} style={{ background: 'linear-gradient(135deg,#5a1a1a,#3a0a0a)', border: '2px solid #8a2a2a', borderRadius: 12, color: '#e08080', font: "700 1.1rem 'Noto Sans JP',sans-serif", padding: '.8rem 2rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(138,42,42,.3)', transition: 'transform .1s' }} onMouseDown={e=>e.currentTarget.style.transform='scale(0.95)'} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'}>▼ LOW</button>
@@ -644,13 +513,10 @@ export function HLGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                 )}
                 
                 <ResultBox result={result} />
-                {result && !isObserver && (
+                {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
-                )}
-                {result && isObserver && (
-                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>

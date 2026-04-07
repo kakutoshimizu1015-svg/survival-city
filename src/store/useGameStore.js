@@ -13,7 +13,8 @@ const initialState = {
     npcMovePick: null,       
     
     shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
-    mgActive: false, mgType: "", mgValue: 0, mgResult: null, storyActive: false,
+    // ▼ 修正: mgActive等の並びに、観戦モード用の activeMiniGamePlayerId を追加
+    mgActive: false, mgType: "", mgValue: 0, mgResult: null, activeMiniGamePlayerId: null, storyActive: false,
     settingsActive: false, rulesActive: false, tutorialActive: false, teamActionActive: false,
     tutorialStep: 0, sandboxActive: false, sandboxScenario: -1, sandboxStep: 0,
     turnBanner: null, turnBannerActive: false, eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,

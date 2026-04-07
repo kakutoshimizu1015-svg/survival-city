@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep } from './MiniGamesPart1';
 import { useUserStore } from '../../store/useUserStore';
+// ▼ 追加: 観戦モード判定用Storeインポート
+import { useGameStore } from '../../store/useGameStore';
+import { useNetworkStore } from '../../store/useNetworkStore';
 
 export const MiniGameStylesPart2 = () => (
     <style>{`
@@ -54,10 +57,27 @@ export const MiniGameStylesPart2 = () => (
     `}</style>
 );
 
+// ▼ 追加: 共通の観戦者用オーバーレイ
+const SpectatorOverlay = ({ isSpectator }) => {
+    if (!isSpectator) return null;
+    return (
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
+            <div style={{ background: 'rgba(0,0,0,0.85)', padding: '1.5rem 2.5rem', borderRadius: 16, border: '2px solid #c97b2a', color: '#f0e8d0', textAlign: 'center', boxShadow: '0 0 20px rgba(201,123,42,.4)' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>👀</div>
+                <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>他プレイヤーの<br/>プレイを観戦中...</div>
+            </div>
+        </div>
+    );
+};
+
 /* ════════════════════════════════════════
-   Game 5: 🎰 路上スロット (観戦対応版)
+   Game 5: 🎰 路上スロット (ルール画面＆観戦モード対応)
 ════════════════════════════════════════ */
-export function SlotGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+export function SlotGame({ pts, addPts, onBack, isEventMode }) {
+    const { activeMiniGamePlayerId } = useGameStore();
+    const { myUserId } = useNetworkStore();
+    const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
+
     const SYMS = ['🥫', '💰', '🍺', '🐀', '💊', '🚬', '🗑️'];
     const SH = 80;
     const TOT = SYMS.length * SH;
@@ -65,6 +85,7 @@ export function SlotGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const [reels, setReels] = useState([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
     const [playing, setPlaying] = useState(false);
     const [result, setResult] = useState(null);
+    const [isReady, setIsReady] = useState(false); // ▼ 追加: 開始待ちフェーズ
     
     const rafRef = useRef(null);
     const offsets = useRef([0, 0, 0]);
@@ -72,14 +93,14 @@ export function SlotGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const reelsDataRef = useRef([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
 
     const { time, start, stop } = useTimer(10, () => {
-        if (playing && !isObserver) {
+        if (playing) {
             [0, 1, 2].forEach(i => stopReel(i));
         }
     });
 
     const init = useCallback(() => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        setResult(null); setPlaying(false); 
+        setResult(null); setPlaying(false); setIsReady(false); // 初期化時に準備画面へ
         
         const initial = [{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }];
         reelsDataRef.current = initial;
@@ -92,8 +113,9 @@ export function SlotGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     }, [TOT]);
 
     const startSlot = () => {
-        if (isObserver) return; // 観戦者はスタートできない
+        setIsReady(true);
         setPlaying(true); setResult(null); 
+        
         reelsDataRef.current = [{ stop: false, res: null }, { stop: false, res: null }, { stop: false, res: null }];
         setReels([...reelsDataRef.current]);
         
@@ -120,7 +142,7 @@ export function SlotGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     };
 
     const stopReel = (i) => {
-        if (!playing || isObserver) return; // 観戦者は止められない
+        if (!playing) return;
         if (reelsDataRef.current[i].stop) return;
         
         reelsDataRef.current[i].stop = true;
@@ -153,42 +175,47 @@ export function SlotGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     useEffect(() => { init(); return () => cancelAnimationFrame(rafRef.current); }, [init]);
 
     return (
-        <div style={S.screen}>
+        <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart2 />
+            <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="🎰 路上スロット" pts={pts} timer={playing ? time : null} onBack={onBack} />
             <div style={S.body}>
-                <Instr>10秒以内に全リールをSTOP！時間切れで自動停止！</Instr>
-                <div className="slot-machine">
-                    <div className="slot-top-light">
-                        {[0,1,2,3,4].map(i => <div key={i} className="light-dot"></div>)}
+                {!isReady && !result ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginTop: '2rem' }}>
+                        <Instr>
+                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                            10秒以内に3つのリールをすべて止めろ！<br/>絵柄が揃えばPゲット！
+                        </Instr>
+                        <button className="slot-start" onPointerDown={startSlot}>🎰 ゲーム開始！</button>
                     </div>
-                    <div className="reels-wrap">
-                        {[0, 1, 2].map(i => (
-                            <div key={i} className="reel-col">
-                                <div className="reel-window">
-                                    <div className="reel-inner" ref={el => innerRefs.current[i] = el}>
-                                        {Array(3).fill(0).map((_, r) => SYMS.map((s, si) => <div key={r + '-' + si} className="reel-sym">{s}</div>))}
+                ) : (
+                    <div className="slot-machine">
+                        <div className="slot-top-light">
+                            {[0,1,2,3,4].map(i => <div key={i} className="light-dot"></div>)}
+                        </div>
+                        <div className="reels-wrap">
+                            {[0, 1, 2].map(i => (
+                                <div key={i} className="reel-col">
+                                    <div className="reel-window">
+                                        <div className="reel-inner" ref={el => innerRefs.current[i] = el}>
+                                            {Array(3).fill(0).map((_, r) => SYMS.map((s, si) => <div key={r + '-' + si} className="reel-sym">{s}</div>))}
+                                        </div>
                                     </div>
+                                    <button className={`stop-btn ${reels[i].stop && playing ? 'stopped' : ''}`} disabled={!playing || reels[i].stop} onPointerDown={() => stopReel(i)}>
+                                        {reels[i].stop && reels[i].res ? `✓ ${reels[i].res}` : 'STOP'}
+                                    </button>
                                 </div>
-                                <button className={`stop-btn ${reels[i].stop && playing ? 'stopped' : ''}`} disabled={!playing || reels[i].stop || isObserver} onPointerDown={() => stopReel(i)}>
-                                    {reels[i].stop && reels[i].res ? `✓ ${reels[i].res}` : 'STOP'}
-                                </button>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+                        <div className="slot-paylabel"><span>💰×3=+50P</span><span>3揃い=+20P</span><span>2揃い=+5P</span></div>
+                        <div style={{ height: '.5rem' }}></div>
                     </div>
-                    <div className="slot-paylabel"><span>💰×3=+50P</span><span>3揃い=+20P</span><span>2揃い=+5P</span></div>
-                    <div style={{ height: '.5rem' }}></div>
-                    {/* ▼ 観戦者にはスタートボタンを隠す */}
-                    {!playing && !result && !isObserver && <button className="slot-start" onPointerDown={startSlot}>🎰 スタート！</button>}
-                </div>
+                )}
                 <ResultBox result={result} />
-                {result && !isObserver && (
+                {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
-                )}
-                {result && isObserver && (
-                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -196,9 +223,13 @@ export function SlotGame({ pts, addPts, onBack, isEventMode, isObserver }) {
 }
 
 /* ════════════════════════════════════════
-   Game 6: ♟️ 路上○×ゲーム (観戦対応版)
+   Game 6: ♟️ 路上○×ゲーム (観戦モード＆ルール明記)
 ════════════════════════════════════════ */
-export function OxoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+export function OxoGame({ pts, addPts, onBack, isEventMode }) {
+    const { activeMiniGamePlayerId } = useGameStore();
+    const { myUserId } = useNetworkStore();
+    const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
+
     const { gachaPoints, addGachaAssets } = useUserStore();
     const [board, setBoard] = useState(Array(9).fill(null));
     const [bet, setBet] = useState(0);
@@ -210,7 +241,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const isCpuThinking = useRef(false);
 
     const { time, start, stop } = useTimer(5, () => {
-        if (phase === 'play' && turn === 'p' && !isObserver) end('lose');
+        if (phase === 'play' && turn === 'p') end('lose');
     });
 
     const init = useCallback(() => { 
@@ -218,7 +249,6 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     }, [stop]);
 
     const startGame = (b) => {
-        if (isObserver) return;
         if (gachaPoints < b) { alert('Pが足りない！ゲーム本編で稼ごう！'); return; }
         addGachaAssets(0, -b);
         setBet(b); setPhase('play'); setTurn('p');
@@ -238,7 +268,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     };
 
     const move = (i) => {
-        if (board[i] || phase !== 'play' || turn !== 'p' || isCpuThinking.current || isObserver) return;
+        if (board[i] || phase !== 'play' || turn !== 'p' || isCpuThinking.current) return;
         stop();
         
         const nb = [...board]; 
@@ -304,17 +334,22 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     useEffect(() => { init(); }, [init]);
 
     return (
-        <div style={S.screen}>
+        <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart2 />
+            <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="♟️ 路上○×" pts={pts} timer={phase === 'play' ? time : null} onBack={onBack} />
             <div style={S.body}>
                 {phase === 'bet' && (
                     <>
-                        <Instr>CPUに勝てばP倍増！5秒以内に手を打て！</Instr>
+                        <Instr>
+                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                            CPUと○×ゲームで勝負！制限時間は1ターン5秒。<br/>
+                            賭けPを選んでスタート！勝てば賭けPが倍になる！
+                        </Instr>
                         <div style={{ fontSize: '.88rem', color: '#7a6a4a', textAlign: 'center', marginBottom: '.5rem', marginTop: '20px' }}>賭けPを選べ（所持: {gachaPoints}P）</div>
                         <div className="bet-btns">
                             {[3, 5, 8, 10].map(b => (
-                                <button key={b} className="bet-btn" disabled={isObserver} onPointerDown={() => startGame(b)}>{b}P</button>
+                                <button key={b} className="bet-btn" onPointerDown={() => startGame(b)}>{b}P</button>
                             ))}
                         </div>
                     </>
@@ -340,13 +375,10 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                     </>
                 )}
                 <ResultBox result={result} />
-                {result && !isObserver && (
+                {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
-                )}
-                {result && isObserver && (
-                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -354,9 +386,13 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
 }
 
 /* ════════════════════════════════════════
-   Game 7: 📦 段ボールパズル (壁反転バグ修正版)
+   Game 7: 📦 段ボールパズル (速度バグ＆観戦モード対応)
 ════════════════════════════════════════ */
-export function TetrisGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
+    const { activeMiniGamePlayerId } = useGameStore();
+    const { myUserId } = useNetworkStore();
+    const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
+
     const TET_COLS = 6, TET_ROWS = 10;
     const TET_WS = [1, 2, 2, 3, 1, 2];
     const TET_COLORS = ['#c97b2a', '#4e8539', '#2a5a8a', '#8a3a2a', '#6a4a8a', '#3a6a5a'];
@@ -368,6 +404,7 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const [pieceColor, setPieceColor] = useState(TET_COLORS[0]);
     const [result, setResult] = useState(null);
     const [playing, setPlaying] = useState(false);
+    const [started, setStarted] = useState(false); // ▼ 追加: 待機フェーズ用
     
     const boardRef = useRef(Array.from({ length: TET_ROWS }, () => Array(TET_COLS).fill(null)));
     const pxRef = useRef(0);
@@ -380,9 +417,12 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode, isObserver }) {
 
     const slideTick = useCallback(() => {
         const max = TET_COLS - pwRef.current;
+        const maxLimit = max + 0.99; // ▼ 修正: 右端のマスに届いた直後に折り返さないように猶予を持たせる
+        
         posRef.current += 0.05 * dirRef.current; 
-        if (posRef.current >= max) { posRef.current = max; dirRef.current = -1; }
+        if (posRef.current >= maxLimit) { posRef.current = maxLimit; dirRef.current = -1; }
         if (posRef.current <= 0) { posRef.current = 0; dirRef.current = 1; }
+        
         pxRef.current = Math.floor(posRef.current); 
         setPieceX(pxRef.current);
         rafRef.current = requestAnimationFrame(slideTick);
@@ -397,7 +437,7 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     }, []);
 
     const tetDrop = useCallback(() => {
-        if (!playing || isObserver) return;
+        if (!playing) return;
         const b = boardRef.current.map(r => [...r]);
         let land = -1; 
         for (let r = TET_ROWS - 1; r >= 0; r--) {
@@ -440,17 +480,11 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode, isObserver }) {
             return; 
         }
         newPiece();
-    }, [playing, addPts, newPiece, isObserver]);
+    }, [playing, addPts, newPiece]);
 
     const tetMove = (d) => {
-        if (!playing || isObserver) return;
-        const max = TET_COLS - pwRef.current;
-        posRef.current = Math.max(0, Math.min(max, pxRef.current + d)); 
-        
-        // ▼ 追加: ボタンで端に到達した場合、自動スライドの進行方向を即座に反転させる
-        if (posRef.current >= max) dirRef.current = -1;
-        if (posRef.current <= 0) dirRef.current = 1;
-        
+        if (!playing) return;
+        posRef.current = Math.max(0, Math.min(TET_COLS - pwRef.current, pxRef.current + d)); 
         pxRef.current = Math.floor(posRef.current); 
         setPieceX(pxRef.current);
     };
@@ -460,20 +494,42 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         clearedRef.current = 0; posRef.current = 0; dirRef.current = 1;
         const b = Array.from({ length: TET_ROWS }, () => Array(TET_COLS).fill(null)); 
         boardRef.current = b;
-        setBoard(b.map(r => [...r])); setCleared(0); setResult(null); setPlaying(true);
+        setBoard(b.map(r => [...r])); setCleared(0); setResult(null); 
+        setStarted(false); setPlaying(false); // 初期は待機
         newPiece(); 
+    }, [newPiece]);
+
+    const startGame = () => {
+        setStarted(true);
+        setPlaying(true);
         rafRef.current = requestAnimationFrame(slideTick);
-    }, [slideTick, newPiece]);
+    };
 
     useEffect(() => { init(); return () => cancelAnimationFrame(rafRef.current); }, [init]);
 
     return (
-        <div style={S.screen}>
+        <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart2 />
+            <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="📦 段ボールパズル" pts={pts} onBack={onBack} />
             <div style={S.body}>
-                <Instr>制限時間なし！パーツが左右に動く！◀▶で列を選んでDROPで落とせ！2段クリアで成功！</Instr>
-                <StatBox label="クリア段数" val={`${cleared} / 2`} />
+                {!started && !result && (
+                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                        <Instr>
+                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                            箱が上部を左右に動きます。<br/>
+                            ◀▶ボタンで落とす列を微調整し、<br/>
+                            「⬇ DROP」で箱を落としましょう！<br/>
+                            横一列揃えると段ボールが消えます。<br/>
+                            高く積みすぎずに2段消せばクリア！
+                        </Instr>
+                        <BtnPrim onClick={startGame} style={{ width: '100%' }}>ゲーム開始！</BtnPrim>
+                    </div>
+                )}
+                
+                {started && (
+                    <StatBox label="クリア段数" val={`${cleared} / 2`} />
+                )}
                 
                 <div style={{ display: 'flex', gap: 2, padding: '6px 8px', background: '#241a0e', border: `2px solid ${playing ? '#c97b2a' : '#3d2e1a'}`, borderRadius: 10, width: 'fit-content', minHeight: 50, alignItems: 'center' }}>
                     {Array.from({ length: TET_COLS }).map((_, c) => (
@@ -491,22 +547,19 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                     </div>
                 </div>
                 
-                {!result && (
+                {started && !result && (
                     <div style={{ display: 'flex', gap: '.55rem', justifyContent: 'center' }}>
-                        <button className="tet-btn" onPointerDown={() => tetMove(-1)} disabled={isObserver}>◀ 左</button>
-                        <button className="tet-btn tet-btn-drop" onPointerDown={tetDrop} disabled={isObserver}>⬇ DROP</button>
-                        <button className="tet-btn" onPointerDown={() => tetMove(1)} disabled={isObserver}>右 ▶</button>
+                        <button className="tet-btn" onPointerDown={() => tetMove(-1)}>◀ 左</button>
+                        <button className="tet-btn tet-btn-drop" onPointerDown={tetDrop}>⬇ DROP</button>
+                        <button className="tet-btn" onPointerDown={() => tetMove(1)}>右 ▶</button>
                     </div>
                 )}
                 
                 <ResultBox result={result} />
-                {result && !isObserver && (
+                {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
-                )}
-                {result && isObserver && (
-                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -514,9 +567,13 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode, isObserver }) {
 }
 
 /* ════════════════════════════════════════
-   Game 8: 🪰 ハエ捕まえ (観戦対応版)
+   Game 8: 🪰 ハエ捕まえ (ルール明記＆観戦モード対応)
 ════════════════════════════════════════ */
-export function FlyGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+export function FlyGame({ pts, addPts, onBack, isEventMode }) {
+    const { activeMiniGamePlayerId } = useGameStore();
+    const { myUserId } = useNetworkStore();
+    const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
+
     const [caught, setCaught] = useState(0);
     const [started, setStarted] = useState(false);
     const [result, setResult] = useState(null);
@@ -527,7 +584,7 @@ export function FlyGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const pos = useRef({ x: 0, y: 0, vx: 3, vy: 3 });
     const caughtRef = useRef(0);
     const playingRef = useRef(false);
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endFly(); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endFly(); });
 
     const endFly = useCallback((forceWin = false) => {
         playingRef.current = false; stop(); cancelAnimationFrame(rafRef.current);
@@ -571,7 +628,7 @@ export function FlyGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const catchFly = useCallback((e) => {
         e.stopPropagation();
         e.preventDefault();
-        if (!playingRef.current || isObserver) return;
+        if (!playingRef.current) return;
         
         caughtRef.current++; 
         setCaught(caughtRef.current);
@@ -593,10 +650,9 @@ export function FlyGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                 pos.current.vy = Math.sin(ang) * spd;
             }
         }
-    }, [endFly, isObserver]);
+    }, [endFly]);
 
     const startFly = useCallback(() => {
-        if (isObserver) return;
         setStarted(true); playingRef.current = true;
         if (arenaRef.current) {
             const W = arenaRef.current.offsetWidth / 2, H = arenaRef.current.offsetHeight / 2;
@@ -605,7 +661,7 @@ export function FlyGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         }
         start(); 
         rafRef.current = requestAnimationFrame(moveFly);
-    }, [start, moveFly, isObserver]);
+    }, [start, moveFly]);
 
     const init = useCallback(() => {
         playingRef.current = false; caughtRef.current = 0; setCaught(0); setStarted(false); setResult(null); setFxList([]);
@@ -615,23 +671,31 @@ export function FlyGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
-        <div style={S.screen}>
+        <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart2 />
+            <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="🪰 ハエ捕まえ" pts={pts} timer={started && !result ? time : null} onBack={onBack} />
             <div style={S.body}>
-                <Instr>10秒で3匹捕まえたら成功！（難易度緩和版）</Instr>
-                <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ textAlign: 'center' }}><div style={{ fontSize: '.6rem', color: '#7a6a4a', letterSpacing: '.1em' }}>CATCH</div><div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: '2.5rem', color: '#e8b84b' }}>{caught}</div></div>
-                    <div className="fly-prog">
-                        {[0, 1, 2].map(i => <div key={i} className={`fly-prog-dot ${i < caught ? 'caught' : ''}`}>{i < caught ? '✓' : '🪰'}</div>)}
+                {!started && !result ? (
+                    <Instr>
+                        <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                        画面内を飛び回るハエを直接タップして捕まえろ！<br/>
+                        制限時間は10秒。3匹捕まえればクリアだ！
+                    </Instr>
+                ) : (
+                    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ textAlign: 'center' }}><div style={{ fontSize: '.6rem', color: '#7a6a4a', letterSpacing: '.1em' }}>CATCH</div><div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: '2.5rem', color: '#e8b84b' }}>{caught}</div></div>
+                        <div className="fly-prog">
+                            {[0, 1, 2].map(i => <div key={i} className={`fly-prog-dot ${i < caught ? 'caught' : ''}`}>{i < caught ? '✓' : '🪰'}</div>)}
+                        </div>
                     </div>
-                </div>
+                )}
                 
                 <div ref={arenaRef} className="fly-arena">
-                    {!started && !result && !isObserver && (
+                    {!started && !result && (
                         <div className="fly-start-overlay">
                             <div onPointerDown={startFly} className="big-fly">🪰</div>
-                            <div style={{ fontSize: '.85rem', color: '#7a6a4a' }}>タップでスタート！</div>
+                            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#e8b84b', marginTop: '10px' }}>ハエをタップしてスタート！</div>
                         </div>
                     )}
                     
@@ -643,13 +707,10 @@ export function FlyGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                 </div>
                 
                 <ResultBox result={result} />
-                {result && !isObserver && (
+                {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
-                )}
-                {result && isObserver && (
-                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
