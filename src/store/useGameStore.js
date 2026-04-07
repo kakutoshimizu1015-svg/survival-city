@@ -51,7 +51,7 @@ const initialState = {
     
     // ▼ ミニゲームモード用ステート追加
     selectedMiniGame: null,
-    minigameLiveState: null, // ★追加: リアルタイム同期用の高速受信用ステート
+    minigameLiveState: null,
 };
 
 export const useGameStore = create((set, get) => ({

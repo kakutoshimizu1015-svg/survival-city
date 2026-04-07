@@ -13,7 +13,6 @@ import { SlotGame, OxoGame, TetrisGame, FlyGame } from '../../features/minigames
 import { RatGame, DrunkGame, RainGame, KashiGame } from '../../features/minigames/MiniGamesPart3';
 import { BegGame, MusicGame, NegoGame } from '../../features/minigames/MiniGamesPart4';
 
-// ▼ コンポーネントのマッピング
 const MINIGAME_COMPONENTS = {
     box: BoxGame, vend: VendGame, scratch: ScratchGame, hl: HLGame,
     slot: SlotGame, oxo: OxoGame, tetris: TetrisGame, fly: FlyGame,
@@ -22,28 +21,27 @@ const MINIGAME_COMPONENTS = {
 };
 
 export const GameEventOverlays = () => {
-    // ★追加: minigameLiveState を取得
+    // ★ minigameLiveState を取得
     const { mgActive, mgType, storyActive, storyIndex, players, turn, jobResult, npcSelectActive, minigameLiveState } = useGameStore();
-    // ★追加: broadcastMinigameLive を取得
-    const { myUserId, status, broadcastMinigameLive } = useNetworkStore();
+    const { myUserId, status } = useNetworkStore();
     
     const cp = players[turn];
     const isMyTurn = status === 'connected' ? (cp?.userId === myUserId) : true;
     
     const { charInfoModal, roundSummary, acquiredCard, territorySelectOptions, mapData, territories, gameResult } = useGameStore();
     const [confirmEnd, setConfirmEnd] = useState(false);
-    
-    // リトライ等で何度も報酬を受け取れないようにするためのフラグ
     const [mgRewardGiven, setMgRewardGiven] = useState(false);
 
     useEffect(() => {
         if (mgActive) setMgRewardGiven(false);
     }, [mgActive]);
 
-    // ★追加: 自分のターンの時だけ、リアルタイムデータをブロードキャストする関数
+    // ★追加: 自分のターンの時だけ、Storeに状態を保存（50msごとに自動でネットワーク同期されます）
     const syncLiveState = useCallback((data) => {
-        if (isMyTurn) broadcastMinigameLive(data);
-    }, [isMyTurn, broadcastMinigameLive]);
+        if (isMyTurn) {
+            useGameStore.setState({ minigameLiveState: data });
+        }
+    }, [isMyTurn]);
 
     const victoryPhrases = [
         "優勝！",
@@ -145,17 +143,17 @@ export const GameEventOverlays = () => {
             )}
 
             {mgActive && mgType && MINIGAME_COMPONENTS[mgType] && (
+                /* ★ pointerEvents で観戦者の画面タップを完全にブロック */
                 <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#0c0a07', pointerEvents: isMyTurn ? 'auto' : 'none' }}>
-                    {/* ★修正: pointerEvents を追加して、他人のターンなら操作を完全にブロック */}
                     {!isMyTurn && (
                         <div style={{ position: 'absolute', top: 20, width: '100%', textAlign: 'center', color: '#e8b84b', zIndex: 10001, fontSize: '1.2rem', fontWeight: 'bold', textShadow: '0 2px 4px #000' }}>
                             (現在 {cp?.name} がプレイ中...)
                         </div>
                     )}
                     {React.createElement(MINIGAME_COMPONENTS[mgType], {
-                        isEventMode: !isMyTurn, // ★修正: 他人のターンなら観戦(Event)モードにする
-                        syncLiveState: syncLiveState, // ★追加: リアルタイム同期用の送信関数
-                        liveState: minigameLiveState, // ★追加: リアルタイム同期用の受信データ
+                        isEventMode: !isMyTurn,
+                        syncLiveState: syncLiveState,
+                        liveState: minigameLiveState,
                         pts: cp?.p || 0,
                         addPts: (pts) => {
                             if (!isMyTurn || mgRewardGiven) return;
@@ -179,7 +177,7 @@ export const GameEventOverlays = () => {
                             logMsg(`🎲 ミニゲームで ${pts}P 失った...`);
                         },
                         onBack: () => {
-                            if (!isMyTurn) return; // 観戦者は勝手に閉じられないようにする
+                            if (!isMyTurn) return; 
                             useGameStore.setState({ mgActive: false, mgType: null, minigameLiveState: null });
                         }
                     })}
