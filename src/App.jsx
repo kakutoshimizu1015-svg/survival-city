@@ -28,7 +28,12 @@ function App() {
   const [showMailboxModal, setShowMailboxModal] = useState(false);
   const [selectedProfileUid, setSelectedProfileUid] = useState(null);
 
-  const unreadMailsCount = (inbox || []).filter(mail => !(claimedMails || []).includes(mail.id)).length;
+  // ▼ 修正: Firebaseからオブジェクト形式でデータが届いても絶対にクラッシュしないように配列へ強制変換する
+  const safeInbox = Array.isArray(inbox) ? inbox : (inbox ? Object.values(inbox) : []);
+  const safeClaimedMails = Array.isArray(claimedMails) ? claimedMails : (claimedMails ? Object.values(claimedMails) : []);
+  const safeFriendReqs = Array.isArray(friendRequests) ? friendRequests : (friendRequests ? Object.values(friendRequests) : []);
+
+  const unreadMailsCount = safeInbox.filter(mail => mail && !safeClaimedMails.includes(mail.id)).length;
 
   useEffect(() => {
     if (!isLoggedIn) loginAnonymously();
@@ -67,7 +72,7 @@ function App() {
         <MailboxOverlay onClose={() => setShowMailboxModal(false)} />
       )}
 
-      {/* トップバー（タイトル、モード選択、オフライン設定画面で表示） */}
+      {/* トップバー */}
       {(gamePhase === 'title' || gamePhase === 'mode_select' || gamePhase === 'setup_offline') && !rulesActive && !tutorialActive && !settingsActive && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%',
@@ -77,13 +82,13 @@ function App() {
           borderBottom: '2px solid #f1c40f', boxShadow: '0 2px 8px rgba(0,0,0,0.8)', flexWrap: 'wrap'
         }}>
           <div style={{ color: '#ecf0f1' }}>👤 {playerName || 'Player'}</div>
-          <div style={{ color: '#f1c40f' }}>🏆 優勝: {totalWins || wins}回</div>
+          <div style={{ color: '#f1c40f' }}>🏆 優勝: {totalWins || wins || 0}回</div>
           <div style={{ color: '#2ecc71' }}>🥫 缶: {gachaCans || 0}</div>
           <div style={{ color: '#3498db' }}>💰 P: {gachaPoints || 0}</div>
         </div>
       )}
 
-      {/* ゲーム中の設定ボタン */}
+      {/* 設定ボタン */}
       {gamePhase !== 'title' && gamePhase !== 'gacha' && gamePhase !== 'minigames' && gamePhase !== 'mode_select' && (
         <button id="settings-btn" onClick={(e) => { e.stopPropagation(); setGameState({ settingsActive: true }); }}>⚙️</button>
       )}
@@ -127,15 +132,14 @@ function App() {
                   maxLength={10}
                 />
                 
-                {/* フレンドボタン */}
                 <button onClick={(e) => { e.stopPropagation(); setShowFriendModal(true); }} style={{
                     background: '#2980b9', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', position: 'relative'
                 }}>
                     👥 フレンド
-                    {friendRequests?.length > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff' }}>{friendRequests.length}</span>}
+                    {/* ▼ 安全な配列でカウントする */}
+                    {safeFriendReqs.length > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff' }}>{safeFriendReqs.length}</span>}
                 </button>
 
-                {/* ▼ メールボタン：クリック貫通を防止して確実にモーダルを開く */}
                 <button onClick={(e) => { e.stopPropagation(); setShowMailboxModal(true); }} style={{
                     background: '#e67e22', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', position: 'relative'
                 }}>
@@ -143,7 +147,6 @@ function App() {
                     {unreadMailsCount > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff', animation: 'canBounce 1s infinite' }}>{unreadMailsCount}</span>}
                 </button>
 
-                {/* ▼ 設定ボタン：クリック貫通を防止して確実に設定画面を開く */}
                 <button onClick={(e) => { e.stopPropagation(); setGameState({ settingsActive: true }); }} style={{
                     background: '#7f8c8d', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
                 }}>
@@ -154,7 +157,6 @@ function App() {
           </div>
 
           <h2 style={{ margin: '10px 0' }}>モード選択</h2>
-          {/* 全てのボタンに e.stopPropagation() を追加して混線を防止 */}
           <button className="btn-large btn-brown" onClick={(e) => { e.stopPropagation(); setGameState({ gamePhase: 'setup_offline' }); }}>🎮 オフライン</button>
           <button className="btn-large btn-blue" onClick={(e) => { e.stopPropagation(); setGameState({ gamePhase: 'online_lobby' }); }}>🌐 オンライン</button>
           <button className="btn-large" style={{ background: '#27ae60', color: '#fff' }} onClick={(e) => { e.stopPropagation(); setGameState({ gamePhase: 'minigames' }); }}>🎲 ミニゲームで稼ぐ</button>
