@@ -9,8 +9,8 @@ import { SlotGame, OxoGame, TetrisGame, FlyGame } from './MiniGamesPart2';
 import { RatGame, DrunkGame, RainGame, KashiGame } from './MiniGamesPart3';
 import { BegGame, MusicGame, NegoGame } from './MiniGamesPart4';
 
-/* ─── メニュー画面用データ (全15種) ─────────────────────── */
-const ALL_GAMES = [
+//* ─── メニュー画面用データ (全15種) ─────────────────────── */
+export const ALL_GAMES = [ // ← ▼ 修正: 他ファイルからルール文を読めるように export を追加
   { id: 'box', icon: '📦', name: '箱選びゲーム', desc: '10秒で当たりの箱を選べ！', reward: '最大+10P' },
   { id: 'vend', icon: '🏧', name: 'ボロ自販機ガチャ', desc: '3台から当たり1台を選べ！', reward: '最大+15P' },
   { id: 'hl', icon: '🃏', name: 'ハイ＆ロー', desc: '10秒で連続正解を重ねろ！', reward: '最大+25P' },

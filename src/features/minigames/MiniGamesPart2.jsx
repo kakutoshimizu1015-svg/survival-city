@@ -379,9 +379,13 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
     const slideTick = useCallback(() => {
         const max = TET_COLS - pwRef.current;
         posRef.current += 0.05 * dirRef.current; 
-        if (posRef.current >= max) { posRef.current = max; dirRef.current = -1; }
-        if (posRef.current <= 0) { posRef.current = 0; dirRef.current = 1; }
-        pxRef.current = Math.floor(posRef.current); 
+        
+        // ▼ 修正: 仮想的な移動範囲を広げて、端での「滞在時間（ウェイト）」を確保
+        if (posRef.current >= max + 0.8) { posRef.current = max + 0.8; dirRef.current = -1; }
+        if (posRef.current <= -0.8) { posRef.current = -0.8; dirRef.current = 1; }
+        
+        // ▼ 修正: 実際の描画位置(px)は 0 ～ max のマス目内に制限(クランプ)する
+        pxRef.current = Math.floor(Math.max(0, Math.min(max, posRef.current))); 
         setPieceX(pxRef.current);
         rafRef.current = requestAnimationFrame(slideTick);
     }, []);

@@ -13,6 +13,9 @@ import { SlotGame, OxoGame, TetrisGame, FlyGame } from '../../features/minigames
 import { RatGame, DrunkGame, RainGame, KashiGame } from '../../features/minigames/MiniGamesPart3';
 import { BegGame, MusicGame, NegoGame } from '../../features/minigames/MiniGamesPart4';
 
+// ▼ 追加: ルール説明文を呼び出すためのインポート
+import { ALL_GAMES } from '../../features/minigames/MinigamesApp';
+
 // ▼ 追加: コンポーネントのマッピング
 const MINIGAME_COMPONENTS = {
     box: BoxGame, vend: VendGame, scratch: ScratchGame, hl: HLGame,
@@ -33,10 +36,15 @@ export const GameEventOverlays = () => {
     
     // ▼ 追加: リトライ等で何度も報酬を受け取れないようにするためのフラグ
     const [mgRewardGiven, setMgRewardGiven] = useState(false);
+    // ▼ 追加: ミニゲームのルール画面を管理するフラグ
+    const [mgStarted, setMgStarted] = useState(false);
 
     useEffect(() => {
-        // ミニゲーム起動時に報酬受け取りフラグをリセット
-        if (mgActive) setMgRewardGiven(false);
+        // ミニゲーム起動時に状態をリセット
+        if (mgActive) {
+            setMgRewardGiven(false);
+            setMgStarted(false); // 毎回ルール画面からスタートさせる
+        }
     }, [mgActive]);
 
     const victoryPhrases = [
@@ -146,7 +154,28 @@ export const GameEventOverlays = () => {
                             (他プレイヤーがミニゲーム中...)
                         </div>
                     )}
-                    {React.createElement(MINIGAME_COMPONENTS[mgType], {
+                    
+                    {/* ▼ 追加: スタートボタンが押される前ならルール画面を表示 */}
+                    {!mgStarted ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#f0e8d0', padding: '20px', textAlign: 'center' }}>
+                            <div style={{ background: '#241a0e', border: '2px solid #c97b2a', borderRadius: '15px', padding: '30px', maxWidth: '400px', width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+                                <h2 style={{ fontSize: '1.8rem', color: '#e8b84b', margin: '0 0 15px 0' }}>
+                                    {ALL_GAMES.find(g => g.id === mgType)?.icon} {ALL_GAMES.find(g => g.id === mgType)?.name}
+                                </h2>
+                                <p style={{ fontSize: '1.1rem', color: '#d4c4a0', marginBottom: '25px', lineHeight: '1.6' }}>
+                                    {ALL_GAMES.find(g => g.id === mgType)?.desc}
+                                </p>
+                                {isMyTurn ? (
+                                    <ClayButton onClick={() => setMgStarted(true)} style={{ width: '100%', fontSize: '1.2rem', padding: '15px' }}>
+                                        🎮 ゲームスタート！
+                                    </ClayButton>
+                                ) : (
+                                    <p style={{ color: '#7a6a4a', fontWeight: 'bold' }}>プレイヤーの操作を待っています...</p>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                    React.createElement(MINIGAME_COMPONENTS[mgType], {
                         isEventMode: true, // ▼ 追加: イベントモードであることを伝えるフラグ
                         pts: cp?.p || 0,
                         addPts: (pts) => {
@@ -175,7 +204,8 @@ export const GameEventOverlays = () => {
                             // ミニゲーム画面を終了してマップへ戻る
                             useGameStore.setState({ mgActive: false, mgType: null });
                         }
-                    })}
+                    })
+                    )} {/* ← 修正: 三項演算子を閉じるためのカッコ「 ) 」を追加しました */}
                 </div>
             )}
 
