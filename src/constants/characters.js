@@ -1,16 +1,4 @@
 // =========================================================
-// ▼ 基本キャラクター画像のインポート（スキン未対応のキャラ）
-// =========================================================
-import musicianFront from '../assets/images/musician_front.png';
-import musicianBack from '../assets/images/musician_back.png';
-import doctorFront from '../assets/images/doctor_front.png';
-import doctorBack from '../assets/images/doctor_back.png';
-import gamblerFront from '../assets/images/gambler_front.png';
-import gamblerBack from '../assets/images/gambler_back.png';
-import detectiveFront from '../assets/images/detective_front.png';
-import detectiveBack from '../assets/images/detective_back.png';
-
-// =========================================================
 // ▼ 元ヤン スキン画像群
 // =========================================================
 import yankee_N_default from '../assets/images/skins/yankee/N_default.png';
@@ -90,6 +78,60 @@ import hacker_UR_CEOofaglobalITcompany from '../assets/images/skins/hacker/UR_CE
 import hacker_UR_geniuscyberagent from '../assets/images/skins/hacker/UR_genius cyber agent.png';
 
 // =========================================================
+// ▼ ミュージシャン スキン画像群
+// =========================================================
+import musician_N_default from '../assets/images/skins/musician/N_default.png';
+import musician_N_bandTshirtblack from '../assets/images/skins/musician/N_bandTshirtblack.png';
+import musician_N_bandTshirtwhte from '../assets/images/skins/musician/N_bandTshirtwhte.png';
+import musician_SR_EmptyCanDrummer from '../assets/images/skins/musician/SR_Empty Can Drummer.png';
+import musician_SR_Aonemanbandofjunk from '../assets/images/skins/musician/SR_A one-man band of junk.png';
+import musician_SSR_dometourstar from '../assets/images/skins/musician/SSR_dome tour star.png';
+import musician_SSR_platinumsinger from '../assets/images/skins/musician/SSR_platinum singer.png';
+
+// =========================================================
+// ▼ 闇医者 スキン画像群
+// =========================================================
+import doctor_N_default from '../assets/images/skins/doctor/N_default.png';
+import doctor_N_Dirtywhitecoat from '../assets/images/skins/doctor/N_Dirty white coat.png';
+import doctor_N_Scrubinadifferentcolor from '../assets/images/skins/doctor/N_Scrub in a different color.png';
+import doctor_R_Patchworksurgicalgown from '../assets/images/skins/doctor/R_Patchwork surgical gown.png';
+import doctor_R_Abloodstainedapron from '../assets/images/skins/doctor/R_A blood-stained apron.png';
+import doctor_SR_TapeBandages from '../assets/images/skins/doctor/SR_Tape Bandages.png';
+import doctor_SR_Syringeneedlearmor from '../assets/images/skins/doctor/SR_Syringe needle armor.png';
+import doctor_SSR_handofgod from '../assets/images/skins/doctor/SSR_hand of god.png';
+import doctor_SSR_Directorofalargehospital from '../assets/images/skins/doctor/SSR_Director of a large hospital.png';
+
+// =========================================================
+// ▼ ギャンブラー スキン画像群
+// =========================================================
+import gambler_N_default from '../assets/images/skins/gambler/N_default.png';
+import gambler_N_Fadedredshirt from '../assets/images/skins/gambler/N_Faded red shirt.png';
+import gambler_N_Fadedblackvest from '../assets/images/skins/gambler/N_Faded black vest.png';
+import gambler_R_Torntuxedo from '../assets/images/skins/gambler/R_Torn tuxedo.png';
+import gambler_R_Adilapidateddealer from '../assets/images/skins/gambler/R_A dilapidated dealer.png';
+import gambler_SR_trumparmor from '../assets/images/skins/gambler/SR_trump armor.png';
+import gambler_SR_walkingslotmachine from '../assets/images/skins/gambler/SR_walking slot machine.png';
+import gambler_SSR_casinoking from '../assets/images/skins/gambler/SSR_casino king.png';
+import gambler_SSR_Undefeatedhighroller from '../assets/images/skins/gambler/SSR_Undefeated high roller.png';
+import gambler_UR_casinoemperor from '../assets/images/skins/gambler/UR_casino emperor.png';
+
+// =========================================================
+// ▼ 元探偵 スキン画像群
+// =========================================================
+import detective_N_default from '../assets/images/skins/detective/N_default.png';
+import detective_N_Awornoutbrowncoat from '../assets/images/skins/detective/N_A wornout brown coat.png';
+import detective_N_Flatcapsindifferentcolors from '../assets/images/skins/detective/N_Flat caps in different colors.png';
+import detective_R_PatchworkInvernesscoat from '../assets/images/skins/detective/R_Patchwork Inverness coat.png';
+import detective_R_Hasamagnifyingglasswithacrackedlens from '../assets/images/skins/detective/R_Has a magnifying glass with a cracked lens.png';
+import detective_SR_Amasterofnewspaperdisguise from '../assets/images/skins/detective/SR_A master of newspaper disguise.png';
+import detective_SR_Equippedwithajunkdetector from '../assets/images/skins/detective/SR_Equipped with a junk detector.png';
+import detective_SSR_Thereturnofthegreatdetective from '../assets/images/skins/detective/SSR_The return of the great detective.png';
+import detective_SSR_Highlyskilleddetectiveagencymanager from '../assets/images/skins/detective/SSR_Highly skilled detective agency manager.png';
+import detective_SSR_conan from '../assets/images/skins/detective/SSR_conan.png';
+import detective_UR_conan2 from '../assets/images/skins/detective/UR_conan2.png';
+import detective_UR_kurosawasann from '../assets/images/skins/detective/UR_kurosawasann.png';
+
+// =========================================================
 // ▼ NPC画像のインポート
 // =========================================================
 import policeImg from '../assets/images/NPC/police.png';
@@ -105,15 +147,15 @@ import animalImg from '../assets/images/NPC/animal.png';
 // ▼ キャラクターキーと基本画像のマッピング
 // =========================================================
 export const charImages = {
-    athlete:  { front: athlete_N_default, back: athlete_N_default },
-    sales:    { front: sales_N_default,   back: sales_N_default },
-    survivor: { front: survivor_N_default,back: survivor_N_default },
-    yankee:   { front: yankee_N_default,  back: yankee_N_default },
-    hacker:   { front: hacker_N_default,  back: hacker_N_default },
-    musician: { front: musicianFront,     back: musicianBack },
-    doctor:   { front: doctorFront,       back: doctorBack },
-    gambler:  { front: gamblerFront,      back: gamblerBack },
-    detective:{ front: detectiveFront,    back: detectiveBack },
+    athlete:  { front: athlete_N_default,   back: athlete_N_default },
+    sales:    { front: sales_N_default,     back: sales_N_default },
+    survivor: { front: survivor_N_default,  back: survivor_N_default },
+    yankee:   { front: yankee_N_default,    back: yankee_N_default },
+    hacker:   { front: hacker_N_default,    back: hacker_N_default },
+    musician: { front: musician_N_default,  back: musician_N_default },
+    doctor:   { front: doctor_N_default,    back: doctor_N_default },
+    gambler:  { front: gambler_N_default,   back: gambler_N_default },
+    detective:{ front: detective_N_default, back: detective_N_default },
 };
 
 // =========================================================
@@ -189,7 +231,52 @@ export const charSkins = {
         { id: "hacker_ur_ceo", charKey: "hacker", name: "世界的IT企業CEO", rarity: "UR", front: hacker_UR_CEOofaglobalITcompany, pieceColor: "#2c3e50", ring: "#bdc3c7", desc: "スティーブ・ジョブズ風の洗練されたタートルネックと最新デバイス。" },
         { id: "hacker_ur_genius", charKey: "hacker", name: "天才サイバーエージェント", rarity: "UR", front: hacker_UR_geniuscyberagent, pieceColor: "#00ffff", ring: "#0088ff", desc: "サイバーパンク風のスタイリッシュな発光ウェア。" }
     ],
-    musician: [], doctor: [], gambler: [], detective: []
+    musician: [
+        { id: "musician_default", charKey: "musician", name: "ミュージシャン（デフォルト）", rarity: "N", front: musician_N_default, pieceColor: "#f1c40f", ring: "#f39c12", desc: "路上ライブで日銭を稼ぐお決まりのスタイル。" },
+        { id: "musician_bandTshirtblack", charKey: "musician", name: "色褪せたバンドT（黒）", rarity: "N", front: musician_N_bandTshirtblack, pieceColor: "#2c3e50", ring: "#34495e", desc: "ロゴがひび割れて読めないTシャツ。" },
+        { id: "musician_bandTshirtwhte", charKey: "musician", name: "色褪せたバンドT（白）", rarity: "N", front: musician_N_bandTshirtwhte, pieceColor: "#ecf0f1", ring: "#bdc3c7", desc: "首元がダルダルに伸びきったTシャツ。" },
+        { id: "musician_emptycandrummer", charKey: "musician", name: "空き缶ドラマー", rarity: "SR", front: musician_SR_EmptyCanDrummer, pieceColor: "#95a5a6", ring: "#7f8c8d", desc: "空き缶とポリバケツで作ったドラムセットを身に纏う。" },
+        { id: "musician_onemanband", charKey: "musician", name: "ガラクタのワンマンバンド", rarity: "SR", front: musician_SR_Aonemanbandofjunk, pieceColor: "#e67e22", ring: "#d35400", desc: "鍋の蓋や自転車のベルなど、全身に鳴り物を付けた姿。" },
+        { id: "musician_dometourstar", charKey: "musician", name: "ドームツアースター", rarity: "SSR", front: musician_SSR_dometourstar, pieceColor: "#f1c40f", ring: "#e67e22", desc: "派手なステージ衣装と黄金のギターを持つロックスター。" },
+        { id: "musician_platinumsinger", charKey: "musician", name: "プラチナシンガー", rarity: "SSR", front: musician_SSR_platinumsinger, pieceColor: "#bdc3c7", ring: "#ffffff", desc: "授賞式で着るような煌びやかなタキシード。" }
+    ],
+    doctor: [
+        { id: "doctor_default", charKey: "doctor", name: "闇医者（デフォルト）", rarity: "N", front: doctor_N_default, pieceColor: "#1abc9c", ring: "#16a085", desc: "路地裏で身を隠すように着ている白衣。" },
+        { id: "doctor_dirtywhitecoat", charKey: "doctor", name: "薄汚れた白衣", rarity: "N", front: doctor_N_Dirtywhitecoat, pieceColor: "#95a5a6", ring: "#7f8c8d", desc: "元は白かったが、様々なシミがついたコート。" },
+        { id: "doctor_scrubblue", charKey: "doctor", name: "色違いのスクラブ（青）", rarity: "N", front: doctor_N_Scrubinadifferentcolor, pieceColor: "#2980b9", ring: "#3498db", desc: "泥だらけの青い手術着。" },
+        { id: "doctor_patchworksurgical", charKey: "doctor", name: "ツギハギの手術着", rarity: "R", front: doctor_R_Patchworksurgicalgown, pieceColor: "#16a085", ring: "#1abc9c", desc: "破れた箇所を医療用テープで無理やり塞いだ姿。" },
+        { id: "doctor_bloodapron", charKey: "doctor", name: "血塗られた(?)エプロン", rarity: "R", front: doctor_R_Abloodstainedapron, pieceColor: "#c0392b", ring: "#e74c3c", desc: "ケチャップか血か分からない汚れがべったりついた姿。" },
+        { id: "doctor_tapebandages", charKey: "doctor", name: "ガムテープ包帯の怪医", rarity: "SR", front: doctor_SR_TapeBandages, pieceColor: "#e67e22", ring: "#d35400", desc: "全身の傷をガムテープでミイラのように巻いた異様な姿。" },
+        { id: "doctor_syringearmor", charKey: "doctor", name: "注射器の針アーマー", rarity: "SR", front: doctor_SR_Syringeneedlearmor, pieceColor: "#bdc3c7", ring: "#7f8c8d", desc: "拾った（安全な）注射器をトゲのように装備した姿。" },
+        { id: "doctor_handofgod", charKey: "doctor", name: "神の手（ゴッドハンド）", rarity: "SSR", front: doctor_SSR_handofgod, pieceColor: "#f1c40f", ring: "#f39c12", desc: "完璧にアイロンがけされた白衣と黄金のメス。" },
+        { id: "doctor_director", charKey: "doctor", name: "大病院の院長", rarity: "SSR", front: doctor_SSR_Directorofalargehospital, pieceColor: "#2c3e50", ring: "#34495e", desc: "威厳のある高級スーツに白衣を羽織った権力者の姿。" }
+    ],
+    gambler: [
+        { id: "gambler_default", charKey: "gambler", name: "ギャンブラー（デフォルト）", rarity: "N", front: gambler_N_default, pieceColor: "#e91e8c", ring: "#c2185b", desc: "破産した夜に着ていた勝負服。" },
+        { id: "gambler_fadedredshirt", charKey: "gambler", name: "色落ちした赤シャツ", rarity: "N", front: gambler_N_Fadedredshirt, pieceColor: "#e74c3c", ring: "#c0392b", desc: "第一ボタンが外れ、襟がすり切れたシャツ。" },
+        { id: "gambler_fadedblackvest", charKey: "gambler", name: "色落ちした黒ベスト", rarity: "N", front: gambler_N_Fadedblackvest, pieceColor: "#2c3e50", ring: "#34495e", desc: "泥やホコリを被ったバーテンダー風のベスト。" },
+        { id: "gambler_torntuxedo", charKey: "gambler", name: "破れたタキシード", rarity: "R", front: gambler_R_Torntuxedo, pieceColor: "#1a252f", ring: "#2c3e50", desc: "カジノから追い出された時についたであろう傷だらけの服。" },
+        { id: "gambler_dilapidateddealer", charKey: "gambler", name: "ボロボロのディーラー", rarity: "R", front: gambler_R_Adilapidateddealer, pieceColor: "#34495e", ring: "#2c3e50", desc: "トランプの柄がかすれて見えないカードを持っている。" },
+        { id: "gambler_trumparmor", charKey: "gambler", name: "トランプアーマー", rarity: "SR", front: gambler_SR_trumparmor, pieceColor: "#ecf0f1", ring: "#e74c3c", desc: "拾ったトランプのカードを何百枚も重ねて作った鎧。" },
+        { id: "gambler_walkingslotmachine", charKey: "gambler", name: "歩くスロットマシン", rarity: "SR", front: gambler_SR_walkingslotmachine, pieceColor: "#f1c40f", ring: "#f39c12", desc: "廃棄されたスロットの筐体を被って生活している姿。" },
+        { id: "gambler_casinoking", charKey: "gambler", name: "カジノ王", rarity: "SSR", front: gambler_SSR_casinoking, pieceColor: "#000000", ring: "#f1c40f", desc: "葉巻を咥え、金糸の刺繍が入った豪華なタキシード。" },
+        { id: "gambler_highroller", charKey: "gambler", name: "無敗のハイローラー", rarity: "SSR", front: gambler_SSR_Undefeatedhighroller, pieceColor: "#f39c12", ring: "#d35400", desc: "溢れんばかりの札束とカジノチップを抱えた姿。" },
+        { id: "gambler_casinoemperor", charKey: "gambler", name: "カジノ皇帝", rarity: "UR", front: gambler_UR_casinoemperor, pieceColor: "#ff00ff", ring: "#d500f9", desc: "溢れんばかりの札束とカジノチップを抱え、キラキラのスーツに身を包む。" }
+    ],
+    detective: [
+        { id: "detective_default", charKey: "detective", name: "元探偵（デフォルト）", rarity: "N", front: detective_N_default, pieceColor: "#6c5ce7", ring: "#4834d4", desc: "かつて数々の難事件を解き明かした探偵のコート。" },
+        { id: "detective_browncoat", charKey: "detective", name: "ヨレヨレの茶コート", rarity: "N", front: detective_N_Awornoutbrowncoat, pieceColor: "#8d6e63", ring: "#5d4037", desc: "シワだらけで襟が曲がったトレンチコート。" },
+        { id: "detective_flatcaps", charKey: "detective", name: "色違いのハンチング帽", rarity: "N", front: detective_N_Flatcapsindifferentcolors, pieceColor: "#7f8c8d", ring: "#95a5a6", desc: "泥で汚れて色がくすんだ帽子。" },
+        { id: "detective_invernesscoat", charKey: "detective", name: "ツギハギのインバネスコート", rarity: "R", front: detective_R_PatchworkInvernesscoat, pieceColor: "#34495e", ring: "#2c3e50", desc: "破れた箇所を別の布で縫い合わせたコート。" },
+        { id: "detective_crackedlens", charKey: "detective", name: "レンズ割れルーペ持ち", rarity: "R", front: detective_R_Hasamagnifyingglasswithacrackedlens, pieceColor: "#bdc3c7", ring: "#95a5a6", desc: "虫眼鏡のレンズが割れてしまっているポンコツ探偵スタイル。" },
+        { id: "detective_newspaperdisguise", charKey: "detective", name: "新聞紙の変装名人", rarity: "SR", front: detective_SR_Amasterofnewspaperdisguise, pieceColor: "#ecf0f1", ring: "#bdc3c7", desc: "新聞紙を全身に巻いて街角に溶け込む究極のステルス姿。" },
+        { id: "detective_junkdetector", charKey: "detective", name: "ガラクタ探知機装備", rarity: "SR", front: detective_SR_Equippedwithajunkdetector, pieceColor: "#e67e22", ring: "#d35400", desc: "傘の骨やハンガーで作った自作のダウジングマシンを装備。" },
+        { id: "detective_return", charKey: "detective", name: "名探偵の帰還", rarity: "SSR", front: detective_SSR_Thereturnofthegreatdetective, pieceColor: "#2c3e50", ring: "#34495e", desc: "英国紳士のような完璧な仕立てのスーツと鹿撃ち帽。" },
+        { id: "detective_agencymanager", charKey: "detective", name: "敏腕探偵事務所長", rarity: "SSR", front: detective_SSR_Highlyskilleddetectiveagencymanager, pieceColor: "#1a252f", ring: "#f1c40f", desc: "高級なパイプを咥え、オーダーメイドのコートを羽織る姿。" },
+        { id: "detective_conan", charKey: "detective", name: "無理やりコナン風子供服", rarity: "SSR", front: detective_SSR_conan, pieceColor: "#3498db", ring: "#e74c3c", desc: "某少年探偵に憧れ、半ズボンと赤い蝶ネクタイを無理やり着た痛いおじさん。" },
+        { id: "detective_conan2", charKey: "detective", name: "無理やりコナン風子供服（真）", rarity: "UR", front: detective_UR_conan2, pieceColor: "#e74c3c", ring: "#3498db", desc: "某少年探偵に憧れ、さらに寄せに行った痛いおじさん。" },
+        { id: "detective_kurosawasann", charKey: "detective", name: "全身黒タイツ（犯人風）", rarity: "UR", front: detective_UR_kurosawasann, pieceColor: "#000000", ring: "#ffffff", desc: "推理モノの「犯人」を模した、目だけが白い全身真っ黒のタイツ姿。" }
+    ]
 };
 
 // ▼ ガチャ排出プール（"default" を含むスキンを除外）
