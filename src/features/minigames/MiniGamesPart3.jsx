@@ -196,7 +196,7 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 10: 🍺 酔っ払いバランス (超速バグ修正版)
+   Game 10: 🍺 酔っ払いバランス (バグ完全修正版)
 ════════════════════════════════════════ */
 export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
     const [bal, setBal] = useState(50);
@@ -208,18 +208,20 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
     const keepRef = useRef(0);
     const playingRef = useRef(false);
     
-    const rafRef = useRef(null);
+    const driftIvRef = useRef(null);
     const keepIvRef = useRef(null);
-
-    // ▼ 追加: 親からの関数が再生成されても初期化ループを引き起こさないようにRefへ退避
     const fnsRef = useRef({ addPts });
+
+    // 親からの関数更新による無限ループを防ぐ
     useEffect(() => { fnsRef.current = { addPts }; }, [addPts]);
 
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endDrunk(true); });
-
-    const endDrunk = useCallback((survived) => {
+    // タイマー終了時の処理をRefに退避（依存配列の罠を回避）
+    const endDrunkRef = useRef(null);
+    endDrunkRef.current = (survived) => {
+        if (!playingRef.current) return;
         playingRef.current = false; stop(); 
-        cancelAnimationFrame(rafRef.current); clearInterval(keepIvRef.current);
+        clearInterval(driftIvRef.current); 
+        clearInterval(keepIvRef.current);
         
         const win = survived && keepRef.current >= 6;
         const p = win ? Math.floor(keepRef.current * 1.5) : 0;
@@ -228,52 +230,63 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
             win, icon: win ? '🎉' : '🌀', main: win ? 'バランスキープ成功！' : '倒れた！', 
             sub: `緑ゾーン内 ${keepRef.current}秒 / 6秒以上で成功`, pts: p 
         });
-        if (p > 0) fnsRef.current.addPts(p); // ▼ 修正: Ref経由で実行する
-    }, [stop]); // ▼ 修正: 依存配列から addPts を削除してループを断ち切る
+        if (p > 0) fnsRef.current.addPts(p);
+    };
 
-    const animate = useCallback(() => {
-        if (!playingRef.current) return;
-        
-        // ▼ 修正: 60fpsに合わせてドリフト値(加算量)を約1/15にスケーリング
-        driftRef.current += (Math.random() - 0.5) * 0.06;
-        driftRef.current = Math.max(-0.25, Math.min(0.25, driftRef.current)); 
-        
-        balRef.current += driftRef.current;
-        setBal(balRef.current);
-        
-        if (balRef.current <= 0 || balRef.current >= 100) {
-            endDrunk(false);
-            return;
-        }
-        rafRef.current = requestAnimationFrame(animate);
-    }, [endDrunk]);
+    const { time, start, stop } = useTimer(10, () => {
+        if (playingRef.current && endDrunkRef.current) endDrunkRef.current(true);
+    });
 
     const tap = (e, d) => {
         e.preventDefault();
         if (!playingRef.current) return;
-        // ▼ 修正: タップによる戻し量も調整
-        balRef.current = Math.max(0, Math.min(100, balRef.current - d * 10));
-        driftRef.current -= d * 0.15; 
+        // ▼ 元HTMLと完全に同じ数値・計算式に戻しました
+        balRef.current = Math.max(0, Math.min(100, balRef.current - d * 15));
+        driftRef.current -= d * 1.5; 
         setBal(balRef.current);
     };
 
     const init = useCallback(() => {
-        playingRef.current = false; cancelAnimationFrame(rafRef.current); clearInterval(keepIvRef.current);
+        playingRef.current = false; 
+        clearInterval(driftIvRef.current); 
+        clearInterval(keepIvRef.current);
+        
         balRef.current = 50; driftRef.current = 0; keepRef.current = 0;
         setBal(50); setKeep(0); setResult(null);
         
         playingRef.current = true; start();
-        rafRef.current = requestAnimationFrame(animate);
+        
+        // ▼ 60fps更新をやめ、元HTMLと同じ250ms(0.25秒)間隔の更新に戻しました
+        driftIvRef.current = setInterval(() => {
+            if (!playingRef.current) return;
+            driftRef.current += (Math.random() - 0.5) * 3.5;
+            driftRef.current = Math.max(-5.5, Math.min(5.5, driftRef.current)); 
+            balRef.current = Math.max(0, Math.min(100, balRef.current + driftRef.current));
+            
+            setBal(balRef.current);
+            
+            if (balRef.current <= 0 || balRef.current >= 100) {
+                if (endDrunkRef.current) endDrunkRef.current(false);
+            }
+        }, 250);
         
         keepIvRef.current = setInterval(() => {
-            if (playingRef.current && balRef.current >= 35 && balRef.current <= 65) {
+            if (!playingRef.current) return;
+            if (balRef.current >= 35 && balRef.current <= 65) {
                 keepRef.current++;
                 setKeep(keepRef.current);
             }
         }, 1000);
-    }, [start, animate]);
+    }, [start]);
 
-    useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); clearInterval(keepIvRef.current); }; }, [init]);
+    useEffect(() => { 
+        init(); 
+        return () => { 
+            playingRef.current = false; 
+            clearInterval(driftIvRef.current); 
+            clearInterval(keepIvRef.current); 
+        }; 
+    }, [init]);
 
     return (
         <div style={S.screen}>
