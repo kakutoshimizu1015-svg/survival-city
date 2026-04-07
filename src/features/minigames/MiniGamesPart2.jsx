@@ -58,7 +58,7 @@ export const MiniGameStylesPart2 = () => (
    Game 5: 🎰 路上スロット
 ════════════════════════════════════════ */
 export function SlotGame({ pts, addPts, onBack, isEventMode }) {
-    const { activeMiniGamePlayerId } = useGameStore();
+    const { activeMiniGamePlayerId, mgSyncState } = useGameStore();
     const { myUserId } = useNetworkStore();
     const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
 
@@ -70,125 +70,112 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
     const [playing, setPlaying] = useState(false);
     const [result, setResult] = useState(null);
     const [isReady, setIsReady] = useState(false);
+    const [offsetsState, setOffsetsState] = useState([0,0,0]);
     
     const rafRef = useRef(null);
     const offsets = useRef([0, 0, 0]);
-    const innerRefs = useRef([]); 
-    const reelsDataRef = useRef([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
 
-    const { time, start, stop } = useTimer(10, () => {
-        if (playing) {
-            [0, 1, 2].forEach(i => stopReel(i));
-        }
-    });
+    const { time, start, stop } = useTimer(10, () => { if (!isSpectator && playing) { [0, 1, 2].forEach(i => stopReel(i)); } }, isSpectator);
 
     const init = useCallback(() => {
+        if (isSpectator) return;
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setResult(null); setPlaying(false); setIsReady(false);
-        
-        const initial = [{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }];
-        reelsDataRef.current = initial;
-        setReels(initial);
-        
-        offsets.current = [0, 0, 0];
-        innerRefs.current.forEach(el => {
-            if(el) el.style.transform = `translateY(${-TOT}px)`;
-        });
-    }, [TOT]);
+        setReels([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
+        offsets.current = [0, 0, 0]; setOffsetsState([0,0,0]);
+    }, [isSpectator]);
 
     const startSlot = () => {
-        setIsReady(true);
-        setPlaying(true); setResult(null); 
-        
-        reelsDataRef.current = [{ stop: false, res: null }, { stop: false, res: null }, { stop: false, res: null }];
-        setReels([...reelsDataRef.current]);
-        
+        if (isSpectator) return;
+        setIsReady(true); setPlaying(true); setResult(null); 
+        setReels([{ stop: false, res: null }, { stop: false, res: null }, { stop: false, res: null }]);
         start(); 
         offsets.current = [Math.random() * TOT, Math.random() * TOT, Math.random() * TOT];
         animate();
     };
 
     const animate = () => {
+        if (isSpectator) return;
         let anyMoved = false;
         const speeds = [3.5, 4.2, 3.8];
-        
-        reelsDataRef.current.forEach((r, i) => {
-            if (!r.stop) {
-                offsets.current[i] = (offsets.current[i] + speeds[i]) % TOT;
-                if (innerRefs.current[i]) {
-                    innerRefs.current[i].style.transform = `translateY(${-TOT + offsets.current[i]}px)`;
-                }
-                anyMoved = true;
-            }
+        setReels(prevReels => {
+            let moved = false;
+            prevReels.forEach((r, i) => {
+                if (!r.stop) { offsets.current[i] = (offsets.current[i] + speeds[i]) % TOT; moved = true; }
+            });
+            anyMoved = moved;
+            return prevReels;
         });
-        
+        setOffsetsState([...offsets.current]);
         if (anyMoved) rafRef.current = requestAnimationFrame(animate);
     };
 
     const stopReel = (i) => {
-        if (!playing) return;
-        if (reelsDataRef.current[i].stop) return;
-        
-        reelsDataRef.current[i].stop = true;
-        const iy = SH + TOT - offsets.current[i];
-        reelsDataRef.current[i].res = SYMS[((Math.floor(iy / SH) % SYMS.length) + SYMS.length) % SYMS.length];
-        
-        setReels([...reelsDataRef.current]);
-        
-        if (reelsDataRef.current.every(r => r.stop)) {
+        if (isSpectator || !playing) return;
+        setReels(prev => {
+            if (prev[i].stop) return prev;
+            const n = [...prev];
+            n[i].stop = true;
+            const iy = SH + TOT - offsets.current[i];
+            n[i].res = SYMS[((Math.floor(iy / SH) % SYMS.length) + SYMS.length) % SYMS.length];
+            return n;
+        });
+    };
+
+    useEffect(() => {
+        if (isSpectator || !playing) return;
+        if (reels.every(r => r.stop)) {
             setPlaying(false); stop(); cancelAnimationFrame(rafRef.current);
             setTimeout(() => {
-                const rs = reelsDataRef.current.map(r => r.res);
+                const rs = reels.map(r => r.res);
                 const allSame = rs[0] === rs[1] && rs[1] === rs[2];
                 const twoSame = rs[0] === rs[1] || rs[1] === rs[2] || rs[0] === rs[2];
-                
-                if (allSame) { 
-                    const p = rs[0] === '💰' ? 50 : 20; 
-                    setResult({ win: true, icon: '🎊', main: 'ジャックポット！', sub: rs.join(''), pts: p }); 
-                    addPts(p); 
-                } else if (twoSame) { 
-                    setResult({ win: true, icon: '✨', main: '2つ揃い！', sub: rs.join(''), pts: 5 }); 
-                    addPts(5); 
-                } else { 
-                    setResult({ win: false, icon: '💀', main: 'ハズレ', sub: rs.join(''), pts: 0 }); 
-                }
+                if (allSame) { const p = rs[0] === '💰' ? 50 : 20; setResult({ win: true, icon: '🎊', main: 'ジャックポット！', sub: rs.join(''), pts: p }); addPts(p); }
+                else if (twoSame) { setResult({ win: true, icon: '✨', main: '2つ揃い！', sub: rs.join(''), pts: 5 }); addPts(5); }
+                else { setResult({ win: false, icon: '💀', main: 'ハズレ', sub: rs.join(''), pts: 0 }); }
             }, 150);
         }
-    };
+    }, [reels, playing, isSpectator, stop, addPts]);
 
     useEffect(() => { init(); return () => cancelAnimationFrame(rafRef.current); }, [init]);
 
+    // ▼ 同期
+    useEffect(() => {
+        if (!isSpectator) useGameStore.setState({ mgSyncState: { isReady, playing, reels, offsetsState, result } });
+    }, [isReady, playing, JSON.stringify(reels), JSON.stringify(offsetsState), JSON.stringify(result), isSpectator]);
+
+    useEffect(() => {
+        if (isSpectator && mgSyncState) {
+            if (mgSyncState.isReady !== undefined) setIsReady(mgSyncState.isReady);
+            if (mgSyncState.playing !== undefined) setPlaying(mgSyncState.playing);
+            if (mgSyncState.reels !== undefined) setReels(mgSyncState.reels);
+            if (mgSyncState.offsetsState !== undefined) setOffsetsState(mgSyncState.offsetsState);
+            if (mgSyncState.result !== undefined) setResult(mgSyncState.result);
+        }
+    }, [isSpectator, mgSyncState]);
+
     return (
         <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
-            <MiniGameStylesPart2 />
             <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="🎰 路上スロット" pts={pts} timer={playing ? time : null} onBack={onBack} />
             <div style={S.body}>
                 {!isReady && !result ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginTop: '2rem' }}>
-                        <Instr>
-                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
-                            10秒以内に3つのリールをすべて止めろ！<br/>
-                            絵柄が揃えばPゲットだ！
-                        </Instr>
+                        <Instr><strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>10秒以内に3つのリールをすべて止めろ！<br/>絵柄が揃えばPゲットだ！</Instr>
                         <button className="slot-start" onPointerDown={startSlot}>🎰 ゲーム開始！</button>
                     </div>
                 ) : (
                     <div className="slot-machine">
-                        <div className="slot-top-light">
-                            {[0,1,2,3,4].map(i => <div key={i} className="light-dot"></div>)}
-                        </div>
+                        <div className="slot-top-light">{[0,1,2,3,4].map(i => <div key={i} className="light-dot"></div>)}</div>
                         <div className="reels-wrap">
                             {[0, 1, 2].map(i => (
                                 <div key={i} className="reel-col">
                                     <div className="reel-window">
-                                        <div className="reel-inner" ref={el => innerRefs.current[i] = el}>
+                                        <div className="reel-inner" style={{ transform: `translateY(${-TOT + offsetsState[i]}px)` }}>
                                             {Array(3).fill(0).map((_, r) => SYMS.map((s, si) => <div key={r + '-' + si} className="reel-sym">{s}</div>))}
                                         </div>
                                     </div>
-                                    <button className={`stop-btn ${reels[i].stop && playing ? 'stopped' : ''}`} disabled={!playing || reels[i].stop} onPointerDown={() => stopReel(i)}>
-                                        {reels[i].stop && reels[i].res ? `✓ ${reels[i].res}` : 'STOP'}
-                                    </button>
+                                    <button className={`stop-btn ${reels[i].stop && playing ? 'stopped' : ''}`} disabled={!playing || reels[i].stop} onPointerDown={() => stopReel(i)}>{reels[i].stop && reels[i].res ? `✓ ${reels[i].res}` : 'STOP'}</button>
                                 </div>
                             ))}
                         </div>
@@ -197,11 +184,7 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
                     </div>
                 )}
                 <ResultBox result={result} />
-                {result && (
-                    <BtnPrim onClick={isEventMode ? onBack : init}>
-                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
-                    </BtnPrim>
-                )}
+                {result && !isSpectator && <BtnPrim onClick={isEventMode ? onBack : init}>{isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}</BtnPrim>}
             </div>
         </div>
     );
@@ -211,7 +194,7 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
    Game 6: ♟️ 路上○×ゲーム
 ════════════════════════════════════════ */
 export function OxoGame({ pts, addPts, onBack, isEventMode }) {
-    const { activeMiniGamePlayerId } = useGameStore();
+    const { activeMiniGamePlayerId, mgSyncState } = useGameStore();
     const { myUserId } = useNetworkStore();
     const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
 
@@ -222,54 +205,38 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
     const [turn, setTurn] = useState('p'); 
     const [result, setResult] = useState(null);
     const [winCells, setWinCells] = useState([]);
-    
     const isCpuThinking = useRef(false);
 
-    const { time, start, stop } = useTimer(5, () => {
-        if (phase === 'play' && turn === 'p') end('lose');
-    });
+    const { time, start, stop } = useTimer(5, () => { if (!isSpectator && phase === 'play' && turn === 'p') end('lose'); }, isSpectator);
 
     const init = useCallback(() => { 
+        if (isSpectator) return;
         stop(); setResult(null); setPhase('bet'); setBoard(Array(9).fill(null)); setWinCells([]); isCpuThinking.current = false;
-    }, [stop]);
+    }, [isSpectator, stop]);
 
     const startGame = (b) => {
+        if (isSpectator) return;
         if (gachaPoints < b) { alert('Pが足りない！ゲーム本編で稼ごう！'); return; }
         addGachaAssets(0, -b);
-        setBet(b); setPhase('play'); setTurn('p');
-        start(5);
+        setBet(b); setPhase('play'); setTurn('p'); start(5);
     };
 
     const checkWin = (brd) => {
         const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
-        for (let [a, b, c] of lines) { 
-            if (brd[a] && brd[a] === brd[b] && brd[a] === brd[c]) {
-                setWinCells([a, b, c]);
-                return brd[a]; 
-            }
-        }
+        for (let [a, b, c] of lines) { if (brd[a] && brd[a] === brd[b] && brd[a] === brd[c]) { setWinCells([a, b, c]); return brd[a]; } }
         if (brd.every(c => c)) return 'draw';
         return null;
     };
 
     const move = (i) => {
-        if (board[i] || phase !== 'play' || turn !== 'p' || isCpuThinking.current) return;
-        stop();
-        
-        const nb = [...board]; 
-        nb[i] = 'p'; 
-        setBoard(nb);
-        
-        let res = checkWin(nb); 
-        if (res) { end(res); return; }
-        
-        setTurn('c');
-        isCpuThinking.current = true;
+        if (isSpectator || board[i] || phase !== 'play' || turn !== 'p' || isCpuThinking.current) return;
+        stop(); const nb = [...board]; nb[i] = 'p'; setBoard(nb);
+        let res = checkWin(nb); if (res) { end(res); return; }
+        setTurn('c'); isCpuThinking.current = true;
 
         setTimeout(() => {
             const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
             let cpuMove = null;
-            
             for (let [a, b, c] of lines) {
                 if (nb[a] === 'c' && nb[b] === 'c' && !nb[c]) cpuMove = c;
                 else if (nb[a] === 'c' && !nb[b] && nb[c] === 'c') cpuMove = b;
@@ -288,72 +255,57 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
                 if (avail.length === 0) { end('draw'); return; }
                 cpuMove = avail[rnd(0, avail.length - 1)];
             }
-            
-            nb[cpuMove] = 'c'; 
-            setBoard(nb);
-            isCpuThinking.current = false;
-            
-            res = checkWin(nb); 
-            if (res) { end(res); return; }
-            
-            setTurn('p');
-            start(5);
+            nb[cpuMove] = 'c'; setBoard(nb); isCpuThinking.current = false;
+            res = checkWin(nb); if (res) { end(res); return; }
+            setTurn('p'); start(5);
         }, 600);
     };
 
     const end = useCallback((res) => {
+        if (isSpectator) return;
         stop(); setPhase('end');
-        if (res === 'p') { 
-            setResult({ win: true, icon: '○', main: 'あなたの勝ち！', sub: `賭け${bet}P → 2倍`, pts: bet * 2 }); 
-            addPts(bet * 2); 
-        }
-        else if (res === 'draw') { 
-            setResult({ win: false, icon: '🤝', main: '引き分け', sub: `賭け${bet}P 返還`, pts: bet }); 
-            addPts(bet); 
-        }
-        else { 
-            setResult({ win: false, icon: '×', main: 'CPUの勝ち…', sub: `賭け${bet}P 没収`, pts: 0 }); 
-        }
-    }, [bet, addPts, stop]);
+        if (res === 'p') { setResult({ win: true, icon: '○', main: 'あなたの勝ち！', sub: `賭け${bet}P → 2倍`, pts: bet * 2 }); addPts(bet * 2); }
+        else if (res === 'draw') { setResult({ win: false, icon: '🤝', main: '引き分け', sub: `賭け${bet}P 返還`, pts: bet }); addPts(bet); }
+        else { setResult({ win: false, icon: '×', main: 'CPUの勝ち…', sub: `賭け${bet}P 没収`, pts: 0 }); }
+    }, [isSpectator, bet, addPts, stop]);
 
     useEffect(() => { init(); }, [init]);
 
+    // ▼ 同期
+    useEffect(() => {
+        if (!isSpectator) useGameStore.setState({ mgSyncState: { phase, board, turn, winCells, result } });
+    }, [phase, JSON.stringify(board), turn, JSON.stringify(winCells), JSON.stringify(result), isSpectator]);
+
+    useEffect(() => {
+        if (isSpectator && mgSyncState) {
+            if (mgSyncState.phase !== undefined) setPhase(mgSyncState.phase);
+            if (mgSyncState.board !== undefined) setBoard(mgSyncState.board);
+            if (mgSyncState.turn !== undefined) setTurn(mgSyncState.turn);
+            if (mgSyncState.winCells !== undefined) setWinCells(mgSyncState.winCells);
+            if (mgSyncState.result !== undefined) setResult(mgSyncState.result);
+        }
+    }, [isSpectator, mgSyncState]);
+
     return (
         <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
-            <MiniGameStylesPart2 />
             <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="♟️ 路上○×" pts={pts} timer={phase === 'play' ? time : null} onBack={onBack} />
             <div style={S.body}>
                 {phase === 'bet' && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                        <Instr>
-                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
-                            CPUと○×ゲームで勝負！<br/>
-                            制限時間は1ターン5秒。賭けPを選んでスタートだ！<br/>
-                            勝てば賭けPが倍になるぞ！
-                        </Instr>
+                        <Instr><strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>CPUと○×ゲームで勝負！制限時間は1ターン5秒。<br/>賭けPを選んでスタート！勝てば賭けPが倍になる！</Instr>
                         <div style={{ fontSize: '.88rem', color: '#7a6a4a', textAlign: 'center', marginBottom: '.5rem', marginTop: '10px' }}>▼ 賭けPを選んでゲーム開始！ ▼<br/>（所持: {gachaPoints}P）</div>
                         <div className="bet-btns">
-                            {[3, 5, 8, 10].map(b => (
-                                <button key={b} className="bet-btn" onPointerDown={() => startGame(b)}>{b}Pを賭ける</button>
-                            ))}
+                            {[3, 5, 8, 10].map(b => <button key={b} className="bet-btn" onPointerDown={() => startGame(b)}>{b}Pを賭ける</button>)}
                         </div>
                     </div>
                 )}
-                
                 {phase !== 'bet' && (
                     <>
-                        <div className="oxo-status">
-                            {phase === 'end' ? '決着！' : (turn === 'p' ? 'あなた(○) の番 — 5秒！' : 'CPU(×) の番…')}
-                        </div>
+                        <div className="oxo-status">{phase === 'end' ? '決着！' : (turn === 'p' ? 'あなた(○) の番 — 5秒！' : 'CPU(×) の番…')}</div>
                         <div className="oxo-board">
                             {board.map((c, i) => (
-                                <div 
-                                    key={i} 
-                                    className={`oxo-cell ${c ? 'taken' : ''} ${winCells.includes(i) ? 'win-cell' : ''}`} 
-                                    onPointerDown={() => move(i)} 
-                                    style={{ color: c === 'p' ? '#e8b84b' : (c === 'c' ? '#b52e1e' : 'inherit') }}
-                                >
+                                <div key={i} className={`oxo-cell ${c ? 'taken' : ''} ${winCells.includes(i) ? 'win-cell' : ''}`} onPointerDown={() => move(i)} style={{ color: c === 'p' ? '#e8b84b' : (c === 'c' ? '#b52e1e' : 'inherit') }}>
                                     {c === 'p' ? '○' : c === 'c' ? '×' : ''}
                                 </div>
                             ))}
@@ -361,11 +313,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
                     </>
                 )}
                 <ResultBox result={result} />
-                {result && (
-                    <BtnPrim onClick={isEventMode ? onBack : init}>
-                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
-                    </BtnPrim>
-                )}
+                {result && !isSpectator && <BtnPrim onClick={isEventMode ? onBack : init}>{isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}</BtnPrim>}
             </div>
         </div>
     );
@@ -375,7 +323,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
    Game 7: 📦 段ボールパズル
 ════════════════════════════════════════ */
 export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
-    const { activeMiniGamePlayerId } = useGameStore();
+    const { activeMiniGamePlayerId, mgSyncState } = useGameStore();
     const { myUserId } = useNetworkStore();
     const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
 
@@ -402,6 +350,7 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
     const colorRef = useRef(TET_COLORS[0]);
 
     const slideTick = useCallback(() => {
+        if (isSpectator) return;
         const max = TET_COLS - pwRef.current;
         const maxLimit = max + 0.99; 
         
@@ -412,7 +361,7 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
         pxRef.current = Math.floor(posRef.current); 
         setPieceX(pxRef.current);
         rafRef.current = requestAnimationFrame(slideTick);
-    }, []);
+    }, [isSpectator]);
 
     const newPiece = useCallback(() => {
         const pi = rnd(0, TET_WS.length - 1); 
@@ -423,98 +372,83 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
     }, []);
 
     const tetDrop = useCallback(() => {
-        if (!playing) return;
+        if (isSpectator || !playing) return;
         const b = boardRef.current.map(r => [...r]);
         let land = -1; 
         for (let r = TET_ROWS - 1; r >= 0; r--) {
             let ok = true;
-            for (let c = pxRef.current; c < pxRef.current + pwRef.current; c++) {
-                if (b[r][c]) { ok = false; break; }
-            }
+            for (let c = pxRef.current; c < pxRef.current + pwRef.current; c++) { if (b[r][c]) { ok = false; break; } }
             if (ok) { land = r; break; }
         }
         if (land < 0) return;
         
-        for (let c = pxRef.current; c < pxRef.current + pwRef.current; c++) {
-            b[land][c] = colorRef.current;
-        }
+        for (let c = pxRef.current; c < pxRef.current + pwRef.current; c++) { b[land][c] = colorRef.current; }
         
         let cl = 0; 
         for (let r = TET_ROWS - 1; r >= 0; r--) {
-            if (b[r].every(c => c !== null)) {
-                b.splice(r, 1);
-                b.unshift(Array(TET_COLS).fill(null));
-                cl++; r++;
-            }
+            if (b[r].every(c => c !== null)) { b.splice(r, 1); b.unshift(Array(TET_COLS).fill(null)); cl++; r++; }
         }
         
-        clearedRef.current += cl; 
-        boardRef.current = b; 
-        setBoard(b.map(r => [...r])); 
-        setCleared(clearedRef.current);
+        clearedRef.current += cl; boardRef.current = b; setBoard(b.map(r => [...r])); setCleared(clearedRef.current);
         
         if (clearedRef.current >= 2) { 
-            setPlaying(false); cancelAnimationFrame(rafRef.current); 
-            const p = clearedRef.current * 4; addPts(p); 
-            setResult({ win: true, icon: '🏠', main: '2段クリア成功！', sub: 'ダンボールハウスが建った！', pts: p }); 
-            return; 
+            setPlaying(false); cancelAnimationFrame(rafRef.current); const p = clearedRef.current * 4; addPts(p); 
+            setResult({ win: true, icon: '🏠', main: '2段クリア成功！', sub: 'ダンボールハウスが建った！', pts: p }); return; 
         }
         if (b[0].some(c => c !== null)) { 
-            setPlaying(false); cancelAnimationFrame(rafRef.current); 
-            const p = clearedRef.current * 4; if (p > 0) addPts(p); 
-            setResult({ win: false, icon: '💀', main: '積みすぎた！', sub: `${clearedRef.current}段クリア`, pts: p }); 
-            return; 
+            setPlaying(false); cancelAnimationFrame(rafRef.current); const p = clearedRef.current * 4; if (p > 0) addPts(p); 
+            setResult({ win: false, icon: '💀', main: '積みすぎた！', sub: `${clearedRef.current}段クリア`, pts: p }); return; 
         }
         newPiece();
-    }, [playing, addPts, newPiece]);
+    }, [playing, addPts, newPiece, isSpectator]);
 
     const tetMove = (d) => {
-        if (!playing) return;
+        if (isSpectator || !playing) return;
         posRef.current = Math.max(0, Math.min(TET_COLS - pwRef.current, pxRef.current + d)); 
-        pxRef.current = Math.floor(posRef.current); 
-        setPieceX(pxRef.current);
+        pxRef.current = Math.floor(posRef.current); setPieceX(pxRef.current);
     };
 
     const init = useCallback(() => {
-        cancelAnimationFrame(rafRef.current);
-        clearedRef.current = 0; posRef.current = 0; dirRef.current = 1;
+        if (isSpectator) return;
+        cancelAnimationFrame(rafRef.current); clearedRef.current = 0; posRef.current = 0; dirRef.current = 1;
         const b = Array.from({ length: TET_ROWS }, () => Array(TET_COLS).fill(null)); 
-        boardRef.current = b;
-        setBoard(b.map(r => [...r])); setCleared(0); setResult(null); 
-        setIsReady(false); setPlaying(false);
-        newPiece(); 
-    }, [newPiece]);
+        boardRef.current = b; setBoard(b.map(r => [...r])); setCleared(0); setResult(null); setIsReady(false); setPlaying(false); newPiece(); 
+    }, [newPiece, isSpectator]);
 
-    const startGame = () => {
-        setIsReady(true);
-        setPlaying(true);
-        rafRef.current = requestAnimationFrame(slideTick);
-    };
-
+    const startGame = () => { if (isSpectator) return; setIsReady(true); setPlaying(true); rafRef.current = requestAnimationFrame(slideTick); };
     useEffect(() => { init(); return () => cancelAnimationFrame(rafRef.current); }, [init]);
+
+    // ▼ 同期
+    useEffect(() => {
+        if (!isSpectator) useGameStore.setState({ mgSyncState: { isReady, playing, board, cleared, pieceX, pieceW, pieceColor, result } });
+    }, [isReady, playing, JSON.stringify(board), cleared, pieceX, pieceW, pieceColor, JSON.stringify(result), isSpectator]);
+
+    useEffect(() => {
+        if (isSpectator && mgSyncState) {
+            if (mgSyncState.isReady !== undefined) setIsReady(mgSyncState.isReady);
+            if (mgSyncState.playing !== undefined) setPlaying(mgSyncState.playing);
+            if (mgSyncState.board !== undefined) setBoard(mgSyncState.board);
+            if (mgSyncState.cleared !== undefined) setCleared(mgSyncState.cleared);
+            if (mgSyncState.pieceX !== undefined) setPieceX(mgSyncState.pieceX);
+            if (mgSyncState.pieceW !== undefined) setPieceW(mgSyncState.pieceW);
+            if (mgSyncState.pieceColor !== undefined) setPieceColor(mgSyncState.pieceColor);
+            if (mgSyncState.result !== undefined) setResult(mgSyncState.result);
+        }
+    }, [isSpectator, mgSyncState]);
 
     return (
         <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
-            <MiniGameStylesPart2 />
             <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="📦 段ボールパズル" pts={pts} onBack={onBack} />
             <div style={S.body}>
                 {!isReady && !result ? (
                     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-                        <Instr>
-                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
-                            箱が上部を左右に自動で動きます。<br/>
-                            ◀▶ボタンで落とす列を微調整し、<br/>
-                            「⬇ DROP」で箱を落としましょう！<br/>
-                            横一列揃えると段ボールが消えます。<br/>
-                            高く積みすぎずに2段消せばクリアです！
-                        </Instr>
+                        <Instr><strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>箱が上部を左右に自動で動きます。<br/>◀▶ボタンで落とす列を微調整し、「⬇ DROP」で箱を落としましょう！<br/>横一列揃えると段ボールが消えます。<br/>高く積みすぎずに2段消せばクリアです！</Instr>
                         <BtnPrim onClick={startGame} style={{ width: '100%' }}>ゲーム開始！</BtnPrim>
                     </div>
                 ) : (
                     <>
                         <StatBox label="クリア段数" val={`${cleared} / 2`} />
-                        
                         <div style={{ display: 'flex', gap: 2, padding: '6px 8px', background: '#241a0e', border: `2px solid ${playing ? '#c97b2a' : '#3d2e1a'}`, borderRadius: 10, width: 'fit-content', minHeight: 50, alignItems: 'center' }}>
                             {Array.from({ length: TET_COLS }).map((_, c) => (
                                 <div key={c} className="tet-preview-cell" style={{ background: c >= pieceX && c < pieceX + pieceW ? pieceColor : '#0a0a0a', borderColor: c >= pieceX && c < pieceX + pieceW ? 'rgba(255,255,255,.4)' : '#222' }}>
@@ -522,15 +456,11 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
                                 </div>
                             ))}
                         </div>
-                        
                         <div style={{ background: '#1a1309', border: '3px solid #5a4228', borderRadius: 12, padding: '.6rem', display: 'inline-block' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${TET_COLS}, 36px)`, gridTemplateRows: `repeat(${TET_ROWS}, 28px)`, gap: 2 }}>
-                                {board.map((row, r) => row.map((cell, c) => (
-                                    <div key={`${r}-${c}`} className="tet-cell" style={{ background: cell || '#0f0f0f', borderColor: cell ? 'rgba(255,255,255,.15)' : '#1a1a1a' }}>{cell ? '📦' : ''}</div>
-                                )))}
+                                {board.map((row, r) => row.map((cell, c) => <div key={`${r}-${c}`} className="tet-cell" style={{ background: cell || '#0f0f0f', borderColor: cell ? 'rgba(255,255,255,.15)' : '#1a1a1a' }}>{cell ? '📦' : ''}</div>))}
                             </div>
                         </div>
-                        
                         {!result && (
                             <div style={{ display: 'flex', gap: '.55rem', justifyContent: 'center' }}>
                                 <button className="tet-btn" onPointerDown={() => tetMove(-1)}>◀ 左</button>
@@ -540,13 +470,8 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
                         )}
                     </>
                 )}
-                
                 <ResultBox result={result} />
-                {result && (
-                    <BtnPrim onClick={isEventMode ? onBack : init}>
-                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
-                    </BtnPrim>
-                )}
+                {result && !isSpectator && <BtnPrim onClick={isEventMode ? onBack : init}>{isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}</BtnPrim>}
             </div>
         </div>
     );
@@ -556,7 +481,7 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
    Game 8: 🪰 ハエ捕まえ
 ════════════════════════════════════════ */
 export function FlyGame({ pts, addPts, onBack, isEventMode }) {
-    const { activeMiniGamePlayerId } = useGameStore();
+    const { activeMiniGamePlayerId, mgSyncState } = useGameStore();
     const { myUserId } = useNetworkStore();
     const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
 
@@ -565,140 +490,121 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
     const [result, setResult] = useState(null);
     const [fxList, setFxList] = useState([]);
     const [isReady, setIsReady] = useState(false);
+    const [flyPos, setFlyPos] = useState({ x: -100, y: -100, scaleX: 1 });
     
     const arenaRef = useRef(null);
     const rafRef = useRef(null);
     const pos = useRef({ x: 0, y: 0, vx: 3, vy: 3 });
     const caughtRef = useRef(0);
     const playingRef = useRef(false);
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endFly(); });
+
+    const { time, start, stop } = useTimer(10, () => { if (!isSpectator && playingRef.current) endFly(); }, isSpectator);
 
     const endFly = useCallback((forceWin = false) => {
+        if (isSpectator) return;
         playingRef.current = false; stop(); cancelAnimationFrame(rafRef.current);
         const c = caughtRef.current;
         const win = forceWin || c >= 3;
         if (win) addPts(15);
         setResult({ win, icon: win ? '🪰🪰🪰' : '⏰', main: win ? '3匹全部捕まえた！' : '時間切れ！', sub: `${c}匹捕獲`, pts: win ? 15 : c * 3 });
-    }, [stop, addPts]);
+    }, [isSpectator, stop, addPts]);
 
     const moveFly = useCallback(() => {
-        if (!playingRef.current || !arenaRef.current) return;
-        const W = arenaRef.current.offsetWidth; 
-        const H = arenaRef.current.offsetHeight;
+        if (isSpectator || !playingRef.current || !arenaRef.current) return;
+        const W = arenaRef.current.offsetWidth, H = arenaRef.current.offsetHeight;
         const p = pos.current;
-        
-        p.vx += (Math.random() - .5) * 1.0; 
-        p.vy += (Math.random() - .5) * 1.0;
-        
-        const spd = Math.hypot(p.vx, p.vy);
-        const max = 6 + caughtRef.current * 1.0; 
+        p.vx += (Math.random() - .5) * 1.0; p.vy += (Math.random() - .5) * 1.0;
+        const spd = Math.hypot(p.vx, p.vy); const max = 6 + caughtRef.current * 1.0; 
         if (spd > max) { p.vx = (p.vx / spd) * max; p.vy = (p.vy / spd) * max; }
-        
         p.x += p.vx; p.y += p.vy;
-        
         const margin = 30;
         if (p.x < margin) { p.x = margin; p.vx = Math.abs(p.vx) + 1; } 
         if (p.x > W - margin) { p.x = W - margin; p.vx = -Math.abs(p.vx) - 1; }
         if (p.y < margin) { p.y = margin; p.vy = Math.abs(p.vy) + 1; } 
         if (p.y > H - margin) { p.y = H - margin; p.vy = -Math.abs(p.vy) - 1; }
         
-        const el = document.getElementById('fly-target');
-        if (el) {
-            el.style.left = p.x + 'px';
-            el.style.top = p.y + 'px';
-            el.style.transform = p.vx < 0 ? 'scaleX(-1)' : 'scaleX(1)';
-        }
-        
+        setFlyPos({ x: p.x, y: p.y, scaleX: p.vx < 0 ? -1 : 1 });
         rafRef.current = requestAnimationFrame(moveFly);
-    }, []);
+    }, [isSpectator]);
 
     const catchFly = useCallback((e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        if (!playingRef.current) return;
-        
-        caughtRef.current++; 
-        setCaught(caughtRef.current);
-        
+        e.stopPropagation(); e.preventDefault();
+        if (isSpectator || !playingRef.current) return;
+        caughtRef.current++; setCaught(caughtRef.current);
         const id = Date.now();
         setFxList(prev => [...prev, { id, x: pos.current.x - 15, y: pos.current.y - 15 }]);
         setTimeout(() => setFxList(prev => prev.filter(f => f.id !== id)), 500);
         
-        if (caughtRef.current >= 3) {
-            endFly(true);
-        } else {
+        if (caughtRef.current >= 3) { endFly(true); } 
+        else {
             if (arenaRef.current) {
                 const W = arenaRef.current.offsetWidth, H = arenaRef.current.offsetHeight;
-                pos.current.x = rnd(40, W - 40); 
-                pos.current.y = rnd(40, H - 40);
-                const ang = Math.random() * Math.PI * 2;
-                const spd = 4 + caughtRef.current;
-                pos.current.vx = Math.cos(ang) * spd; 
-                pos.current.vy = Math.sin(ang) * spd;
+                pos.current.x = rnd(40, W - 40); pos.current.y = rnd(40, H - 40);
+                const ang = Math.random() * Math.PI * 2; const spd = 4 + caughtRef.current;
+                pos.current.vx = Math.cos(ang) * spd; pos.current.vy = Math.sin(ang) * spd;
             }
         }
-    }, [endFly]);
+    }, [isSpectator, endFly]);
 
     const startGame = useCallback(() => {
-        setIsReady(true);
-        setStarted(true); 
-        playingRef.current = true;
+        if (isSpectator) return;
+        setIsReady(true); setStarted(true); playingRef.current = true;
         if (arenaRef.current) {
             const W = arenaRef.current.offsetWidth / 2, H = arenaRef.current.offsetHeight / 2;
-            const ang = Math.random() * Math.PI * 2; 
-            pos.current = { x: W, y: H, vx: Math.cos(ang) * 4, vy: Math.sin(ang) * 4 };
+            const ang = Math.random() * Math.PI * 2; pos.current = { x: W, y: H, vx: Math.cos(ang) * 4, vy: Math.sin(ang) * 4 };
         }
-        start(); 
-        rafRef.current = requestAnimationFrame(moveFly);
-    }, [start, moveFly]);
+        start(); rafRef.current = requestAnimationFrame(moveFly);
+    }, [isSpectator, start, moveFly]);
 
     const init = useCallback(() => {
-        playingRef.current = false; caughtRef.current = 0; setCaught(0); setStarted(false); setResult(null); setFxList([]); setIsReady(false);
+        if (isSpectator) return;
+        playingRef.current = false; caughtRef.current = 0; setCaught(0); setStarted(false); setResult(null); setFxList([]); setIsReady(false); setFlyPos({x:-100,y:-100,scaleX:1});
         cancelAnimationFrame(rafRef.current); stop();
-    }, [stop]);
+    }, [isSpectator, stop]);
 
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); }; }, [init]);
 
+    // ▼ 同期
+    useEffect(() => {
+        if (!isSpectator) useGameStore.setState({ mgSyncState: { isReady, started, caught, flyPos, result } });
+    }, [isReady, started, caught, JSON.stringify(flyPos), JSON.stringify(result), isSpectator]);
+
+    useEffect(() => {
+        if (isSpectator && mgSyncState) {
+            if (mgSyncState.isReady !== undefined) setIsReady(mgSyncState.isReady);
+            if (mgSyncState.started !== undefined) setStarted(mgSyncState.started);
+            if (mgSyncState.caught !== undefined) setCaught(mgSyncState.caught);
+            if (mgSyncState.flyPos !== undefined) setFlyPos(mgSyncState.flyPos);
+            if (mgSyncState.result !== undefined) setResult(mgSyncState.result);
+        }
+    }, [isSpectator, mgSyncState]);
+
     return (
         <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
-            <MiniGameStylesPart2 />
             <SpectatorOverlay isSpectator={isSpectator} />
-            <GameHeader title="🪰 ハエ捕まえ" pts={pts} timer={isReady && !result ? time : null} onBack={onBack} />
+            <GameHeader title="🪰 ハエ捕まえ" pts={pts} timer={started && !result ? time : null} onBack={onBack} />
             <div style={S.body}>
                 {!isReady && !result ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                        <Instr>
-                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
-                            画面内を飛び回るハエを直接タップして捕まえろ！<br/>
-                            制限時間は10秒。3匹捕まえればクリアだ！
-                        </Instr>
+                        <Instr><strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>画面内を飛び回るハエを直接タップして捕まえろ！<br/>制限時間は10秒。3匹捕まえればクリアだ！</Instr>
                         <BtnPrim onClick={startGame} style={{ width: '100%' }}>ゲーム開始！</BtnPrim>
                     </div>
                 ) : (
                     <>
                         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', justifyContent: 'center' }}>
                             <div style={{ textAlign: 'center' }}><div style={{ fontSize: '.6rem', color: '#7a6a4a', letterSpacing: '.1em' }}>CATCH</div><div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: '2.5rem', color: '#e8b84b' }}>{caught}</div></div>
-                            <div className="fly-prog">
-                                {[0, 1, 2].map(i => <div key={i} className={`fly-prog-dot ${i < caught ? 'caught' : ''}`}>{i < caught ? '✓' : '🪰'}</div>)}
-                            </div>
+                            <div className="fly-prog">{[0, 1, 2].map(i => <div key={i} className={`fly-prog-dot ${i < caught ? 'caught' : ''}`}>{i < caught ? '✓' : '🪰'}</div>)}</div>
                         </div>
-                        
                         <div ref={arenaRef} className="fly-arena">
                             {started && !result && (
-                                <div id="fly-target" className="fly-el" onPointerDown={catchFly}>🪰</div>
+                                <div className="fly-el" onPointerDown={catchFly} style={{ left: flyPos.x, top: flyPos.y, transform: `scaleX(${flyPos.scaleX})` }}>🪰</div>
                             )}
-                            
                             {fxList.map(f => <div key={f.id} className="catch-fx" style={{ left: f.x, top: f.y }}>✨+1</div>)}
                         </div>
                     </>
                 )}
-                
                 <ResultBox result={result} />
-                {result && (
-                    <BtnPrim onClick={isEventMode ? onBack : init}>
-                        {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
-                    </BtnPrim>
-                )}
+                {result && !isSpectator && <BtnPrim onClick={isEventMode ? onBack : init}>{isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}</BtnPrim>}
             </div>
         </div>
     );

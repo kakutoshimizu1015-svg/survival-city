@@ -13,8 +13,8 @@ const initialState = {
     npcMovePick: null,       
     
     shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
-    // ▼ 修正: mgActive等の並びに、観戦モード用の activeMiniGamePlayerId を追加
-    mgActive: false, mgType: "", mgValue: 0, mgResult: null, activeMiniGamePlayerId: null, storyActive: false,
+    // ▼ ミニゲームの観戦同期用ステートを追加
+    mgActive: false, mgType: "", mgValue: 0, mgResult: null, activeMiniGamePlayerId: null, mgSyncState: null, storyActive: false,
     settingsActive: false, rulesActive: false, tutorialActive: false, teamActionActive: false,
     tutorialStep: 0, sandboxActive: false, sandboxScenario: -1, sandboxStep: 0,
     turnBanner: null, turnBannerActive: false, eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,
@@ -40,17 +40,8 @@ const initialState = {
     mapData: [], territories: {}, territoryCosts: {}, isRainy: false, weatherState: 'sunny', isNight: false,
     roundCount: 1, maxRounds: 20, canPrice: 1, trashPrice: 2, destTile: -1,
     
-    truckPos: 0, 
-    policePos: 0, policeCd: 0, policeHp: 10, policeRespawn: 0,
-    unclePos: 0, uncleCd: 0, uncleHp: 10, uncleRespawn: 0,
-    animalPos: 0, animalCd: 0, animalHp: 10, animalRespawn: 0,
-    yakuzaPos: 0, yakuzaCd: 0, yakuzaHp: 10, yakuzaRespawn: 0,
-    loansharkPos: 0, loansharkCd: 0, loansharkHp: 10, loansharkRespawn: 0,
-    friendPos: 0, friendCd: 0, friendHp: 10, friendRespawn: 0,
-    
     layoutMode: 'auto',
     
-    // ▼ ミニゲームモード用ステート追加
     selectedMiniGame: null,
 };
 

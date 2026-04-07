@@ -154,12 +154,12 @@ export const executeMove = (targetTileId) => {
         if (Math.random() < 0.3) {
             useGameStore.setState({ storyActive: true, storyIndex: Math.floor(Math.random() * 4) });
         } else {
-            // ▼ 修正: 仮の3種から、実装済みの全15種から抽選するように変更
             const mgTypes = ['box', 'vend', 'scratch', 'hl', 'slot', 'oxo', 'tetris', 'fly', 'rat', 'drunk', 'rain', 'kashi', 'beg', 'music', 'nego'];
             useGameStore.setState({ 
                 mgActive: true, 
                 mgType: mgTypes[Math.floor(Math.random() * mgTypes.length)],
-                activeMiniGamePlayerId: cp.id // ▼ 修正: 発動したプレイヤーIDを登録
+                activeMiniGamePlayerId: cp.id, // ▼ 誰が実行したかを記録
+                mgSyncState: null // ▼ 同期状態をリセット
             });
         }
     }
@@ -294,7 +294,7 @@ export const actionEndTurn = async () => {
             isBranchPicking: false, isDashPicking: false, 
             isSalesVisiting: false, salesTargetId: null, npcSelectActive: false,
             mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null,
-            activeMiniGamePlayerId: null // ▼ 追加: ターン終了時にクリア
+            activeMiniGamePlayerId: null, mgSyncState: null
         });
         
         const isLastPlayer = state.turn === state.players.length - 1;
