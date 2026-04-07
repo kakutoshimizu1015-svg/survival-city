@@ -1,322 +1,96 @@
 import { create } from 'zustand';
-import Peer from 'peerjs';
-import { ref, set, get, onDisconnect, remove, onValue, off, update } from 'firebase/database';
-import { db } from '../lib/firebase';
-import { useGameStore } from './useGameStore';
-import { useLobbyStore } from './useLobbyStore';
-import { processRoundEnd } from '../game/round';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
-let isReceivingNetworkData = false;
-let networkReceiveTimer = null; 
+export const useUserStore = create(
+  persist(
+    (set) => ({
+      uid: null,
+      isLoggedIn: false,
+      
+      playerName: '名無しサバイバー',
+      gachaPoints: 0,
+      wins: 0,
+      totalEarnedP: 0,
+      
+      // ガチャ資産とスキンデータ
+      gachaCans: 0,
+      unlockedSkins: [],
+      equippedSkins: {}, // { charKey: skinId }
+      
+      // スタッツ（累計データ）
+      totalTilesMoved: 0,
+      totalCardsUsed: 0,
+      totalCansCollected: 0,
+      totalTrashCollected: 0,
+      totalPSpentAtShop: 0,
+      npcEncounters: { police: 0, uncle: 0, yakuza: 0, loanshark: 0, friend: 0 },
+      
+      // 永続化する環境設定
+      showSmoke: true,
+      liteMode: false,
+      volume: 1.0,
+      layoutMode: 'auto',
+      showSkipButton: false,
+      autoScrollToPlayer: true,
 
-export const useNetworkStore = create((setStore, getStore) => ({
-    myUserId: null,
-    setMyUserId: (uid) => setStore({ myUserId: uid }),
+      setUserData: (data) => set((state) => ({ ...state, ...data })),
+      setShowSmoke: (show) => set({ showSmoke: show }), 
+      
+      incrementStat: (key, amount = 1) => set((state) => ({ 
+          [key]: (state[key] || 0) + amount 
+      })),
+      incrementNpcEncounter: (npcType) => set((state) => ({
+          npcEncounters: { 
+              ...state.npcEncounters, 
+              [npcType]: (state.npcEncounters[npcType] || 0) + 1 
+          }
+      })),
 
-    isHost: false,
-    roomId: null,
-    peer: null,
-    connections: [], 
-    hostConnection: null, 
-    lobbyPlayers: [], 
-    status: 'disconnected', 
-    activeRooms: [],
+      // ▼ 修正：リロードバグ対策。計算結果を確実に反映させるため状態をディープコピーして更新
+      addGachaAssets: (cansAmount, pointsAmount) => set((state) => {
+          const newCans = Math.max(0, (state.gachaCans || 0) + cansAmount);
+          const newPoints = Math.max(0, (state.gachaPoints || 0) + pointsAmount);
+          return { gachaCans: newCans, gachaPoints: newPoints };
+      }),
 
-    subscribeToRooms: () => {
-        const roomsRef = ref(db, 'rooms');
-        onValue(roomsRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                const roomsList = Object.entries(data).map(([roomId, info]) => ({ roomId, ...info })).filter(room => room.status === 'waiting');
-                setStore({ activeRooms: roomsList });
-            } else { setStore({ activeRooms: [] }); }
-        });
-    },
+      unlockMultipleSkins: (skinIds) => set((state) => {
+          // 重複を防ぎながら追加
+          const currentSkins = state.unlockedSkins || [];
+          const newSkins = skinIds.filter(id => !currentSkins.includes(id));
+          return { unlockedSkins: [...currentSkins, ...newSkins] };
+      }),
 
-    unsubscribeFromRooms: () => off(ref(db, 'rooms')),
-
-    createRoom: async (roomCode, playerName) => {
-        setStore({ status: 'connecting', isHost: true, roomId: roomCode });
-        const peer = new Peer();
+      setEquippedSkin: (charKey, skinId) => set((state) => ({
+          equippedSkins: { ...state.equippedSkins, [charKey]: skinId }
+      }))
+    }),
+    {
+      name: 'homeless-survival-user-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        playerName: state.playerName,
+        gachaPoints: state.gachaPoints,
+        wins: state.wins,
+        totalEarnedP: state.totalEarnedP,
         
-        // ★エラーハンドリング追加: 無反応フリーズを防止
-        peer.on('error', (err) => {
-            console.error("PeerJS Host Error:", err);
-            setStore({ status: 'error' });
-        });
-
-        peer.on('open', async (id) => {
-            const roomRef = ref(db, `rooms/${roomCode}`);
-            await set(roomRef, { hostPeerId: id, createdAt: Date.now(), hostName: playerName, status: 'waiting' });
-            onDisconnect(roomRef).remove(); 
-            setStore({ peer, status: 'connected', lobbyPlayers: [{ userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none', isHost: true, isCPU: false }] });
-        });
-
-        peer.on('connection', (conn) => {
-            conn.on('open', () => {
-                setStore(state => ({ connections: [...state.connections, conn] }));
-                conn.on('data', (data) => {
-                    if (data.type === 'JOIN') {
-                        const newPlayer = { ...data.user, isHost: false, isCPU: false };
-                        const updatedPlayers = [...getStore().lobbyPlayers, newPlayer];
-                        setStore({ lobbyPlayers: updatedPlayers });
-                        getStore().broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
-                    }
-                    if (data.type === 'LOBBY_CHANGE') {
-                        const updatedPlayers = getStore().lobbyPlayers.map(p => p.userId === data.user.userId ? { ...p, ...data.user } : p);
-                        setStore({ lobbyPlayers: updatedPlayers });
-                        getStore().broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
-                    }
-                    if (data.type === 'GAME_SYNC') {
-                        if (data.lastUpdater !== getStore().myUserId) {
-                            isReceivingNetworkData = true;
-                            if (networkReceiveTimer) clearTimeout(networkReceiveTimer);
-                            
-                            const logger = document.getElementById("log");
-                            if (logger && data.gameState.logs) {
-                                logger.innerHTML = data.gameState.logs.map(msg => `<div>> ${msg}</div>`).join('');
-                                logger.scrollTop = logger.scrollHeight;
-                            }
-
-                            useGameStore.setState(data.gameState);
-                            networkReceiveTimer = setTimeout(() => { isReceivingNetworkData = false; }, 200);
-                        }
-                        getStore().connections.forEach(c => {
-                            if (c.peer !== conn.peer && c.open) c.send(data);
-                        });
-                    }
-
-                    if (data.type === 'REQUEST_ROUND_END') {
-                        const gameState = useGameStore.getState();
-                        if (gameState.gamePhase === 'playing' && !gameState.gameOver && !gameState._roundEndInProgress) {
-                            (async () => {
-                                try {
-                                    useGameStore.setState({ _roundEndInProgress: true });
-                                    await processRoundEnd();
-                                    useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false }));
-                                } catch (e) {
-                                    console.error("Host processRoundEnd error:", e);
-                                    useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false, _roundEndInProgress: false }));
-                                }
-                            })();
-                        }
-                    }
-
-                    if (data.type === 'CHAT') {
-                        useLobbyStore.getState().addChatToQueue(data.chat);
-                        const logger = document.getElementById("log");
-                        if (logger) {
-                            const chatHtml = `<div style="color: #007bff; margin: 4px 0;">[チャット] ${data.chat.sender}: ${data.chat.text}</div>`;
-                            logger.insertAdjacentHTML('beforeend', chatHtml);
-                            logger.scrollTop = logger.scrollHeight;
-                        }
-                        getStore().connections.forEach(c => {
-                            if (c.peer !== conn.peer && c.open) c.send(data);
-                        });
-                    }
-
-                    // ★追加: ミニゲームの高速リアルタイム同期（ホストが中継）
-                    if (data.type === 'MINIGAME_LIVE') {
-                        useGameStore.setState({ minigameLiveState: data.state });
-                        getStore().connections.forEach(c => {
-                            if (c.peer !== conn.peer && c.open) c.send(data);
-                        });
-                    }
-                });
-            });
-            conn.on('close', () => {
-                setStore(state => ({ connections: state.connections.filter(c => c.peer !== conn.peer) }));
-                const currentPlayers = getStore().lobbyPlayers.filter(p => p.userId !== conn.peer);
-                setStore({ lobbyPlayers: currentPlayers });
-                getStore().broadcast({ type: 'LOBBY_UPDATE', players: currentPlayers });
-            });
-        });
-    },
-
-    joinRoom: async (roomCode, playerName) => {
-        setStore({ status: 'connecting', isHost: false, roomId: roomCode });
-        const roomRef = ref(db, `rooms/${roomCode}`);
-        const snapshot = await get(roomRef);
-        if (!snapshot.exists()) { setStore({ status: 'error' }); return; }
-
-        const peer = new Peer(getStore().myUserId); 
+        gachaCans: state.gachaCans,
+        unlockedSkins: state.unlockedSkins,
+        equippedSkins: state.equippedSkins,
         
-        // ★エラーハンドリング追加: 同じブラウザでテストした際のID競合などによる無反応を防止
-        peer.on('error', (err) => {
-            console.error("PeerJS Client Error:", err);
-            alert("通信エラーが発生しました。\n別のタブやブラウザでテストしている場合は、もう一方をシークレットウィンドウで開いてください。\n詳細: " + err.type);
-            setStore({ status: 'error' });
-        });
-
-        peer.on('open', () => {
-            const conn = peer.connect(snapshot.val().hostPeerId);
-            
-            conn.on('error', (err) => {
-                console.error("Connection Error:", err);
-                setStore({ status: 'error' });
-            });
-
-            conn.on('open', () => {
-                setStore({ peer, hostConnection: conn, status: 'connected' });
-                conn.send({ type: 'JOIN', user: { userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none' } }); 
-                
-                conn.on('data', (data) => {
-                    if (data.type === 'LOBBY_UPDATE') setStore({ lobbyPlayers: data.players });
-
-                    if (data.type === 'GAME_START') {
-                        useGameStore.setState({ ...data.gameState, gamePhase: 'playing' });
-                    }
-
-                    if (data.type === 'GAME_SYNC') {
-                        if (data.lastUpdater !== getStore().myUserId) {
-                            isReceivingNetworkData = true;
-                            if (networkReceiveTimer) clearTimeout(networkReceiveTimer);
-                            
-                            const logger = document.getElementById("log");
-                            if (logger && data.gameState.logs) {
-                                logger.innerHTML = data.gameState.logs.map(msg => `<div>> ${msg}</div>`).join('');
-                                logger.scrollTop = logger.scrollHeight;
-                            }
-
-                            useGameStore.setState(data.gameState);
-                            networkReceiveTimer = setTimeout(() => { isReceivingNetworkData = false; }, 200);
-                        }
-                    }
-
-                    if (data.type === 'CHAT') {
-                        useLobbyStore.getState().addChatToQueue(data.chat);
-                        const logger = document.getElementById("log");
-                        if (logger) {
-                            const chatHtml = `<div style="color: #007bff; margin: 4px 0;">[チャット] ${data.chat.sender}: ${data.chat.text}</div>`;
-                            logger.insertAdjacentHTML('beforeend', chatHtml);
-                            logger.scrollTop = logger.scrollHeight;
-                        }
-                    }
-
-                    // ★追加: ミニゲームの高速リアルタイム同期（クライアント受信）
-                    if (data.type === 'MINIGAME_LIVE') {
-                        useGameStore.setState({ minigameLiveState: data.state });
-                    }
-                });
-            });
-        });
-    },
-
-    updateMyInfo: (updater) => {
-        const state = getStore();
-        const me = state.lobbyPlayers.find(p => p.userId === state.myUserId);
-        if (!me) return;
-        const newUser = { ...me, ...updater };
-        if (state.isHost) {
-            const updatedPlayers = state.lobbyPlayers.map(p => p.userId === state.myUserId ? newUser : p);
-            setStore({ lobbyPlayers: updatedPlayers });
-            state.broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
-        } else if (state.hostConnection && state.hostConnection.open) {
-            state.hostConnection.send({ type: 'LOBBY_CHANGE', user: newUser });
-        }
-    },
-
-    addCpu: () => {
-        const state = getStore();
-        if (!state.isHost || state.lobbyPlayers.length >= 8) return;
-        const newCpu = { userId: 'cpu-' + Math.random().toString(36).substring(2, 8), name: `CPU${state.lobbyPlayers.length + 1}`, charType: 'survivor', teamColor: 'none', isHost: false, isCPU: true };
-        const updatedPlayers = [...state.lobbyPlayers, newCpu];
-        setStore({ lobbyPlayers: updatedPlayers });
-        state.broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
-    },
-    updateCpu: (userId, updater) => {
-        const state = getStore();
-        if (!state.isHost) return;
-        const updatedPlayers = state.lobbyPlayers.map(p => p.userId === userId ? { ...p, ...updater } : p);
-        setStore({ lobbyPlayers: updatedPlayers });
-        state.broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
-    },
-    removeCpu: (userId) => {
-        const state = getStore();
-        if (!state.isHost) return;
-        const updatedPlayers = state.lobbyPlayers.filter(p => p.userId !== userId);
-        setStore({ lobbyPlayers: updatedPlayers });
-        state.broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
-    },
-    randomizeTeams: () => {
-        const state = getStore();
-        if (!state.isHost) return;
-        const colors = ['red', 'blue', 'green', 'yellow'];
-        const numTeams = Math.min(Math.max(2, Math.floor(state.lobbyPlayers.length / 2)), colors.length);
-        const teamPool = colors.slice(0, numTeams);
-        const shuffled = [...state.lobbyPlayers].sort(() => Math.random() - 0.5);
-        const updatedPlayers = state.lobbyPlayers.map(p => {
-            const idx = shuffled.findIndex(s => s.userId === p.userId);
-            return { ...p, teamColor: teamPool[idx % numTeams] };
-        });
-        setStore({ lobbyPlayers: updatedPlayers });
-        state.broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
-    },
-    clearTeams: () => {
-        const state = getStore();
-        if (!state.isHost) return;
-        const updatedPlayers = state.lobbyPlayers.map(p => ({ ...p, teamColor: 'none' }));
-        setStore({ lobbyPlayers: updatedPlayers });
-        state.broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
-    },
-
-    updateRoomStatus: async (newStatus) => {
-        const { roomId, isHost } = getStore();
-        if (isHost && roomId) await update(ref(db, `rooms/${roomId}`), { status: newStatus });
-    },
-
-    broadcast: (data) => getStore().connections.forEach(conn => conn.send(data)),
-    
-    // ★追加: ミニゲーム状態の高速ブロードキャスト
-    broadcastMinigameLive: (liveState) => {
-        const state = getStore();
-        const data = { type: 'MINIGAME_LIVE', state: liveState };
-        if (state.isHost) {
-            state.broadcast(data);
-        } else if (state.hostConnection && state.hostConnection.open) {
-            state.hostConnection.send(data);
-        }
-    },
-
-    leaveRoom: () => {
-        const { peer, isHost, roomId } = getStore();
-        if (peer) peer.destroy();
-        if (isHost && roomId) remove(ref(db, `rooms/${roomId}`));
-        setStore({ isHost: false, roomId: null, peer: null, connections: [], hostConnection: null, lobbyPlayers: [], status: 'disconnected' });
+        totalTilesMoved: state.totalTilesMoved,
+        totalCardsUsed: state.totalCardsUsed,
+        totalCansCollected: state.totalCansCollected,
+        totalTrashCollected: state.totalTrashCollected,
+        totalPSpentAtShop: state.totalPSpentAtShop,
+        npcEncounters: state.npcEncounters,
+        
+        showSmoke: state.showSmoke,
+        liteMode: state.liteMode,
+        volume: state.volume,
+        layoutMode: state.layoutMode,
+        showSkipButton: state.showSkipButton,
+        autoScrollToPlayer: state.autoScrollToPlayer,
+      }),
     }
-}));
-
-let syncTimeout = null;
-
-useGameStore.subscribe((state) => {
-    const netState = useNetworkStore.getState();
-    if (netState.status !== 'connected' || isReceivingNetworkData || state.gamePhase !== 'playing') return;
-
-    if (!netState.isHost && state._roundEndInProgress) return;
-
-    if (syncTimeout) clearTimeout(syncTimeout);
-
-    syncTimeout = setTimeout(() => {
-        const localOnlyKeys = [
-            'charInfoModal', 'acquiredCard', 'toastMsg', 'centerWarning', 'tooltipData',
-            'settingsActive', 'rulesActive', 'tutorialActive', 'shopActive', 'shopCart',
-            'layoutMode', 'autoScrollToPlayer', 'eventPopups', 'bloodAnim', 'turnBanner',
-            'turnBannerActive', 'jobResult', 'volume', 'showSkipButton', 'minigameLiveState'
-        ];
-
-        const pureState = {};
-        for (const key in state) {
-            if (typeof state[key] !== 'function' && !localOnlyKeys.includes(key)) {
-                pureState[key] = state[key];
-            }
-        }
-        
-        const data = { type: 'GAME_SYNC', gameState: pureState, lastUpdater: netState.myUserId };
-        
-        if (netState.isHost) {
-            netState.broadcast(data);
-        } else if (netState.hostConnection && netState.hostConnection.open) {
-            netState.hostConnection.send(data);
-        }
-    }, 50); 
-});
+  )
+);
