@@ -33,6 +33,11 @@ export const useUserStore = create(
       showSkipButton: false,
       autoScrollToPlayer: true,
 
+      // ▼ 新規追加: フレンド・招待機能用ステート
+      friends: [], 
+      friendRequests: [],
+      invites: [],
+
       setUserData: (data) => set((state) => ({ ...state, ...data })),
       setShowSmoke: (show) => set({ showSmoke: show }), 
       
@@ -46,7 +51,7 @@ export const useUserStore = create(
           }
       })),
 
-      // ▼ 修正：リロードバグ対策。計算結果を確実に反映させるため状態をディープコピーして更新
+      // リロードバグ対策。計算結果を確実に反映させるため状態をディープコピーして更新
       addGachaAssets: (cansAmount, pointsAmount) => set((state) => {
           const newCans = Math.max(0, (state.gachaCans || 0) + cansAmount);
           const newPoints = Math.max(0, (state.gachaPoints || 0) + pointsAmount);
@@ -90,6 +95,9 @@ export const useUserStore = create(
         layoutMode: state.layoutMode,
         showSkipButton: state.showSkipButton,
         autoScrollToPlayer: state.autoScrollToPlayer,
+        
+        // フレンド一覧もキャッシュとして永続化
+        friends: state.friends,
       }),
     }
   )

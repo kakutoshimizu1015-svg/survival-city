@@ -1,6 +1,41 @@
-import { ref, get, set, update } from 'firebase/database';
+import { ref, get, set, update, push, onValue, remove } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useUserStore } from '../store/useUserStore';
+
+/**
+ * ▼ 新規追加: フレンド・招待のリアルタイム監視
+ */
+export const listenToFriendsAndInvites = (uid) => {
+    if (!uid) return;
+    
+    // 1. フレンド一覧の監視
+    const friendsRef = ref(db, `users/${uid}/friends`);
+    onValue(friendsRef, (snapshot) => {
+        const data = snapshot.val();
+        const friendsList = data ? Object.values(data) : [];
+        useUserStore.getState().setUserData({ friends: friendsList });
+    });
+
+    // 2. フレンドリクエストの監視
+    const reqRef = ref(db, `friendRequests/${uid}`);
+    onValue(reqRef, (snapshot) => {
+        const data = snapshot.val();
+        const requests = data ? Object.values(data) : [];
+        useUserStore.getState().setUserData({ friendRequests: requests });
+    });
+
+    // 3. 届いた招待の監視
+    const invitesRef = ref(db, `invites/${uid}`);
+    onValue(invitesRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            const invitesList = Object.entries(data).map(([key, val]) => ({ id: key, ...val }));
+            useUserStore.getState().setUserData({ invites: invitesList });
+        } else {
+            useUserStore.getState().setUserData({ invites: [] });
+        }
+    });
+};
 
 /**
  * ログイン直後にDBからユーザーデータを読み込む
@@ -13,7 +48,7 @@ export const loadUserData = async (uid) => {
       // 既存データがあればStoreに反映
       const data = snapshot.val();
       
-      // ▼ 修正: DBに無い可能性がある新しいキー（ガチャ資産・スキン）のデフォルト値ケア
+      // DBに無い可能性がある新しいキー（ガチャ資産・スキン）のデフォルト値ケア
       const mergedData = {
           ...data,
           gachaCans: data.gachaCans || 0,
@@ -37,6 +72,10 @@ export const loadUserData = async (uid) => {
       await set(userRef, initialData);
       console.log("新規ユーザーデータ作成完了");
     }
+
+    // ▼ 追加: ログイン完了と同時にフレンド機能の監視を開始
+    listenToFriendsAndInvites(uid);
+
   } catch (error) {
     console.error("データ読み込み失敗:", error);
   }
@@ -55,7 +94,6 @@ export const savePlayerName = async (newName) => {
 
 /**
  * 優勝時の記録更新
- * @param {number} earnedP 今回の優勝で獲得したP
  */
 export const recordWin = async (earnedP) => {
   const { uid, wins, totalEarnedP, gachaPoints } = useUserStore.getState();
@@ -64,7 +102,7 @@ export const recordWin = async (earnedP) => {
   const newData = {
     wins: wins + 1,
     totalEarnedP: totalEarnedP + earnedP,
-    gachaPoints: gachaPoints + earnedP // 稼いだPをガチャPに加算
+    gachaPoints: gachaPoints + earnedP 
   };
 
   await update(ref(db, `users/${uid}`), newData);
@@ -72,7 +110,7 @@ export const recordWin = async (earnedP) => {
 };
 
 /**
- * ▼ 新規追加: ガチャ資産やスキンの変動をFirebaseに同期する
+ * ガチャ資産やスキンの変動をFirebaseに同期する
  */
 export const syncGachaData = async () => {
   const { uid, gachaCans, gachaPoints, unlockedSkins, equippedSkins } = useUserStore.getState();
@@ -91,4 +129,57 @@ export const syncGachaData = async () => {
   } catch (error) {
       console.error("ガチャデータ同期失敗:", error);
   }
+};
+
+// ==========================================
+// ▼ 新規追加: フレンド・招待アクション群
+// ==========================================
+
+export const sendFriendRequest = async (targetUid) => {
+    const state = useUserStore.getState();
+    if (!state.uid || !targetUid || state.uid === targetUid) return;
+    
+    // 相手のリクエストノードに自分の情報を追加
+    const reqRef = ref(db, `friendRequests/${targetUid}/${state.uid}`);
+    await set(reqRef, { uid: state.uid, name: state.playerName, timestamp: Date.now() });
+};
+
+export const acceptFriendRequest = async (requesterUid, requesterName) => {
+    const state = useUserStore.getState();
+    if (!state.uid) return;
+    
+    // お互いのfriendsノードに追加
+    await set(ref(db, `users/${state.uid}/friends/${requesterUid}`), { uid: requesterUid, name: requesterName });
+    await set(ref(db, `users/${requesterUid}/friends/${state.uid}`), { uid: state.uid, name: state.playerName });
+    
+    // 承認後はリクエストを削除
+    await remove(ref(db, `friendRequests/${state.uid}/${requesterUid}`));
+};
+
+export const removeFriendRequest = async (requesterUid) => {
+    const state = useUserStore.getState();
+    if (!state.uid) return;
+    await remove(ref(db, `friendRequests/${state.uid}/${requesterUid}`));
+};
+
+export const sendRoomInvite = async (targetUid, roomId) => {
+    const state = useUserStore.getState();
+    if (!state.uid || !targetUid || !roomId) return;
+    
+    const inviteRef = push(ref(db, `invites/${targetUid}`));
+    await set(inviteRef, {
+        fromUid: state.uid,
+        fromName: state.playerName,
+        roomId: roomId,
+        timestamp: Date.now()
+    });
+    
+    // 招待は10分後に自動消滅する簡易的な処理
+    setTimeout(() => remove(inviteRef), 600000);
+};
+
+export const deleteInvite = async (inviteId) => {
+    const state = useUserStore.getState();
+    if (!state.uid || !inviteId) return;
+    await remove(ref(db, `invites/${state.uid}/${inviteId}`));
 };

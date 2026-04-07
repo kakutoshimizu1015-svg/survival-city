@@ -7,6 +7,7 @@ import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatte
 import { useUserStore } from '../store/useUserStore';
 import { CharacterSelect } from './CharacterSelect';
 import { CharImage } from '../components/common/CharImage';
+import { sendFriendRequest, acceptFriendRequest, removeFriendRequest, sendRoomInvite, deleteInvite } from '../utils/userLogic';
 
 const TEAM_COLORS = { 
     none: { label:'ソロ', color:'transparent', icon:'⚪' }, 
@@ -19,9 +20,17 @@ const TEAM_COLORS = {
 export const OnlineLobby = () => {
     const globalPlayerName = useUserStore(state => state.playerName);
     const equippedSkins = useUserStore(state => state.equippedSkins);
+    const myUid = useUserStore(state => state.uid);
+
+    // ▼ 新規追加: フレンド・招待用ステートの読み込み
+    const friends = useUserStore(state => state.friends) || [];
+    const friendRequests = useUserStore(state => state.friendRequests) || [];
+    const invites = useUserStore(state => state.invites) || [];
 
     const [playerName, setPlayerName] = useState(globalPlayerName || 'Player' + Math.floor(Math.random() * 1000));
     const [roomInput, setRoomInput] = useState('');
+    const [targetUidInput, setTargetUidInput] = useState('');
+    const [showInviteModal, setShowInviteModal] = useState(false);
     
     const [mapSize, setMapSize] = useState('medium'); 
     const [maxRounds, setMaxRounds] = useState(20);
@@ -66,6 +75,14 @@ export const OnlineLobby = () => {
 
     const handleCreate = () => createRoom(Math.random().toString(36).substring(2, 6).toUpperCase(), playerName);
     const handleJoin = (targetRoomId) => { const code = targetRoomId || roomInput; if (code.length > 0) joinRoom(code.toUpperCase(), playerName); };
+
+    const handleSendFriendReq = () => {
+        if (targetUidInput) {
+            sendFriendRequest(targetUidInput);
+            setTargetUidInput('');
+            alert('フレンド申請を送信しました！');
+        }
+    };
 
     const drawInitialCard = () => {
         const rarePool = [12, 13, 35, 36, 37];
@@ -145,7 +162,12 @@ export const OnlineLobby = () => {
                     <h2>🌐 ロビー: 部屋コード【 {roomId} 】</h2>
                     
                     <div className="panel" style={{ width: '100%', maxWidth: '650px', marginBottom: '20px' }}>
-                        <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px' }}>👥 参加者リスト ({lobbyPlayers.length}/8)</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #8d7b68', paddingBottom: '10px', marginBottom: '10px' }}>
+                            <h3 style={{ margin: 0 }}>👥 参加者リスト ({lobbyPlayers.length}/8)</h3>
+                            {isHost && (
+                                <button onClick={() => setShowInviteModal(true)} className="btn-clay btn-green" style={{ padding: '5px 10px', fontSize: '12px' }}>👥 フレンドを招待</button>
+                            )}
+                        </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {lobbyPlayers.map(p => (
                                 <div key={p.userId} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(92, 74, 68, 0.4)', padding: '10px', borderRadius: '8px', borderLeft: p.teamColor !== 'none' ? `5px solid ${TEAM_COLORS[p.teamColor]?.color}` : 'none' }}>
@@ -245,33 +267,59 @@ export const OnlineLobby = () => {
                         initialCharKey={charSelectTarget === myUserId ? myInfo.charType : lobbyPlayers.find(p => p.userId === charSelectTarget)?.charType || 'athlete'}
                         targetName={charSelectTarget === myUserId ? "あなた" : lobbyPlayers.find(p => p.userId === charSelectTarget)?.name || "CPU"}
                     />
+
+                    {/* ▼ 新規追加: フレンド招待モーダル */}
+                    {showInviteModal && (
+                        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div className="panel" style={{ width: '90%', maxWidth: '400px', padding: '20px' }}>
+                                <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px', marginTop: 0 }}>👥 フレンドを招待</h3>
+                                <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '15px' }}>
+                                    {friends.length === 0 ? <p style={{ textAlign: 'center', color: '#bdc3c7' }}>フレンドがいません</p> : friends.map(f => (
+                                        <div key={f.uid} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(92, 74, 68, 0.4)', padding: '10px', borderRadius: '8px', marginBottom: '5px' }}>
+                                            <span>{f.name}</span>
+                                            <button className="btn-clay btn-blue" onClick={() => { sendRoomInvite(f.uid, roomId); alert(`${f.name} に招待を送信しました`); }}>招待送信</button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <button className="btn-large" style={{ width: '100%', background: '#7f8c8d' }} onClick={() => setShowInviteModal(false)}>閉じる</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         );
     }
 
     return (
-        <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fdf5e6', width: '100vw', height: '100vh' }}>
-            <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fdf5e6', width: '100vw', height: '100vh', overflowY: 'auto' }}>
+            <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                 <h2 style={{ fontSize: '32px' }}>🌐 オンライン対戦</h2>
-                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <div className="panel" style={{ width: '350px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <div>
-                            <label>プレイヤー名:</label>
-                            <input 
-                                type="text" value={playerName} readOnly title="名前の変更はモード選択画面で行ってください"
-                                style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '4px', background: '#d7ccc8', color: '#5c4a44', cursor: 'not-allowed' }} 
-                            />
-                        </div>
-                        <hr style={{ borderColor: '#5c4a44' }} />
-                        <button className="btn-large btn-green" onClick={handleCreate} disabled={status === 'connecting'}>👑 部屋を新しく作る</button>
-                        <div style={{ textAlign: 'center', margin: '5px 0' }}>または手動で入力</div>
-                        <div style={{ display: 'flex', gap: '10px' }}><input type="text" placeholder="コード入力" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flexGrow: 1, padding: '10px', borderRadius: '4px' }} /><button className="btn-clay btn-blue" onClick={() => handleJoin()} disabled={status === 'connecting' || roomInput === ''}>参加</button></div>
-                        {/* ▼ 追加: エラー時のメッセージ表示 */}
-                        {status === 'error' && <div style={{ color: '#e74c3c', fontSize: '14px', marginTop: '5px', fontWeight: 'bold' }}>接続エラーが発生しました。もう一度お試しください。</div>}
+                
+                {/* 中央：プロフィール */}
+                <div className="panel" style={{ width: '350px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '20px' }}>
+                    <div>
+                        <label>プレイヤー名:</label>
+                        <input 
+                            type="text" value={playerName} readOnly title="名前の変更はモード選択画面で行ってください"
+                            style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '4px', background: '#d7ccc8', color: '#5c4a44', cursor: 'not-allowed' }} 
+                        />
                     </div>
-                    <div className="panel" style={{ width: '400px', height: '350px', padding: '20px', display: 'flex', flexDirection: 'column' }}>
-                        <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px', marginBottom: '15px' }}>📡 募集中の部屋</h3>
+                    <hr style={{ borderColor: '#5c4a44', width: '100%' }} />
+                    <button className="btn-large btn-green" onClick={handleCreate} disabled={status === 'connecting'}>👑 部屋を新しく作る</button>
+                    <div style={{ textAlign: 'center', margin: '5px 0' }}>または手動で入力</div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <input type="text" placeholder="コード入力" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flexGrow: 1, padding: '10px', borderRadius: '4px' }} />
+                        <button className="btn-clay btn-blue" onClick={() => handleJoin()} disabled={status === 'connecting' || roomInput === ''}>参加</button>
+                    </div>
+                    {status === 'error' && <div style={{ color: '#e74c3c', fontSize: '14px', marginTop: '5px', fontWeight: 'bold' }}>接続エラーが発生しました。もう一度お試しください。</div>}
+                </div>
+
+                {/* 左右分割：部屋リストとフレンドリスト */}
+                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: '900px' }}>
+                    
+                    {/* 左：部屋リスト */}
+                    <div className="panel" style={{ flex: '1 1 350px', height: '400px', padding: '20px', display: 'flex', flexDirection: 'column' }}>
+                        <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px', marginBottom: '15px', marginTop: 0 }}>📡 募集中の部屋</h3>
                         <div style={{ flexGrow: 1, overflowY: 'auto', paddingRight: '10px' }}>
                             {activeRooms.length === 0 ? <div style={{ color: '#bdc3c7', textAlign: 'center', marginTop: '80px' }}>現在募集中の部屋はありません</div> : activeRooms.map(room => (
                                 <div key={room.roomId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(92, 74, 68, 0.4)', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}>
@@ -281,7 +329,68 @@ export const OnlineLobby = () => {
                             ))}
                         </div>
                     </div>
+
+                    {/* 右：フレンド＆招待パネル ▼ 新規追加 */}
+                    <div className="panel" style={{ flex: '1 1 350px', height: '400px', padding: '20px', display: 'flex', flexDirection: 'column', background: '#3e2723' }}>
+                        <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px', marginBottom: '15px', marginTop: 0 }}>👥 フレンド＆招待</h3>
+                        
+                        <div style={{ fontSize: '12px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            あなたのUID: 
+                            <input type="text" value={myUid || ''} readOnly style={{ padding: '4px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid #5c4a44', borderRadius: '4px', width: '180px' }} onClick={e => e.target.select()} />
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
+                            <input type="text" placeholder="相手のUIDを入力して追加" value={targetUidInput} onChange={e => setTargetUidInput(e.target.value)} style={{ flexGrow: 1, padding: '8px', borderRadius: '4px' }} />
+                            <button className="btn-clay btn-blue" onClick={handleSendFriendReq} disabled={!targetUidInput}>申請</button>
+                        </div>
+
+                        <div style={{ flexGrow: 1, overflowY: 'auto', paddingRight: '5px' }}>
+                            {/* 招待一覧 */}
+                            {invites.length > 0 && (
+                                <div style={{ marginBottom: '15px' }}>
+                                    <div style={{ color: '#f1c40f', fontWeight: 'bold', marginBottom: '5px' }}>📩 届いた招待</div>
+                                    {invites.map(inv => (
+                                        <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(241, 196, 15, 0.2)', padding: '10px', borderRadius: '8px', marginBottom: '5px' }}>
+                                            <div style={{ fontSize: '14px' }}>{inv.fromName} からの招待</div>
+                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                                <button className="btn-clay btn-green" style={{ padding: '4px 8px' }} onClick={() => { handleJoin(inv.roomId); deleteInvite(inv.id); }}>参加</button>
+                                                <button className="btn-clay" style={{ background: '#e74c3c', padding: '4px 8px' }} onClick={() => deleteInvite(inv.id)}>✕</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* 申請一覧 */}
+                            {friendRequests.length > 0 && (
+                                <div style={{ marginBottom: '15px' }}>
+                                    <div style={{ color: '#e67e22', fontWeight: 'bold', marginBottom: '5px' }}>👤 届いたフレンド申請</div>
+                                    {friendRequests.map(req => (
+                                        <div key={req.uid} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(230, 126, 34, 0.2)', padding: '10px', borderRadius: '8px', marginBottom: '5px' }}>
+                                            <div style={{ fontSize: '14px' }}>{req.name}</div>
+                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                                <button className="btn-clay btn-green" style={{ padding: '4px 8px' }} onClick={() => acceptFriendRequest(req.uid, req.name)}>承認</button>
+                                                <button className="btn-clay" style={{ background: '#e74c3c', padding: '4px 8px' }} onClick={() => removeFriendRequest(req.uid)}>拒否</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* フレンド一覧 */}
+                            <div style={{ color: '#2ecc71', fontWeight: 'bold', marginBottom: '5px' }}>🤝 フレンド一覧 ({friends.length})</div>
+                            {friends.length === 0 ? <div style={{ fontSize: '12px', color: '#bdc3c7' }}>フレンドはいません</div> : (
+                                friends.map(f => (
+                                    <div key={f.uid} style={{ background: 'rgba(92, 74, 68, 0.4)', padding: '10px', borderRadius: '8px', marginBottom: '5px', fontSize: '14px' }}>
+                                        {f.name}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
                 </div>
+
                 <button className="btn-large" style={{ marginTop: '30px', background: '#7f8c8d' }} onClick={() => setGameState({ gamePhase: 'mode_select' })}>◀ 戻る</button>
             </div>
         </div>
