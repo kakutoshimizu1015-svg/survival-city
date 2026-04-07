@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// ▼ 修正: Part1から同期用の syncToStore も読み込む
 import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep, beep, syncToStore } from './MiniGamesPart1';
 import { useGameStore } from '../../store/useGameStore';
 
@@ -15,7 +14,7 @@ export const MiniGameStylesPart4 = () => (
         .beg-npc { position:absolute; bottom:6px; font-size:1.7rem; z-index:4; white-space:nowrap; }
         .beg-feedback { height:1.4rem; text-align:center; font-weight:700; font-size:.9rem; }
 
-        /* Music Game (視認性大幅アップ) */
+        /* Music Game */
         .music-arena { width:100%; height:300px; background:linear-gradient(to bottom,#080608,#180e08); border:2px solid #3d2e1a; border-radius:14px; position:relative; overflow:hidden; }
         .music-lane-line { position:absolute; top:0; bottom:60px; width:2px; background:rgba(255,255,255,.1); }
         .music-hit-line { position:absolute; left:0; right:0; bottom:60px; height:4px; background:#e8b84b; box-shadow: 0 0 8px rgba(232,184,75,0.8); z-index:5; }
@@ -34,22 +33,45 @@ export const MiniGameStylesPart4 = () => (
     `}</style>
 );
 
+/* ─── 定数定義（コンポーネントの外に出すことで無限ループを防止） ─── */
+const BEG_NPCS = [
+    { e: '🤵', name: 'サラリーマン', p: 5 }, { e: '👩', name: '主婦', p: 0 }, 
+    { e: '🧑‍🎓', name: '学生', p: 2 }, { e: '🕴️', name: 'ヤクザ', p: -3 }, 
+    { e: '👮', name: '警察官', p: -5 }, { e: '👴', name: 'おじいさん', p: 4 }, 
+    { e: '💼', name: '社長', p: 10 }
+];
+const BEG_REACT = { 
+    5: '「しょうがないな」💰', 0: '無視された…', 2: '「少しだけ」🪙', 
+    '-3': '「うっとうしい！」👊', '-5': '「不法行為だ！」🚔', 4: '「元気出せ」🪙', 10: '「頑張れよ」💰💰' 
+};
+
+const MUSIC_SEQ = [
+    { l: 0, t: 0.5 }, { l: 1, t: 1.2 }, { l: 2, t: 1.8 }, { l: 0, t: 2.5 }, 
+    { l: 1, t: 3.0 }, { l: 2, t: 3.5 }, { l: 0, t: 4.2 }, { l: 1, t: 4.8 }, 
+    { l: 2, t: 5.4 }, { l: 0, t: 6.0 }
+];
+const MUSIC_FALL_DUR = 1.5; 
+const MUSIC_LANE_DATA = [
+    { icon: '🎸', bg: 'rgba(201,123,42,0.3)', border: '#c97b2a' },
+    { icon: '🥁', bg: 'rgba(78,133,57,0.3)', border: '#4e8539' },
+    { icon: '🎹', bg: 'rgba(42,90,138,0.3)', border: '#2a5a8a' }
+];
+
+const NEGO_ITEMS = [
+    { e: '🥫', name: '缶詰セット×5', desc: '拾い集めた缶詰', max: 20 }, 
+    { e: '🔧', name: '謎の工具', desc: '使えるかわからない工具', max: 15 }, 
+    { e: '📱', name: '拾ったスマホ', desc: '画面割れ・充電切れ', max: 30 }, 
+    { e: '🧥', name: 'ブランドコート', desc: '少し汚れているが本物', max: 40 }, 
+    { e: '📦', name: '段ボール特大', desc: '高品質な大きい箱', max: 8 }, 
+    { e: '🪙', name: '古銭コレクション', desc: '価値不明の古いコイン', max: 25 }
+];
+const NEGO_NPCS_LIST = ['🧔', '🧑‍🦱', '👩‍🦳', '🧑‍🦲'];
+
 /* ════════════════════════════════════════
    Game 13: 🙏 物乞いゲーム (完全同期対応版)
 ════════════════════════════════════════ */
 export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }) {
     const mgSyncData = useGameStore(s => s.mgSyncData);
-
-    const NPCS = [
-        { e: '🤵', name: 'サラリーマン', p: 5 }, { e: '👩', name: '主婦', p: 0 }, 
-        { e: '🧑‍🎓', name: '学生', p: 2 }, { e: '🕴️', name: 'ヤクザ', p: -3 }, 
-        { e: '👮', name: '警察官', p: -5 }, { e: '👴', name: 'おじいさん', p: 4 }, 
-        { e: '💼', name: '社長', p: 10 }
-    ];
-    const BEG_REACT = { 
-        5: '「しょうがないな」💰', 0: '無視された…', 2: '「少しだけ」🪙', 
-        '-3': '「うっとうしい！」👊', '-5': '「不法行為だ！」🚔', 4: '「元気出せ」🪙', 10: '「頑張れよ」💰💰' 
-    };
 
     const [earned, setEarned] = useState(0);
     const [count, setCount] = useState(6);
@@ -69,7 +91,6 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }
     useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
     const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
 
-    // ▼ 観戦者: 同期
     useEffect(() => {
         if (isObserver && mgSyncData) {
             if (mgSyncData.earned !== undefined) setEarned(mgSyncData.earned);
@@ -99,7 +120,7 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }
 
     const spawnNpc = useCallback(() => {
         if (!playingRef.current || countRef.current <= 0 || isObserver) return;
-        const npc = NPCS[rnd(0, NPCS.length - 1)];
+        const npc = BEG_NPCS[rnd(0, BEG_NPCS.length - 1)];
         setCurNpc(npc);
         npcXRef.current = 112; setNpcX(112);
         setFeedback({ text: '', color: '#7a6a4a' });
@@ -127,7 +148,7 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }
             rafRef.current = requestAnimationFrame(tick);
         };
         rafRef.current = requestAnimationFrame(tick);
-    }, [endBeg, isObserver, NPCS]);
+    }, [endBeg, isObserver]);
 
     const doBeg = () => {
         if (!playingRef.current || npcXRef.current < -18 || npcXRef.current > 112 || isObserver) return;
@@ -226,20 +247,12 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const scoreRef = useRef(0);
     const comboRef = useRef(0);
     const judgeTimerRef = useRef(null);
-    
-    const SEQ = [
-        { l: 0, t: 0.5 }, { l: 1, t: 1.2 }, { l: 2, t: 1.8 }, { l: 0, t: 2.5 }, 
-        { l: 1, t: 3.0 }, { l: 2, t: 3.5 }, { l: 0, t: 4.2 }, { l: 1, t: 4.8 }, 
-        { l: 2, t: 5.4 }, { l: 0, t: 6.0 }
-    ];
-    const FALL_DUR = 1.5; 
 
     const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endMusic(); });
 
     useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
     const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
 
-    // ▼ 観戦者: 同期
     useEffect(() => {
         if (isObserver && mgSyncData) {
             if (mgSyncData.score !== undefined) setScore(mgSyncData.score);
@@ -274,7 +287,7 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         if (isObserver) return;
         playingRef.current = false; setIsStarted(false); stop(); cancelAnimationFrame(rafRef.current);
         
-        const total = SEQ.length;
+        const total = MUSIC_SEQ.length;
         const hit = notesRef.current.filter(n => n.hit).length;
         const pct = Math.round((hit / total) * 100);
         const win = pct >= 60;
@@ -289,7 +302,7 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         syncToStore(isObserver, { result: resObj, isStarted: false });
         if (p > 0) addPts(p);
         setNotes([]); syncToStore(isObserver, { notes: [] });
-    }, [stop, addPts, SEQ.length, isObserver]);
+    }, [stop, addPts, isObserver]);
 
     const animate = useCallback(() => {
         if (!playingRef.current || isObserver) return;
@@ -305,7 +318,7 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
             
             if (now >= n.t) {
                 const elapsed = now - n.t;
-                const y = -40 + (elapsed / FALL_DUR) * (hitY + 40);
+                const y = -40 + (elapsed / MUSIC_FALL_DUR) * (hitY + 40);
                 
                 if (y > hitY + 40) {
                     n.missed = true;
@@ -364,7 +377,7 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const startMusic = useCallback(() => {
         if (isObserver) return;
         playingRef.current = true; setIsStarted(true); t0.current = performance.now() / 1000;
-        notesRef.current = SEQ.map((n, i) => ({ id: i, ...n, hit: false, missed: false, y: -40 }));
+        notesRef.current = MUSIC_SEQ.map((n, i) => ({ id: i, ...n, hit: false, missed: false, y: -40 }));
         scoreRef.current = 0; comboRef.current = 0;
         
         setScore(0); setCombo(0); setResult(null);
@@ -372,7 +385,7 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         
         start(); 
         rafRef.current = requestAnimationFrame(animate);
-    }, [start, animate, SEQ, isObserver]);
+    }, [start, animate, isObserver]);
 
     const init = useCallback(() => {
         if (isObserver) return;
@@ -383,12 +396,6 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     }, [isObserver]);
 
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); }; }, [init]);
-
-    const LANE_DATA = [
-        { icon: '🎸', bg: 'rgba(201,123,42,0.3)', border: '#c97b2a' },
-        { icon: '🥁', bg: 'rgba(78,133,57,0.3)', border: '#4e8539' },
-        { icon: '🎹', bg: 'rgba(42,90,138,0.3)', border: '#2a5a8a' }
-    ];
 
     return (
         <div style={S.screen}>
@@ -410,9 +417,9 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                     {notes.map(n => (
                         <div key={n.id} className="music-note" style={{ 
                             left: `${n.l * 33.33 + 16.66}%`, top: n.y, width: '28%',
-                            background: LANE_DATA[n.l].bg, borderColor: LANE_DATA[n.l].border, color: LANE_DATA[n.l].border
+                            background: MUSIC_LANE_DATA[n.l].bg, borderColor: MUSIC_LANE_DATA[n.l].border, color: MUSIC_LANE_DATA[n.l].border
                         }}>
-                            {LANE_DATA[n.l].icon}
+                            {MUSIC_LANE_DATA[n.l].icon}
                         </div>
                     ))}
                     
@@ -421,9 +428,9 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                             <button 
                                 key={l} className="music-btn" 
                                 onPointerDown={(e) => tap(e, l)}
-                                style={{ borderColor: LANE_DATA[l].border, color: LANE_DATA[l].border }}
+                                style={{ borderColor: MUSIC_LANE_DATA[l].border, color: MUSIC_LANE_DATA[l].border }}
                             >
-                                {LANE_DATA[l].icon}
+                                {MUSIC_LANE_DATA[l].icon}
                             </button>
                         ))}
                     </div>
@@ -447,16 +454,6 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
 export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const mgSyncData = useGameStore(s => s.mgSyncData);
 
-    const NEGO_ITEMS = [
-        { e: '🥫', name: '缶詰セット×5', desc: '拾い集めた缶詰', max: 20 }, 
-        { e: '🔧', name: '謎の工具', desc: '使えるかわからない工具', max: 15 }, 
-        { e: '📱', name: '拾ったスマホ', desc: '画面割れ・充電切れ', max: 30 }, 
-        { e: '🧥', name: 'ブランドコート', desc: '少し汚れているが本物', max: 40 }, 
-        { e: '📦', name: '段ボール特大', desc: '高品質な大きい箱', max: 8 }, 
-        { e: '🪙', name: '古銭コレクション', desc: '価値不明の古いコイン', max: 25 }
-    ];
-    const NEGO_NPCS = ['🧔', '🧑‍🦱', '👩‍🦳', '🧑‍🦲'];
-
     const [items, setItems] = useState([]);
     const [idx, setIdx] = useState(0);
     const [total, setTotal] = useState(0);
@@ -476,7 +473,6 @@ export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
     const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
 
-    // ▼ 観戦者: 同期
     useEffect(() => {
         if (isObserver && mgSyncData) {
             if (mgSyncData.items) setItems(mgSyncData.items);
@@ -509,7 +505,7 @@ export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const showItem = useCallback((i, its) => {
         if (doneRef.current || isObserver) return;
         const item = its[i]; 
-        const n = NEGO_NPCS[rnd(0, NEGO_NPCS.length - 1)];
+        const n = NEGO_NPCS_LIST[rnd(0, NEGO_NPCS_LIST.length - 1)];
         const text = `「${item.name}？…で、いくらで売る？」`;
         setNpc(n); 
         setNpcText(text);
@@ -520,7 +516,7 @@ export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         setOffers(newOffers);
         
         syncToStore(isObserver, { npc: n, npcText: text, idx: i, offers: newOffers });
-    }, [isObserver, NEGO_NPCS]);
+    }, [isObserver]);
 
     const makeOffer = useCallback(({ v, item, npc: n }) => {
         if (isObserver) return;
@@ -562,7 +558,7 @@ export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         
         start(); 
         showItem(0, its);
-    }, [start, showItem, isObserver, NEGO_ITEMS]);
+    }, [start, showItem, isObserver]);
 
     useEffect(() => { init(); return () => { doneRef.current = true; }; }, [init]);
 

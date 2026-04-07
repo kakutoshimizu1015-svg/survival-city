@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// ▼ 修正: Part1から同期用の syncToStore も読み込む
 import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep, syncToStore } from './MiniGamesPart1';
 import { useUserStore } from '../../store/useUserStore';
 import { useGameStore } from '../../store/useGameStore';
@@ -43,6 +42,14 @@ export const MiniGameStylesPart3 = () => (
     `}</style>
 );
 
+/* ─── 定数定義（コンポーネントの外に出すことで無限ループを防止） ─── */
+const RAIN_OBS_LIST = [
+    { e: '👮', name: '警察', danger: 28 }, 
+    { e: '🐕', name: '野良犬', danger: 20 }, 
+    { e: '💦', name: '水たまり', danger: 12 }, 
+    { e: '🧟', name: 'おじさん', danger: 25 }
+];
+
 /* ════════════════════════════════════════
    Game 9: 🐀 ネズミ追い払い (完全同期対応版)
 ════════════════════════════════════════ */
@@ -70,7 +77,6 @@ export function RatGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
     const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
 
-    // ▼ 観戦者: 同期
     useEffect(() => {
         if (isObserver && mgSyncData) {
             if (mgSyncData.rats) setRats(mgSyncData.rats);
@@ -99,7 +105,6 @@ export function RatGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const animate = useCallback(() => {
         if (!playingRef.current || isObserver) return;
         let stolenOccurred = false;
-        let fxAdded = false;
         
         ratsRef.current.forEach(r => {
             if (!r.alive) return;
@@ -114,7 +119,6 @@ export function RatGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                 r.alive = false;
                 stolenRef.current += 2;
                 stolenOccurred = true;
-                fxAdded = true;
                 
                 addGachaAssets(0, -2);
                 
@@ -268,7 +272,6 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
     const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
 
-    // ▼ 観戦者: 同期
     useEffect(() => {
         if (isObserver && mgSyncData) {
             if (mgSyncData.bal !== undefined) setBal(mgSyncData.bal);
@@ -391,13 +394,6 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode, isObserver }) {
    Game 11: ☔ 雨宿りダッシュ (完全同期対応版)
 ════════════════════════════════════════ */
 export function RainGame({ pts, addPts, onBack, isEventMode, isObserver }) {
-    const OBS_LIST = [
-        { e: '👮', name: '警察', danger: 28 }, 
-        { e: '🐕', name: '野良犬', danger: 20 }, 
-        { e: '💦', name: '水たまり', danger: 12 }, 
-        { e: '🧟', name: 'おじさん', danger: 25 }
-    ];
-
     const mgSyncData = useGameStore(s => s.mgSyncData);
 
     const [wet, setWet] = useState(0);
@@ -418,7 +414,6 @@ export function RainGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
     const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
 
-    // ▼ 観戦者: 同期
     useEffect(() => {
         if (isObserver && mgSyncData) {
             if (mgSyncData.wet !== undefined) setWet(mgSyncData.wet);
@@ -446,7 +441,7 @@ export function RainGame({ pts, addPts, onBack, isEventMode, isObserver }) {
 
     const spawnObs = useCallback(() => {
         if (!playingRef.current || isObserver) return;
-        const target = OBS_LIST[rnd(0, OBS_LIST.length - 1)];
+        const target = RAIN_OBS_LIST[rnd(0, RAIN_OBS_LIST.length - 1)];
         setInfo(`⚠️ ${target.name}が来る！`); 
         syncToStore(isObserver, { info: `⚠️ ${target.name}が来る！` });
         
@@ -482,7 +477,7 @@ export function RainGame({ pts, addPts, onBack, isEventMode, isObserver }) {
             rafRef.current = requestAnimationFrame(tick);
         };
         rafRef.current = requestAnimationFrame(tick);
-    }, [endRain, isObserver, OBS_LIST]);
+    }, [endRain, isObserver]);
 
     const doJump = useCallback((e) => {
         e.preventDefault();
@@ -534,7 +529,6 @@ export function RainGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                 </div>
                 
                 <div className="rain-arena">
-                    {/* 背景の雨 (同期せず個別に描画でOK) */}
                     {playingRef.current && Array.from({ length: 8 }).map((_, i) => (
                         <div key={i} className="rain-drop" style={{ left: `${rnd(0, 100)}%`, animationDuration: `${rnd(6, 12) / 10}s`, animationDelay: `${rnd(0, 10) / 10}s` }}>|</div>
                     ))}
@@ -589,7 +583,6 @@ export function KashiGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
     const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
 
-    // ▼ 観戦者: 同期
     useEffect(() => {
         if (isObserver && mgSyncData) {
             if (mgSyncData.score !== undefined) setScore(mgSyncData.score);
