@@ -148,9 +148,10 @@ export const GameEventOverlays = () => {
 
             {/* ▼ 修正: 古いHTML版ミニゲーム用UIを完全に削除し、新コンポーネントをフルスクリーンで呼び出す */}
             {mgActive && mgType && MINIGAME_COMPONENTS[mgType] && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#0c0a07' }}>
+                // ▼ 修正: 観戦モード時はコンテナ全体でpointerEventsを無効化し、操作貫通を完全に防ぐ
+                <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#0c0a07', pointerEvents: isMyTurn ? 'auto' : 'none' }}>
                     {!isMyTurn && (
-                        <div style={{ position: 'absolute', top: 20, width: '100%', textAlign: 'center', color: 'white', zIndex: 10001, fontSize: '1.2rem', fontWeight: 'bold' }}>
+                        <div style={{ position: 'absolute', top: 20, width: '100%', textAlign: 'center', color: 'white', zIndex: 10001, fontSize: '1.2rem', fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
                             (他プレイヤーがミニゲーム中...)
                         </div>
                     )}
@@ -176,7 +177,8 @@ export const GameEventOverlays = () => {
                         </div>
                     ) : (
                     React.createElement(MINIGAME_COMPONENTS[mgType], {
-                        isEventMode: true, // ▼ 追加: イベントモードであることを伝えるフラグ
+                        isEventMode: true, // イベントモードであることを伝えるフラグ
+                        isObserver: !isMyTurn, // ▼ 追加: ミニゲーム内部にも観戦者であることを伝える
                         pts: cp?.p || 0,
                         addPts: (pts) => {
                             if (!isMyTurn || mgRewardGiven) return;

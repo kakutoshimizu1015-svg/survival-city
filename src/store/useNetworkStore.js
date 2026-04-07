@@ -279,6 +279,9 @@ useGameStore.subscribe((state) => {
 
     if (syncTimeout) clearTimeout(syncTimeout);
 
+    // ▼ 修正: ミニゲーム中は通信頻度を上げて(16ms)アニメーションを滑らかにし、本編中は負荷軽減(50ms)
+    const syncDelay = state.mgActive ? 16 : 50;
+
     syncTimeout = setTimeout(() => {
         const localOnlyKeys = [
             'charInfoModal', 'acquiredCard', 'toastMsg', 'centerWarning', 'tooltipData',
@@ -301,5 +304,5 @@ useGameStore.subscribe((state) => {
         } else if (netState.hostConnection && netState.hostConnection.open) {
             netState.hostConnection.send(data);
         }
-    }, 50); 
+    }, syncDelay);
 });
