@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep } from './MiniGamesPart1';
+import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep, SpectatorOverlay } from './MiniGamesPart1';
 import { useUserStore } from '../../store/useUserStore';
+import { useGameStore } from '../../store/useGameStore';
+import { useNetworkStore } from '../../store/useNetworkStore';
 
 export const MiniGameStylesPart3 = () => (
     <style>{`
@@ -42,15 +44,20 @@ export const MiniGameStylesPart3 = () => (
 );
 
 /* ════════════════════════════════════════
-   Game 9: 🐀 ネズミ追い払い (スポーンバグ修正版)
+   Game 9: 🐀 ネズミ追い払い
 ════════════════════════════════════════ */
 export function RatGame({ pts, addPts, onBack, isEventMode }) {
+    const { activeMiniGamePlayerId } = useGameStore();
+    const { myUserId } = useNetworkStore();
+    const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
+
     const { addGachaAssets } = useUserStore();
     const [rats, setRats] = useState([]);
     const [hitCount, setHitCount] = useState(0);
     const [stolen, setStolen] = useState(0);
     const [result, setResult] = useState(null);
     const [fxList, setFxList] = useState([]);
+    const [isReady, setIsReady] = useState(false);
     
     const arenaRef = useRef(null);
     const rafRef = useRef(null);
@@ -150,40 +157,55 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
     const init = useCallback(() => {
         playingRef.current = false; cancelAnimationFrame(rafRef.current);
         hitRef.current = 0; stolenRef.current = 0; ratsRef.current = []; idRef.current = 0;
-        setHitCount(0); setStolen(0); setRats([]); setFxList([]); setResult(null);
-        
-        // ▼ 修正: フラグを先にtrueにしてからスポーン処理を行う
+        setHitCount(0); setStolen(0); setRats([]); setFxList([]); setResult(null); setIsReady(false);
+    }, []);
+
+    const startGame = () => {
+        setIsReady(true);
         playingRef.current = true; 
         for (let i = 0; i < 4; i++) spawnRat();
-        
         start();
         rafRef.current = requestAnimationFrame(animate);
-    }, [start, spawnRat, animate]);
+    };
 
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
-        <div style={S.screen}>
+        <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart3 />
+            <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="🐀 ネズミ追い払い" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
             <div style={S.body}>
-                <Instr>荷物💰を狙うネズミをタップ！盗まれ3P以下で成功！</Instr>
-                <div style={{ display: 'flex', gap: '.8rem', justifyContent: 'center' }}>
-                    <StatBox label="🐀 撃退" val={hitCount} />
-                    <StatBox label="💰 損失" val={`${stolen}P`} style={{ color: '#b52e1e' }} />
-                </div>
-                
-                <div ref={arenaRef} className="rat-arena">
-                    <div className="rat-stash">💰</div>
-                    {rats.map(r => (
-                        <div 
-                            key={r.id} className="rat-el" 
-                            onPointerDown={(e) => hitRat(e, r.id)}
-                            style={{ left: r.x, top: r.y, transform: r.flip ? 'scaleX(-1)' : 'scaleX(1)' }}
-                        >🐀</div>
-                    ))}
-                    {fxList.map(f => <div key={f.id} className="rat-fx" style={{ left: f.x, top: f.y, color: f.c }}>{f.t}</div>)}
-                </div>
+                {!isReady && !result ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <Instr>
+                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                            10秒間、中央の荷物💰に迫ってくるネズミを直接タップして撃退しろ！<br/>
+                            盗まれた被害が3P以下なら成功だ！
+                        </Instr>
+                        <BtnPrim onClick={startGame} style={{ width: '100%' }}>ゲーム開始！</BtnPrim>
+                    </div>
+                ) : (
+                    <>
+                        <Instr>荷物💰を狙うネズミをタップ！盗まれ3P以下で成功！</Instr>
+                        <div style={{ display: 'flex', gap: '.8rem', justifyContent: 'center' }}>
+                            <StatBox label="🐀 撃退" val={hitCount} />
+                            <StatBox label="💰 損失" val={`${stolen}P`} style={{ color: '#b52e1e' }} />
+                        </div>
+                        
+                        <div ref={arenaRef} className="rat-arena">
+                            <div className="rat-stash">💰</div>
+                            {rats.map(r => (
+                                <div 
+                                    key={r.id} className="rat-el" 
+                                    onPointerDown={(e) => hitRat(e, r.id)}
+                                    style={{ left: r.x, top: r.y, transform: r.flip ? 'scaleX(-1)' : 'scaleX(1)' }}
+                                >🐀</div>
+                            ))}
+                            {fxList.map(f => <div key={f.id} className="rat-fx" style={{ left: f.x, top: f.y, color: f.c }}>{f.t}</div>)}
+                        </div>
+                    </>
+                )}
                 <ResultBox result={result} />
                 {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
@@ -196,12 +218,17 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 10: 🍺 酔っ払いバランス (超速バグ修正版)
+   Game 10: 🍺 酔っ払いバランス
 ════════════════════════════════════════ */
 export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
+    const { activeMiniGamePlayerId } = useGameStore();
+    const { myUserId } = useNetworkStore();
+    const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
+
     const [bal, setBal] = useState(50);
     const [keep, setKeep] = useState(0);
     const [result, setResult] = useState(null);
+    const [isReady, setIsReady] = useState(false);
     
     const balRef = useRef(50);
     const driftRef = useRef(0);
@@ -230,7 +257,6 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
     const animate = useCallback(() => {
         if (!playingRef.current) return;
         
-        // ▼ 修正: 60fpsに合わせてドリフト値(加算量)を約1/15にスケーリング
         driftRef.current += (Math.random() - 0.5) * 0.06;
         driftRef.current = Math.max(-0.25, Math.min(0.25, driftRef.current)); 
         
@@ -247,7 +273,6 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
     const tap = (e, d) => {
         e.preventDefault();
         if (!playingRef.current) return;
-        // ▼ 修正: タップによる戻し量も調整
         balRef.current = Math.max(0, Math.min(100, balRef.current - d * 10));
         driftRef.current -= d * 0.15; 
         setBal(balRef.current);
@@ -256,8 +281,11 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
     const init = useCallback(() => {
         playingRef.current = false; cancelAnimationFrame(rafRef.current); clearInterval(keepIvRef.current);
         balRef.current = 50; driftRef.current = 0; keepRef.current = 0;
-        setBal(50); setKeep(0); setResult(null);
-        
+        setBal(50); setKeep(0); setResult(null); setIsReady(false);
+    }, []);
+
+    const startGame = () => {
+        setIsReady(true);
         playingRef.current = true; start();
         rafRef.current = requestAnimationFrame(animate);
         
@@ -267,35 +295,50 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
                 setKeep(keepRef.current);
             }
         }, 1000);
-    }, [start, animate]);
+    };
 
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); clearInterval(keepIvRef.current); }; }, [init]);
 
     return (
-        <div style={S.screen}>
+        <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart3 />
+            <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="🍺 酔っ払いバランス" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
             <div style={S.body}>
-                <Instr>緑ゾーンを6秒以上キープで成功！<br/>左に傾いたら右タップ、右なら左タップ！</Instr>
-                
-                <StatBox label="✅ ゾーン内" val={`${keep}秒`} style={{ color: '#4e8539', fontSize: '1.1rem' }} />
-                
-                <div className="drunk-char" style={{ transform: `rotate(${(bal - 50) / 1.5}deg)` }}>🧔</div>
-                
-                <div style={{ width: '100%' }}>
-                    <div style={{ fontSize: '.75rem', color: '#7a6a4a', textAlign: 'center', marginBottom: '.3rem' }}>← 左タップ　　　右タップ →</div>
-                    <div className="balance-bar-track">
-                        <div className="balance-center" />
-                        <div className="balance-zone" />
-                        <div className="balance-indicator" style={{ left: `${bal}%` }} />
+                {!isReady && !result ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <Instr>
+                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                            酔っ払いがフラフラと倒れそうになるぞ！<br/>
+                            左に傾いたら「右タップ」、右に傾いたら「左タップ」してバランスを取れ。<br/>
+                            緑のゾーン内に合計6秒以上いればクリアだ！
+                        </Instr>
+                        <BtnPrim onClick={startGame} style={{ width: '100%' }}>ゲーム開始！</BtnPrim>
                     </div>
-                </div>
-                
-                {!result && (
-                    <div className="drunk-tap-area">
-                        <div className="drunk-tap drunk-left" onPointerDown={(e) => tap(e, -1)}>← 左</div>
-                        <div className="drunk-tap drunk-right" onPointerDown={(e) => tap(e, 1)}>右 →</div>
-                    </div>
+                ) : (
+                    <>
+                        <Instr>緑ゾーンを6秒以上キープで成功！<br/>左に傾いたら右タップ、右なら左タップ！</Instr>
+                        
+                        <StatBox label="✅ ゾーン内" val={`${keep}秒`} style={{ color: '#4e8539', fontSize: '1.1rem' }} />
+                        
+                        <div className="drunk-char" style={{ transform: `rotate(${(bal - 50) / 1.5}deg)` }}>🧔</div>
+                        
+                        <div style={{ width: '100%' }}>
+                            <div style={{ fontSize: '.75rem', color: '#7a6a4a', textAlign: 'center', marginBottom: '.3rem' }}>← 左タップ　　　右タップ →</div>
+                            <div className="balance-bar-track">
+                                <div className="balance-center" />
+                                <div className="balance-zone" />
+                                <div className="balance-indicator" style={{ left: `${bal}%` }} />
+                            </div>
+                        </div>
+                        
+                        {!result && (
+                            <div className="drunk-tap-area">
+                                <div className="drunk-tap drunk-left" onPointerDown={(e) => tap(e, -1)}>← 左</div>
+                                <div className="drunk-tap drunk-right" onPointerDown={(e) => tap(e, 1)}>右 →</div>
+                            </div>
+                        )}
+                    </>
                 )}
                 <ResultBox result={result} />
                 {result && (
@@ -312,6 +355,10 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
    Game 11: ☔ 雨宿りダッシュ
 ════════════════════════════════════════ */
 export function RainGame({ pts, addPts, onBack, isEventMode }) {
+    const { activeMiniGamePlayerId } = useGameStore();
+    const { myUserId } = useNetworkStore();
+    const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
+
     const OBS_LIST = [
         { e: '👮', name: '警察', danger: 28 }, 
         { e: '🐕', name: '野良犬', danger: 20 }, 
@@ -324,6 +371,7 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
     const [info, setInfo] = useState('障害物を待て…');
     const [jumping, setJumping] = useState(false);
     const [result, setResult] = useState(null);
+    const [isReady, setIsReady] = useState(false);
     
     const wetRef = useRef(0);
     const jumpRef = useRef(false);
@@ -397,7 +445,11 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
         playingRef.current = false; cancelAnimationFrame(rafRef.current); clearInterval(wetIvRef.current);
         jumpRef.current = false; wetRef.current = 0;
         setWet(0); setJumping(false); setObs({ x: -100, e: null }); setInfo('障害物を待て…'); setResult(null);
-        
+        setIsReady(false);
+    }, []);
+
+    const startGame = () => {
+        setIsReady(true);
         playingRef.current = true; start();
         
         wetIvRef.current = setInterval(() => {
@@ -409,36 +461,51 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
         }, 400);
         
         setTimeout(spawnObs, 1500);
-    }, [start, spawnObs, endRain]);
+    };
 
     useEffect(() => { init(); return () => { playingRef.current = false; clearInterval(wetIvRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
-        <div style={S.screen}>
+        <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart3 />
+            <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="☔ 雨宿りダッシュ" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
             <div style={S.body}>
-                <Instr>障害物がきたらジャンプ！濡れ度100%で失敗！</Instr>
-                <div style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.72rem', marginBottom: 3 }}><span style={{ color: '#6af' }}>☔ 濡れ度</span><span style={{ color: '#6af' }}>{Math.floor(wet)}%</span></div>
-                    <div className="wet-track"><div className="wet-fill" style={{ width: `${wet}%` }} /></div>
-                </div>
-                
-                <div ref={arenaRef} className="rain-arena">
-                    {/* 背景の雨 */}
-                    {playingRef.current && Array.from({ length: 8 }).map((_, i) => (
-                        <div key={i} className="rain-drop" style={{ left: `${rnd(0, 100)}%`, animationDuration: `${rnd(6, 12) / 10}s`, animationDelay: `${rnd(0, 10) / 10}s` }}>|</div>
-                    ))}
-                    
-                    <div className={`rain-runner ${jumping ? 'runner-jump' : ''}`} style={{ bottom: jumping ? '65px' : '20px' }}>🏃</div>
-                    {obs.e && <div className="obs-el" style={{ left: `${obs.x}%` }}>{obs.e}</div>}
-                    <div className="rain-shelter">🏕️</div>
-                </div>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', alignItems: 'center', width: '100%' }}>
-                    <div style={{ fontSize: '.82rem', color: '#7a6a4a' }}>{info}</div>
-                    {!result && <button onPointerDown={doJump} className="jump-btn-big">⬆️ JUMP！</button>}
-                </div>
+                {!isReady && !result ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <Instr>
+                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                            雨宿り先までダッシュしろ！<br/>
+                            途中で障害物が向かってくるので、「JUMP！」ボタンで避けろ。<br/>
+                            濡れ度が100%になる前に10秒間逃げ切ればクリアだ！
+                        </Instr>
+                        <BtnPrim onClick={startGame} style={{ width: '100%' }}>ゲーム開始！</BtnPrim>
+                    </div>
+                ) : (
+                    <>
+                        <Instr>障害物がきたらジャンプ！濡れ度100%で失敗！</Instr>
+                        <div style={{ width: '100%' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.72rem', marginBottom: 3 }}><span style={{ color: '#6af' }}>☔ 濡れ度</span><span style={{ color: '#6af' }}>{Math.floor(wet)}%</span></div>
+                            <div className="wet-track"><div className="wet-fill" style={{ width: `${wet}%`, background: '#6af', height: '100%' }} /></div>
+                        </div>
+                        
+                        <div ref={arenaRef} className="rain-arena">
+                            {/* 背景の雨 */}
+                            {playingRef.current && Array.from({ length: 8 }).map((_, i) => (
+                                <div key={i} className="rain-drop" style={{ left: `${rnd(0, 100)}%`, animationDuration: `${rnd(6, 12) / 10}s`, animationDelay: `${rnd(0, 10) / 10}s` }}>|</div>
+                            ))}
+                            
+                            <div className={`rain-runner ${jumping ? 'runner-jump' : ''}`} style={{ bottom: jumping ? '65px' : '20px' }}>🏃</div>
+                            {obs.e && <div className="obs-el" style={{ left: `${obs.x}%` }}>{obs.e}</div>}
+                            <div className="rain-shelter">🏕️</div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', alignItems: 'center', width: '100%' }}>
+                            <div style={{ fontSize: '.82rem', color: '#7a6a4a' }}>{info}</div>
+                            {!result && <button onPointerDown={doJump} className="jump-btn-big">⬆️ JUMP！</button>}
+                        </div>
+                    </>
+                )}
                 <ResultBox result={result} />
                 {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
@@ -454,12 +521,17 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
    Game 12: 🍱 炊き出し争奪戦
 ════════════════════════════════════════ */
 export function KashiGame({ pts, addPts, onBack, isEventMode }) {
+    const { activeMiniGamePlayerId } = useGameStore();
+    const { myUserId } = useNetworkStore();
+    const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
+
     const [score, setScore] = useState(0);
     const [rival, setRival] = useState(0);
     const [playerX, setPlayerX] = useState(40);
     const [rivalX, setRivalX] = useState(68);
     const [bentos, setBentos] = useState([]);
     const [result, setResult] = useState(null);
+    const [isReady, setIsReady] = useState(false);
     
     const pxRef = useRef(40);
     const rxRef = useRef(68);
@@ -544,37 +616,55 @@ export function KashiGame({ pts, addPts, onBack, isEventMode }) {
         moveDirRef.current = 0; pxRef.current = 40; rxRef.current = 68; scoreRef.current = 0; rivalRef.current = 0;
         bentosRef.current = []; idRef.current = 0;
         
-        setScore(0); setRival(0); setPlayerX(40); setRivalX(68); setBentos([]); setResult(null);
-        
+        setScore(0); setRival(0); setPlayerX(40); setRivalX(68); setBentos([]); setResult(null); setIsReady(false);
+    }, []);
+
+    const startGame = () => {
+        setIsReady(true);
         playingRef.current = true; start();
         bentoIvRef.current = setInterval(spawnBento, 1000);
         rafRef.current = requestAnimationFrame(animate);
-    }, [start, spawnBento, animate]);
+    };
 
     useEffect(() => { init(); return () => { playingRef.current = false; clearInterval(bentoIvRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
-        <div style={S.screen}>
+        <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart3 />
+            <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="🍱 炊き出し争奪戦" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
             <div style={S.body}>
-                <Instr>◀▶を押し続けて移動し弁当をキャッチ！3個で成功！</Instr>
-                <div style={{ display: 'flex', gap: '.8rem', justifyContent: 'center' }}>
-                    <StatBox label="🍱 あなた" val={score} style={{ color: '#e8b84b', fontSize: '1.2rem' }} />
-                    <StatBox label="🧟 ライバル" val={rival} />
-                </div>
-                
-                <div className="kashi-arena">
-                    <div className="kashi-player" style={{ left: `${playerX}%` }}>🧍</div>
-                    <div className="kashi-npc" style={{ left: `${rivalX}%` }}>🧟</div>
-                    {bentos.map(b => <div key={b.id} className="bento-el" style={{ left: `${b.x}%`, top: `${b.y}%` }}>🍱</div>)}
-                </div>
-                
-                {!result && (
-                    <div className="kashi-btns">
-                        <button className="kashi-mv-btn" onPointerDown={(e) => handlePointerDown(e, -1)} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>◀ 左</button>
-                        <button className="kashi-mv-btn" onPointerDown={(e) => handlePointerDown(e, 1)} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>右 ▶</button>
+                {!isReady && !result ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <Instr>
+                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                            上から落ちてくる弁当をライバルより先にキャッチしろ！<br/>
+                            ◀▶ボタンを押し続けて移動だ。<br/>
+                            10秒以内に3個キャッチできればクリア！
+                        </Instr>
+                        <BtnPrim onClick={startGame} style={{ width: '100%' }}>ゲーム開始！</BtnPrim>
                     </div>
+                ) : (
+                    <>
+                        <Instr>◀▶を押し続けて移動し弁当をキャッチ！3個で成功！</Instr>
+                        <div style={{ display: 'flex', gap: '.8rem', justifyContent: 'center' }}>
+                            <StatBox label="🍱 あなた" val={score} style={{ color: '#e8b84b', fontSize: '1.2rem' }} />
+                            <StatBox label="🧟 ライバル" val={rival} />
+                        </div>
+                        
+                        <div className="kashi-arena">
+                            <div className="kashi-player" style={{ left: `${playerX}%` }}>🧍</div>
+                            <div className="kashi-npc" style={{ left: `${rivalX}%` }}>🧟</div>
+                            {bentos.map(b => <div key={b.id} className="bento-el" style={{ left: `${b.x}%`, top: `${b.y}%` }}>🍱</div>)}
+                        </div>
+                        
+                        {!result && (
+                            <div className="kashi-btns">
+                                <button className="kashi-mv-btn" onPointerDown={(e) => handlePointerDown(e, -1)} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>◀ 左</button>
+                                <button className="kashi-mv-btn" onPointerDown={(e) => handlePointerDown(e, 1)} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>右 ▶</button>
+                            </div>
+                        )}
+                    </>
                 )}
                 <ResultBox result={result} />
                 {result && (

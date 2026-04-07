@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep, beep } from './MiniGamesPart1';
+import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep, beep, SpectatorOverlay } from './MiniGamesPart1';
+import { useGameStore } from '../../store/useGameStore';
+import { useNetworkStore } from '../../store/useNetworkStore';
 
 /* ─── Part 4 専用スタイル ─────────────────────────────── */
 export const MiniGameStylesPart4 = () => (
@@ -36,6 +38,10 @@ export const MiniGameStylesPart4 = () => (
    Game 13: 🙏 物乞いゲーム
 ════════════════════════════════════════ */
 export function BegGame({ pts, addPts, subPts, onBack, isEventMode }) {
+    const { activeMiniGamePlayerId } = useGameStore();
+    const { myUserId } = useNetworkStore();
+    const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
+
     const NPCS = [
         { e: '🤵', name: 'サラリーマン', p: 5 }, { e: '👩', name: '主婦', p: 0 }, 
         { e: '🧑‍🎓', name: '学生', p: 2 }, { e: '🕴️', name: 'ヤクザ', p: -3 }, 
@@ -53,6 +59,7 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode }) {
     const [npcX, setNpcX] = useState(112);
     const [curNpc, setCurNpc] = useState(null);
     const [feedback, setFeedback] = useState({ text: '', color: '#7a6a4a' });
+    const [isReady, setIsReady] = useState(false);
     
     const rafRef = useRef(null);
     const earnedRef = useRef(0);
@@ -134,35 +141,53 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode }) {
     const init = useCallback(() => {
         playingRef.current = false; cancelAnimationFrame(rafRef.current);
         earnedRef.current = 0; countRef.current = 6; npcXRef.current = 112;
-        setEarned(0); setCount(6); setNpcX(112); setFeedback({ text: '', color: '#7a6a4a' }); setResult(null);
-        
+        setEarned(0); setCount(6); setNpcX(112); setFeedback({ text: '', color: '#7a6a4a' }); setResult(null); setIsReady(false);
+    }, []);
+
+    const startGame = () => {
+        setIsReady(true);
         playingRef.current = true; start();
         spawnNpc();
-    }, [start, spawnNpc]);
+    };
 
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
-        <div style={S.screen}>
+        <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart4 />
+            <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="🙏 物乞い" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
             <div style={S.body}>
-                <Instr>⭐ゾーンにNPCがいるとき押せ！5P以上稼げば成功！</Instr>
-                
-                <div style={{ display: 'flex', gap: '.8rem', justifyContent: 'center', width: '100%' }}>
-                    <StatBox label="残りNPC" val={count} style={{ flex: 1 }} />
-                    <StatBox label="💰 獲得" val={`${earned}P`} style={{ color: '#e8b84b', flex: 1 }} />
-                </div>
-                
-                <div className="beg-street">
-                    <div className="beg-road"></div>
-                    <div className="beg-zone"></div>
-                    <div className="beg-char">🧎</div>
-                    {npcX > -18 && <div className="beg-npc" style={{ left: `${npcX}%` }}>{curNpc?.e}</div>}
-                </div>
-                
-                <div className="beg-feedback" style={{ color: feedback.color }}>{feedback.text}</div>
-                {!result && <BtnPrim onClick={doBeg} style={{ width: '100%' }}>🙏 お恵みを…</BtnPrim>}
+                {!isReady && !result ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <Instr>
+                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                            通行人が⭐マークのゾーンに入った瞬間にボタンを押せ！<br/>
+                            良い人からPをもらい、ヤクザや警察からは逃げろ。<br/>
+                            10秒以内に5P以上稼げばクリアだ！
+                        </Instr>
+                        <BtnPrim onClick={startGame} style={{ width: '100%' }}>ゲーム開始！</BtnPrim>
+                    </div>
+                ) : (
+                    <>
+                        <Instr>⭐ゾーンにNPCがいるとき押せ！5P以上稼げば成功！</Instr>
+                        
+                        <div style={{ display: 'flex', gap: '.8rem', justifyContent: 'center', width: '100%' }}>
+                            <StatBox label="残りNPC" val={count} style={{ flex: 1 }} />
+                            <StatBox label="💰 獲得" val={`${earned}P`} style={{ color: '#e8b84b', flex: 1 }} />
+                        </div>
+                        
+                        <div className="beg-street">
+                            <div className="beg-road"></div>
+                            <div className="beg-zone"></div>
+                            <div className="beg-char">🧎</div>
+                            {npcX > -18 && <div className="beg-npc" style={{ left: `${npcX}%` }}>{curNpc?.e}</div>}
+                        </div>
+                        
+                        <div className="beg-feedback" style={{ color: feedback.color }}>{feedback.text}</div>
+                        {!result && <BtnPrim onClick={doBeg} style={{ width: '100%' }}>🙏 お恵みを…</BtnPrim>}
+                    </>
+                )}
                 <ResultBox result={result} />
                 {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
@@ -175,14 +200,19 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 14: 🎸 路上ライブ音ゲー (視認性修正版)
+   Game 14: 🎸 路上ライブ音ゲー
 ════════════════════════════════════════ */
 export function MusicGame({ pts, addPts, onBack, isEventMode }) {
+    const { activeMiniGamePlayerId } = useGameStore();
+    const { myUserId } = useNetworkStore();
+    const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
+
     const [score, setScore] = useState(0);
     const [combo, setCombo] = useState(0);
     const [result, setResult] = useState(null);
     const [notes, setNotes] = useState([]);
     const [judge, setJudge] = useState({ text: '', color: '', show: false });
+    const [isReady, setIsReady] = useState(false);
     
     const rafRef = useRef(null);
     const playingRef = useRef(false);
@@ -288,12 +318,12 @@ export function MusicGame({ pts, addPts, onBack, isEventMode }) {
             }
             setScore(scoreRef.current); setCombo(comboRef.current);
         } else {
-            // 空振り
             comboRef.current = 0; setCombo(0);
         }
     };
 
-    const startMusic = useCallback(() => {
+    const startGame = useCallback(() => {
+        setIsReady(true);
         playingRef.current = true; t0.current = performance.now() / 1000;
         notesRef.current = SEQ.map((n, i) => ({ id: i, ...n, hit: false, missed: false, y: -40 }));
         scoreRef.current = 0; comboRef.current = 0;
@@ -305,13 +335,12 @@ export function MusicGame({ pts, addPts, onBack, isEventMode }) {
 
     const init = useCallback(() => {
         playingRef.current = false; cancelAnimationFrame(rafRef.current);
-        setScore(0); setCombo(0); setResult(null); setNotes([]);
+        setScore(0); setCombo(0); setResult(null); setNotes([]); setIsReady(false);
         setJudge({ text: '', color: '', show: false });
     }, []);
 
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); }; }, [init]);
 
-    // rgba()を利用してブラウザ間で透過が確実に機能するように修正
     const LANE_DATA = [
         { icon: '🎸', bg: 'rgba(201,123,42,0.3)', border: '#c97b2a' },
         { icon: '🥁', bg: 'rgba(78,133,57,0.3)', border: '#4e8539' },
@@ -319,45 +348,59 @@ export function MusicGame({ pts, addPts, onBack, isEventMode }) {
     ];
 
     return (
-        <div style={S.screen}>
+        <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart4 />
+            <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="🎸 路上ライブ" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
             <div style={S.body}>
-                <Instr>ノーツがラインに来たらタップ！60%以上ヒットで成功！</Instr>
-                <div style={{ fontSize: '1.1rem', color: '#e8b84b', fontWeight: 700, textAlign: 'center' }}>SCORE: {score} / COMBO: {combo}</div>
-                
-                <div className="music-arena">
-                    <div className="music-lane-line" style={{ left: '33.33%' }} />
-                    <div className="music-lane-line" style={{ left: '66.66%' }} />
-                    <div className="music-hit-line" />
-                    
-                    <div className={`music-judge ${judge.show ? 'show' : ''}`} style={{ color: judge.color }}>
-                        {judge.text}
+                {!isReady && !result ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <Instr>
+                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                            上から落ちてくるノーツが下のラインに重なるタイミングで、<br/>
+                            対応する楽器ボタンをタップして演奏しろ！<br/>
+                            ヒット率60%以上でライブ成功だ！
+                        </Instr>
+                        <BtnPrim onClick={startGame} style={{ width: '100%' }}>🎸 ゲーム開始！</BtnPrim>
                     </div>
-                    
-                    {notes.map(n => (
-                        <div key={n.id} className="music-note" style={{ 
-                            left: `${n.l * 33.33 + 16.66}%`, top: n.y, width: '28%',
-                            background: LANE_DATA[n.l].bg, borderColor: LANE_DATA[n.l].border, color: LANE_DATA[n.l].border
-                        }}>
-                            {LANE_DATA[n.l].icon}
+                ) : (
+                    <>
+                        <Instr>ノーツがラインに来たらタップ！60%以上ヒットで成功！</Instr>
+                        <div style={{ fontSize: '1.1rem', color: '#e8b84b', fontWeight: 700, textAlign: 'center' }}>SCORE: {score} / COMBO: {combo}</div>
+                        
+                        <div className="music-arena">
+                            <div className="music-lane-line" style={{ left: '33.33%' }} />
+                            <div className="music-lane-line" style={{ left: '66.66%' }} />
+                            <div className="music-hit-line" />
+                            
+                            <div className={`music-judge ${judge.show ? 'show' : ''}`} style={{ color: judge.color }}>
+                                {judge.text}
+                            </div>
+                            
+                            {notes.map(n => (
+                                <div key={n.id} className="music-note" style={{ 
+                                    left: `${n.l * 33.33 + 16.66}%`, top: n.y, width: '28%',
+                                    background: LANE_DATA[n.l].bg, borderColor: LANE_DATA[n.l].border, color: LANE_DATA[n.l].border
+                                }}>
+                                    {LANE_DATA[n.l].icon}
+                                </div>
+                            ))}
+                            
+                            <div className="music-btns">
+                                {[0, 1, 2].map(l => (
+                                    <button 
+                                        key={l} className="music-btn" 
+                                        onPointerDown={(e) => tap(e, l)}
+                                        style={{ borderColor: LANE_DATA[l].border, color: LANE_DATA[l].border }}
+                                    >
+                                        {LANE_DATA[l].icon}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    ))}
-                    
-                    <div className="music-btns">
-                        {[0, 1, 2].map(l => (
-                            <button 
-                                key={l} className="music-btn" 
-                                onPointerDown={(e) => tap(e, l)}
-                                style={{ borderColor: LANE_DATA[l].border, color: LANE_DATA[l].border }}
-                            >
-                                {LANE_DATA[l].icon}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                    </>
+                )}
                 
-                {!playingRef.current && !result && <BtnPrim onClick={startMusic} style={{ width: '100%' }}>🎸 演奏スタート！</BtnPrim>}
                 <ResultBox result={result} />
                 {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
@@ -373,6 +416,10 @@ export function MusicGame({ pts, addPts, onBack, isEventMode }) {
    Game 15: 💬 闇市交渉ゲーム
 ════════════════════════════════════════ */
 export function NegoGame({ pts, addPts, onBack, isEventMode }) {
+    const { activeMiniGamePlayerId } = useGameStore();
+    const { myUserId } = useNetworkStore();
+    const isSpectator = isEventMode && activeMiniGamePlayerId && activeMiniGamePlayerId !== myUserId;
+
     const NEGO_ITEMS = [
         { e: '🥫', name: '缶詰セット×5', desc: '拾い集めた缶詰', max: 20 }, 
         { e: '🔧', name: '謎の工具', desc: '使えるかわからない工具', max: 15 }, 
@@ -391,6 +438,7 @@ export function NegoGame({ pts, addPts, onBack, isEventMode }) {
     const [npcText, setNpcText] = useState('交渉相手を呼んでいる…');
     const [offers, setOffers] = useState([]);
     const [result, setResult] = useState(null);
+    const [isReady, setIsReady] = useState(false);
     
     const totalRef = useRef(0);
     const idxRef = useRef(0);
@@ -450,46 +498,65 @@ export function NegoGame({ pts, addPts, onBack, isEventMode }) {
         doneRef.current = false; totalRef.current = 0; idxRef.current = 0;
         const its = [...NEGO_ITEMS].sort(() => Math.random() - .5).slice(0, 3);
         itemsRef.current = its; 
-        setItems(its); setIdx(0); setTotal(0); setHistory([]); setResult(null);
+        setItems(its); setIdx(0); setTotal(0); setHistory([]); setResult(null); setIsReady(false);
+    }, []);
+
+    const startGame = () => {
+        setIsReady(true);
         start(); 
-        showItem(0, its);
-    }, [start, showItem]);
+        showItem(0, itemsRef.current);
+    };
 
     useEffect(() => { init(); return () => { doneRef.current = true; }; }, [init]);
 
     const item = items[idx];
 
     return (
-        <div style={S.screen}>
+        <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart4 />
-            <GameHeader title="💬 闇市交渉" pts={pts} timer={!result ? time : null} onBack={onBack} />
+            <SpectatorOverlay isSpectator={isSpectator} />
+            <GameHeader title="💬 闇市交渉" pts={pts} timer={isReady && !result ? time : null} onBack={onBack} />
             <div style={S.body}>
-                <Instr>アイテムを最高値で売れ！相手の上限を超えると失敗！3アイテムで15P以上稼げば成功！</Instr>
-                <StatBox label="アイテム" val={`${Math.min(idx + 1, 3)} / 3`} style={{ width: '100%' }} />
-                
-                {item && !result && (
-                    <div className="nego-item-box">
-                        <div style={{ fontSize: '3.5rem' }}>{item.e}</div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f0e8d0', marginTop: '.25rem' }}>{item.name}</div>
-                        <div style={{ fontSize: '.85rem', color: '#7a6a4a', marginTop: '.15rem' }}>{item.desc}</div>
+                {!isReady && !result ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <Instr>
+                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                            3つのアイテムを闇市の住人に売りつけろ！<br/>
+                            相手が買える上限額を超えると交渉決裂になってしまう。<br/>
+                            上手く足元を見て、合計15P以上稼げば成功だ！
+                        </Instr>
+                        <BtnPrim onClick={startGame} style={{ width: '100%' }}>ゲーム開始！</BtnPrim>
                     </div>
-                )}
-                
-                {!result && (
-                    <div className="nego-npc-say">
-                        <span style={{ fontSize: '1.8rem' }}>{npc}</span>
-                        <span style={{ fontWeight: 'bold' }}>{npcText}</span>
-                    </div>
-                )}
-                
-                {history.length > 0 && <div className="nego-history">{history.join(' | ')}</div>}
-                
-                {offers.length > 0 && (
-                    <div style={{ display: 'flex', gap: '.8rem', width: '100%', marginTop: '10px' }}>
-                        {offers.map((o, i) => (
-                            <button key={i} className="nego-offer-btn" onPointerDown={() => makeOffer(o)}>{o.v}P</button>
-                        ))}
-                    </div>
+                ) : (
+                    <>
+                        <Instr>アイテムを最高値で売れ！相手の上限を超えると失敗！3アイテムで15P以上稼げば成功！</Instr>
+                        <StatBox label="アイテム" val={`${Math.min(idx + 1, 3)} / 3`} style={{ width: '100%' }} />
+                        
+                        {item && !result && (
+                            <div className="nego-item-box">
+                                <div style={{ fontSize: '3.5rem' }}>{item.e}</div>
+                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f0e8d0', marginTop: '.25rem' }}>{item.name}</div>
+                                <div style={{ fontSize: '.85rem', color: '#7a6a4a', marginTop: '.15rem' }}>{item.desc}</div>
+                            </div>
+                        )}
+                        
+                        {!result && (
+                            <div className="nego-npc-say">
+                                <span style={{ fontSize: '1.8rem' }}>{npc}</span>
+                                <span style={{ fontWeight: 'bold' }}>{npcText}</span>
+                            </div>
+                        )}
+                        
+                        {history.length > 0 && <div className="nego-history">{history.join(' | ')}</div>}
+                        
+                        {offers.length > 0 && (
+                            <div style={{ display: 'flex', gap: '.8rem', width: '100%', marginTop: '10px' }}>
+                                {offers.map((o, i) => (
+                                    <button key={i} className="nego-offer-btn" onPointerDown={() => makeOffer(o)}>{o.v}P</button>
+                                ))}
+                            </div>
+                        )}
+                    </>
                 )}
                 <ResultBox result={result} />
                 {result && <BtnPrim onClick={init}>🔁 もう一度</BtnPrim>}
