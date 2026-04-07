@@ -51,7 +51,6 @@ const initialState = {
     
     // ▼ ミニゲームモード用ステート追加
     selectedMiniGame: null,
-    minigameLiveState: null,
 };
 
 export const useGameStore = create((set, get) => ({

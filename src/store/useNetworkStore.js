@@ -3,11 +3,11 @@ import Peer from 'peerjs';
 import { ref, set, get, onDisconnect, remove, onValue, off, update } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useGameStore } from './useGameStore';
-import { useLobbyStore } from './useLobbyStore';
+import { useLobbyStore } from './useLobbyStore'; // ▼ 追加: チャット連携用
 import { processRoundEnd } from '../game/round';
 
 let isReceivingNetworkData = false;
-let networkReceiveTimer = null; 
+let networkReceiveTimer = null; // ▼ 追加: 受信タイマー管理用
 
 export const useNetworkStore = create((setStore, getStore) => ({
     myUserId: null,
@@ -96,6 +96,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         }
                     }
 
+                    // ▼ 追加: チャットメッセージの受信と転送処理
                     if (data.type === 'CHAT') {
                         useLobbyStore.getState().addChatToQueue(data.chat);
                         const logger = document.getElementById("log");
@@ -104,6 +105,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                             logger.insertAdjacentHTML('beforeend', chatHtml);
                             logger.scrollTop = logger.scrollHeight;
                         }
+                        // ホストとして他の全員に転送
                         getStore().connections.forEach(c => {
                             if (c.peer !== conn.peer && c.open) c.send(data);
                         });
@@ -123,41 +125,12 @@ export const useNetworkStore = create((setStore, getStore) => ({
         setStore({ status: 'connecting', isHost: false, roomId: roomCode });
         const roomRef = ref(db, `rooms/${roomCode}`);
         const snapshot = await get(roomRef);
-        if (!snapshot.exists()) { 
-            setStore({ status: 'error' }); 
-            alert("部屋が見つかりませんでした。");
-            return; 
-        }
+        if (!snapshot.exists()) { setStore({ status: 'error' }); return; }
 
         const peer = new Peer(getStore().myUserId); 
-
-        // ★追加: 接続タイムアウト処理（ゾンビ部屋でのフリーズを防止）
-        const timeout = setTimeout(() => {
-            if (getStore().status === 'connecting') {
-                peer.destroy();
-                setStore({ status: 'error' });
-                alert("ホストとの接続に失敗しました。（ホストが既に退出している可能性があります）");
-            }
-        }, 8000); // 8秒間応答がなければエラーにして元の画面に戻す
-
-        peer.on('error', (err) => {
-            clearTimeout(timeout);
-            console.error("PeerJS Client Error:", err);
-            setStore({ status: 'error' });
-            alert("通信エラーが発生しました。別のタブでホストを開いている場合は、IDが重複している可能性があります。");
-        });
-
         peer.on('open', () => {
             const conn = peer.connect(snapshot.val().hostPeerId);
-            
-            conn.on('error', (err) => {
-                clearTimeout(timeout);
-                console.error("Connection Error:", err);
-                setStore({ status: 'error' });
-            });
-
             conn.on('open', () => {
-                clearTimeout(timeout); // 接続成功したらタイムアウトを解除
                 setStore({ peer, hostConnection: conn, status: 'connected' });
                 conn.send({ type: 'JOIN', user: { userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none' } }); 
                 
@@ -184,6 +157,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         }
                     }
 
+                    // ▼ 追加: チャットメッセージの受信処理
                     if (data.type === 'CHAT') {
                         useLobbyStore.getState().addChatToQueue(data.chat);
                         const logger = document.getElementById("log");
@@ -195,6 +169,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                     }
                 });
             });
+            conn.on('error', () => setStore({ status: 'error' }));
         });
     },
 
@@ -260,7 +235,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
         const { roomId, isHost } = getStore();
         if (isHost && roomId) await update(ref(db, `rooms/${roomId}`), { status: newStatus });
     },
-
     broadcast: (data) => getStore().connections.forEach(conn => conn.send(data)),
     leaveRoom: () => {
         const { peer, isHost, roomId } = getStore();
@@ -285,7 +259,7 @@ useGameStore.subscribe((state) => {
             'charInfoModal', 'acquiredCard', 'toastMsg', 'centerWarning', 'tooltipData',
             'settingsActive', 'rulesActive', 'tutorialActive', 'shopActive', 'shopCart',
             'layoutMode', 'autoScrollToPlayer', 'eventPopups', 'bloodAnim', 'turnBanner',
-            'turnBannerActive', 'jobResult', 'volume', 'showSkipButton', 'minigameLiveState' // ← これだけ残しておいてください
+            'turnBannerActive', 'jobResult', 'volume', 'showSkipButton',
         ];
 
         const pureState = {};

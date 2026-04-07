@@ -55,55 +55,51 @@ export const MiniGameStylesPart2 = () => (
 );
 
 /* ════════════════════════════════════════
-   Game 5: 🎰 路上スロット (State同期バグ修正・リアルタイム同期対応)
+   Game 5: 🎰 路上スロット (State同期バグ修正)
 ════════════════════════════════════════ */
-export function SlotGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveState }) {
+export function SlotGame({ pts, addPts, onBack, isEventMode }) {
     const SYMS = ['🥫', '💰', '🍺', '🐀', '💊', '🚬', '🗑️'];
     const SH = 80;
     const TOT = SYMS.length * SH;
     
+    // UI描画用のState
     const [reels, setReels] = useState([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
     const [playing, setPlaying] = useState(false);
     const [result, setResult] = useState(null);
     
+    // ロジック（アニメーション）管理用のRef
     const rafRef = useRef(null);
     const offsets = useRef([0, 0, 0]);
     const innerRefs = useRef([]); 
     const reelsDataRef = useRef([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
 
-    // ★追加: 観戦モード時のデータ受信処理
-    useEffect(() => {
-        if (isEventMode && liveState?.type === 'slot') {
-            liveState.offsets.forEach((off, i) => {
-                if (innerRefs.current[i]) innerRefs.current[i].style.transform = `translateY(${-TOT + off}px)`;
-            });
-            setReels(liveState.reels);
-            setPlaying(liveState.playing);
-            if (liveState.result) setResult(liveState.result);
-        }
-    }, [isEventMode, liveState, TOT]);
-
     const { time, start, stop } = useTimer(10, () => {
-        if (playing && !isEventMode) { [0, 1, 2].forEach(i => stopReel(i)); }
+        if (playing) {
+            [0, 1, 2].forEach(i => stopReel(i));
+        }
     });
 
     const init = useCallback(() => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setResult(null); setPlaying(false); 
+        
         const initial = [{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }];
         reelsDataRef.current = initial;
         setReels(initial);
-        offsets.current = [0, 0, 0];
-        innerRefs.current.forEach(el => { if(el) el.style.transform = `translateY(${-TOT}px)`; });
         
-        // 同期
-        syncLiveState({ type: 'slot', offsets: [0,0,0], reels: initial, playing: false, result: null });
-    }, [TOT, syncLiveState]);
+        offsets.current = [0, 0, 0];
+        innerRefs.current.forEach(el => {
+            if(el) el.style.transform = `translateY(${-TOT}px)`;
+        });
+    }, [TOT]);
 
     const startSlot = () => {
         setPlaying(true); setResult(null); 
+        
+        // ▼ Stateの同期ズレを防ぐため、Refで直接状態を上書きしてからアニメーション開始
         reelsDataRef.current = [{ stop: false, res: null }, { stop: false, res: null }, { stop: false, res: null }];
         setReels([...reelsDataRef.current]);
+        
         start(); 
         offsets.current = [Math.random() * TOT, Math.random() * TOT, Math.random() * TOT];
         animate();
@@ -112,6 +108,8 @@ export function SlotGame({ pts, addPts, onBack, isEventMode, syncLiveState, live
     const animate = () => {
         let anyMoved = false;
         const speeds = [3.5, 4.2, 3.8];
+        
+        // ▼ State (prev) ではなく、直接 Ref を参照して動かす
         reelsDataRef.current.forEach((r, i) => {
             if (!r.stop) {
                 offsets.current[i] = (offsets.current[i] + speeds[i]) % TOT;
@@ -122,48 +120,39 @@ export function SlotGame({ pts, addPts, onBack, isEventMode, syncLiveState, live
             }
         });
         
-        if (anyMoved) {
-            // ★追加: 毎フレーム同期を送信 (useNetworkStoreの制御により負荷は抑えられます)
-            syncLiveState({ type: 'slot', offsets: offsets.current, reels: reelsDataRef.current, playing: true });
-            rafRef.current = requestAnimationFrame(animate);
-        }
+        if (anyMoved) rafRef.current = requestAnimationFrame(animate);
     };
 
     const stopReel = (i) => {
-        if (!playing || isEventMode) return;
+        if (!playing) return;
         if (reelsDataRef.current[i].stop) return;
         
         reelsDataRef.current[i].stop = true;
         const iy = SH + TOT - offsets.current[i];
         reelsDataRef.current[i].res = SYMS[((Math.floor(iy / SH) % SYMS.length) + SYMS.length) % SYMS.length];
         
+        // UI更新のためにStateにセット
         setReels([...reelsDataRef.current]);
         
+        // 全て停止したかチェック
         if (reelsDataRef.current.every(r => r.stop)) {
             setPlaying(false); stop(); cancelAnimationFrame(rafRef.current);
             setTimeout(() => {
                 const rs = reelsDataRef.current.map(r => r.res);
                 const allSame = rs[0] === rs[1] && rs[1] === rs[2];
                 const twoSame = rs[0] === rs[1] || rs[1] === rs[2] || rs[0] === rs[2];
-                let finalRes = null;
                 
                 if (allSame) { 
                     const p = rs[0] === '💰' ? 50 : 20; 
-                    finalRes = { win: true, icon: '🎊', main: 'ジャックポット！', sub: rs.join(''), pts: p };
+                    setResult({ win: true, icon: '🎊', main: 'ジャックポット！', sub: rs.join(''), pts: p }); 
                     addPts(p); 
                 } else if (twoSame) { 
-                    finalRes = { win: true, icon: '✨', main: '2つ揃い！', sub: rs.join(''), pts: 5 };
+                    setResult({ win: true, icon: '✨', main: '2つ揃い！', sub: rs.join(''), pts: 5 }); 
                     addPts(5); 
                 } else { 
-                    finalRes = { win: false, icon: '💀', main: 'ハズレ', sub: rs.join(''), pts: 0 };
+                    setResult({ win: false, icon: '💀', main: 'ハズレ', sub: rs.join(''), pts: 0 }); 
                 }
-                setResult(finalRes);
-                // ★追加: 最終結果を同期
-                syncLiveState({ type: 'slot', offsets: offsets.current, reels: reelsDataRef.current, playing: false, result: finalRes });
             }, 150);
-        } else {
-            // ★追加: 途中停止を同期
-            syncLiveState({ type: 'slot', offsets: offsets.current, reels: reelsDataRef.current, playing: true });
         }
     };
 
@@ -209,9 +198,9 @@ export function SlotGame({ pts, addPts, onBack, isEventMode, syncLiveState, live
 }
 
 /* ════════════════════════════════════════
-   Game 6: ♟️ 路上○×ゲーム (リアルタイム同期対応)
+   Game 6: ♟️ 路上○×ゲーム
 ════════════════════════════════════════ */
-export function OxoGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveState }) {
+export function OxoGame({ pts, addPts, onBack, isEventMode }) {
     const { gachaPoints, addGachaAssets } = useUserStore();
     const [board, setBoard] = useState(Array(9).fill(null));
     const [bet, setBet] = useState(0);
@@ -222,33 +211,19 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveS
     
     const isCpuThinking = useRef(false);
 
-    // ★追加: 観戦モード時のデータ受信処理
-    useEffect(() => {
-        if (isEventMode && liveState?.type === 'oxo') {
-            setBoard(liveState.board);
-            setPhase(liveState.phase);
-            setTurn(liveState.turn);
-            setBet(liveState.bet);
-            if (liveState.winCells) setWinCells(liveState.winCells);
-            if (liveState.result) setResult(liveState.result);
-        }
-    }, [isEventMode, liveState]);
-
     const { time, start, stop } = useTimer(5, () => {
-        if (phase === 'play' && turn === 'p' && !isEventMode) end('lose');
+        if (phase === 'play' && turn === 'p') end('lose');
     });
 
     const init = useCallback(() => { 
         stop(); setResult(null); setPhase('bet'); setBoard(Array(9).fill(null)); setWinCells([]); isCpuThinking.current = false;
-        syncLiveState({ type: 'oxo', board: Array(9).fill(null), phase: 'bet', turn: 'p', bet: 0, winCells: [], result: null });
-    }, [stop, syncLiveState]);
+    }, [stop]);
 
     const startGame = (b) => {
         if (gachaPoints < b) { alert('Pが足りない！ゲーム本編で稼ごう！'); return; }
         addGachaAssets(0, -b);
         setBet(b); setPhase('play'); setTurn('p');
         start(5);
-        syncLiveState({ type: 'oxo', board, phase: 'play', turn: 'p', bet: b, winCells });
     };
 
     const checkWin = (brd) => {
@@ -264,16 +239,15 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveS
     };
 
     const move = (i) => {
-        if (board[i] || phase !== 'play' || turn !== 'p' || isCpuThinking.current || isEventMode) return;
+        if (board[i] || phase !== 'play' || turn !== 'p' || isCpuThinking.current) return;
         stop();
         
         const nb = [...board]; 
         nb[i] = 'p'; 
         setBoard(nb);
-        syncLiveState({ type: 'oxo', board: nb, phase, turn: 'c', bet, winCells });
         
         let res = checkWin(nb); 
-        if (res) { end(res, nb); return; }
+        if (res) { end(res); return; }
         
         setTurn('c');
         isCpuThinking.current = true;
@@ -281,6 +255,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveS
         setTimeout(() => {
             const lines = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
             let cpuMove = null;
+            
             for (let [a, b, c] of lines) {
                 if (nb[a] === 'c' && nb[b] === 'c' && !nb[c]) cpuMove = c;
                 else if (nb[a] === 'c' && !nb[b] && nb[c] === 'c') cpuMove = b;
@@ -296,7 +271,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveS
             if (cpuMove === null && !nb[4]) cpuMove = 4;
             if (cpuMove === null) {
                 const avail = nb.map((c, idx) => c === null ? idx : null).filter(c => c !== null);
-                if (avail.length === 0) { end('draw', nb); return; }
+                if (avail.length === 0) { end('draw'); return; }
                 cpuMove = avail[rnd(0, avail.length - 1)];
             }
             
@@ -305,31 +280,27 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveS
             isCpuThinking.current = false;
             
             res = checkWin(nb); 
-            if (res) { end(res, nb); return; }
+            if (res) { end(res); return; }
             
             setTurn('p');
             start(5);
-            syncLiveState({ type: 'oxo', board: nb, phase: 'play', turn: 'p', bet, winCells });
         }, 600);
     };
 
-    const end = useCallback((res, finalBoard = board) => {
+    const end = useCallback((res) => {
         stop(); setPhase('end');
-        let finalRes = null;
         if (res === 'p') { 
-            finalRes = { win: true, icon: '○', main: 'あなたの勝ち！', sub: `賭け${bet}P → 2倍`, pts: bet * 2 }; 
+            setResult({ win: true, icon: '○', main: 'あなたの勝ち！', sub: `賭け${bet}P → 2倍`, pts: bet * 2 }); 
             addPts(bet * 2); 
         }
         else if (res === 'draw') { 
-            finalRes = { win: false, icon: '🤝', main: '引き分け', sub: `賭け${bet}P 返還`, pts: bet }; 
+            setResult({ win: false, icon: '🤝', main: '引き分け', sub: `賭け${bet}P 返還`, pts: bet }); 
             addPts(bet); 
         }
         else { 
-            finalRes = { win: false, icon: '×', main: 'CPUの勝ち…', sub: `賭け${bet}P 没収`, pts: 0 }; 
+            setResult({ win: false, icon: '×', main: 'CPUの勝ち…', sub: `賭け${bet}P 没収`, pts: 0 }); 
         }
-        setResult(finalRes);
-        syncLiveState({ type: 'oxo', board: finalBoard, phase: 'end', turn: 'c', bet, winCells, result: finalRes });
-    }, [board, bet, addPts, stop, winCells, syncLiveState]);
+    }, [bet, addPts, stop]);
 
     useEffect(() => { init(); }, [init]);
 
@@ -353,7 +324,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveS
                 {phase !== 'bet' && (
                     <>
                         <div className="oxo-status">
-                            {phase === 'end' ? '決着！' : (turn === 'p' ? 'プレイヤー(○) の番' : 'CPU(×) の番…')}
+                            {phase === 'end' ? '決着！' : (turn === 'p' ? 'あなた(○) の番 — 5秒！' : 'CPU(×) の番…')}
                         </div>
                         <div className="oxo-board">
                             {board.map((c, i) => (
@@ -381,9 +352,9 @@ export function OxoGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveS
 }
 
 /* ════════════════════════════════════════
-   Game 7: 📦 段ボールパズル (リアルタイム同期対応)
+   Game 7: 📦 段ボールパズル
 ════════════════════════════════════════ */
-export function TetrisGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveState }) {
+export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
     const TET_COLS = 6, TET_ROWS = 10;
     const TET_WS = [1, 2, 2, 3, 1, 2];
     const TET_COLORS = ['#c97b2a', '#4e8539', '#2a5a8a', '#8a3a2a', '#6a4a8a', '#3a6a5a'];
@@ -405,32 +376,15 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode, syncLiveState, li
     const rafRef = useRef(null);
     const colorRef = useRef(TET_COLORS[0]);
 
-    // ★追加: 観戦モード時のデータ受信処理
-    useEffect(() => {
-        if (isEventMode && liveState?.type === 'tetris') {
-            setBoard(liveState.board);
-            setPieceX(liveState.pieceX);
-            setPieceW(liveState.pieceW);
-            setPieceColor(liveState.pieceColor);
-            setCleared(liveState.cleared);
-            if (liveState.result) setResult(liveState.result);
-        }
-    }, [isEventMode, liveState]);
-
     const slideTick = useCallback(() => {
         const max = TET_COLS - pwRef.current;
         posRef.current += 0.05 * dirRef.current; 
         if (posRef.current >= max) { posRef.current = max; dirRef.current = -1; }
         if (posRef.current <= 0) { posRef.current = 0; dirRef.current = 1; }
-        
-        pxRef.current = Math.round(posRef.current); 
+        pxRef.current = Math.floor(posRef.current); 
         setPieceX(pxRef.current);
-        
-        // ★追加: アニメーション同期
-        syncLiveState({ type: 'tetris', board: boardRef.current, pieceX: pxRef.current, pieceW: pwRef.current, pieceColor: colorRef.current, cleared: clearedRef.current });
-        
         rafRef.current = requestAnimationFrame(slideTick);
-    }, [syncLiveState]);
+    }, []);
 
     const newPiece = useCallback(() => {
         const pi = rnd(0, TET_WS.length - 1); 
@@ -441,7 +395,7 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode, syncLiveState, li
     }, []);
 
     const tetDrop = useCallback(() => {
-        if (!playing || isEventMode) return;
+        if (!playing) return;
         const b = boardRef.current.map(r => [...r]);
         let land = -1; 
         for (let r = TET_ROWS - 1; r >= 0; r--) {
@@ -474,26 +428,22 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode, syncLiveState, li
         if (clearedRef.current >= 2) { 
             setPlaying(false); cancelAnimationFrame(rafRef.current); 
             const p = clearedRef.current * 4; addPts(p); 
-            const finalRes = { win: true, icon: '🏠', main: '2段クリア成功！', sub: 'ダンボールハウスが建った！', pts: p };
-            setResult(finalRes);
-            syncLiveState({ type: 'tetris', board: b, pieceX: pxRef.current, pieceW: pwRef.current, pieceColor: colorRef.current, cleared: clearedRef.current, result: finalRes });
+            setResult({ win: true, icon: '🏠', main: '2段クリア成功！', sub: 'ダンボールハウスが建った！', pts: p }); 
             return; 
         }
         if (b[0].some(c => c !== null)) { 
             setPlaying(false); cancelAnimationFrame(rafRef.current); 
             const p = clearedRef.current * 4; if (p > 0) addPts(p); 
-            const finalRes = { win: false, icon: '💀', main: '積みすぎた！', sub: `${clearedRef.current}段クリア`, pts: p };
-            setResult(finalRes);
-            syncLiveState({ type: 'tetris', board: b, pieceX: pxRef.current, pieceW: pwRef.current, pieceColor: colorRef.current, cleared: clearedRef.current, result: finalRes });
+            setResult({ win: false, icon: '💀', main: '積みすぎた！', sub: `${clearedRef.current}段クリア`, pts: p }); 
             return; 
         }
         newPiece();
-    }, [playing, addPts, newPiece, isEventMode, syncLiveState]);
+    }, [playing, addPts, newPiece]);
 
     const tetMove = (d) => {
-        if (!playing || isEventMode) return;
+        if (!playing) return;
         posRef.current = Math.max(0, Math.min(TET_COLS - pwRef.current, pxRef.current + d)); 
-        pxRef.current = Math.round(posRef.current); 
+        pxRef.current = Math.floor(posRef.current); 
         setPieceX(pxRef.current);
     };
 
@@ -553,9 +503,9 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode, syncLiveState, li
 }
 
 /* ════════════════════════════════════════
-   Game 8: 🪰 ハエ捕まえ (リアルタイム同期対応)
+   Game 8: 🪰 ハエ捕まえ
 ════════════════════════════════════════ */
-export function FlyGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveState }) {
+export function FlyGame({ pts, addPts, onBack, isEventMode }) {
     const [caught, setCaught] = useState(0);
     const [started, setStarted] = useState(false);
     const [result, setResult] = useState(null);
@@ -566,34 +516,15 @@ export function FlyGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveS
     const pos = useRef({ x: 0, y: 0, vx: 3, vy: 3 });
     const caughtRef = useRef(0);
     const playingRef = useRef(false);
-
-    // ★追加: 観戦モード時のデータ受信処理
-    useEffect(() => {
-        if (isEventMode && liveState?.type === 'fly') {
-            setCaught(liveState.caught);
-            setStarted(liveState.started);
-            setFxList(liveState.fxList || []);
-            if (liveState.result) setResult(liveState.result);
-            const el = document.getElementById('fly-target');
-            if (el && liveState.pos) {
-                el.style.left = liveState.pos.x + 'px';
-                el.style.top = liveState.pos.y + 'px';
-                el.style.transform = liveState.pos.vx < 0 ? 'scaleX(-1)' : 'scaleX(1)';
-            }
-        }
-    }, [isEventMode, liveState]);
-
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isEventMode) endFly(); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endFly(); });
 
     const endFly = useCallback((forceWin = false) => {
         playingRef.current = false; stop(); cancelAnimationFrame(rafRef.current);
         const c = caughtRef.current;
         const win = forceWin || c >= 3;
         if (win) addPts(15);
-        const finalRes = { win, icon: win ? '🪰🪰🪰' : '⏰', main: win ? '3匹全部捕まえた！' : '時間切れ！', sub: `${c}匹捕獲`, pts: win ? 15 : c * 3 };
-        setResult(finalRes);
-        syncLiveState({ type: 'fly', pos: pos.current, caught: c, started: true, result: finalRes, fxList });
-    }, [stop, addPts, syncLiveState, fxList]);
+        setResult({ win, icon: win ? '🪰🪰🪰' : '⏰', main: win ? '3匹全部捕まえた！' : '時間切れ！', sub: `${c}匹捕獲`, pts: win ? 15 : c * 3 });
+    }, [stop, addPts]);
 
     const moveFly = useCallback(() => {
         if (!playingRef.current || !arenaRef.current) return;
@@ -623,23 +554,19 @@ export function FlyGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveS
             el.style.transform = p.vx < 0 ? 'scaleX(-1)' : 'scaleX(1)';
         }
         
-        // ★追加: アニメーション同期
-        syncLiveState({ type: 'fly', pos: p, caught: caughtRef.current, started: true, result: null, fxList });
-        
         rafRef.current = requestAnimationFrame(moveFly);
-    }, [syncLiveState, fxList]);
+    }, []);
 
     const catchFly = useCallback((e) => {
         e.stopPropagation();
         e.preventDefault();
-        if (!playingRef.current || isEventMode) return;
+        if (!playingRef.current) return;
         
         caughtRef.current++; 
         setCaught(caughtRef.current);
         
         const id = Date.now();
-        const newFx = { id, x: pos.current.x - 15, y: pos.current.y - 15 };
-        setFxList(prev => [...prev, newFx]);
+        setFxList(prev => [...prev, { id, x: pos.current.x - 15, y: pos.current.y - 15 }]);
         setTimeout(() => setFxList(prev => prev.filter(f => f.id !== id)), 500);
         
         if (caughtRef.current >= 3) {
@@ -655,7 +582,7 @@ export function FlyGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveS
                 pos.current.vy = Math.sin(ang) * spd;
             }
         }
-    }, [endFly, isEventMode]);
+    }, [endFly]);
 
     const startFly = useCallback(() => {
         setStarted(true); playingRef.current = true;
@@ -666,14 +593,12 @@ export function FlyGame({ pts, addPts, onBack, isEventMode, syncLiveState, liveS
         }
         start(); 
         rafRef.current = requestAnimationFrame(moveFly);
-        syncLiveState({ type: 'fly', pos: pos.current, caught: 0, started: true, result: null, fxList: [] });
-    }, [start, moveFly, syncLiveState]);
+    }, [start, moveFly]);
 
     const init = useCallback(() => {
         playingRef.current = false; caughtRef.current = 0; setCaught(0); setStarted(false); setResult(null); setFxList([]);
         cancelAnimationFrame(rafRef.current); stop();
-        syncLiveState({ type: 'fly', pos: null, caught: 0, started: false, result: null, fxList: [] });
-    }, [stop, syncLiveState]);
+    }, [stop]);
 
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); }; }, [init]);
 
