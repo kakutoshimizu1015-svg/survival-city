@@ -2,30 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { ClayButton } from '../common/ClayButton';
 import { useUserStore } from '../../store/useUserStore';
-import { savePlayerName, syncGachaData } from '../../utils/userLogic';
-import { sendGlobalMail } from '../../utils/adminLogic';
+import { savePlayerName } from '../../utils/userLogic';
 
 export const SettingsAndRules = () => {
     const { settingsActive, rulesActive, setGameState, resetGame } = useGameStore();
     const [confirmOpen, setConfirmOpen] = useState(false);
 
     const { 
-        playerName, wins, totalEarnedP, showSmoke, setShowSmoke, addGachaAssets,
+        playerName, wins, totalEarnedP, showSmoke, setShowSmoke,
         totalTilesMoved, totalCardsUsed, totalCansCollected, totalTrashCollected, totalPSpentAtShop, npcEncounters,
         liteMode, volume, layoutMode, showSkipButton, autoScrollToPlayer, setUserData 
     } = useUserStore();
     
-    const [activeTab, setActiveTab] = useState('settings'); // 初期タブを設定に変更
+    const [activeTab, setActiveTab] = useState('player');
     const [editingName, setEditingName] = useState(playerName);
-
-    // ▼ 開発者専用機能のステート
-    const [devPass, setDevPass] = useState("");
-    const [devUnlocked, setDevUnlocked] = useState(false);
-    const [mailTitle, setMailTitle] = useState("");
-    const [mailText, setMailText] = useState("");
-    const [mailP, setMailP] = useState("");
-    const [mailCans, setMailCans] = useState("");
-    const [isSendingMail, setIsSendingMail] = useState(false);
 
     useEffect(() => {
         if (playerName) {
@@ -44,36 +34,6 @@ export const SettingsAndRules = () => {
         if (editingName && editingName.trim() !== '' && editingName !== playerName) {
             savePlayerName(editingName);
         }
-    };
-
-    // ▼ パスワード自動判定
-    const handleDevPassChange = (e) => {
-        const val = e.target.value;
-        setDevPass(val);
-        // パスワードが一致したらロック解除
-        if (val === "DEV_MAIL_2026") {
-            setDevUnlocked(true);
-            setDevPass(""); 
-        }
-    };
-
-    const handleSendGlobalMail = async () => {
-        if (!mailTitle || !mailText) { alert("タイトルと本文は必須です"); return; }
-        setIsSendingMail(true);
-        const res = await sendGlobalMail("DEV_MAIL_2026", { title: mailTitle, text: mailText, p: mailP, cans: mailCans });
-        setIsSendingMail(false);
-        if (res.success) {
-            alert("✅ 全体メールを送信しました！");
-            setMailTitle(""); setMailText(""); setMailP(""); setMailCans("");
-        } else {
-            alert(res.message);
-        }
-    };
-
-    const handleDevAssets = async () => {
-        addGachaAssets(500, 500);
-        await syncGachaData();
-        alert("✅ 資産 (缶・P) を +500 しました！");
     };
 
     if (rulesActive) {
@@ -286,16 +246,16 @@ export const SettingsAndRules = () => {
                 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', borderBottom: '2px solid #8d6e63', paddingBottom: '10px' }}>
                     <ClayButton 
-                        onClick={() => setActiveTab('settings')} 
-                        style={{ flex: 1, padding: '10px', background: activeTab === 'settings' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'settings' ? 1 : 0.7 }}
-                    >
-                        ⚙️ 設定
-                    </ClayButton>
-                    <ClayButton 
                         onClick={() => setActiveTab('player')} 
                         style={{ flex: 1, padding: '10px', background: activeTab === 'player' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'player' ? 1 : 0.7 }}
                     >
                         👤 プレイヤー
+                    </ClayButton>
+                    <ClayButton 
+                        onClick={() => setActiveTab('settings')} 
+                        style={{ flex: 1, padding: '10px', background: activeTab === 'settings' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'settings' ? 1 : 0.7 }}
+                    >
+                        ⚙️ 設定
                     </ClayButton>
                 </div>
 
@@ -327,6 +287,7 @@ export const SettingsAndRules = () => {
                             </div>
                         </div>
 
+                        {/* ▼ 追加: 累計スタッツとNPC遭遇回数の表示グリッド */}
                         <div style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '8px', marginTop: '15px' }}>
                             <h4 style={{ margin: '0 0 10px 0', color: '#bdc3c7', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '5px' }}>📊 累計スタッツ</h4>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '13px', textAlign: 'left' }}>
@@ -350,94 +311,64 @@ export const SettingsAndRules = () => {
                 )}
 
                 {activeTab === 'settings' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                        
-                        {/* ▼ 追加: 開発者専用メニュー（煙エフェクトの上に配置） */}
-                        <div style={{ background: '#2c1e16', padding: '15px', borderRadius: '8px', border: '2px solid #5c3015', color: '#ede0c4' }}>
-                            {!devUnlocked ? (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#7a5a35' }}>🔧 開発者コード</span>
-                                    <input 
-                                        type="password" placeholder="パスワードを入力" 
-                                        value={devPass} onChange={handleDevPassChange}
-                                        style={{ padding: '6px', borderRadius: '4px', border: '1px solid #5c3015', background: '#0c0600', color: '#fff', width: '150px', fontSize: '14px' }}
-                                    />
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', animation: 'fadeIn 0.3s' }}>
-                                    <div style={{ color: '#ffd700', fontWeight: 'bold', fontSize: '15px', borderBottom: '1px solid #5c3015', paddingBottom: '5px' }}>
-                                        🚀 運営専用コントロールパネル
-                                    </div>
-                                    <input type="text" placeholder="メールタイトル" value={mailTitle} onChange={e => setMailTitle(e.target.value)} style={{ padding: '8px', borderRadius: '4px', background: '#0c0600', color: '#fff', border: '1px solid #7a5400' }} />
-                                    <textarea placeholder="本文" value={mailText} onChange={e => setMailText(e.target.value)} style={{ padding: '8px', borderRadius: '4px', background: '#0c0600', color: '#fff', border: '1px solid #7a5400', minHeight: '60px', resize: 'none' }} />
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <input type="number" placeholder="付与P" value={mailP} onChange={e => setMailP(e.target.value)} style={{ flex: 1, padding: '8px', borderRadius: '4px', background: '#0c0600', color: '#fff', border: '1px solid #7a5400' }} />
-                                        <input type="number" placeholder="付与缶" value={mailCans} onChange={e => setMailCans(e.target.value)} style={{ flex: 1, padding: '8px', borderRadius: '4px', background: '#0c0600', color: '#fff', border: '1px solid #7a5400' }} />
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
-                                        <button disabled={isSendingMail} onClick={handleSendGlobalMail} style={{ flex: 2, background: '#c0392b', color: '#fff', border: 'none', padding: '10px', borderRadius: '6px', fontWeight: 'bold', cursor: isSendingMail ? 'not-allowed' : 'pointer' }}>
-                                            {isSendingMail ? "送信中..." : "全体メール送信"}
-                                        </button>
-                                        <button onClick={handleDevAssets} style={{ flex: 1, background: '#2980b9', color: '#fff', border: 'none', padding: '10px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                                            資産+500
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div style={{ padding: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #d7ccc8' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#333' }}>
-                                <input type="checkbox" checked={showSmoke} onChange={(e) => setShowSmoke(e.target.checked)} style={{ transform: 'scale(1.5)', marginRight: '15px' }} />
-                                💨 煙（土埃）エフェクトを表示する
-                            </label>
-                            <div style={{ fontSize: '12px', color: '#7f8c8d', marginLeft: '30px', marginTop: '5px' }}>※オフにすると動作が少し軽くなります。</div>
-                        </div>
-
-                        <div style={{ padding: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #d7ccc8' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#333' }}>
-                                <input type="checkbox" checked={liteMode} onChange={(e) => setUserData({ liteMode: e.target.checked })} style={{ transform: 'scale(1.5)', marginRight: '15px' }} />
+                    <>
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px', border: '2px solid #e74c3c' }}>
+                            <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={liteMode} onChange={(e) => setUserData({ liteMode: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
                                 🍃 軽量モード（発熱・バッテリー消費を抑える）
                             </label>
-                            <div style={{ fontSize: '12px', color: '#7f8c8d', marginLeft: '30px', marginTop: '5px' }}>※スマホなどで重い場合に推奨。一部のエフェクトを無効化します。</div>
+                            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '6px', marginLeft: '28px', lineHeight: 1.4 }}>
+                                ONにすると、影や発光エフェクト、一部のアニメーションを無効化し、スマホやPCの動作を軽くします。
+                            </div>
                         </div>
 
-                        <div style={{ padding: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #d7ccc8' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', fontWeight: 'bold', color: '#333' }}>
-                                <input type="checkbox" checked={autoScrollToPlayer} onChange={(e) => setUserData({ autoScrollToPlayer: e.target.checked })} style={{ transform: 'scale(1.5)', marginRight: '15px' }} />
-                                🗺️ ターン開始時に自動スクロール
-                            </label>
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>🔊 音量: {Math.round(volume * 100)}%</label>
+                            <input type="range" min="0" max="2" step="0.1" value={volume} onChange={(e) => setUserData({ volume: parseFloat(e.target.value) })} style={{ width: '100%' }} />
                         </div>
-
-                        <div style={{ padding: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #d7ccc8' }}>
-                            <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer', color: '#333' }}>
-                                <input type="checkbox" checked={showSkipButton} onChange={(e) => setUserData({ showSkipButton: e.target.checked })} style={{ transform: 'scale(1.5)', marginRight: '15px' }} />
-                                ⏭️ 強制スキップボタンを表示する（誤タップ注意）
-                            </label>
-                        </div>
-
-                        <div style={{ padding: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #d7ccc8', color: '#333' }}>
+                        
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
                             <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>📱 レイアウト切替</div>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <ClayButton onClick={() => setUserData({ layoutMode: 'auto' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#2ecc71', opacity: layoutMode === 'auto' ? 1 : 0.5 }}>🔄 自動</ClayButton>
                                 <ClayButton onClick={() => setUserData({ layoutMode: 'pc' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#3498db', opacity: layoutMode === 'pc' ? 1 : 0.5 }}>🖥️ PC</ClayButton>
                                 <ClayButton onClick={() => setUserData({ layoutMode: 'sp' })} style={{ flex: 1, padding: '7px', fontSize: '12px', background: '#8e44ad', opacity: layoutMode === 'sp' ? 1 : 0.5 }}>📱 スマホ</ClayButton>
                             </div>
+                            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '6px', textAlign: 'center' }}>
+                                現在: {layoutMode === 'auto' ? '自動（画面幅で切替）' : layoutMode === 'pc' ? 'PCレイアウト固定' : 'スマホレイアウト固定'}
+                            </div>
                         </div>
 
-                        <div style={{ padding: '10px', background: '#fff', borderRadius: '8px', border: '1px solid #d7ccc8', color: '#333' }}>
-                            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '10px' }}>🔊 効果音ボリューム: {Math.round(volume * 100)}%</label>
-                            <input 
-                                type="range" min="0" max="2" step="0.1" value={volume} 
-                                onChange={(e) => setUserData({ volume: parseFloat(e.target.value) })} 
-                                style={{ width: '100%' }} 
-                            />
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                            <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={showSkipButton} onChange={(e) => setUserData({ showSkipButton: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
+                                ⏭️ 強制スキップボタンを表示する（誤タップ注意）
+                            </label>
                         </div>
 
-                    </div>
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                            <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={autoScrollToPlayer} onChange={(e) => setUserData({ autoScrollToPlayer: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
+                                🗺️ ターン開始時にマップを自動スクロール
+                            </label>
+                            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '4px', marginLeft: '28px' }}>
+                                ONにすると、各プレイヤーのターン開始時にマップがそのプレイヤーの位置へ自動で移動します
+                            </div>
+                        </div>
+
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                            <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={showSmoke} onChange={(e) => setShowSmoke(e.target.checked)} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
+                                💨 煙（土埃）エフェクトを表示する
+                            </label>
+                            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '4px', marginLeft: '28px' }}>
+                                ONにするとプレイヤー移動時に煙が出ます。動作が重い場合はOFFにしてください。
+                            </div>
+                        </div>
+                    </>
                 )}
                 
-                <ClayButton onClick={() => setGameState({ rulesActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', marginTop: '15px', background: '#3498db' }}>📖 遊び方・ルールを見る</ClayButton>
+                <ClayButton onClick={() => setGameState({ rulesActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#3498db' }}>📖 遊び方・ルールを見る</ClayButton>
                 <ClayButton onClick={() => setGameState({ tutorialActive: true, settingsActive: false })} style={{ width: '100%', marginBottom: '10px', background: '#8e44ad', color: '#f1c40f' }}>📚 チュートリアル</ClayButton>
                 
                 <ClayButton onClick={() => setConfirmOpen(true)} style={{ width: '100%', marginBottom: '15px', background: '#e74c3c' }}>🏠 タイトルに戻る</ClayButton>

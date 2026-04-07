@@ -19,7 +19,7 @@ import { UserProfileModal } from './components/common/UserProfileModal';
 import { MailboxOverlay } from './components/common/MailboxOverlay';
 
 function App() {
-  const { gamePhase, layoutMode, weatherState, isNight, horrorMode, rulesActive, tutorialActive, settingsActive } = useGameStore();
+  const { gamePhase, layoutMode, weatherState, isNight, horrorMode, rulesActive, tutorialActive, settingsActive, setGameState } = useGameStore();
   const { isLoggedIn, uid, playerName, wins, totalEarnedP, totalWins, gachaCans, gachaPoints, friendRequests, inbox, claimedMails } = useUserStore();
   
   const [localName, setLocalName] = useState(playerName);
@@ -67,8 +67,8 @@ function App() {
         <MailboxOverlay onClose={() => setShowMailboxModal(false)} />
       )}
 
-      {/* ▼ 修正: トップバーを少し小さくし、確実に出るようにz-indexを999999に設定 */}
-      {(gamePhase === 'title' || gamePhase === 'mode_select') && isLoggedIn && !rulesActive && !tutorialActive && !settingsActive && (
+      {/* ▼ 修正: トップバーを少し小さくし、確実に表示させるために条件とz-indexを強化 */}
+      {(gamePhase === 'title' || gamePhase === 'mode_select') && !rulesActive && !tutorialActive && !settingsActive && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%',
           background: 'rgba(15, 15, 20, 0.98)', padding: '6px 0', display: 'flex',
@@ -124,7 +124,6 @@ function App() {
                   maxLength={10}
                 />
                 
-                {/* 独立したフレンドボタン */}
                 <button onClick={() => setShowFriendModal(true)} style={{
                     background: '#2980b9', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', position: 'relative'
                 }}>
@@ -132,7 +131,6 @@ function App() {
                     {friendRequests?.length > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff' }}>{friendRequests.length}</span>}
                 </button>
 
-                {/* 独立したメールボタン */}
                 <button onClick={() => setShowMailboxModal(true)} style={{
                     background: '#e67e22', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', position: 'relative'
                 }}>
@@ -140,7 +138,7 @@ function App() {
                     {unreadMailsCount > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff', animation: 'canBounce 1s infinite' }}>{unreadMailsCount}</span>}
                 </button>
 
-                {/* モード選択画面用の設定ボタン */}
+                {/* ▼ 修正: モード選択画面にも設定ボタンを追加 */}
                 <button onClick={() => useGameStore.setState({ settingsActive: true })} style={{
                     background: '#7f8c8d', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
                 }}>
@@ -151,12 +149,10 @@ function App() {
           </div>
 
           <h2 style={{ margin: '10px 0' }}>モード選択</h2>
-          
-          {/* 独立した各モードへの遷移ボタン */}
-          <button className="btn-large btn-brown" onClick={() => useGameStore.setState({ gamePhase: 'setup_offline' })}>🎮 オフライン</button>
-          <button className="btn-large btn-blue" onClick={() => useGameStore.setState({ gamePhase: 'online_lobby' })}>🌐 オンライン</button>
-          <button className="btn-large" style={{ background: '#27ae60', color: '#fff' }} onClick={() => useGameStore.setState({ gamePhase: 'minigames' })}>🎲 ミニゲームで稼ぐ</button>
-          <button className="btn-large" style={{ background: '#c0392b', color: '#fff' }} onClick={() => useGameStore.setState({ gamePhase: 'gacha' })}>🔥 ガチャ屋台へ行く</button>
+          <button className="btn-large btn-brown" onClick={() => setGameState({ gamePhase: 'setup_offline' })}>🎮 オフライン</button>
+          <button className="btn-large btn-blue" onClick={() => setGameState({ gamePhase: 'online_lobby' })}>🌐 オンライン</button>
+          <button className="btn-large" style={{ background: '#27ae60', color: '#fff' }} onClick={() => setGameState({ gamePhase: 'minigames' })}>🎲 ミニゲームで稼ぐ</button>
+          <button className="btn-large" style={{ background: '#c0392b', color: '#fff' }} onClick={() => setGameState({ gamePhase: 'gacha' })}>🔥 ガチャ屋台へ行く</button>
         </div>
       )}
 
