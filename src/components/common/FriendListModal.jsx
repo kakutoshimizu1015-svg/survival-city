@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useUserStore } from '../../store/useUserStore';
 import { sendFriendRequestByCode, acceptFriendRequest, removeFriendRequest } from '../../utils/userLogic';
+import { ref, push, set } from 'firebase/database'; // ▼ 追加
+import { db } from '../../lib/firebase'; // ▼ 追加
 
-export const FriendListModal = ({ onClose, onSelectFriend }) => {
-    const { friendCode, friends, friendRequests } = useUserStore();
+export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => { // ▼ currentRoomId を受け取る
+    const { friendCode, friends, friendRequests, playerName } = useUserStore();
     const [tab, setTab] = useState('list'); // 'list', 'add', 'requests'
     const [codeInput, setCodeInput] = useState('');
     const [searchMsg, setSearchMsg] = useState({ text: '', type: '' });
@@ -18,6 +20,27 @@ export const FriendListModal = ({ onClose, onSelectFriend }) => {
         setSearchMsg({ text: result.message, type: result.success ? 'success' : 'error' });
         if (result.success) setCodeInput('');
         setIsSearching(false);
+    };
+
+    // ▼ 追加: フレンドへ招待を送信するロジック
+    const handleSendInvite = async (e, friend) => {
+        e.stopPropagation(); // プロフィールが開くのを防ぐ
+        if (!currentRoomId) return;
+
+        try {
+            // 相手の uid の下にある invites ノードへ招待データを書き込む
+            const inviteRef = push(ref(db, `users/${friend.uid}/invites`));
+            await set(inviteRef, {
+                id: inviteRef.key,
+                roomId: currentRoomId,
+                fromName: playerName,
+                timestamp: Date.now()
+            });
+            alert(`${friend.name} さんに招待を送信しました！`);
+        } catch (error) {
+            console.error("招待送信エラー:", error);
+            alert('招待の送信に失敗しました。');
+        }
     };
 
     const tabStyle = (isActive) => ({
@@ -72,7 +95,22 @@ export const FriendListModal = ({ onClose, onSelectFriend }) => {
                                         color: '#EDE0C4', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer'
                                     }}>
                                         <div style={{ fontWeight: 'bold' }}>{f.name}</div>
-                                        <div style={{ fontSize: '11px', color: '#D4A017' }}>プロフを見る ▶</div>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                            {/* ▼ 追加: 部屋IDがある場合のみ招待ボタンを表示 */}
+                                            {currentRoomId && (
+                                                <button 
+                                                    onClick={(e) => handleSendInvite(e, f)}
+                                                    style={{ 
+                                                        background: '#2ecc71', color: '#fff', border: 'none', 
+                                                        padding: '6px 12px', borderRadius: '6px', fontSize: '11px', 
+                                                        fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.4)'
+                                                    }}
+                                                >
+                                                    ✉️ 招待
+                                                </button>
+                                            )}
+                                            <div style={{ fontSize: '11px', color: '#D4A017' }}>プロフを見る ▶</div>
+                                        </div>
                                     </div>
                                 ))
                             )}

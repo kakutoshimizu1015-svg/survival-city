@@ -7,6 +7,8 @@ import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatte
 import { useUserStore } from '../store/useUserStore';
 import { CharacterSelect } from './CharacterSelect';
 import { CharImage } from '../components/common/CharImage';
+import { FriendListModal } from '../components/common/FriendListModal'; // ▼ 追加
+import { UserProfileModal } from '../components/common/UserProfileModal'; // ▼ 追加
 
 const TEAM_COLORS = { 
     none: { label:'ソロ', color:'transparent', icon:'⚪' }, 
@@ -34,6 +36,10 @@ export const OnlineLobby = () => {
     const [charAssignMode, setCharAssignMode] = useState('choose'); 
 
     const [charSelectTarget, setCharSelectTarget] = useState(null);
+    
+    // ▼ 追加: フレンドモーダル制御用のステート
+    const [showFriendModal, setShowFriendModal] = useState(false);
+    const [selectedProfileUid, setSelectedProfileUid] = useState(null);
     
     const { 
         createRoom, joinRoom, leaveRoom, status, roomId, lobbyPlayers, isHost, broadcast, 
@@ -145,7 +151,18 @@ export const OnlineLobby = () => {
                     <h2>🌐 ロビー: 部屋コード【 {roomId} 】</h2>
                     
                     <div className="panel" style={{ width: '100%', maxWidth: '650px', marginBottom: '20px' }}>
-                        <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px' }}>👥 参加者リスト ({lobbyPlayers.length}/8)</h3>
+                        {/* ▼ 修正: 参加者リストのヘッダーにフレンド招待ボタンを追加 */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #8d7b68', paddingBottom: '10px', marginBottom: '10px' }}>
+                            <h3 style={{ margin: 0 }}>👥 参加者リスト ({lobbyPlayers.length}/8)</h3>
+                            <button onClick={() => setShowFriendModal(true)} style={{
+                                background: '#2980b9', color: '#FFF', border: 'none', padding: '6px 12px', 
+                                borderRadius: '8px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                            }}>
+                                ✉️ フレンドを招待
+                            </button>
+                        </div>
+                        
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {lobbyPlayers.map(p => (
                                 <div key={p.userId} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(92, 74, 68, 0.4)', padding: '10px', borderRadius: '8px', borderLeft: p.teamColor !== 'none' ? `5px solid ${TEAM_COLORS[p.teamColor]?.color}` : 'none' }}>
@@ -246,6 +263,21 @@ export const OnlineLobby = () => {
                         targetName={charSelectTarget === myUserId ? "あなた" : lobbyPlayers.find(p => p.userId === charSelectTarget)?.name || "CPU"}
                     />
                 </div>
+
+                {/* ▼ 追加: フレンド関連のモーダル群 */}
+                {showFriendModal && (
+                    <FriendListModal 
+                        onClose={() => setShowFriendModal(false)} 
+                        onSelectFriend={(uid) => setSelectedProfileUid(uid)}
+                        currentRoomId={roomId} /* 現在の部屋IDを渡す */
+                    />
+                )}
+                {selectedProfileUid && (
+                    <UserProfileModal 
+                        uid={selectedProfileUid} 
+                        onClose={() => setSelectedProfileUid(null)} 
+                    />
+                )}
             </div>
         );
     }
