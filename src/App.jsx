@@ -1,4 +1,59 @@
-return (
+import React, { useEffect, useState } from 'react';
+import { useGameStore } from './store/useGameStore';
+import { useUserStore } from './store/useUserStore';
+import { loginAnonymously } from './utils/authLogic';
+import { savePlayerName } from './utils/userLogic';
+
+import { GameMain } from './features/GameMain';
+import { SetupOffline } from './features/SetupOffline';
+import { OnlineLobby } from './features/OnlineLobby';
+import { SettingsAndRules } from './components/overlays/SettingsAndRules';
+import { TutorialOverlay } from './components/overlays/TutorialOverlay';
+import { SandboxGuide } from './components/overlays/SandboxGuide';
+import GachaScreen from './features/GachaScreen';
+import MinigamesApp from './features/minigames/MinigamesApp';
+
+import { GlobalInviteModal } from './components/common/GlobalInviteModal';
+import { FriendListModal } from './components/common/FriendListModal';
+import { UserProfileModal } from './components/common/UserProfileModal';
+import { MailboxOverlay } from './components/common/MailboxOverlay';
+
+function App() {
+  const { gamePhase, layoutMode, weatherState, isNight, horrorMode, rulesActive, tutorialActive, settingsActive, setGameState } = useGameStore();
+  const { isLoggedIn, uid, playerName, wins, totalEarnedP, totalWins, gachaCans, gachaPoints, friendRequests, inbox, claimedMails } = useUserStore();
+  
+  const [localName, setLocalName] = useState(playerName);
+  
+  const [showFriendModal, setShowFriendModal] = useState(false);
+  const [showMailboxModal, setShowMailboxModal] = useState(false);
+  const [selectedProfileUid, setSelectedProfileUid] = useState(null);
+
+  const unreadMailsCount = (inbox || []).filter(mail => !(claimedMails || []).includes(mail.id)).length;
+
+  useEffect(() => {
+    if (!isLoggedIn) loginAnonymously();
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (playerName) setLocalName(playerName);
+  }, [playerName]);
+
+  useEffect(() => {
+    document.body.classList.remove('layout-pc', 'layout-mobile', 'sunny', 'rainy', 'cloudy', 'night', 'horror-mode');
+    if (layoutMode === 'sp') document.body.classList.add('layout-mobile');
+    if (layoutMode === 'pc') document.body.classList.add('layout-pc');
+    if (weatherState) document.body.classList.add(weatherState);
+    if (isNight) document.body.classList.add('night');
+    if (horrorMode) document.body.classList.add('horror-mode');
+  }, [layoutMode, weatherState, isNight, horrorMode]);
+
+  const handleNameBlur = () => {
+    if (localName && localName.trim() !== '' && localName !== playerName) {
+      savePlayerName(localName);
+    }
+  };
+
+  return (
     <>
       <GlobalInviteModal />
 
@@ -12,7 +67,7 @@ return (
         <MailboxOverlay onClose={() => setShowMailboxModal(false)} />
       )}
 
-      {/* ▼ 修正: 表示条件に setup_offline を追加し、サイズを少し小さく調整 */}
+      {/* ▼ 修正: トップバーの表示条件に setup_offline を追加し、サイズを少し小さく調整 */}
       {(gamePhase === 'title' || gamePhase === 'mode_select' || gamePhase === 'setup_offline') && !rulesActive && !tutorialActive && !settingsActive && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%',
@@ -32,7 +87,28 @@ return (
         <button id="settings-btn" onClick={() => useGameStore.setState({ settingsActive: true })}>⚙️</button>
       )}
 
-      {/* (中略: title-screen-overlay の部分はそのまま) */}
+      {gamePhase === 'title' && (
+        <div id="title-screen-overlay" onClick={() => useGameStore.setState({ gamePhase: 'mode_select' })}>
+          <div style={{ fontSize: '80px', marginBottom: '20px', marginTop: '60px' }}>🏠</div>
+          <div className="title-logo">脱・ホームレス<br/>サバイバルシティ</div>
+          <div className="blink-text">画面をタップしてスタート</div>
+          
+          <button 
+            className="btn-large" 
+            onClick={(e) => { e.stopPropagation(); useGameStore.setState({ rulesActive: true }); }} 
+            style={{ marginTop: '10px', background: '#3498db', color: '#fff' }}
+          >
+            📖 遊び方・ルールを見る
+          </button>
+          <button 
+            className="btn-large" 
+            onClick={(e) => { e.stopPropagation(); useGameStore.setState({ tutorialActive: true }); }} 
+            style={{ marginTop: '15px', background: '#8e44ad', color: '#f1c40f' }}
+          >
+            📚 チュートリアル
+          </button>
+        </div>
+      )}
 
       {gamePhase === 'mode_select' && (
         <div id="mode-select-overlay" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -52,9 +128,10 @@ return (
                     background: '#2980b9', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', position: 'relative'
                 }}>
                     👥 フレンド
+                    {friendRequests?.length > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff' }}>{friendRequests.length}</span>}
                 </button>
 
-                {/* ▼ 修正: メールモーダルを開く処理を確実に独立化 */}
+                {/* ▼ 修正: メールモーダルを確実に独立化 */}
                 <button onClick={() => setShowMailboxModal(true)} style={{
                     background: '#e67e22', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', position: 'relative'
                 }}>
@@ -62,26 +139,26 @@ return (
                     {unreadMailsCount > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff', animation: 'canBounce 1s infinite' }}>{unreadMailsCount}</span>}
                 </button>
 
-                {/* モード選択画面の設定ボタン（実装済みですが念のため確認） */}
+                {/* ▼ 修正: モード選択画面にも設定ボタンを追加 */}
                 <button onClick={() => useGameStore.setState({ settingsActive: true })} style={{
                     background: '#7f8c8d', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
                 }}>
                     ⚙️ 設定
                 </button>
             </div>
+            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '8px' }}>※名前は入力後、枠外をタップで自動保存</div>
           </div>
 
           <h2 style={{ margin: '10px 0' }}>モード選択</h2>
           <button className="btn-large btn-brown" onClick={() => setGameState({ gamePhase: 'setup_offline' })}>🎮 オフライン</button>
           <button className="btn-large btn-blue" onClick={() => setGameState({ gamePhase: 'online_lobby' })}>🌐 オンライン</button>
           
-          {/* ▼ 修正: ミニゲーム遷移を確実に独立化 */}
+          {/* ▼ 修正: ミニゲーム遷移を独立化 */}
           <button className="btn-large" style={{ background: '#27ae60', color: '#fff' }} onClick={() => setGameState({ gamePhase: 'minigames' })}>🎲 ミニゲームで稼ぐ</button>
           <button className="btn-large" style={{ background: '#c0392b', color: '#fff' }} onClick={() => setGameState({ gamePhase: 'gacha' })}>🔥 ガチャ屋台へ行く</button>
         </div>
       )}
-      
-      {/* 遷移先コンポーネント群 */}
+
       {gamePhase === 'setup_offline' && <SetupOffline />}
       {gamePhase === 'online_lobby' && <OnlineLobby />}
       {gamePhase === 'playing' && <GameMain />}
@@ -93,3 +170,6 @@ return (
       <SandboxGuide />
     </>
   );
+}
+
+export default App;
