@@ -1,7 +1,6 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
-import { useNetworkStore } from '../../store/useNetworkStore';
 import { syncGachaData } from '../../utils/userLogic';
 
 import { BoxGame, VendGame, ScratchGame, HLGame } from './MiniGamesPart1';
@@ -81,7 +80,7 @@ function TitleScreen({ pts, onSelect }) {
   );
 }
 
-function IntroScreen({ game, isMyTurn, onStart, onBack }) {
+function IntroScreen({ game, onStart, onBack }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -92,18 +91,14 @@ function IntroScreen({ game, isMyTurn, onStart, onBack }) {
       <p style={{ fontSize: '1.2rem', textAlign: 'center', lineHeight: 1.6, marginBottom: '2rem', color: '#f0e8d0' }}>
         {game.desc}
       </p>
-      {isMyTurn ? (
-        <button
-          onClick={onStart}
-          style={{ background: 'linear-gradient(135deg,#c97b2a,#8a5010)', border: 'none', borderRadius: 12, color: '#f0e8d0', font: "700 1.2rem 'Noto Sans JP',sans-serif", padding: '1rem 3rem', cursor: 'pointer', boxShadow: '0 4px 20px rgba(201,123,42,.4)', marginBottom: '1rem' }}
-        >
-          ゲームスタート！
-        </button>
-      ) : (
-        <div style={{ background: '#241a0e', padding: '1rem 2rem', borderRadius: 12, border: '1px solid #5a4228', color: '#e8b84b', fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center' }}>
-          現在他のプレイヤーがプレイ中です<br/>（観戦モード）
-        </div>
-      )}
+      
+      <button
+        onClick={onStart}
+        style={{ background: 'linear-gradient(135deg,#c97b2a,#8a5010)', border: 'none', borderRadius: 12, color: '#f0e8d0', font: "700 1.2rem 'Noto Sans JP',sans-serif", padding: '1rem 3rem', cursor: 'pointer', boxShadow: '0 4px 20px rgba(201,123,42,.4)', marginBottom: '1rem' }}
+      >
+        ゲームスタート！
+      </button>
+
       <button onClick={onBack} style={{ background: 'transparent', border: '1px solid #7a6a4a', color: '#7a6a4a', padding: '0.5rem 1.5rem', borderRadius: 8, cursor: 'pointer' }}>
         戻る
       </button>
@@ -113,17 +108,10 @@ function IntroScreen({ game, isMyTurn, onStart, onBack }) {
 
 export default function MinigamesApp() {
   const { gachaPoints, addGachaAssets } = useUserStore();
-  const { turn, players, selectedMiniGame, setGameState, minigameLiveState } = useGameStore();
-  const { myUserId, broadcastMinigameLive } = useNetworkStore();
   
-  const isMyTurn = players[turn]?.id === myUserId;
-  const screen = selectedMiniGame;
+  // 完全ローカルモードなので、StoreのselectedMiniGameではなくローカルのStateを使用します
+  const [screen, setScreen] = useState(null);
   const [gameStarted, setGameStarted] = useState(false);
-
-  // ★追加: 自分のターンなら高速でデータを送信するラッパー関数
-  const syncLiveState = useCallback((data) => {
-    if (isMyTurn) broadcastMinigameLive(data);
-  }, [isMyTurn, broadcastMinigameLive]);
 
   const addPts = useCallback(async (n) => { 
     if (n > 0) {
@@ -140,37 +128,24 @@ export default function MinigamesApp() {
   }, [addGachaAssets]);
 
   const goTitle = useCallback(() => {
-    setGameState({ selectedMiniGame: null, minigameLiveState: null }); 
+    setScreen(null); 
     setGameStarted(false);
-  }, [setGameState]);
+  }, []);
 
   const goGame = useCallback((id) => {
-    if (isMyTurn) {
-        setGameState({ selectedMiniGame: id });
-        syncLiveState({ type: 'intro', id }); // イントロ画面への遷移も同期
-        setGameStarted(false); 
-    }
-  }, [isMyTurn, setGameState, syncLiveState]);
+    setScreen(id);
+    setGameStarted(false); 
+  }, []);
 
-  // ★追加: 他人がゲームを選んで観戦状態に入った時に、画面を自動で切り替える
-  useEffect(() => {
-    if (!isMyTurn && minigameLiveState?.type === 'intro') {
-        setGameStarted(false);
-    }
-    if (!isMyTurn && minigameLiveState?.gameStarted) {
-        setGameStarted(true);
-    }
-  }, [isMyTurn, minigameLiveState]);
-
-  // ★追加: syncLiveState と liveState を Props として渡す
+  // ローカル版用のProps（観戦モードや同期は無効化）
   const gameProps = { 
     pts: gachaPoints, 
     addPts, 
     subPts, 
     onBack: goTitle,
-    isEventMode: !isMyTurn,
-    syncLiveState,
-    liveState: minigameLiveState 
+    isEventMode: false,
+    syncLiveState: () => {}, // 同期しないので空関数
+    liveState: null
   };
 
   const GameComponent = {
@@ -189,11 +164,7 @@ export default function MinigamesApp() {
       {screen && !gameStarted && selectedGameData && (
         <IntroScreen 
           game={selectedGameData} 
-          isMyTurn={isMyTurn} 
-          onStart={() => {
-            setGameStarted(true);
-            syncLiveState({ type: 'intro', gameStarted: true }); // 開始合図を同期
-          }} 
+          onStart={() => setGameStarted(true)} 
           onBack={goTitle} 
         />
       )}
