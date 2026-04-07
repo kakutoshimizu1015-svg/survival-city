@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep } from './MiniGamesPart1';
 import { useUserStore } from '../../store/useUserStore';
+import { useGameStore } from '../../store/useGameStore'; // ▼ 追加: 状態同期用Store
 
 export const MiniGameStylesPart2 = () => (
     <style>{`
@@ -54,32 +55,57 @@ export const MiniGameStylesPart2 = () => (
     `}</style>
 );
 
+// ▼ 共通: 状態をNetwork経由で他人に送る関数 (プレイヤー側のみ実行される)
+const syncToStore = (isObserver, data) => {
+    if (!isObserver) {
+        useGameStore.setState(s => ({ mgSyncData: { ...(s.mgSyncData || {}), ...data } }));
+    }
+};
+
 /* ════════════════════════════════════════
-   Game 5: 🎰 路上スロット (State同期バグ修正)
+   Game 5: 🎰 路上スロット (完全同期対応版)
 ════════════════════════════════════════ */
-export function SlotGame({ pts, addPts, onBack, isEventMode }) {
+export function SlotGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const SYMS = ['🥫', '💰', '🍺', '🐀', '💊', '🚬', '🗑️'];
     const SH = 80;
     const TOT = SYMS.length * SH;
     
-    // UI描画用のState
     const [reels, setReels] = useState([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
     const [playing, setPlaying] = useState(false);
     const [result, setResult] = useState(null);
     
-    // ロジック（アニメーション）管理用のRef
     const rafRef = useRef(null);
     const offsets = useRef([0, 0, 0]);
     const innerRefs = useRef([]); 
     const reelsDataRef = useRef([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
 
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const { time, start, stop } = useTimer(10, () => {
-        if (playing) {
-            [0, 1, 2].forEach(i => stopReel(i));
-        }
+        if (playing && !isObserver) [0, 1, 2].forEach(i => stopReel(i));
     });
 
+    // プレイヤーがタイマーを更新したら同期
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    // 観戦者は送られてきたタイマーを表示
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 送られてきたSyncDataを画面に反映させる
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.reels) setReels(mgSyncData.reels);
+            if (mgSyncData.playing !== undefined) setPlaying(mgSyncData.playing);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+            if (mgSyncData.offsets) {
+                mgSyncData.offsets.forEach((off, i) => {
+                    if (innerRefs.current[i]) innerRefs.current[i].style.transform = `translateY(${-TOT + off}px)`;
+                });
+            }
+        }
+    }, [isObserver, mgSyncData, TOT]);
+
     const init = useCallback(() => {
+        if (isObserver) return; // 観戦者はロジックを走らせない
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         setResult(null); setPlaying(false); 
         
@@ -88,20 +114,23 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
         setReels(initial);
         
         offsets.current = [0, 0, 0];
-        innerRefs.current.forEach(el => {
-            if(el) el.style.transform = `translateY(${-TOT}px)`;
-        });
-    }, [TOT]);
+        innerRefs.current.forEach(el => { if(el) el.style.transform = `translateY(${-TOT}px)`; });
+        
+        syncToStore(isObserver, { reels: initial, playing: false, result: null, offsets: [0, 0, 0] });
+    }, [TOT, isObserver]);
 
     const startSlot = () => {
+        if (isObserver) return;
         setPlaying(true); setResult(null); 
         
-        // ▼ Stateの同期ズレを防ぐため、Refで直接状態を上書きしてからアニメーション開始
-        reelsDataRef.current = [{ stop: false, res: null }, { stop: false, res: null }, { stop: false, res: null }];
-        setReels([...reelsDataRef.current]);
+        const nextReels = [{ stop: false, res: null }, { stop: false, res: null }, { stop: false, res: null }];
+        reelsDataRef.current = nextReels;
+        setReels(nextReels);
+        
+        offsets.current = [Math.random() * TOT, Math.random() * TOT, Math.random() * TOT];
+        syncToStore(isObserver, { reels: nextReels, playing: true, result: null, offsets: offsets.current });
         
         start(); 
-        offsets.current = [Math.random() * TOT, Math.random() * TOT, Math.random() * TOT];
         animate();
     };
 
@@ -109,7 +138,6 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
         let anyMoved = false;
         const speeds = [3.5, 4.2, 3.8];
         
-        // ▼ State (prev) ではなく、直接 Ref を参照して動かす
         reelsDataRef.current.forEach((r, i) => {
             if (!r.stop) {
                 offsets.current[i] = (offsets.current[i] + speeds[i]) % TOT;
@@ -120,21 +148,22 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
             }
         });
         
-        if (anyMoved) rafRef.current = requestAnimationFrame(animate);
+        if (anyMoved) {
+            syncToStore(isObserver, { offsets: offsets.current });
+            rafRef.current = requestAnimationFrame(animate);
+        }
     };
 
     const stopReel = (i) => {
-        if (!playing) return;
-        if (reelsDataRef.current[i].stop) return;
+        if (!playing || isObserver || reelsDataRef.current[i].stop) return;
         
         reelsDataRef.current[i].stop = true;
         const iy = SH + TOT - offsets.current[i];
         reelsDataRef.current[i].res = SYMS[((Math.floor(iy / SH) % SYMS.length) + SYMS.length) % SYMS.length];
         
-        // UI更新のためにStateにセット
         setReels([...reelsDataRef.current]);
+        syncToStore(isObserver, { reels: reelsDataRef.current });
         
-        // 全て停止したかチェック
         if (reelsDataRef.current.every(r => r.stop)) {
             setPlaying(false); stop(); cancelAnimationFrame(rafRef.current);
             setTimeout(() => {
@@ -142,16 +171,19 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
                 const allSame = rs[0] === rs[1] && rs[1] === rs[2];
                 const twoSame = rs[0] === rs[1] || rs[1] === rs[2] || rs[0] === rs[2];
                 
+                let resObj;
                 if (allSame) { 
                     const p = rs[0] === '💰' ? 50 : 20; 
-                    setResult({ win: true, icon: '🎊', main: 'ジャックポット！', sub: rs.join(''), pts: p }); 
+                    resObj = { win: true, icon: '🎊', main: 'ジャックポット！', sub: rs.join(''), pts: p };
                     addPts(p); 
                 } else if (twoSame) { 
-                    setResult({ win: true, icon: '✨', main: '2つ揃い！', sub: rs.join(''), pts: 5 }); 
+                    resObj = { win: true, icon: '✨', main: '2つ揃い！', sub: rs.join(''), pts: 5 };
                     addPts(5); 
                 } else { 
-                    setResult({ win: false, icon: '💀', main: 'ハズレ', sub: rs.join(''), pts: 0 }); 
+                    resObj = { win: false, icon: '💀', main: 'ハズレ', sub: rs.join(''), pts: 0 };
                 }
+                setResult(resObj);
+                syncToStore(isObserver, { playing: false, result: resObj });
             }, 150);
         }
     };
@@ -161,7 +193,7 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
     return (
         <div style={S.screen}>
             <MiniGameStylesPart2 />
-            <GameHeader title="🎰 路上スロット" pts={pts} timer={playing ? time : null} onBack={onBack} />
+            <GameHeader title="🎰 路上スロット" pts={pts} timer={playing ? displayTime : null} onBack={onBack} />
             <div style={S.body}>
                 <Instr>10秒以内に全リールをSTOP！時間切れで自動停止！</Instr>
                 <div className="slot-machine">
@@ -198,10 +230,12 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 6: ♟️ 路上○×ゲーム
+   Game 6: ♟️ 路上○×ゲーム (完全同期対応版)
 ════════════════════════════════════════ */
-export function OxoGame({ pts, addPts, onBack, isEventMode }) {
+export function OxoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const { gachaPoints, addGachaAssets } = useUserStore();
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const [board, setBoard] = useState(Array(9).fill(null));
     const [bet, setBet] = useState(0);
     const [phase, setPhase] = useState('bet'); 
@@ -212,17 +246,36 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
     const isCpuThinking = useRef(false);
 
     const { time, start, stop } = useTimer(5, () => {
-        if (phase === 'play' && turn === 'p') end('lose');
+        if (phase === 'play' && turn === 'p' && !isObserver) end('lose');
     });
 
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 5) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.board) setBoard(mgSyncData.board);
+            if (mgSyncData.bet !== undefined) setBet(mgSyncData.bet);
+            if (mgSyncData.phase !== undefined) setPhase(mgSyncData.phase);
+            if (mgSyncData.turn !== undefined) setTurn(mgSyncData.turn);
+            if (mgSyncData.winCells) setWinCells(mgSyncData.winCells);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+        }
+    }, [isObserver, mgSyncData]);
+
     const init = useCallback(() => { 
+        if (isObserver) return;
         stop(); setResult(null); setPhase('bet'); setBoard(Array(9).fill(null)); setWinCells([]); isCpuThinking.current = false;
-    }, [stop]);
+        syncToStore(isObserver, { board: Array(9).fill(null), bet: 0, phase: 'bet', turn: 'p', winCells: [], result: null });
+    }, [stop, isObserver]);
 
     const startGame = (b) => {
+        if (isObserver) return;
         if (gachaPoints < b) { alert('Pが足りない！ゲーム本編で稼ごう！'); return; }
         addGachaAssets(0, -b);
         setBet(b); setPhase('play'); setTurn('p');
+        syncToStore(isObserver, { bet: b, phase: 'play', turn: 'p' });
         start(5);
     };
 
@@ -231,6 +284,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
         for (let [a, b, c] of lines) { 
             if (brd[a] && brd[a] === brd[b] && brd[a] === brd[c]) {
                 setWinCells([a, b, c]);
+                syncToStore(isObserver, { winCells: [a, b, c] });
                 return brd[a]; 
             }
         }
@@ -239,17 +293,19 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
     };
 
     const move = (i) => {
-        if (board[i] || phase !== 'play' || turn !== 'p' || isCpuThinking.current) return;
+        if (board[i] || phase !== 'play' || turn !== 'p' || isCpuThinking.current || isObserver) return;
         stop();
         
         const nb = [...board]; 
         nb[i] = 'p'; 
         setBoard(nb);
+        syncToStore(isObserver, { board: nb });
         
         let res = checkWin(nb); 
         if (res) { end(res); return; }
         
         setTurn('c');
+        syncToStore(isObserver, { turn: 'c' });
         isCpuThinking.current = true;
 
         setTimeout(() => {
@@ -283,31 +339,34 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
             if (res) { end(res); return; }
             
             setTurn('p');
+            syncToStore(isObserver, { board: nb, turn: 'p' });
             start(5);
         }, 600);
     };
 
     const end = useCallback((res) => {
+        if (isObserver) return;
         stop(); setPhase('end');
+        let resObj;
         if (res === 'p') { 
-            setResult({ win: true, icon: '○', main: 'あなたの勝ち！', sub: `賭け${bet}P → 2倍`, pts: bet * 2 }); 
+            resObj = { win: true, icon: '○', main: 'あなたの勝ち！', sub: `賭け${bet}P → 2倍`, pts: bet * 2 };
             addPts(bet * 2); 
-        }
-        else if (res === 'draw') { 
-            setResult({ win: false, icon: '🤝', main: '引き分け', sub: `賭け${bet}P 返還`, pts: bet }); 
+        } else if (res === 'draw') { 
+            resObj = { win: false, icon: '🤝', main: '引き分け', sub: `賭け${bet}P 返還`, pts: bet };
             addPts(bet); 
+        } else { 
+            resObj = { win: false, icon: '×', main: 'CPUの勝ち…', sub: `賭け${bet}P 没収`, pts: 0 };
         }
-        else { 
-            setResult({ win: false, icon: '×', main: 'CPUの勝ち…', sub: `賭け${bet}P 没収`, pts: 0 }); 
-        }
-    }, [bet, addPts, stop]);
+        setResult(resObj);
+        syncToStore(isObserver, { phase: 'end', result: resObj });
+    }, [bet, addPts, stop, isObserver]);
 
     useEffect(() => { init(); }, [init]);
 
     return (
         <div style={S.screen}>
             <MiniGameStylesPart2 />
-            <GameHeader title="♟️ 路上○×" pts={pts} timer={phase === 'play' ? time : null} onBack={onBack} />
+            <GameHeader title="♟️ 路上○×" pts={pts} timer={phase === 'play' ? displayTime : null} onBack={onBack} />
             <div style={S.body}>
                 {phase === 'bet' && (
                     <>
@@ -352,12 +411,14 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 7: 📦 段ボールパズル
+   Game 7: 📦 段ボールパズル (完全同期対応版)
 ════════════════════════════════════════ */
-export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
+export function TetrisGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const TET_COLS = 6, TET_ROWS = 10;
     const TET_WS = [1, 2, 2, 3, 1, 2];
     const TET_COLORS = ['#c97b2a', '#4e8539', '#2a5a8a', '#8a3a2a', '#6a4a8a', '#3a6a5a'];
+
+    const mgSyncData = useGameStore(s => s.mgSyncData);
 
     const [board, setBoard] = useState(() => Array.from({ length: TET_ROWS }, () => Array(TET_COLS).fill(null)));
     const [cleared, setCleared] = useState(0);
@@ -376,30 +437,46 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
     const rafRef = useRef(null);
     const colorRef = useRef(TET_COLORS[0]);
 
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.board) setBoard(mgSyncData.board);
+            if (mgSyncData.cleared !== undefined) setCleared(mgSyncData.cleared);
+            if (mgSyncData.pieceX !== undefined) setPieceX(mgSyncData.pieceX);
+            if (mgSyncData.pieceW !== undefined) setPieceW(mgSyncData.pieceW);
+            if (mgSyncData.pieceColor) setPieceColor(mgSyncData.pieceColor);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+            if (mgSyncData.playing !== undefined) setPlaying(mgSyncData.playing);
+        }
+    }, [isObserver, mgSyncData]);
+
     const slideTick = useCallback(() => {
+        if (isObserver) return;
         const max = TET_COLS - pwRef.current;
         posRef.current += 0.05 * dirRef.current; 
         
-        // ▼ 修正: 仮想的な移動範囲を広げて、端での「滞在時間（ウェイト）」を確保
         if (posRef.current >= max + 0.8) { posRef.current = max + 0.8; dirRef.current = -1; }
         if (posRef.current <= -0.8) { posRef.current = -0.8; dirRef.current = 1; }
         
-        // ▼ 修正: 実際の描画位置(px)は 0 ～ max のマス目内に制限(クランプ)する
         pxRef.current = Math.floor(Math.max(0, Math.min(max, posRef.current))); 
         setPieceX(pxRef.current);
+        
+        syncToStore(isObserver, { pieceX: pxRef.current, pieceW: pwRef.current, pieceColor: colorRef.current });
         rafRef.current = requestAnimationFrame(slideTick);
-    }, []);
+    }, [isObserver]);
 
     const newPiece = useCallback(() => {
+        if (isObserver) return;
         const pi = rnd(0, TET_WS.length - 1); 
         pwRef.current = TET_WS[pi]; 
         colorRef.current = TET_COLORS[pi];
         posRef.current = 0; dirRef.current = 1; pxRef.current = 0;
         setPieceW(TET_WS[pi]); setPieceColor(TET_COLORS[pi]); setPieceX(0);
-    }, []);
+        syncToStore(isObserver, { pieceW: TET_WS[pi], pieceColor: TET_COLORS[pi], pieceX: 0 });
+    }, [isObserver]);
 
     const tetDrop = useCallback(() => {
-        if (!playing) return;
+        if (!playing || isObserver) return;
         const b = boardRef.current.map(r => [...r]);
         let land = -1; 
         for (let r = TET_ROWS - 1; r >= 0; r--) {
@@ -432,34 +509,43 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
         if (clearedRef.current >= 2) { 
             setPlaying(false); cancelAnimationFrame(rafRef.current); 
             const p = clearedRef.current * 4; addPts(p); 
-            setResult({ win: true, icon: '🏠', main: '2段クリア成功！', sub: 'ダンボールハウスが建った！', pts: p }); 
+            const resObj = { win: true, icon: '🏠', main: '2段クリア成功！', sub: 'ダンボールハウスが建った！', pts: p };
+            setResult(resObj); 
+            syncToStore(isObserver, { board: b, cleared: clearedRef.current, playing: false, result: resObj });
             return; 
         }
         if (b[0].some(c => c !== null)) { 
             setPlaying(false); cancelAnimationFrame(rafRef.current); 
             const p = clearedRef.current * 4; if (p > 0) addPts(p); 
-            setResult({ win: false, icon: '💀', main: '積みすぎた！', sub: `${clearedRef.current}段クリア`, pts: p }); 
+            const resObj = { win: false, icon: '💀', main: '積みすぎた！', sub: `${clearedRef.current}段クリア`, pts: p };
+            setResult(resObj); 
+            syncToStore(isObserver, { board: b, cleared: clearedRef.current, playing: false, result: resObj });
             return; 
         }
+        
+        syncToStore(isObserver, { board: b, cleared: clearedRef.current });
         newPiece();
-    }, [playing, addPts, newPiece]);
+    }, [playing, addPts, newPiece, isObserver]);
 
     const tetMove = (d) => {
-        if (!playing) return;
+        if (!playing || isObserver) return;
         posRef.current = Math.max(0, Math.min(TET_COLS - pwRef.current, pxRef.current + d)); 
         pxRef.current = Math.floor(posRef.current); 
         setPieceX(pxRef.current);
     };
 
     const init = useCallback(() => {
+        if (isObserver) return;
         cancelAnimationFrame(rafRef.current);
         clearedRef.current = 0; posRef.current = 0; dirRef.current = 1;
         const b = Array.from({ length: TET_ROWS }, () => Array(TET_COLS).fill(null)); 
         boardRef.current = b;
         setBoard(b.map(r => [...r])); setCleared(0); setResult(null); setPlaying(true);
+        syncToStore(isObserver, { board: b, cleared: 0, result: null, playing: true });
+        
         newPiece(); 
         rafRef.current = requestAnimationFrame(slideTick);
-    }, [slideTick, newPiece]);
+    }, [slideTick, newPiece, isObserver]);
 
     useEffect(() => { init(); return () => cancelAnimationFrame(rafRef.current); }, [init]);
 
@@ -507,9 +593,11 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 8: 🪰 ハエ捕まえ
+   Game 8: 🪰 ハエ捕まえ (完全同期対応版)
 ════════════════════════════════════════ */
-export function FlyGame({ pts, addPts, onBack, isEventMode }) {
+export function FlyGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const [caught, setCaught] = useState(0);
     const [started, setStarted] = useState(false);
     const [result, setResult] = useState(null);
@@ -520,18 +608,43 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
     const pos = useRef({ x: 0, y: 0, vx: 3, vy: 3 });
     const caughtRef = useRef(0);
     const playingRef = useRef(false);
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endFly(); });
+
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endFly(); });
+    
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.caught !== undefined) setCaught(mgSyncData.caught);
+            if (mgSyncData.started !== undefined) setStarted(mgSyncData.started);
+            if (mgSyncData.fxList) setFxList(mgSyncData.fxList);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+            
+            const el = document.getElementById('fly-target');
+            if (el && mgSyncData.flyX !== undefined) {
+                el.style.left = mgSyncData.flyX + 'px';
+                el.style.top = mgSyncData.flyY + 'px';
+                el.style.transform = mgSyncData.flip ? 'scaleX(-1)' : 'scaleX(1)';
+            }
+        }
+    }, [isObserver, mgSyncData]);
 
     const endFly = useCallback((forceWin = false) => {
+        if (isObserver) return;
         playingRef.current = false; stop(); cancelAnimationFrame(rafRef.current);
         const c = caughtRef.current;
         const win = forceWin || c >= 3;
         if (win) addPts(15);
-        setResult({ win, icon: win ? '🪰🪰🪰' : '⏰', main: win ? '3匹全部捕まえた！' : '時間切れ！', sub: `${c}匹捕獲`, pts: win ? 15 : c * 3 });
-    }, [stop, addPts]);
+        
+        const resObj = { win, icon: win ? '🪰🪰🪰' : '⏰', main: win ? '3匹全部捕まえた！' : '時間切れ！', sub: `${c}匹捕獲`, pts: win ? 15 : c * 3 };
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj });
+    }, [stop, addPts, isObserver]);
 
     const moveFly = useCallback(() => {
-        if (!playingRef.current || !arenaRef.current) return;
+        if (!playingRef.current || !arenaRef.current || isObserver) return;
         const W = arenaRef.current.offsetWidth; 
         const H = arenaRef.current.offsetHeight;
         const p = pos.current;
@@ -555,23 +668,35 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
         if (el) {
             el.style.left = p.x + 'px';
             el.style.top = p.y + 'px';
-            el.style.transform = p.vx < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+            const flip = p.vx < 0;
+            el.style.transform = flip ? 'scaleX(-1)' : 'scaleX(1)';
+            syncToStore(isObserver, { flyX: p.x, flyY: p.y, flip });
         }
         
         rafRef.current = requestAnimationFrame(moveFly);
-    }, []);
+    }, [isObserver]);
 
     const catchFly = useCallback((e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        if (!playingRef.current) return;
+        e.stopPropagation(); e.preventDefault();
+        if (!playingRef.current || isObserver) return;
         
         caughtRef.current++; 
         setCaught(caughtRef.current);
         
         const id = Date.now();
-        setFxList(prev => [...prev, { id, x: pos.current.x - 15, y: pos.current.y - 15 }]);
-        setTimeout(() => setFxList(prev => prev.filter(f => f.id !== id)), 500);
+        setFxList(prev => {
+            const newList = [...prev, { id, x: pos.current.x - 15, y: pos.current.y - 15 }];
+            syncToStore(isObserver, { caught: caughtRef.current, fxList: newList });
+            return newList;
+        });
+        
+        setTimeout(() => {
+            setFxList(prev => {
+                const newList = prev.filter(f => f.id !== id);
+                syncToStore(isObserver, { fxList: newList });
+                return newList;
+            });
+        }, 500);
         
         if (caughtRef.current >= 3) {
             endFly(true);
@@ -586,30 +711,34 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
                 pos.current.vy = Math.sin(ang) * spd;
             }
         }
-    }, [endFly]);
+    }, [endFly, isObserver]);
 
     const startFly = useCallback(() => {
+        if (isObserver) return;
         setStarted(true); playingRef.current = true;
         if (arenaRef.current) {
             const W = arenaRef.current.offsetWidth / 2, H = arenaRef.current.offsetHeight / 2;
             const ang = Math.random() * Math.PI * 2; 
             pos.current = { x: W, y: H, vx: Math.cos(ang) * 4, vy: Math.sin(ang) * 4 };
         }
+        syncToStore(isObserver, { started: true });
         start(); 
         rafRef.current = requestAnimationFrame(moveFly);
-    }, [start, moveFly]);
+    }, [start, moveFly, isObserver]);
 
     const init = useCallback(() => {
+        if (isObserver) return;
         playingRef.current = false; caughtRef.current = 0; setCaught(0); setStarted(false); setResult(null); setFxList([]);
         cancelAnimationFrame(rafRef.current); stop();
-    }, [stop]);
+        syncToStore(isObserver, { caught: 0, started: false, result: null, fxList: [] });
+    }, [stop, isObserver]);
 
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
         <div style={S.screen}>
             <MiniGameStylesPart2 />
-            <GameHeader title="🪰 ハエ捕まえ" pts={pts} timer={started && !result ? time : null} onBack={onBack} />
+            <GameHeader title="🪰 ハエ捕まえ" pts={pts} timer={started && !result ? displayTime : null} onBack={onBack} />
             <div style={S.body}>
                 <Instr>10秒で3匹捕まえたら成功！（難易度緩和版）</Instr>
                 <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', justifyContent: 'center' }}>
