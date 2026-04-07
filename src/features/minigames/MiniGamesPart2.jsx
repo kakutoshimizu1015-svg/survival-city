@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep } from './MiniGamesPart1';
+import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep, SpectatorOverlay } from './MiniGamesPart1';
 import { useUserStore } from '../../store/useUserStore';
-// ▼ 追加: 観戦モード判定用Storeインポート
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 
@@ -47,8 +46,6 @@ export const MiniGameStylesPart2 = () => (
 
         /* Fly Game */
         .fly-arena { width:100%; height:310px; background:linear-gradient(160deg,#1a1208,#0d0a05); border:2px solid #3d2e1a; border-radius:14px; position:relative; overflow:hidden; cursor:crosshair; }
-        .fly-start-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem; background:rgba(0,0,0,0.4); z-index: 20; }
-        .big-fly { font-size:4rem; animation:flyBuzz .3s ease infinite, bounce 1.5s ease infinite; cursor:pointer; }
         .fly-el { position:absolute; font-size:3.5rem; cursor:pointer; user-select:none; z-index:10; line-height:1; display:flex; align-items:center; justify-content:center; width:60px; height:60px; margin-left:-30px; margin-top:-30px; -webkit-tap-highlight-color: transparent;}
         .fly-prog { display:flex; gap:.35rem; justify-content:center; }
         .fly-prog-dot { width:18px; height:18px; border-radius:50%; border:2px solid #5a4228; background:#241a0e; display:flex; align-items:center; justify-content:center; font-size:.7rem; }
@@ -57,21 +54,8 @@ export const MiniGameStylesPart2 = () => (
     `}</style>
 );
 
-// ▼ 追加: 共通の観戦者用オーバーレイ
-const SpectatorOverlay = ({ isSpectator }) => {
-    if (!isSpectator) return null;
-    return (
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
-            <div style={{ background: 'rgba(0,0,0,0.85)', padding: '1.5rem 2.5rem', borderRadius: 16, border: '2px solid #c97b2a', color: '#f0e8d0', textAlign: 'center', boxShadow: '0 0 20px rgba(201,123,42,.4)' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>👀</div>
-                <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>他プレイヤーの<br/>プレイを観戦中...</div>
-            </div>
-        </div>
-    );
-};
-
 /* ════════════════════════════════════════
-   Game 5: 🎰 路上スロット (ルール画面＆観戦モード対応)
+   Game 5: 🎰 路上スロット
 ════════════════════════════════════════ */
 export function SlotGame({ pts, addPts, onBack, isEventMode }) {
     const { activeMiniGamePlayerId } = useGameStore();
@@ -85,7 +69,7 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
     const [reels, setReels] = useState([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
     const [playing, setPlaying] = useState(false);
     const [result, setResult] = useState(null);
-    const [isReady, setIsReady] = useState(false); // ▼ 追加: 開始待ちフェーズ
+    const [isReady, setIsReady] = useState(false);
     
     const rafRef = useRef(null);
     const offsets = useRef([0, 0, 0]);
@@ -100,7 +84,7 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
 
     const init = useCallback(() => {
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        setResult(null); setPlaying(false); setIsReady(false); // 初期化時に準備画面へ
+        setResult(null); setPlaying(false); setIsReady(false);
         
         const initial = [{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }];
         reelsDataRef.current = initial;
@@ -184,7 +168,8 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginTop: '2rem' }}>
                         <Instr>
                             <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
-                            10秒以内に3つのリールをすべて止めろ！<br/>絵柄が揃えばPゲット！
+                            10秒以内に3つのリールをすべて止めろ！<br/>
+                            絵柄が揃えばPゲットだ！
                         </Instr>
                         <button className="slot-start" onPointerDown={startSlot}>🎰 ゲーム開始！</button>
                     </div>
@@ -223,7 +208,7 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 6: ♟️ 路上○×ゲーム (観戦モード＆ルール明記)
+   Game 6: ♟️ 路上○×ゲーム
 ════════════════════════════════════════ */
 export function OxoGame({ pts, addPts, onBack, isEventMode }) {
     const { activeMiniGamePlayerId } = useGameStore();
@@ -340,19 +325,20 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
             <GameHeader title="♟️ 路上○×" pts={pts} timer={phase === 'play' ? time : null} onBack={onBack} />
             <div style={S.body}>
                 {phase === 'bet' && (
-                    <>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
                         <Instr>
                             <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
-                            CPUと○×ゲームで勝負！制限時間は1ターン5秒。<br/>
-                            賭けPを選んでスタート！勝てば賭けPが倍になる！
+                            CPUと○×ゲームで勝負！<br/>
+                            制限時間は1ターン5秒。賭けPを選んでスタートだ！<br/>
+                            勝てば賭けPが倍になるぞ！
                         </Instr>
-                        <div style={{ fontSize: '.88rem', color: '#7a6a4a', textAlign: 'center', marginBottom: '.5rem', marginTop: '20px' }}>賭けPを選べ（所持: {gachaPoints}P）</div>
+                        <div style={{ fontSize: '.88rem', color: '#7a6a4a', textAlign: 'center', marginBottom: '.5rem', marginTop: '10px' }}>▼ 賭けPを選んでゲーム開始！ ▼<br/>（所持: {gachaPoints}P）</div>
                         <div className="bet-btns">
                             {[3, 5, 8, 10].map(b => (
-                                <button key={b} className="bet-btn" onPointerDown={() => startGame(b)}>{b}P</button>
+                                <button key={b} className="bet-btn" onPointerDown={() => startGame(b)}>{b}Pを賭ける</button>
                             ))}
                         </div>
-                    </>
+                    </div>
                 )}
                 
                 {phase !== 'bet' && (
@@ -386,7 +372,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 7: 📦 段ボールパズル (速度バグ＆観戦モード対応)
+   Game 7: 📦 段ボールパズル
 ════════════════════════════════════════ */
 export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
     const { activeMiniGamePlayerId } = useGameStore();
@@ -404,7 +390,7 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
     const [pieceColor, setPieceColor] = useState(TET_COLORS[0]);
     const [result, setResult] = useState(null);
     const [playing, setPlaying] = useState(false);
-    const [started, setStarted] = useState(false); // ▼ 追加: 待機フェーズ用
+    const [isReady, setIsReady] = useState(false);
     
     const boardRef = useRef(Array.from({ length: TET_ROWS }, () => Array(TET_COLS).fill(null)));
     const pxRef = useRef(0);
@@ -417,7 +403,7 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
 
     const slideTick = useCallback(() => {
         const max = TET_COLS - pwRef.current;
-        const maxLimit = max + 0.99; // ▼ 修正: 右端のマスに届いた直後に折り返さないように猶予を持たせる
+        const maxLimit = max + 0.99; 
         
         posRef.current += 0.05 * dirRef.current; 
         if (posRef.current >= maxLimit) { posRef.current = maxLimit; dirRef.current = -1; }
@@ -495,12 +481,12 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
         const b = Array.from({ length: TET_ROWS }, () => Array(TET_COLS).fill(null)); 
         boardRef.current = b;
         setBoard(b.map(r => [...r])); setCleared(0); setResult(null); 
-        setStarted(false); setPlaying(false); // 初期は待機
+        setIsReady(false); setPlaying(false);
         newPiece(); 
     }, [newPiece]);
 
     const startGame = () => {
-        setStarted(true);
+        setIsReady(true);
         setPlaying(true);
         rafRef.current = requestAnimationFrame(slideTick);
     };
@@ -513,46 +499,46 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
             <SpectatorOverlay isSpectator={isSpectator} />
             <GameHeader title="📦 段ボールパズル" pts={pts} onBack={onBack} />
             <div style={S.body}>
-                {!started && !result && (
+                {!isReady && !result ? (
                     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
                         <Instr>
                             <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
-                            箱が上部を左右に動きます。<br/>
+                            箱が上部を左右に自動で動きます。<br/>
                             ◀▶ボタンで落とす列を微調整し、<br/>
                             「⬇ DROP」で箱を落としましょう！<br/>
                             横一列揃えると段ボールが消えます。<br/>
-                            高く積みすぎずに2段消せばクリア！
+                            高く積みすぎずに2段消せばクリアです！
                         </Instr>
                         <BtnPrim onClick={startGame} style={{ width: '100%' }}>ゲーム開始！</BtnPrim>
                     </div>
-                )}
-                
-                {started && (
-                    <StatBox label="クリア段数" val={`${cleared} / 2`} />
-                )}
-                
-                <div style={{ display: 'flex', gap: 2, padding: '6px 8px', background: '#241a0e', border: `2px solid ${playing ? '#c97b2a' : '#3d2e1a'}`, borderRadius: 10, width: 'fit-content', minHeight: 50, alignItems: 'center' }}>
-                    {Array.from({ length: TET_COLS }).map((_, c) => (
-                        <div key={c} className="tet-preview-cell" style={{ background: c >= pieceX && c < pieceX + pieceW ? pieceColor : '#0a0a0a', borderColor: c >= pieceX && c < pieceX + pieceW ? 'rgba(255,255,255,.4)' : '#222' }}>
-                            {c >= pieceX && c < pieceX + pieceW ? '📦' : ''}
+                ) : (
+                    <>
+                        <StatBox label="クリア段数" val={`${cleared} / 2`} />
+                        
+                        <div style={{ display: 'flex', gap: 2, padding: '6px 8px', background: '#241a0e', border: `2px solid ${playing ? '#c97b2a' : '#3d2e1a'}`, borderRadius: 10, width: 'fit-content', minHeight: 50, alignItems: 'center' }}>
+                            {Array.from({ length: TET_COLS }).map((_, c) => (
+                                <div key={c} className="tet-preview-cell" style={{ background: c >= pieceX && c < pieceX + pieceW ? pieceColor : '#0a0a0a', borderColor: c >= pieceX && c < pieceX + pieceW ? 'rgba(255,255,255,.4)' : '#222' }}>
+                                    {c >= pieceX && c < pieceX + pieceW ? '📦' : ''}
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-                
-                <div style={{ background: '#1a1309', border: '3px solid #5a4228', borderRadius: 12, padding: '.6rem', display: 'inline-block' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${TET_COLS}, 36px)`, gridTemplateRows: `repeat(${TET_ROWS}, 28px)`, gap: 2 }}>
-                        {board.map((row, r) => row.map((cell, c) => (
-                            <div key={`${r}-${c}`} className="tet-cell" style={{ background: cell || '#0f0f0f', borderColor: cell ? 'rgba(255,255,255,.15)' : '#1a1a1a' }}>{cell ? '📦' : ''}</div>
-                        )))}
-                    </div>
-                </div>
-                
-                {started && !result && (
-                    <div style={{ display: 'flex', gap: '.55rem', justifyContent: 'center' }}>
-                        <button className="tet-btn" onPointerDown={() => tetMove(-1)}>◀ 左</button>
-                        <button className="tet-btn tet-btn-drop" onPointerDown={tetDrop}>⬇ DROP</button>
-                        <button className="tet-btn" onPointerDown={() => tetMove(1)}>右 ▶</button>
-                    </div>
+                        
+                        <div style={{ background: '#1a1309', border: '3px solid #5a4228', borderRadius: 12, padding: '.6rem', display: 'inline-block' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${TET_COLS}, 36px)`, gridTemplateRows: `repeat(${TET_ROWS}, 28px)`, gap: 2 }}>
+                                {board.map((row, r) => row.map((cell, c) => (
+                                    <div key={`${r}-${c}`} className="tet-cell" style={{ background: cell || '#0f0f0f', borderColor: cell ? 'rgba(255,255,255,.15)' : '#1a1a1a' }}>{cell ? '📦' : ''}</div>
+                                )))}
+                            </div>
+                        </div>
+                        
+                        {!result && (
+                            <div style={{ display: 'flex', gap: '.55rem', justifyContent: 'center' }}>
+                                <button className="tet-btn" onPointerDown={() => tetMove(-1)}>◀ 左</button>
+                                <button className="tet-btn tet-btn-drop" onPointerDown={tetDrop}>⬇ DROP</button>
+                                <button className="tet-btn" onPointerDown={() => tetMove(1)}>右 ▶</button>
+                            </div>
+                        )}
+                    </>
                 )}
                 
                 <ResultBox result={result} />
@@ -567,7 +553,7 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 8: 🪰 ハエ捕まえ (ルール明記＆観戦モード対応)
+   Game 8: 🪰 ハエ捕まえ
 ════════════════════════════════════════ */
 export function FlyGame({ pts, addPts, onBack, isEventMode }) {
     const { activeMiniGamePlayerId } = useGameStore();
@@ -578,6 +564,7 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
     const [started, setStarted] = useState(false);
     const [result, setResult] = useState(null);
     const [fxList, setFxList] = useState([]);
+    const [isReady, setIsReady] = useState(false);
     
     const arenaRef = useRef(null);
     const rafRef = useRef(null);
@@ -652,8 +639,10 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
         }
     }, [endFly]);
 
-    const startFly = useCallback(() => {
-        setStarted(true); playingRef.current = true;
+    const startGame = useCallback(() => {
+        setIsReady(true);
+        setStarted(true); 
+        playingRef.current = true;
         if (arenaRef.current) {
             const W = arenaRef.current.offsetWidth / 2, H = arenaRef.current.offsetHeight / 2;
             const ang = Math.random() * Math.PI * 2; 
@@ -664,7 +653,7 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
     }, [start, moveFly]);
 
     const init = useCallback(() => {
-        playingRef.current = false; caughtRef.current = 0; setCaught(0); setStarted(false); setResult(null); setFxList([]);
+        playingRef.current = false; caughtRef.current = 0; setCaught(0); setStarted(false); setResult(null); setFxList([]); setIsReady(false);
         cancelAnimationFrame(rafRef.current); stop();
     }, [stop]);
 
@@ -674,37 +663,35 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
         <div style={{ ...S.screen, pointerEvents: isSpectator ? 'none' : 'auto' }}>
             <MiniGameStylesPart2 />
             <SpectatorOverlay isSpectator={isSpectator} />
-            <GameHeader title="🪰 ハエ捕まえ" pts={pts} timer={started && !result ? time : null} onBack={onBack} />
+            <GameHeader title="🪰 ハエ捕まえ" pts={pts} timer={isReady && !result ? time : null} onBack={onBack} />
             <div style={S.body}>
-                {!started && !result ? (
-                    <Instr>
-                        <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
-                        画面内を飛び回るハエを直接タップして捕まえろ！<br/>
-                        制限時間は10秒。3匹捕まえればクリアだ！
-                    </Instr>
-                ) : (
-                    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ textAlign: 'center' }}><div style={{ fontSize: '.6rem', color: '#7a6a4a', letterSpacing: '.1em' }}>CATCH</div><div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: '2.5rem', color: '#e8b84b' }}>{caught}</div></div>
-                        <div className="fly-prog">
-                            {[0, 1, 2].map(i => <div key={i} className={`fly-prog-dot ${i < caught ? 'caught' : ''}`}>{i < caught ? '✓' : '🪰'}</div>)}
-                        </div>
+                {!isReady && !result ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                        <Instr>
+                            <strong style={{color:'#e8b84b', fontSize:'1.1rem'}}>【ルール説明】</strong><br/><br/>
+                            画面内を飛び回るハエを直接タップして捕まえろ！<br/>
+                            制限時間は10秒。3匹捕まえればクリアだ！
+                        </Instr>
+                        <BtnPrim onClick={startGame} style={{ width: '100%' }}>ゲーム開始！</BtnPrim>
                     </div>
-                )}
-                
-                <div ref={arenaRef} className="fly-arena">
-                    {!started && !result && (
-                        <div className="fly-start-overlay">
-                            <div onPointerDown={startFly} className="big-fly">🪰</div>
-                            <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#e8b84b', marginTop: '10px' }}>ハエをタップしてスタート！</div>
+                ) : (
+                    <>
+                        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ textAlign: 'center' }}><div style={{ fontSize: '.6rem', color: '#7a6a4a', letterSpacing: '.1em' }}>CATCH</div><div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: '2.5rem', color: '#e8b84b' }}>{caught}</div></div>
+                            <div className="fly-prog">
+                                {[0, 1, 2].map(i => <div key={i} className={`fly-prog-dot ${i < caught ? 'caught' : ''}`}>{i < caught ? '✓' : '🪰'}</div>)}
+                            </div>
                         </div>
-                    )}
-                    
-                    {started && !result && (
-                        <div id="fly-target" className="fly-el" onPointerDown={catchFly}>🪰</div>
-                    )}
-                    
-                    {fxList.map(f => <div key={f.id} className="catch-fx" style={{ left: f.x, top: f.y }}>✨+1</div>)}
-                </div>
+                        
+                        <div ref={arenaRef} className="fly-arena">
+                            {started && !result && (
+                                <div id="fly-target" className="fly-el" onPointerDown={catchFly}>🪰</div>
+                            )}
+                            
+                            {fxList.map(f => <div key={f.id} className="catch-fx" style={{ left: f.x, top: f.y }}>✨+1</div>)}
+                        </div>
+                    </>
+                )}
                 
                 <ResultBox result={result} />
                 {result && (
