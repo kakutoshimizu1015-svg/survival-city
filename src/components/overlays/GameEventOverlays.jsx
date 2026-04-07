@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { ClayButton } from '../common/ClayButton';
@@ -7,13 +7,13 @@ import { deckData } from '../../constants/cards';
 import { dealDamage } from '../../game/combat';
 import { setupNpcMove } from '../../game/skills'; 
 
-// ▼ 追加: 15種類のミニゲームコンポーネントをすべてインポート
+// ▼ 15種類のミニゲームコンポーネントをすべてインポート
 import { BoxGame, VendGame, ScratchGame, HLGame } from '../../features/minigames/MiniGamesPart1';
 import { SlotGame, OxoGame, TetrisGame, FlyGame } from '../../features/minigames/MiniGamesPart2';
 import { RatGame, DrunkGame, RainGame, KashiGame } from '../../features/minigames/MiniGamesPart3';
 import { BegGame, MusicGame, NegoGame } from '../../features/minigames/MiniGamesPart4';
 
-// ▼ 追加: コンポーネントのマッピング
+// ▼ コンポーネントのマッピング
 const MINIGAME_COMPONENTS = {
     box: BoxGame, vend: VendGame, scratch: ScratchGame, hl: HLGame,
     slot: SlotGame, oxo: OxoGame, tetris: TetrisGame, fly: FlyGame,
@@ -22,22 +22,28 @@ const MINIGAME_COMPONENTS = {
 };
 
 export const GameEventOverlays = () => {
-    const { mgActive, mgType, storyActive, storyIndex, players, turn, jobResult, npcSelectActive } = useGameStore();
-    const { myUserId, status } = useNetworkStore();
+    // ★追加: minigameLiveState を取得
+    const { mgActive, mgType, storyActive, storyIndex, players, turn, jobResult, npcSelectActive, minigameLiveState } = useGameStore();
+    // ★追加: broadcastMinigameLive を取得
+    const { myUserId, status, broadcastMinigameLive } = useNetworkStore();
+    
     const cp = players[turn];
-
     const isMyTurn = status === 'connected' ? (cp?.userId === myUserId) : true;
     
     const { charInfoModal, roundSummary, acquiredCard, territorySelectOptions, mapData, territories, gameResult } = useGameStore();
     const [confirmEnd, setConfirmEnd] = useState(false);
     
-    // ▼ 追加: リトライ等で何度も報酬を受け取れないようにするためのフラグ
+    // リトライ等で何度も報酬を受け取れないようにするためのフラグ
     const [mgRewardGiven, setMgRewardGiven] = useState(false);
 
     useEffect(() => {
-        // ミニゲーム起動時に報酬受け取りフラグをリセット
         if (mgActive) setMgRewardGiven(false);
     }, [mgActive]);
+
+    // ★追加: 自分のターンの時だけ、リアルタイムデータをブロードキャストする関数
+    const syncLiveState = useCallback((data) => {
+        if (isMyTurn) broadcastMinigameLive(data);
+    }, [isMyTurn, broadcastMinigameLive]);
 
     const victoryPhrases = [
         "優勝！",
@@ -138,25 +144,26 @@ export const GameEventOverlays = () => {
                 </div>
             )}
 
-            {/* ▼ 修正: 古いHTML版ミニゲーム用UIを完全に削除し、新コンポーネントをフルスクリーンで呼び出す */}
             {mgActive && mgType && MINIGAME_COMPONENTS[mgType] && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#0c0a07' }}>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#0c0a07', pointerEvents: isMyTurn ? 'auto' : 'none' }}>
+                    {/* ★修正: pointerEvents を追加して、他人のターンなら操作を完全にブロック */}
                     {!isMyTurn && (
-                        <div style={{ position: 'absolute', top: 20, width: '100%', textAlign: 'center', color: 'white', zIndex: 10001, fontSize: '1.2rem', fontWeight: 'bold' }}>
-                            (他プレイヤーがミニゲーム中...)
+                        <div style={{ position: 'absolute', top: 20, width: '100%', textAlign: 'center', color: '#e8b84b', zIndex: 10001, fontSize: '1.2rem', fontWeight: 'bold', textShadow: '0 2px 4px #000' }}>
+                            (現在 {cp?.name} がプレイ中...)
                         </div>
                     )}
                     {React.createElement(MINIGAME_COMPONENTS[mgType], {
-                        isEventMode: true, // ▼ 追加: イベントモードであることを伝えるフラグ
+                        isEventMode: !isMyTurn, // ★修正: 他人のターンなら観戦(Event)モードにする
+                        syncLiveState: syncLiveState, // ★追加: リアルタイム同期用の送信関数
+                        liveState: minigameLiveState, // ★追加: リアルタイム同期用の受信データ
                         pts: cp?.p || 0,
                         addPts: (pts) => {
                             if (!isMyTurn || mgRewardGiven) return;
-                            setMgRewardGiven(true); // 報酬は1マスにつき1回のみ付与
+                            setMgRewardGiven(true);
                             
                             useGameStore.getState().updateCurrentPlayer(p => ({ p: p.p + pts }));
                             useGameStore.getState().incrementGameStat(cp.id, 'minigames', 1);
                             
-                            // ボードゲーム本編のボーナス: 勝ったらカードを引く
                             const cardId = Math.floor(Math.random() * 38);
                             useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
                             
@@ -172,8 +179,8 @@ export const GameEventOverlays = () => {
                             logMsg(`🎲 ミニゲームで ${pts}P 失った...`);
                         },
                         onBack: () => {
-                            // ミニゲーム画面を終了してマップへ戻る
-                            useGameStore.setState({ mgActive: false, mgType: null });
+                            if (!isMyTurn) return; // 観戦者は勝手に閉じられないようにする
+                            useGameStore.setState({ mgActive: false, mgType: null, minigameLiveState: null });
                         }
                     })}
                 </div>
