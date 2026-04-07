@@ -14,11 +14,11 @@ const SHOW_DEV_CONTROLS = false;
 // 開発者はここの `rate` の数値を変更するだけで、自動的に実際の抽選確率に反映されます。
 // （※合計が100になるように設定してください）
 const RARITY_CFG = {
-  UR:  { label:"UR",  gold:"#FFFFFF", bg:"#1A0033", border:"#D500F9", rate:1,  glow:"#FF00FF" },
-  SSR: { label:"SSR", gold:"#FFD700", bg:"#3D1500", border:"#FFD700", rate:3,  glow:"#FF8C00" },
-  SR:  { label:"SR",  gold:"#DA70D6", bg:"#1A0040", border:"#CE93D8", rate:5,  glow:"#9B59B6" },
+  UR:  { label:"UR",  gold:"#FFFFFF", bg:"#1A0033", border:"#D500F9", rate:3,  glow:"#FF00FF" },
+  SSR: { label:"SSR", gold:"#FFD700", bg:"#3D1500", border:"#FFD700", rate:5,  glow:"#FF8C00" },
+  SR:  { label:"SR",  gold:"#DA70D6", bg:"#1A0040", border:"#CE93D8", rate:10,  glow:"#9B59B6" },
   R:   { label:"R",   gold:"#64B5F6", bg:"#001A4A", border:"#4FC3F7", rate:30, glow:"#2196F3" },
-  N:   { label:"N",   gold:"#B0BEC5", bg:"#1A1A1A", border:"#78909C", rate:61, glow:"#607D8B" },
+  N:   { label:"N",   gold:"#B0BEC5", bg:"#1A1A1A", border:"#78909C", rate:52, glow:"#607D8B" },
 };
 // ==========================================
 
