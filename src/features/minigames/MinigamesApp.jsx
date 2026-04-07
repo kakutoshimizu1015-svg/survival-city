@@ -1,15 +1,14 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
+import { useNetworkStore } from '../../store/useNetworkStore';
 import { syncGachaData } from '../../utils/userLogic';
 
-// ▼ 4つに分割したミニゲームコンポーネントをインポート
 import { BoxGame, VendGame, ScratchGame, HLGame } from './MiniGamesPart1';
 import { SlotGame, OxoGame, TetrisGame, FlyGame } from './MiniGamesPart2';
 import { RatGame, DrunkGame, RainGame, KashiGame } from './MiniGamesPart3';
 import { BegGame, MusicGame, NegoGame } from './MiniGamesPart4';
 
-/* ─── メニュー画面用データ (全15種) ─────────────────────── */
 const ALL_GAMES = [
   { id: 'box', icon: '📦', name: '箱選びゲーム', desc: '10秒で当たりの箱を選べ！', reward: '最大+10P' },
   { id: 'vend', icon: '🏧', name: 'ボロ自販機ガチャ', desc: '3台から当たり1台を選べ！', reward: '最大+15P' },
@@ -28,7 +27,6 @@ const ALL_GAMES = [
   { id: 'nego', icon: '💬', name: '闇市交渉ゲーム', desc: '3アイテムを最高値で売れ！', reward: '最大+25P' }
 ];
 
-/* ─── タイトル（メニュー）コンポーネント ─────────────────── */
 function TitleScreen({ pts, onSelect }) {
   return (
     <div style={{
@@ -41,13 +39,10 @@ function TitleScreen({ pts, onSelect }) {
       <h1 style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: 'clamp(2.5rem,9vw,5rem)', lineHeight: .9, color: '#c97b2a', textShadow: '0 0 40px rgba(201,123,42,.4),4px 4px 0 #000', textAlign: 'center', margin: '.5rem 0' }}>
         路上<br/>ミニゲーム
       </h1>
-      
       <div style={{ width: 200, height: 2, background: 'linear-gradient(90deg,transparent,#c97b2a,transparent)', margin: '.7rem auto' }} />
-      
       <div style={{ background: '#241a0e', border: '1px solid #5a4228', borderRadius: 50, padding: '.4rem 1.4rem', fontSize: '1rem', color: '#e8b84b', fontWeight: 700, marginBottom: '1.2rem', boxShadow: '0 0 15px rgba(232,184,75,.15)' }}>
         💰 所持P: {pts}
       </div>
-      
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '.65rem', padding: '0 .8rem', width: '100%', maxWidth: 500 }}>
         {ALL_GAMES.map(g => (
           <div 
@@ -68,9 +63,7 @@ function TitleScreen({ pts, onSelect }) {
           </div>
         ))}
       </div>
-      
       <div style={{ height: '1rem' }} />
-      
       <button
         onClick={() => useGameStore.setState({ gamePhase: 'mode_select' })}
         style={{
@@ -88,15 +81,50 @@ function TitleScreen({ pts, onSelect }) {
   );
 }
 
-/* ════════════════════════════════════════
-   ROOT APP (統合コンポーネント)
-════════════════════════════════════════ */
-export default function MinigamesApp() {
-  // ▼ ユーザーの永続化データ（ガチャP）を取得
-  const { gachaPoints, addGachaAssets } = useUserStore();
-  const [screen, setScreen] = useState(null); // null = タイトル画面, 文字列 = ゲームID
+function IntroScreen({ game, isMyTurn, onStart, onBack }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(12, 10, 7, 0.95)', color: '#d4c4a0', fontFamily: "'Noto Sans JP',sans-serif", zIndex: 1100, padding: '2rem'
+    }}>
+      <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>{game.icon}</div>
+      <h2 style={{ fontSize: '2rem', color: '#c97b2a', marginBottom: '1rem' }}>{game.name}</h2>
+      <p style={{ fontSize: '1.2rem', textAlign: 'center', lineHeight: 1.6, marginBottom: '2rem', color: '#f0e8d0' }}>
+        {game.desc}
+      </p>
+      {isMyTurn ? (
+        <button
+          onClick={onStart}
+          style={{ background: 'linear-gradient(135deg,#c97b2a,#8a5010)', border: 'none', borderRadius: 12, color: '#f0e8d0', font: "700 1.2rem 'Noto Sans JP',sans-serif", padding: '1rem 3rem', cursor: 'pointer', boxShadow: '0 4px 20px rgba(201,123,42,.4)', marginBottom: '1rem' }}
+        >
+          ゲームスタート！
+        </button>
+      ) : (
+        <div style={{ background: '#241a0e', padding: '1rem 2rem', borderRadius: 12, border: '1px solid #5a4228', color: '#e8b84b', fontWeight: 'bold', marginBottom: '1rem', textAlign: 'center' }}>
+          現在他のプレイヤーがプレイ中です<br/>（観戦モード）
+        </div>
+      )}
+      <button onClick={onBack} style={{ background: 'transparent', border: '1px solid #7a6a4a', color: '#7a6a4a', padding: '0.5rem 1.5rem', borderRadius: 8, cursor: 'pointer' }}>
+        戻る
+      </button>
+    </div>
+  );
+}
 
-  // Pを加算し、即座にFirebaseへセーブするラッパー関数
+export default function MinigamesApp() {
+  const { gachaPoints, addGachaAssets } = useUserStore();
+  const { turn, players, selectedMiniGame, setGameState, minigameLiveState } = useGameStore();
+  const { myUserId, broadcastMinigameLive } = useNetworkStore();
+  
+  const isMyTurn = players[turn]?.id === myUserId;
+  const screen = selectedMiniGame;
+  const [gameStarted, setGameStarted] = useState(false);
+
+  // ★追加: 自分のターンなら高速でデータを送信するラッパー関数
+  const syncLiveState = useCallback((data) => {
+    if (isMyTurn) broadcastMinigameLive(data);
+  }, [isMyTurn, broadcastMinigameLive]);
+
   const addPts = useCallback(async (n) => { 
     if (n > 0) {
       addGachaAssets(0, n);
@@ -104,7 +132,6 @@ export default function MinigamesApp() {
     }
   }, [addGachaAssets]);
 
-  // Pを減算し、即座にFirebaseへセーブするラッパー関数
   const subPts = useCallback(async (n) => { 
     if (n > 0) {
       addGachaAssets(0, -n);
@@ -112,33 +139,66 @@ export default function MinigamesApp() {
     }
   }, [addGachaAssets]);
 
-  const goTitle = useCallback(() => setScreen(null), []);
-  const goGame = useCallback((id) => setScreen(id), []);
+  const goTitle = useCallback(() => {
+    setGameState({ selectedMiniGame: null, minigameLiveState: null }); 
+    setGameStarted(false);
+  }, [setGameState]);
 
-  // 全ゲームに共通で渡すProps
+  const goGame = useCallback((id) => {
+    if (isMyTurn) {
+        setGameState({ selectedMiniGame: id });
+        syncLiveState({ type: 'intro', id }); // イントロ画面への遷移も同期
+        setGameStarted(false); 
+    }
+  }, [isMyTurn, setGameState, syncLiveState]);
+
+  // ★追加: 他人がゲームを選んで観戦状態に入った時に、画面を自動で切り替える
+  useEffect(() => {
+    if (!isMyTurn && minigameLiveState?.type === 'intro') {
+        setGameStarted(false);
+    }
+    if (!isMyTurn && minigameLiveState?.gameStarted) {
+        setGameStarted(true);
+    }
+  }, [isMyTurn, minigameLiveState]);
+
+  // ★追加: syncLiveState と liveState を Props として渡す
   const gameProps = { 
     pts: gachaPoints, 
     addPts, 
     subPts, 
-    onBack: goTitle 
+    onBack: goTitle,
+    isEventMode: !isMyTurn,
+    syncLiveState,
+    liveState: minigameLiveState 
   };
 
-  // 選択されたscreen IDに応じてコンポーネントをマッピング
   const GameComponent = {
-    // Part 1
     box: BoxGame, vend: VendGame, scratch: ScratchGame, hl: HLGame,
-    // Part 2
     slot: SlotGame, oxo: OxoGame, tetris: TetrisGame, fly: FlyGame,
-    // Part 3
     rat: RatGame, drunk: DrunkGame, rain: RainGame, kashi: KashiGame,
-    // Part 4
     beg: BegGame, music: MusicGame, nego: NegoGame
   }[screen];
 
+  const selectedGameData = ALL_GAMES.find(g => g.id === screen);
+
   return (
-    <>
+    <div style={{ pointerEvents: isMyTurn ? 'auto' : 'none' }}>
       {!screen && <TitleScreen pts={gachaPoints} onSelect={goGame} />}
-      {screen && GameComponent && <GameComponent key={screen} {...gameProps} />}
-    </>
+      
+      {screen && !gameStarted && selectedGameData && (
+        <IntroScreen 
+          game={selectedGameData} 
+          isMyTurn={isMyTurn} 
+          onStart={() => {
+            setGameStarted(true);
+            syncLiveState({ type: 'intro', gameStarted: true }); // 開始合図を同期
+          }} 
+          onBack={goTitle} 
+        />
+      )}
+
+      {screen && gameStarted && GameComponent && <GameComponent key={screen} {...gameProps} />}
+    </div>
   );
 }
