@@ -55,26 +55,24 @@ export const MiniGameStylesPart2 = () => (
 );
 
 /* ════════════════════════════════════════
-   Game 5: 🎰 路上スロット (State同期バグ修正)
+   Game 5: 🎰 路上スロット (観戦対応版)
 ════════════════════════════════════════ */
-export function SlotGame({ pts, addPts, onBack, isEventMode }) {
+export function SlotGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const SYMS = ['🥫', '💰', '🍺', '🐀', '💊', '🚬', '🗑️'];
     const SH = 80;
     const TOT = SYMS.length * SH;
     
-    // UI描画用のState
     const [reels, setReels] = useState([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
     const [playing, setPlaying] = useState(false);
     const [result, setResult] = useState(null);
     
-    // ロジック（アニメーション）管理用のRef
     const rafRef = useRef(null);
     const offsets = useRef([0, 0, 0]);
     const innerRefs = useRef([]); 
     const reelsDataRef = useRef([{ stop: true, res: null }, { stop: true, res: null }, { stop: true, res: null }]);
 
     const { time, start, stop } = useTimer(10, () => {
-        if (playing) {
+        if (playing && !isObserver) {
             [0, 1, 2].forEach(i => stopReel(i));
         }
     });
@@ -94,9 +92,8 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
     }, [TOT]);
 
     const startSlot = () => {
+        if (isObserver) return; // 観戦者はスタートできない
         setPlaying(true); setResult(null); 
-        
-        // ▼ Stateの同期ズレを防ぐため、Refで直接状態を上書きしてからアニメーション開始
         reelsDataRef.current = [{ stop: false, res: null }, { stop: false, res: null }, { stop: false, res: null }];
         setReels([...reelsDataRef.current]);
         
@@ -109,7 +106,6 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
         let anyMoved = false;
         const speeds = [3.5, 4.2, 3.8];
         
-        // ▼ State (prev) ではなく、直接 Ref を参照して動かす
         reelsDataRef.current.forEach((r, i) => {
             if (!r.stop) {
                 offsets.current[i] = (offsets.current[i] + speeds[i]) % TOT;
@@ -124,17 +120,15 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
     };
 
     const stopReel = (i) => {
-        if (!playing) return;
+        if (!playing || isObserver) return; // 観戦者は止められない
         if (reelsDataRef.current[i].stop) return;
         
         reelsDataRef.current[i].stop = true;
         const iy = SH + TOT - offsets.current[i];
         reelsDataRef.current[i].res = SYMS[((Math.floor(iy / SH) % SYMS.length) + SYMS.length) % SYMS.length];
         
-        // UI更新のためにStateにセット
         setReels([...reelsDataRef.current]);
         
-        // 全て停止したかチェック
         if (reelsDataRef.current.every(r => r.stop)) {
             setPlaying(false); stop(); cancelAnimationFrame(rafRef.current);
             setTimeout(() => {
@@ -176,7 +170,7 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
                                         {Array(3).fill(0).map((_, r) => SYMS.map((s, si) => <div key={r + '-' + si} className="reel-sym">{s}</div>))}
                                     </div>
                                 </div>
-                                <button className={`stop-btn ${reels[i].stop && playing ? 'stopped' : ''}`} disabled={!playing || reels[i].stop} onPointerDown={() => stopReel(i)}>
+                                <button className={`stop-btn ${reels[i].stop && playing ? 'stopped' : ''}`} disabled={!playing || reels[i].stop || isObserver} onPointerDown={() => stopReel(i)}>
                                     {reels[i].stop && reels[i].res ? `✓ ${reels[i].res}` : 'STOP'}
                                 </button>
                             </div>
@@ -184,13 +178,17 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
                     </div>
                     <div className="slot-paylabel"><span>💰×3=+50P</span><span>3揃い=+20P</span><span>2揃い=+5P</span></div>
                     <div style={{ height: '.5rem' }}></div>
-                    {!playing && !result && <button className="slot-start" onPointerDown={startSlot}>🎰 スタート！</button>}
+                    {/* ▼ 観戦者にはスタートボタンを隠す */}
+                    {!playing && !result && !isObserver && <button className="slot-start" onPointerDown={startSlot}>🎰 スタート！</button>}
                 </div>
                 <ResultBox result={result} />
-                {result && (
+                {result && !isObserver && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
+                )}
+                {result && isObserver && (
+                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -198,9 +196,9 @@ export function SlotGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 6: ♟️ 路上○×ゲーム
+   Game 6: ♟️ 路上○×ゲーム (観戦対応版)
 ════════════════════════════════════════ */
-export function OxoGame({ pts, addPts, onBack, isEventMode }) {
+export function OxoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const { gachaPoints, addGachaAssets } = useUserStore();
     const [board, setBoard] = useState(Array(9).fill(null));
     const [bet, setBet] = useState(0);
@@ -212,7 +210,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
     const isCpuThinking = useRef(false);
 
     const { time, start, stop } = useTimer(5, () => {
-        if (phase === 'play' && turn === 'p') end('lose');
+        if (phase === 'play' && turn === 'p' && !isObserver) end('lose');
     });
 
     const init = useCallback(() => { 
@@ -220,6 +218,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
     }, [stop]);
 
     const startGame = (b) => {
+        if (isObserver) return;
         if (gachaPoints < b) { alert('Pが足りない！ゲーム本編で稼ごう！'); return; }
         addGachaAssets(0, -b);
         setBet(b); setPhase('play'); setTurn('p');
@@ -239,7 +238,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
     };
 
     const move = (i) => {
-        if (board[i] || phase !== 'play' || turn !== 'p' || isCpuThinking.current) return;
+        if (board[i] || phase !== 'play' || turn !== 'p' || isCpuThinking.current || isObserver) return;
         stop();
         
         const nb = [...board]; 
@@ -315,7 +314,7 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
                         <div style={{ fontSize: '.88rem', color: '#7a6a4a', textAlign: 'center', marginBottom: '.5rem', marginTop: '20px' }}>賭けPを選べ（所持: {gachaPoints}P）</div>
                         <div className="bet-btns">
                             {[3, 5, 8, 10].map(b => (
-                                <button key={b} className="bet-btn" onPointerDown={() => startGame(b)}>{b}P</button>
+                                <button key={b} className="bet-btn" disabled={isObserver} onPointerDown={() => startGame(b)}>{b}P</button>
                             ))}
                         </div>
                     </>
@@ -341,10 +340,13 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
                     </>
                 )}
                 <ResultBox result={result} />
-                {result && (
+                {result && !isObserver && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
+                )}
+                {result && isObserver && (
+                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -352,9 +354,9 @@ export function OxoGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 7: 📦 段ボールパズル
+   Game 7: 📦 段ボールパズル (壁反転バグ修正版)
 ════════════════════════════════════════ */
-export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
+export function TetrisGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const TET_COLS = 6, TET_ROWS = 10;
     const TET_WS = [1, 2, 2, 3, 1, 2];
     const TET_COLORS = ['#c97b2a', '#4e8539', '#2a5a8a', '#8a3a2a', '#6a4a8a', '#3a6a5a'];
@@ -395,7 +397,7 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
     }, []);
 
     const tetDrop = useCallback(() => {
-        if (!playing) return;
+        if (!playing || isObserver) return;
         const b = boardRef.current.map(r => [...r]);
         let land = -1; 
         for (let r = TET_ROWS - 1; r >= 0; r--) {
@@ -438,11 +440,17 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
             return; 
         }
         newPiece();
-    }, [playing, addPts, newPiece]);
+    }, [playing, addPts, newPiece, isObserver]);
 
     const tetMove = (d) => {
-        if (!playing) return;
-        posRef.current = Math.max(0, Math.min(TET_COLS - pwRef.current, pxRef.current + d)); 
+        if (!playing || isObserver) return;
+        const max = TET_COLS - pwRef.current;
+        posRef.current = Math.max(0, Math.min(max, pxRef.current + d)); 
+        
+        // ▼ 追加: ボタンで端に到達した場合、自動スライドの進行方向を即座に反転させる
+        if (posRef.current >= max) dirRef.current = -1;
+        if (posRef.current <= 0) dirRef.current = 1;
+        
         pxRef.current = Math.floor(posRef.current); 
         setPieceX(pxRef.current);
     };
@@ -485,17 +493,20 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
                 
                 {!result && (
                     <div style={{ display: 'flex', gap: '.55rem', justifyContent: 'center' }}>
-                        <button className="tet-btn" onPointerDown={() => tetMove(-1)}>◀ 左</button>
-                        <button className="tet-btn tet-btn-drop" onPointerDown={tetDrop}>⬇ DROP</button>
-                        <button className="tet-btn" onPointerDown={() => tetMove(1)}>右 ▶</button>
+                        <button className="tet-btn" onPointerDown={() => tetMove(-1)} disabled={isObserver}>◀ 左</button>
+                        <button className="tet-btn tet-btn-drop" onPointerDown={tetDrop} disabled={isObserver}>⬇ DROP</button>
+                        <button className="tet-btn" onPointerDown={() => tetMove(1)} disabled={isObserver}>右 ▶</button>
                     </div>
                 )}
                 
                 <ResultBox result={result} />
-                {result && (
+                {result && !isObserver && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
+                )}
+                {result && isObserver && (
+                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -503,9 +514,9 @@ export function TetrisGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 8: 🪰 ハエ捕まえ
+   Game 8: 🪰 ハエ捕まえ (観戦対応版)
 ════════════════════════════════════════ */
-export function FlyGame({ pts, addPts, onBack, isEventMode }) {
+export function FlyGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const [caught, setCaught] = useState(0);
     const [started, setStarted] = useState(false);
     const [result, setResult] = useState(null);
@@ -516,7 +527,7 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
     const pos = useRef({ x: 0, y: 0, vx: 3, vy: 3 });
     const caughtRef = useRef(0);
     const playingRef = useRef(false);
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endFly(); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endFly(); });
 
     const endFly = useCallback((forceWin = false) => {
         playingRef.current = false; stop(); cancelAnimationFrame(rafRef.current);
@@ -560,7 +571,7 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
     const catchFly = useCallback((e) => {
         e.stopPropagation();
         e.preventDefault();
-        if (!playingRef.current) return;
+        if (!playingRef.current || isObserver) return;
         
         caughtRef.current++; 
         setCaught(caughtRef.current);
@@ -582,9 +593,10 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
                 pos.current.vy = Math.sin(ang) * spd;
             }
         }
-    }, [endFly]);
+    }, [endFly, isObserver]);
 
     const startFly = useCallback(() => {
+        if (isObserver) return;
         setStarted(true); playingRef.current = true;
         if (arenaRef.current) {
             const W = arenaRef.current.offsetWidth / 2, H = arenaRef.current.offsetHeight / 2;
@@ -593,7 +605,7 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
         }
         start(); 
         rafRef.current = requestAnimationFrame(moveFly);
-    }, [start, moveFly]);
+    }, [start, moveFly, isObserver]);
 
     const init = useCallback(() => {
         playingRef.current = false; caughtRef.current = 0; setCaught(0); setStarted(false); setResult(null); setFxList([]);
@@ -616,7 +628,7 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
                 </div>
                 
                 <div ref={arenaRef} className="fly-arena">
-                    {!started && !result && (
+                    {!started && !result && !isObserver && (
                         <div className="fly-start-overlay">
                             <div onPointerDown={startFly} className="big-fly">🪰</div>
                             <div style={{ fontSize: '.85rem', color: '#7a6a4a' }}>タップでスタート！</div>
@@ -631,10 +643,13 @@ export function FlyGame({ pts, addPts, onBack, isEventMode }) {
                 </div>
                 
                 <ResultBox result={result} />
-                {result && (
+                {result && !isObserver && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
+                )}
+                {result && isObserver && (
+                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>

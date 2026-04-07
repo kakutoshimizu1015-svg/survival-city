@@ -42,9 +42,9 @@ export const MiniGameStylesPart3 = () => (
 );
 
 /* ════════════════════════════════════════
-   Game 9: 🐀 ネズミ追い払い (スポーンバグ修正版)
+   Game 9: 🐀 ネズミ追い払い (スポーンバグ修正＆観戦対応版)
 ════════════════════════════════════════ */
-export function RatGame({ pts, addPts, onBack, isEventMode }) {
+export function RatGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const { addGachaAssets } = useUserStore();
     const [rats, setRats] = useState([]);
     const [hitCount, setHitCount] = useState(0);
@@ -61,7 +61,7 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
     const stolenRef = useRef(0);
     const idRef = useRef(0);
 
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endRat(); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endRat(); });
 
     const spawnRat = useCallback(() => {
         if (!arenaRef.current || !playingRef.current) return;
@@ -96,7 +96,9 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
                 stolenRef.current += 2;
                 stolenOccurred = true;
                 
-                addGachaAssets(0, -2);
+                if (!isObserver) {
+                    addGachaAssets(0, -2);
+                }
                 
                 const fid = Date.now() + Math.random();
                 setFxList(prev => [...prev, { id: fid, x: cx, y: cy, t: '-2P', c: '#b52e1e' }]);
@@ -114,12 +116,12 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
         if (stolenOccurred) setStolen(stolenRef.current);
         
         rafRef.current = requestAnimationFrame(animate);
-    }, [addGachaAssets, spawnRat]);
+    }, [addGachaAssets, spawnRat, isObserver]);
 
     const hitRat = (e, id) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!playingRef.current) return;
+        if (!playingRef.current || isObserver) return; // 観戦者はブロック
         
         const r = ratsRef.current.find(x => x.id === id);
         if (!r || !r.alive) return;
@@ -144,15 +146,14 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
             win, icon: win ? '🐀' : '💀', main: win ? 'ネズミ撃退成功！' : '盗まれすぎた…', 
             sub: `撃退${hitRef.current}匹 / 損失${stolenRef.current}P`, pts: p 
         });
-        if (p > 0) addPts(p);
-    }, [stop, addPts]);
+        if (p > 0 && !isObserver) addPts(p);
+    }, [stop, addPts, isObserver]);
 
     const init = useCallback(() => {
         playingRef.current = false; cancelAnimationFrame(rafRef.current);
         hitRef.current = 0; stolenRef.current = 0; ratsRef.current = []; idRef.current = 0;
         setHitCount(0); setStolen(0); setRats([]); setFxList([]); setResult(null);
         
-        // ▼ 修正: フラグを先にtrueにしてからスポーン処理を行う
         playingRef.current = true; 
         for (let i = 0; i < 4; i++) spawnRat();
         
@@ -185,10 +186,13 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
                     {fxList.map(f => <div key={f.id} className="rat-fx" style={{ left: f.x, top: f.y, color: f.c }}>{f.t}</div>)}
                 </div>
                 <ResultBox result={result} />
-                {result && (
+                {result && !isObserver && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
+                )}
+                {result && isObserver && (
+                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -196,9 +200,9 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 10: 🍺 酔っ払いバランス (超速バグ修正版)
+   Game 10: 🍺 酔っ払いバランス (超速バグ修正＆観戦対応版)
 ════════════════════════════════════════ */
-export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
+export function DrunkGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const [bal, setBal] = useState(50);
     const [keep, setKeep] = useState(0);
     const [result, setResult] = useState(null);
@@ -211,7 +215,7 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
     const rafRef = useRef(null);
     const keepIvRef = useRef(null);
 
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endDrunk(true); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endDrunk(true); });
 
     const endDrunk = useCallback((survived) => {
         playingRef.current = false; stop(); 
@@ -224,13 +228,12 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
             win, icon: win ? '🎉' : '🌀', main: win ? 'バランスキープ成功！' : '倒れた！', 
             sub: `緑ゾーン内 ${keepRef.current}秒 / 6秒以上で成功`, pts: p 
         });
-        if (p > 0) addPts(p);
-    }, [stop, addPts]);
+        if (p > 0 && !isObserver) addPts(p);
+    }, [stop, addPts, isObserver]);
 
     const animate = useCallback(() => {
         if (!playingRef.current) return;
         
-        // ▼ 修正: 60fpsに合わせてドリフト値(加算量)を約1/15にスケーリング
         driftRef.current += (Math.random() - 0.5) * 0.06;
         driftRef.current = Math.max(-0.25, Math.min(0.25, driftRef.current)); 
         
@@ -238,16 +241,15 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
         setBal(balRef.current);
         
         if (balRef.current <= 0 || balRef.current >= 100) {
-            endDrunk(false);
+            if (!isObserver) endDrunk(false);
             return;
         }
         rafRef.current = requestAnimationFrame(animate);
-    }, [endDrunk]);
+    }, [endDrunk, isObserver]);
 
     const tap = (e, d) => {
         e.preventDefault();
-        if (!playingRef.current) return;
-        // ▼ 修正: タップによる戻し量も調整
+        if (!playingRef.current || isObserver) return; // 観戦者はブロック
         balRef.current = Math.max(0, Math.min(100, balRef.current - d * 10));
         driftRef.current -= d * 0.15; 
         setBal(balRef.current);
@@ -291,17 +293,20 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
                     </div>
                 </div>
                 
-                {!result && (
+                {!result && !isObserver && (
                     <div className="drunk-tap-area">
                         <div className="drunk-tap drunk-left" onPointerDown={(e) => tap(e, -1)}>← 左</div>
                         <div className="drunk-tap drunk-right" onPointerDown={(e) => tap(e, 1)}>右 →</div>
                     </div>
                 )}
                 <ResultBox result={result} />
-                {result && (
+                {result && !isObserver && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
+                )}
+                {result && isObserver && (
+                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -309,9 +314,9 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 11: ☔ 雨宿りダッシュ
+   Game 11: ☔ 雨宿りダッシュ (観戦対応版)
 ════════════════════════════════════════ */
-export function RainGame({ pts, addPts, onBack, isEventMode }) {
+export function RainGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const OBS_LIST = [
         { e: '👮', name: '警察', danger: 28 }, 
         { e: '🐕', name: '野良犬', danger: 20 }, 
@@ -333,7 +338,7 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
     const wetIvRef = useRef(null);
     const arenaRef = useRef(null);
     
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endRain(wetRef.current < 100); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endRain(wetRef.current < 100); });
 
     const endRain = useCallback((win) => {
         playingRef.current = false; stop(); 
@@ -344,8 +349,8 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
             win, icon: win ? '🏕️' : '💧', main: win ? '雨宿り成功！' : 'びしょ濡れで動けない…', 
             sub: `濡れ度 ${Math.floor(wetRef.current)}%`, pts: p 
         });
-        if (p > 0) addPts(p);
-    }, [stop, addPts]);
+        if (p > 0 && !isObserver) addPts(p);
+    }, [stop, addPts, isObserver]);
 
     const spawnObs = useCallback(() => {
         if (!playingRef.current) return;
@@ -367,14 +372,16 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
                     wetRef.current = Math.min(100, wetRef.current + target.danger);
                     setWet(wetRef.current);
                     setInfo(`💥 ${target.name}にぶつかった！`);
-                    if (wetRef.current >= 100) { endRain(false); return; }
+                    if (wetRef.current >= 100) { 
+                        if (!isObserver) endRain(false); 
+                        return; 
+                    }
                 } else {
                     setInfo('🌟 ジャンプ成功！');
                 }
             }
             
             if (ox < -20) {
-                // 画面左に消えたら次をスポーン
                 setObs({ x: -100, e: null });
                 setTimeout(() => { if (playingRef.current) spawnObs(); }, rnd(600, 1000));
                 return;
@@ -382,16 +389,16 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
             rafRef.current = requestAnimationFrame(tick);
         };
         rafRef.current = requestAnimationFrame(tick);
-    }, [endRain]);
+    }, [endRain, isObserver]);
 
     const doJump = useCallback((e) => {
         e.preventDefault();
-        if (!playingRef.current || jumpRef.current) return;
+        if (!playingRef.current || jumpRef.current || isObserver) return; // 観戦者はブロック
         jumpRef.current = true; setJumping(true);
         setTimeout(() => {
             if (playingRef.current) { jumpRef.current = false; setJumping(false); }
-        }, 500); // 滞空時間
-    }, []);
+        }, 500); 
+    }, [isObserver]);
 
     const init = useCallback(() => {
         playingRef.current = false; cancelAnimationFrame(rafRef.current); clearInterval(wetIvRef.current);
@@ -404,12 +411,12 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
             if (playingRef.current) {
                 wetRef.current = Math.min(100, wetRef.current + 1.5);
                 setWet(wetRef.current);
-                if (wetRef.current >= 100) endRain(false);
+                if (wetRef.current >= 100 && !isObserver) endRain(false);
             }
         }, 400);
         
         setTimeout(spawnObs, 1500);
-    }, [start, spawnObs, endRain]);
+    }, [start, spawnObs, endRain, isObserver]);
 
     useEffect(() => { init(); return () => { playingRef.current = false; clearInterval(wetIvRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
 
@@ -421,7 +428,7 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
                 <Instr>障害物がきたらジャンプ！濡れ度100%で失敗！</Instr>
                 <div style={{ width: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.72rem', marginBottom: 3 }}><span style={{ color: '#6af' }}>☔ 濡れ度</span><span style={{ color: '#6af' }}>{Math.floor(wet)}%</span></div>
-                    <div className="wet-track"><div className="wet-fill" style={{ width: `${wet}%` }} /></div>
+                    <div className="wet-track"><div className="wet-fill" style={{ width: `${wet}%`, height: '100%', background: 'linear-gradient(90deg,#3a7aa0,#1a3a6a)', borderRadius: 7, transition: 'width .4s ease' }} /></div>
                 </div>
                 
                 <div ref={arenaRef} className="rain-arena">
@@ -437,13 +444,16 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '.5rem', alignItems: 'center', width: '100%' }}>
                     <div style={{ fontSize: '.82rem', color: '#7a6a4a' }}>{info}</div>
-                    {!result && <button onPointerDown={doJump} className="jump-btn-big">⬆️ JUMP！</button>}
+                    {!result && !isObserver && <button onPointerDown={doJump} className="jump-btn-big">⬆️ JUMP！</button>}
                 </div>
                 <ResultBox result={result} />
-                {result && (
+                {result && !isObserver && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
+                )}
+                {result && isObserver && (
+                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>
@@ -451,9 +461,9 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 12: 🍱 炊き出し争奪戦
+   Game 12: 🍱 炊き出し争奪戦 (観戦対応版)
 ════════════════════════════════════════ */
-export function KashiGame({ pts, addPts, onBack, isEventMode }) {
+export function KashiGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const [score, setScore] = useState(0);
     const [rival, setRival] = useState(0);
     const [playerX, setPlayerX] = useState(40);
@@ -473,7 +483,7 @@ export function KashiGame({ pts, addPts, onBack, isEventMode }) {
     const bentoIvRef = useRef(null);
     const idRef = useRef(0);
 
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endKashi(); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endKashi(); });
 
     const endKashi = useCallback(() => {
         playingRef.current = false; stop();
@@ -486,9 +496,9 @@ export function KashiGame({ pts, addPts, onBack, isEventMode }) {
             win, icon: win ? '🍱' : '😢', main: win ? '弁当3個ゲット！' : '3個に届かなかった…', 
             sub: `あなた${scoreRef.current}個 / ライバル${rivalRef.current}個`, pts: p 
         });
-        if (p > 0) addPts(p);
+        if (p > 0 && !isObserver) addPts(p);
         setBentos([]);
-    }, [stop, addPts]);
+    }, [stop, addPts, isObserver]);
 
     const spawnBento = useCallback(() => {
         if (!playingRef.current) return;
@@ -499,7 +509,7 @@ export function KashiGame({ pts, addPts, onBack, isEventMode }) {
     const animate = useCallback(() => {
         if (!playingRef.current) return;
         
-        if (moveDirRef.current !== 0) {
+        if (moveDirRef.current !== 0 && !isObserver) {
             pxRef.current = Math.max(5, Math.min(95, pxRef.current + moveDirRef.current * 1.5));
             setPlayerX(pxRef.current);
         }
@@ -534,9 +544,9 @@ export function KashiGame({ pts, addPts, onBack, isEventMode }) {
         
         setBentos([...bentosRef.current]);
         rafRef.current = requestAnimationFrame(animate);
-    }, []);
+    }, [isObserver]);
 
-    const handlePointerDown = (e, dir) => { e.preventDefault(); moveDirRef.current = dir; };
+    const handlePointerDown = (e, dir) => { e.preventDefault(); if(!isObserver) moveDirRef.current = dir; };
     const handlePointerUp = (e) => { e.preventDefault(); moveDirRef.current = 0; };
 
     const init = useCallback(() => {
@@ -570,17 +580,20 @@ export function KashiGame({ pts, addPts, onBack, isEventMode }) {
                     {bentos.map(b => <div key={b.id} className="bento-el" style={{ left: `${b.x}%`, top: `${b.y}%` }}>🍱</div>)}
                 </div>
                 
-                {!result && (
+                {!result && !isObserver && (
                     <div className="kashi-btns">
                         <button className="kashi-mv-btn" onPointerDown={(e) => handlePointerDown(e, -1)} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>◀ 左</button>
                         <button className="kashi-mv-btn" onPointerDown={(e) => handlePointerDown(e, 1)} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp}>右 ▶</button>
                     </div>
                 )}
                 <ResultBox result={result} />
-                {result && (
+                {result && !isObserver && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
                         {isEventMode ? '⬅ マップに戻る' : '🔁 もう一度'}
                     </BtnPrim>
+                )}
+                {result && isObserver && (
+                    <div style={{ marginTop: '15px', color: '#7a6a4a', fontWeight: 'bold' }}>ターンプレイヤーの操作を待っています...</div>
                 )}
             </div>
         </div>

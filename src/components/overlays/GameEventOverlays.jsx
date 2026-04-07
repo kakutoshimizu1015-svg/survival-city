@@ -7,13 +7,11 @@ import { deckData } from '../../constants/cards';
 import { dealDamage } from '../../game/combat';
 import { setupNpcMove } from '../../game/skills'; 
 
-// ▼ 追加: 15種類のミニゲームコンポーネントをすべてインポート
 import { BoxGame, VendGame, ScratchGame, HLGame } from '../../features/minigames/MiniGamesPart1';
 import { SlotGame, OxoGame, TetrisGame, FlyGame } from '../../features/minigames/MiniGamesPart2';
 import { RatGame, DrunkGame, RainGame, KashiGame } from '../../features/minigames/MiniGamesPart3';
 import { BegGame, MusicGame, NegoGame } from '../../features/minigames/MiniGamesPart4';
 
-// ▼ 追加: コンポーネントのマッピング
 const MINIGAME_COMPONENTS = {
     box: BoxGame, vend: VendGame, scratch: ScratchGame, hl: HLGame,
     slot: SlotGame, oxo: OxoGame, tetris: TetrisGame, fly: FlyGame,
@@ -21,8 +19,28 @@ const MINIGAME_COMPONENTS = {
     beg: BegGame, music: MusicGame, nego: NegoGame
 };
 
+// ▼ 追加: ワンクッション表示用のミニゲーム説明データ
+const MINIGAME_INFO = {
+    box: { icon: '📦', name: '箱選びゲーム', desc: '10秒で当たりの箱を選べ！' },
+    vend: { icon: '🏧', name: 'ボロ自販機ガチャ', desc: '3台から当たり1台を選べ！' },
+    hl: { icon: '🃏', name: 'ハイ＆ロー', desc: '10秒で連続正解を重ねろ！' },
+    slot: { icon: '🎰', name: '路上スロット', desc: '10秒以内に全リールを止めろ！' },
+    fly: { icon: '🪰', name: 'ハエ捕まえ', desc: '10秒で3匹捕まえろ！' },
+    scratch: { icon: '🪙', name: 'スクラッチくじ', desc: '10秒で3マス削れ！' },
+    beg: { icon: '🙏', name: '物乞いゲーム', desc: '10秒で通行人に物乞い！' },
+    rain: { icon: '☔', name: '雨宿りダッシュ', desc: '10秒で障害物を越えろ！' },
+    kashi: { icon: '🍱', name: '炊き出し争奪戦', desc: '10秒で弁当を3個キャッチ！' },
+    oxo: { icon: '♟️', name: '路上○×ゲーム', desc: '5秒制限！CPUに勝て！' },
+    tetris: { icon: '📦', name: '段ボールパズル', desc: '制限時間なし！パーツを落とせ！' },
+    rat: { icon: '🐀', name: 'ネズミ追い払い', desc: '10秒！荷物を守れ！' },
+    drunk: { icon: '🍺', name: '酔っ払いバランス', desc: '10秒間バランスを保て！' },
+    music: { icon: '🎸', name: '路上ライブ音ゲー', desc: '10秒ライブで投げ銭！' },
+    nego: { icon: '💬', name: '闇市交渉ゲーム', desc: '3アイテムを最高値で売れ！' }
+};
+
 export const GameEventOverlays = () => {
-    const { mgActive, mgType, storyActive, storyIndex, players, turn, jobResult, npcSelectActive } = useGameStore();
+    // ▼ 修正: mgStarted（開始合図）を取得・管理
+    const { mgActive, mgType, mgStarted, storyActive, storyIndex, players, turn, jobResult, npcSelectActive } = useGameStore();
     const { myUserId, status } = useNetworkStore();
     const cp = players[turn];
 
@@ -30,18 +48,16 @@ export const GameEventOverlays = () => {
     
     const { charInfoModal, roundSummary, acquiredCard, territorySelectOptions, mapData, territories, gameResult } = useGameStore();
     const [confirmEnd, setConfirmEnd] = useState(false);
-    
-    // ▼ 追加: リトライ等で何度も報酬を受け取れないようにするためのフラグ
     const [mgRewardGiven, setMgRewardGiven] = useState(false);
 
     useEffect(() => {
-        // ミニゲーム起動時に報酬受け取りフラグをリセット
-        if (mgActive) setMgRewardGiven(false);
+        if (mgActive) {
+            setMgRewardGiven(false);
+        }
     }, [mgActive]);
 
     const victoryPhrases = [
-        "優勝！",
-        "空き缶拾って成り上がり！見事、人生カンストだ！！",
+        "優勝！", "空き缶拾って成り上がり！見事、人生カンストだ！！",
         "過酷なサバイバル完了！見事、路上卒業（路卒）だ！！",
         "勝った！勝った！今日の炊き出しは特上ステーキだ！",
         "段ボールハウス、本日解体！今夜はタワマン最上階だ！"
@@ -138,44 +154,64 @@ export const GameEventOverlays = () => {
                 </div>
             )}
 
-            {/* ▼ 修正: 古いHTML版ミニゲーム用UIを完全に削除し、新コンポーネントをフルスクリーンで呼び出す */}
+            {/* ▼ ミニゲーム開始制御と観戦フラグの追加 */}
             {mgActive && mgType && MINIGAME_COMPONENTS[mgType] && (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#0c0a07' }}>
-                    {!isMyTurn && (
-                        <div style={{ position: 'absolute', top: 20, width: '100%', textAlign: 'center', color: 'white', zIndex: 10001, fontSize: '1.2rem', fontWeight: 'bold' }}>
-                            (他プレイヤーがミニゲーム中...)
+                    {/* ワンクッション画面（まだ開始していない時） */}
+                    {!mgStarted ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#d4c4a0', padding: '20px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '5rem', marginBottom: '10px' }}>{MINIGAME_INFO[mgType]?.icon}</div>
+                            <h2 style={{ fontSize: '2rem', color: '#e8b84b', marginBottom: '10px' }}>{MINIGAME_INFO[mgType]?.name}</h2>
+                            <p style={{ fontSize: '1.2rem', marginBottom: '30px', background: 'rgba(0,0,0,0.5)', padding: '15px', borderRadius: '10px', border: '1px solid #5a4228', maxWidth: '400px' }}>
+                                {MINIGAME_INFO[mgType]?.desc}
+                            </p>
+                            
+                            {isMyTurn ? (
+                                <button 
+                                    onClick={() => useGameStore.setState({ mgStarted: true })}
+                                    style={{ background: 'linear-gradient(135deg,#c97b2a,#8a5010)', border: 'none', borderRadius: '12px', color: '#f0e8d0', fontWeight: 'bold', fontSize: '1.2rem', padding: '15px 40px', cursor: 'pointer', boxShadow: '0 4px 20px rgba(201,123,42,.4)' }}
+                                >
+                                    ▶ ゲームを開始する
+                                </button>
+                            ) : (
+                                <div style={{ fontSize: '1.2rem', color: '#7a6a4a', animation: 'lightBlink 1.5s infinite' }}>
+                                    ターンプレイヤーの開始を待っています...
+                                </div>
+                            )}
                         </div>
+                    ) : (
+                        /* ミニゲーム本編 */
+                        React.createElement(MINIGAME_COMPONENTS[mgType], {
+                            isEventMode: true,
+                            isObserver: !isMyTurn, // ▼ 追加: 観戦者フラグを渡す
+                            pts: cp?.p || 0,
+                            addPts: (pts) => {
+                                if (!isMyTurn || mgRewardGiven) return;
+                                setMgRewardGiven(true);
+                                
+                                useGameStore.getState().updateCurrentPlayer(p => ({ p: p.p + pts }));
+                                useGameStore.getState().incrementGameStat(cp.id, 'minigames', 1);
+                                
+                                const cardId = Math.floor(Math.random() * 38);
+                                useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
+                                
+                                const cardData = deckData.find(c => c.id === cardId) || { name: '謎のカード', icon: '🃏', color: '#fff', desc: '詳細不明' };
+                                useGameStore.setState({ acquiredCard: cardData });
+                                setTimeout(() => useGameStore.setState({ acquiredCard: null }), 2500); 
+                                
+                                logMsg(`🎲 ミニゲーム大成功！ +${pts}P と「${cardData.name}」を獲得！`);
+                            },
+                            subPts: (pts) => {
+                                if (!isMyTurn) return;
+                                useGameStore.getState().updateCurrentPlayer(p => ({ p: Math.max(0, p.p - pts) }));
+                                logMsg(`🎲 ミニゲームで ${pts}P 失った...`);
+                            },
+                            onBack: () => {
+                                // ▼ 修正: mgStarted もリセットする
+                                useGameStore.setState({ mgActive: false, mgType: null, mgStarted: false });
+                            }
+                        })
                     )}
-                    {React.createElement(MINIGAME_COMPONENTS[mgType], {
-                        isEventMode: true, // ▼ 追加: イベントモードであることを伝えるフラグ
-                        pts: cp?.p || 0,
-                        addPts: (pts) => {
-                            if (!isMyTurn || mgRewardGiven) return;
-                            setMgRewardGiven(true); // 報酬は1マスにつき1回のみ付与
-                            
-                            useGameStore.getState().updateCurrentPlayer(p => ({ p: p.p + pts }));
-                            useGameStore.getState().incrementGameStat(cp.id, 'minigames', 1);
-                            
-                            // ボードゲーム本編のボーナス: 勝ったらカードを引く
-                            const cardId = Math.floor(Math.random() * 38);
-                            useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
-                            
-                            const cardData = deckData.find(c => c.id === cardId) || { name: '謎のカード', icon: '🃏', color: '#fff', desc: '詳細不明' };
-                            useGameStore.setState({ acquiredCard: cardData });
-                            setTimeout(() => useGameStore.setState({ acquiredCard: null }), 2500); 
-                            
-                            logMsg(`🎲 ミニゲーム大成功！ +${pts}P と「${cardData.name}」を獲得！`);
-                        },
-                        subPts: (pts) => {
-                            if (!isMyTurn) return;
-                            useGameStore.getState().updateCurrentPlayer(p => ({ p: Math.max(0, p.p - pts) }));
-                            logMsg(`🎲 ミニゲームで ${pts}P 失った...`);
-                        },
-                        onBack: () => {
-                            // ミニゲーム画面を終了してマップへ戻る
-                            useGameStore.setState({ mgActive: false, mgType: null });
-                        }
-                    })}
                 </div>
             )}
 
