@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep } from './MiniGamesPart1';
+// ▼ 修正: Part1から同期用の syncToStore も読み込む
+import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep, syncToStore } from './MiniGamesPart1';
 import { useUserStore } from '../../store/useUserStore';
+import { useGameStore } from '../../store/useGameStore';
 
 export const MiniGameStylesPart3 = () => (
     <style>{`
@@ -42,10 +44,12 @@ export const MiniGameStylesPart3 = () => (
 );
 
 /* ════════════════════════════════════════
-   Game 9: 🐀 ネズミ追い払い (スポーンバグ修正版)
+   Game 9: 🐀 ネズミ追い払い (完全同期対応版)
 ════════════════════════════════════════ */
-export function RatGame({ pts, addPts, onBack, isEventMode }) {
+export function RatGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const { addGachaAssets } = useUserStore();
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const [rats, setRats] = useState([]);
     const [hitCount, setHitCount] = useState(0);
     const [stolen, setStolen] = useState(0);
@@ -61,10 +65,24 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
     const stolenRef = useRef(0);
     const idRef = useRef(0);
 
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endRat(); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endRat(); });
+
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.rats) setRats(mgSyncData.rats);
+            if (mgSyncData.hitCount !== undefined) setHitCount(mgSyncData.hitCount);
+            if (mgSyncData.stolen !== undefined) setStolen(mgSyncData.stolen);
+            if (mgSyncData.fxList) setFxList(mgSyncData.fxList);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+        }
+    }, [isObserver, mgSyncData]);
 
     const spawnRat = useCallback(() => {
-        if (!arenaRef.current || !playingRef.current) return;
+        if (!arenaRef.current || !playingRef.current || isObserver) return;
         const W = arenaRef.current.offsetWidth; 
         const H = arenaRef.current.offsetHeight;
         const edge = rnd(0, 3);
@@ -76,11 +94,12 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
         
         const r = { id: idRef.current++, x, y, alive: true, speed: rnd(10, 18) / 10 };
         ratsRef.current.push(r);
-    }, []);
+    }, [isObserver]);
 
     const animate = useCallback(() => {
-        if (!playingRef.current) return;
+        if (!playingRef.current || isObserver) return;
         let stolenOccurred = false;
+        let fxAdded = false;
         
         ratsRef.current.forEach(r => {
             if (!r.alive) return;
@@ -95,12 +114,21 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
                 r.alive = false;
                 stolenRef.current += 2;
                 stolenOccurred = true;
+                fxAdded = true;
                 
                 addGachaAssets(0, -2);
                 
                 const fid = Date.now() + Math.random();
-                setFxList(prev => [...prev, { id: fid, x: cx, y: cy, t: '-2P', c: '#b52e1e' }]);
-                setTimeout(() => setFxList(prev => prev.filter(f => f.id !== fid)), 600);
+                setFxList(prev => {
+                    const newList = [...prev, { id: fid, x: cx, y: cy, t: '-2P', c: '#b52e1e' }];
+                    syncToStore(isObserver, { fxList: newList });
+                    return newList;
+                });
+                setTimeout(() => setFxList(prev => {
+                    const newList = prev.filter(f => f.id !== fid);
+                    syncToStore(isObserver, { fxList: newList });
+                    return newList;
+                }), 600);
                 
                 setTimeout(() => { if (playingRef.current) spawnRat(); }, 1000);
             } else {
@@ -110,16 +138,21 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
             }
         });
         
-        setRats(ratsRef.current.filter(r => r.alive).map(r => ({ ...r })));
+        const currentRats = ratsRef.current.filter(r => r.alive).map(r => ({ ...r }));
+        setRats(currentRats);
         if (stolenOccurred) setStolen(stolenRef.current);
         
+        syncToStore(isObserver, { 
+            rats: currentRats, 
+            stolen: stolenRef.current 
+        });
+        
         rafRef.current = requestAnimationFrame(animate);
-    }, [addGachaAssets, spawnRat]);
+    }, [addGachaAssets, spawnRat, isObserver]);
 
     const hitRat = (e, id) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!playingRef.current) return;
+        e.preventDefault(); e.stopPropagation();
+        if (!playingRef.current || isObserver) return;
         
         const r = ratsRef.current.find(x => x.id === id);
         if (!r || !r.alive) return;
@@ -129,43 +162,55 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
         setHitCount(hitRef.current);
         
         const fid = Date.now() + Math.random();
-        setFxList(prev => [...prev, { id: fid, x: r.x, y: r.y, t: '💥', c: '#e8b84b' }]);
-        setTimeout(() => setFxList(prev => prev.filter(f => f.id !== fid)), 400);
+        setFxList(prev => {
+            const newList = [...prev, { id: fid, x: r.x, y: r.y, t: '💥', c: '#e8b84b' }];
+            syncToStore(isObserver, { hitCount: hitRef.current, fxList: newList });
+            return newList;
+        });
+        setTimeout(() => setFxList(prev => {
+            const newList = prev.filter(f => f.id !== fid);
+            syncToStore(isObserver, { fxList: newList });
+            return newList;
+        }), 400);
         
         setTimeout(() => { if (playingRef.current) spawnRat(); }, 800);
     };
 
     const endRat = useCallback(() => {
+        if (isObserver) return;
         playingRef.current = false; stop(); cancelAnimationFrame(rafRef.current);
         const win = stolenRef.current <= 3;
         const p = win ? Math.max(0, hitRef.current * 2 - stolenRef.current) : 0;
         
-        setResult({ 
+        const resObj = { 
             win, icon: win ? '🐀' : '💀', main: win ? 'ネズミ撃退成功！' : '盗まれすぎた…', 
             sub: `撃退${hitRef.current}匹 / 損失${stolenRef.current}P`, pts: p 
-        });
+        };
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj });
         if (p > 0) addPts(p);
-    }, [stop, addPts]);
+    }, [stop, addPts, isObserver]);
 
     const init = useCallback(() => {
+        if (isObserver) return;
         playingRef.current = false; cancelAnimationFrame(rafRef.current);
         hitRef.current = 0; stolenRef.current = 0; ratsRef.current = []; idRef.current = 0;
         setHitCount(0); setStolen(0); setRats([]); setFxList([]); setResult(null);
+        syncToStore(isObserver, { hitCount: 0, stolen: 0, rats: [], fxList: [], result: null });
         
-        // ▼ 修正: フラグを先にtrueにしてからスポーン処理を行う
         playingRef.current = true; 
         for (let i = 0; i < 4; i++) spawnRat();
         
         start();
         rafRef.current = requestAnimationFrame(animate);
-    }, [start, spawnRat, animate]);
+    }, [start, spawnRat, animate, isObserver]);
 
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
         <div style={S.screen}>
             <MiniGameStylesPart3 />
-            <GameHeader title="🐀 ネズミ追い払い" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
+            <GameHeader title="🐀 ネズミ追い払い" pts={pts} timer={playingRef.current ? displayTime : null} onBack={onBack} />
             <div style={S.body}>
                 <Instr>荷物💰を狙うネズミをタップ！盗まれ3P以下で成功！</Instr>
                 <div style={{ display: 'flex', gap: '.8rem', justifyContent: 'center' }}>
@@ -196,9 +241,11 @@ export function RatGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 10: 🍺 酔っ払いバランス (バグ完全修正版)
+   Game 10: 🍺 酔っ払いバランス (完全同期対応版)
 ════════════════════════════════════════ */
-export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
+export function DrunkGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const [bal, setBal] = useState(50);
     const [keep, setKeep] = useState(0);
     const [result, setResult] = useState(null);
@@ -212,13 +259,27 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
     const keepIvRef = useRef(null);
     const fnsRef = useRef({ addPts });
 
-    // 親からの関数更新による無限ループを防ぐ
     useEffect(() => { fnsRef.current = { addPts }; }, [addPts]);
 
-    // タイマー終了時の処理をRefに退避（依存配列の罠を回避）
+    const { time, start, stop } = useTimer(10, () => {
+        if (playingRef.current && endDrunkRef.current && !isObserver) endDrunkRef.current(true);
+    });
+
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.bal !== undefined) setBal(mgSyncData.bal);
+            if (mgSyncData.keep !== undefined) setKeep(mgSyncData.keep);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+        }
+    }, [isObserver, mgSyncData]);
+
     const endDrunkRef = useRef(null);
     endDrunkRef.current = (survived) => {
-        if (!playingRef.current) return;
+        if (!playingRef.current || isObserver) return;
         playingRef.current = false; stop(); 
         clearInterval(driftIvRef.current); 
         clearInterval(keepIvRef.current);
@@ -226,44 +287,44 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
         const win = survived && keepRef.current >= 6;
         const p = win ? Math.floor(keepRef.current * 1.5) : 0;
         
-        setResult({ 
+        const resObj = { 
             win, icon: win ? '🎉' : '🌀', main: win ? 'バランスキープ成功！' : '倒れた！', 
             sub: `緑ゾーン内 ${keepRef.current}秒 / 6秒以上で成功`, pts: p 
-        });
+        };
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj });
         if (p > 0) fnsRef.current.addPts(p);
     };
 
-    const { time, start, stop } = useTimer(10, () => {
-        if (playingRef.current && endDrunkRef.current) endDrunkRef.current(true);
-    });
-
     const tap = (e, d) => {
         e.preventDefault();
-        if (!playingRef.current) return;
-        // ▼ 元HTMLと完全に同じ数値・計算式に戻しました
+        if (!playingRef.current || isObserver) return;
         balRef.current = Math.max(0, Math.min(100, balRef.current - d * 15));
         driftRef.current -= d * 1.5; 
         setBal(balRef.current);
+        syncToStore(isObserver, { bal: balRef.current });
     };
 
     const init = useCallback(() => {
+        if (isObserver) return;
         playingRef.current = false; 
         clearInterval(driftIvRef.current); 
         clearInterval(keepIvRef.current);
         
         balRef.current = 50; driftRef.current = 0; keepRef.current = 0;
         setBal(50); setKeep(0); setResult(null);
+        syncToStore(isObserver, { bal: 50, keep: 0, result: null });
         
         playingRef.current = true; start();
         
-        // ▼ 60fps更新をやめ、元HTMLと同じ250ms(0.25秒)間隔の更新に戻しました
         driftIvRef.current = setInterval(() => {
-            if (!playingRef.current) return;
+            if (!playingRef.current || isObserver) return;
             driftRef.current += (Math.random() - 0.5) * 3.5;
             driftRef.current = Math.max(-5.5, Math.min(5.5, driftRef.current)); 
             balRef.current = Math.max(0, Math.min(100, balRef.current + driftRef.current));
             
             setBal(balRef.current);
+            syncToStore(isObserver, { bal: balRef.current });
             
             if (balRef.current <= 0 || balRef.current >= 100) {
                 if (endDrunkRef.current) endDrunkRef.current(false);
@@ -271,13 +332,14 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
         }, 250);
         
         keepIvRef.current = setInterval(() => {
-            if (!playingRef.current) return;
+            if (!playingRef.current || isObserver) return;
             if (balRef.current >= 35 && balRef.current <= 65) {
                 keepRef.current++;
                 setKeep(keepRef.current);
+                syncToStore(isObserver, { keep: keepRef.current });
             }
         }, 1000);
-    }, [start]);
+    }, [start, isObserver]);
 
     useEffect(() => { 
         init(); 
@@ -291,7 +353,7 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
     return (
         <div style={S.screen}>
             <MiniGameStylesPart3 />
-            <GameHeader title="🍺 酔っ払いバランス" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
+            <GameHeader title="🍺 酔っ払いバランス" pts={pts} timer={playingRef.current ? displayTime : null} onBack={onBack} />
             <div style={S.body}>
                 <Instr>緑ゾーンを6秒以上キープで成功！<br/>左に傾いたら右タップ、右なら左タップ！</Instr>
                 
@@ -326,15 +388,17 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 11: ☔ 雨宿りダッシュ
+   Game 11: ☔ 雨宿りダッシュ (完全同期対応版)
 ════════════════════════════════════════ */
-export function RainGame({ pts, addPts, onBack, isEventMode }) {
+export function RainGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const OBS_LIST = [
         { e: '👮', name: '警察', danger: 28 }, 
         { e: '🐕', name: '野良犬', danger: 20 }, 
         { e: '💦', name: '水たまり', danger: 12 }, 
         { e: '🧟', name: 'おじさん', danger: 25 }
     ];
+
+    const mgSyncData = useGameStore(s => s.mgSyncData);
 
     const [wet, setWet] = useState(0);
     const [obs, setObs] = useState({ x: -100, e: null });
@@ -348,92 +412,120 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
     
     const rafRef = useRef(null);
     const wetIvRef = useRef(null);
-    const arenaRef = useRef(null);
     
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endRain(wetRef.current < 100); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endRain(wetRef.current < 100); });
+
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.wet !== undefined) setWet(mgSyncData.wet);
+            if (mgSyncData.obs) setObs(mgSyncData.obs);
+            if (mgSyncData.info !== undefined) setInfo(mgSyncData.info);
+            if (mgSyncData.jumping !== undefined) setJumping(mgSyncData.jumping);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+        }
+    }, [isObserver, mgSyncData]);
 
     const endRain = useCallback((win) => {
+        if (isObserver) return;
         playingRef.current = false; stop(); 
         clearInterval(wetIvRef.current); cancelAnimationFrame(rafRef.current);
         
         const p = win ? Math.max(2, Math.floor(12 * (1 - wetRef.current / 100))) : 0;
-        setResult({ 
+        const resObj = { 
             win, icon: win ? '🏕️' : '💧', main: win ? '雨宿り成功！' : 'びしょ濡れで動けない…', 
             sub: `濡れ度 ${Math.floor(wetRef.current)}%`, pts: p 
-        });
+        };
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj });
         if (p > 0) addPts(p);
-    }, [stop, addPts]);
+    }, [stop, addPts, isObserver]);
 
     const spawnObs = useCallback(() => {
-        if (!playingRef.current) return;
+        if (!playingRef.current || isObserver) return;
         const target = OBS_LIST[rnd(0, OBS_LIST.length - 1)];
         setInfo(`⚠️ ${target.name}が来る！`); 
+        syncToStore(isObserver, { info: `⚠️ ${target.name}が来る！` });
         
-        let ox = 120; // 画面右外 (100% + 20%)
+        let ox = 120; // 画面右外
         let hit = false;
         
         const tick = () => {
-            if (!playingRef.current) return;
-            ox -= 2.5; // スピード
+            if (!playingRef.current || isObserver) return;
+            ox -= 2.5;
             setObs({ x: ox, e: target.e });
+            syncToStore(isObserver, { obs: { x: ox, e: target.e } });
             
-            // 当たり判定 (ランナーは18%付近)
             if (!hit && ox < 25 && ox > 12) {
                 hit = true;
                 if (!jumpRef.current) {
                     wetRef.current = Math.min(100, wetRef.current + target.danger);
                     setWet(wetRef.current);
                     setInfo(`💥 ${target.name}にぶつかった！`);
+                    syncToStore(isObserver, { wet: wetRef.current, info: `💥 ${target.name}にぶつかった！` });
                     if (wetRef.current >= 100) { endRain(false); return; }
                 } else {
                     setInfo('🌟 ジャンプ成功！');
+                    syncToStore(isObserver, { info: '🌟 ジャンプ成功！' });
                 }
             }
             
             if (ox < -20) {
-                // 画面左に消えたら次をスポーン
                 setObs({ x: -100, e: null });
+                syncToStore(isObserver, { obs: { x: -100, e: null } });
                 setTimeout(() => { if (playingRef.current) spawnObs(); }, rnd(600, 1000));
                 return;
             }
             rafRef.current = requestAnimationFrame(tick);
         };
         rafRef.current = requestAnimationFrame(tick);
-    }, [endRain]);
+    }, [endRain, isObserver, OBS_LIST]);
 
     const doJump = useCallback((e) => {
         e.preventDefault();
-        if (!playingRef.current || jumpRef.current) return;
+        if (!playingRef.current || jumpRef.current || isObserver) return;
         jumpRef.current = true; setJumping(true);
+        syncToStore(isObserver, { jumping: true });
+        
         setTimeout(() => {
-            if (playingRef.current) { jumpRef.current = false; setJumping(false); }
-        }, 500); // 滞空時間
-    }, []);
+            if (playingRef.current) { 
+                jumpRef.current = false; setJumping(false); 
+                syncToStore(isObserver, { jumping: false });
+            }
+        }, 500); 
+    }, [isObserver]);
 
     const init = useCallback(() => {
+        if (isObserver) return;
         playingRef.current = false; cancelAnimationFrame(rafRef.current); clearInterval(wetIvRef.current);
         jumpRef.current = false; wetRef.current = 0;
+        
         setWet(0); setJumping(false); setObs({ x: -100, e: null }); setInfo('障害物を待て…'); setResult(null);
+        syncToStore(isObserver, { wet: 0, jumping: false, obs: { x: -100, e: null }, info: '障害物を待て…', result: null });
         
         playingRef.current = true; start();
         
         wetIvRef.current = setInterval(() => {
-            if (playingRef.current) {
+            if (playingRef.current && !isObserver) {
                 wetRef.current = Math.min(100, wetRef.current + 1.5);
                 setWet(wetRef.current);
+                syncToStore(isObserver, { wet: wetRef.current });
                 if (wetRef.current >= 100) endRain(false);
             }
         }, 400);
         
         setTimeout(spawnObs, 1500);
-    }, [start, spawnObs, endRain]);
+    }, [start, spawnObs, endRain, isObserver]);
 
     useEffect(() => { init(); return () => { playingRef.current = false; clearInterval(wetIvRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
         <div style={S.screen}>
             <MiniGameStylesPart3 />
-            <GameHeader title="☔ 雨宿りダッシュ" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
+            <GameHeader title="☔ 雨宿りダッシュ" pts={pts} timer={playingRef.current ? displayTime : null} onBack={onBack} />
             <div style={S.body}>
                 <Instr>障害物がきたらジャンプ！濡れ度100%で失敗！</Instr>
                 <div style={{ width: '100%' }}>
@@ -441,8 +533,8 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
                     <div className="wet-track"><div className="wet-fill" style={{ width: `${wet}%` }} /></div>
                 </div>
                 
-                <div ref={arenaRef} className="rain-arena">
-                    {/* 背景の雨 */}
+                <div className="rain-arena">
+                    {/* 背景の雨 (同期せず個別に描画でOK) */}
                     {playingRef.current && Array.from({ length: 8 }).map((_, i) => (
                         <div key={i} className="rain-drop" style={{ left: `${rnd(0, 100)}%`, animationDuration: `${rnd(6, 12) / 10}s`, animationDelay: `${rnd(0, 10) / 10}s` }}>|</div>
                     ))}
@@ -468,9 +560,11 @@ export function RainGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 12: 🍱 炊き出し争奪戦
+   Game 12: 🍱 炊き出し争奪戦 (完全同期対応版)
 ════════════════════════════════════════ */
-export function KashiGame({ pts, addPts, onBack, isEventMode }) {
+export function KashiGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const [score, setScore] = useState(0);
     const [rival, setRival] = useState(0);
     const [playerX, setPlayerX] = useState(40);
@@ -490,31 +584,51 @@ export function KashiGame({ pts, addPts, onBack, isEventMode }) {
     const bentoIvRef = useRef(null);
     const idRef = useRef(0);
 
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endKashi(); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endKashi(); });
+
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.score !== undefined) setScore(mgSyncData.score);
+            if (mgSyncData.rival !== undefined) setRival(mgSyncData.rival);
+            if (mgSyncData.playerX !== undefined) setPlayerX(mgSyncData.playerX);
+            if (mgSyncData.rivalX !== undefined) setRivalX(mgSyncData.rivalX);
+            if (mgSyncData.bentos) setBentos(mgSyncData.bentos);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+        }
+    }, [isObserver, mgSyncData]);
 
     const endKashi = useCallback(() => {
+        if (isObserver) return;
         playingRef.current = false; stop();
         clearInterval(bentoIvRef.current); cancelAnimationFrame(rafRef.current);
         
         const win = scoreRef.current >= 3; 
         const p = win ? scoreRef.current * 3 : 0;
         
-        setResult({ 
+        const resObj = { 
             win, icon: win ? '🍱' : '😢', main: win ? '弁当3個ゲット！' : '3個に届かなかった…', 
             sub: `あなた${scoreRef.current}個 / ライバル${rivalRef.current}個`, pts: p 
-        });
+        };
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj });
+        
         if (p > 0) addPts(p);
         setBentos([]);
-    }, [stop, addPts]);
+        syncToStore(isObserver, { bentos: [] });
+    }, [stop, addPts, isObserver]);
 
     const spawnBento = useCallback(() => {
-        if (!playingRef.current) return;
+        if (!playingRef.current || isObserver) return;
         const b = { id: idRef.current++, x: rnd(15, 85), y: -10, hit: false };
         bentosRef.current.push(b);
-    }, []);
+    }, [isObserver]);
 
     const animate = useCallback(() => {
-        if (!playingRef.current) return;
+        if (!playingRef.current || isObserver) return;
         
         if (moveDirRef.current !== 0) {
             pxRef.current = Math.max(5, Math.min(95, pxRef.current + moveDirRef.current * 1.5));
@@ -550,30 +664,41 @@ export function KashiGame({ pts, addPts, onBack, isEventMode }) {
         }
         
         setBentos([...bentosRef.current]);
+        
+        syncToStore(isObserver, {
+            playerX: pxRef.current,
+            rivalX: rxRef.current,
+            bentos: [...bentosRef.current],
+            score: scoreRef.current,
+            rival: rivalRef.current
+        });
+        
         rafRef.current = requestAnimationFrame(animate);
-    }, []);
+    }, [isObserver]);
 
-    const handlePointerDown = (e, dir) => { e.preventDefault(); moveDirRef.current = dir; };
-    const handlePointerUp = (e) => { e.preventDefault(); moveDirRef.current = 0; };
+    const handlePointerDown = (e, dir) => { e.preventDefault(); if(!isObserver) moveDirRef.current = dir; };
+    const handlePointerUp = (e) => { e.preventDefault(); if(!isObserver) moveDirRef.current = 0; };
 
     const init = useCallback(() => {
+        if (isObserver) return;
         playingRef.current = false; cancelAnimationFrame(rafRef.current); clearInterval(bentoIvRef.current);
         moveDirRef.current = 0; pxRef.current = 40; rxRef.current = 68; scoreRef.current = 0; rivalRef.current = 0;
         bentosRef.current = []; idRef.current = 0;
         
         setScore(0); setRival(0); setPlayerX(40); setRivalX(68); setBentos([]); setResult(null);
+        syncToStore(isObserver, { score: 0, rival: 0, playerX: 40, rivalX: 68, bentos: [], result: null });
         
         playingRef.current = true; start();
         bentoIvRef.current = setInterval(spawnBento, 1000);
         rafRef.current = requestAnimationFrame(animate);
-    }, [start, spawnBento, animate]);
+    }, [start, spawnBento, animate, isObserver]);
 
     useEffect(() => { init(); return () => { playingRef.current = false; clearInterval(bentoIvRef.current); cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
         <div style={S.screen}>
             <MiniGameStylesPart3 />
-            <GameHeader title="🍱 炊き出し争奪戦" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
+            <GameHeader title="🍱 炊き出し争奪戦" pts={pts} timer={playingRef.current ? displayTime : null} onBack={onBack} />
             <div style={S.body}>
                 <Instr>◀▶を押し続けて移動し弁当をキャッチ！3個で成功！</Instr>
                 <div style={{ display: 'flex', gap: '.8rem', justifyContent: 'center' }}>

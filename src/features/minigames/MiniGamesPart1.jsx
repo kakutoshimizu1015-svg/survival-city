@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useGameStore } from '../../store/useGameStore'; // ▼ 追加: 状態同期用Store
 
 /* ─── 共通ユーティリティ (他Partでも利用) ───────────────── */
 export const rnd = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
@@ -100,46 +101,107 @@ export function useTimer(secs, onEnd) {
     return { time, start, stop };
 }
 
+// ▼ 共通: 状態をNetwork経由で他人に送る関数 (プレイヤー側のみ実行される)
+export const syncToStore = (isObserver, data) => {
+    if (!isObserver) {
+        useGameStore.setState(s => ({ mgSyncData: { ...(s.mgSyncData || {}), ...data } }));
+    }
+};
+
 /* ════════════════════════════════════════
-   Game 1: 📦 箱選びゲーム
+   Game 1: 📦 箱選びゲーム (完全同期対応版)
 ════════════════════════════════════════ */
-export function BoxGame({ pts, addPts, onBack, isEventMode }) {
+export function BoxGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const [msg, setMsg] = useState('シャッフル中…');
     const [states, setStates] = useState(['', '', '']);
     const [result, setResult] = useState(null);
     const doneRef = useRef(false);
     const winRef = useRef(-1);
-    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current) pick(rnd(0, 2)); });
+    
+    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current && !isObserver) pick(rnd(0, 2)); });
+
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 送られてきたSyncDataを画面に反映させる
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.msg !== undefined) setMsg(mgSyncData.msg);
+            if (mgSyncData.states) setStates(mgSyncData.states);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+        }
+    }, [isObserver, mgSyncData]);
+
+    const updateStates = (newStates) => {
+        setStates(newStates);
+        syncToStore(isObserver, { states: newStates });
+    };
+
+    const updateMsg = (m) => {
+        setMsg(m);
+        syncToStore(isObserver, { msg: m });
+    };
 
     const pick = useCallback(async (idx) => {
-        if (doneRef.current) return;
+        if (doneRef.current || isObserver) return;
         doneRef.current = true; stop();
         const win = idx === winRef.current;
-        setStates(prev => { const n = [...prev]; n[idx] = win ? 'win' : 'lose'; return n; });
+        
+        let curStates = [...states];
+        curStates[idx] = win ? 'win' : 'lose';
+        updateStates(curStates);
+        
         await sleep(400);
-        if (!win) setStates(prev => { const n = [...prev]; n[winRef.current] = 'win'; return n; });
+        if (!win) {
+            curStates = [...curStates];
+            curStates[winRef.current] = 'win';
+            updateStates(curStates);
+        }
         await sleep(200);
-        setStates(prev => prev.map((s, i) => (i === idx || i === winRef.current) ? s : 'dim'));
+        
+        curStates = curStates.map((s, i) => (i === idx || i === winRef.current) ? s : 'dim');
+        updateStates(curStates);
         
         const prizes = [{ e: '🥫', l: '空き缶発見！', p: 3 }, { e: '💰', l: 'お金を見つけた！', p: 10 }, { e: '🍺', l: 'ビール缶ゲット！', p: 5 }];
         const pr = prizes[rnd(0, 2)];
-        if (win) { addPts(pr.p); setResult({ win: true, icon: pr.e, main: pr.l, pts: pr.p }); }
-        else setResult({ win: false, icon: '💀', main: 'ハズレ…', sub: 'また挑戦しな', pts: 0 });
-    }, [stop, addPts]);
+        
+        let resObj;
+        if (win) { 
+            addPts(pr.p); 
+            resObj = { win: true, icon: pr.e, main: pr.l, pts: pr.p }; 
+        } else {
+            resObj = { win: false, icon: '💀', main: 'ハズレ…', sub: 'また挑戦しな', pts: 0 };
+        }
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj });
+    }, [stop, addPts, states, isObserver]);
 
     const init = useCallback(async () => {
+        if (isObserver) return;
         doneRef.current = false; winRef.current = rnd(0, 2);
-        setResult(null); setMsg('シャッフル中…'); setStates(['', '', '']);
+        setResult(null); updateMsg('シャッフル中…'); updateStates(['', '', '']);
+        syncToStore(isObserver, { result: null });
+
         for (let r = 0; r < 6; r++) {
             const a = rnd(0, 2), b = (a + 1 + rnd(0, 1)) % 3;
-            setStates(prev => { const n = [...prev]; n[a] = 'shake'; n[b] = 'shake'; return n; });
+            setStates(prev => { 
+                const n = [...prev]; n[a] = 'shake'; n[b] = 'shake'; 
+                syncToStore(isObserver, { states: n });
+                return n; 
+            });
             await sleep(300);
-            setStates(prev => { const n = [...prev]; if (n[a] === 'shake') n[a] = ''; if (n[b] === 'shake') n[b] = ''; return n; });
+            setStates(prev => { 
+                const n = [...prev]; if (n[a] === 'shake') n[a] = ''; if (n[b] === 'shake') n[b] = ''; 
+                syncToStore(isObserver, { states: n });
+                return n; 
+            });
             await sleep(70);
         }
-        setMsg('どれだ！10秒以内に選べ！');
+        updateMsg('どれだ！10秒以内に選べ！');
         start();
-    }, [start]);
+    }, [start, isObserver]);
 
     useEffect(() => { init(); }, [init]);
 
@@ -147,7 +209,7 @@ export function BoxGame({ pts, addPts, onBack, isEventMode }) {
         width: 100, height: 110,
         background: s === 'win' ? 'linear-gradient(145deg,#2a5a18,#163a0a)' : s === 'lose' ? 'linear-gradient(145deg,#5a1818,#3a0a0a)' : 'linear-gradient(145deg,#9b7520,#5c4010)',
         border: `3px solid ${s === 'win' ? '#4a8a28' : s === 'lose' ? '#8a2828' : '#7a5a18'}`,
-        borderRadius: 8, cursor: doneRef.current ? 'default' : 'pointer',
+        borderRadius: 8, cursor: (doneRef.current || isObserver) ? 'default' : 'pointer',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         fontSize: '2.6rem', position: 'relative', boxShadow: '0 6px 20px rgba(0,0,0,.6)',
         opacity: s === 'dim' ? 0.4 : 1, transition: 'transform .18s',
@@ -157,12 +219,12 @@ export function BoxGame({ pts, addPts, onBack, isEventMode }) {
 
     return (
         <div style={S.screen}>
-            <GameHeader title="📦 箱選びゲーム" pts={pts} timer={time} onBack={onBack} />
+            <GameHeader title="📦 箱選びゲーム" pts={pts} timer={displayTime} onBack={onBack} />
             <div style={S.body}>
                 <Instr>{msg}</Instr>
                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                     {states.map((s, i) => (
-                        <div key={i} style={boxStyle(s)} onClick={() => !doneRef.current && s !== 'dim' && pick(i)}>
+                        <div key={i} style={boxStyle(s)} onPointerDown={() => !doneRef.current && !isObserver && s !== 'dim' && pick(i)}>
                             {s === 'win' ? '✅' : s === 'lose' ? '❌' : '📦'}
                             <span style={{ position: 'absolute', bottom: 6, fontFamily: "'Bebas Neue',sans-serif", fontSize: '.75rem', color: 'rgba(255,255,255,.4)' }}>BOX {i + 1}</span>
                         </div>
@@ -180,13 +242,15 @@ export function BoxGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 2: 🏧 ボロ自販機ガチャ
+   Game 2: 🏧 ボロ自販機ガチャ (完全同期対応版)
 ════════════════════════════════════════ */
 const VEND_WIN = [{ e: '💰', l: 'コイン大量発見！', p: 15 }, { e: '🥤', l: 'コーヒー缶！', p: 10 }, { e: '🎁', l: '謎のプレゼント！', p: 12 }];
 const VEND_LOSE = [{ e: '❌', l: '空っぽ…', p: 0 }, { e: '🕷️', l: 'クモが出た！', p: 0 }, { e: '💨', l: '何も出てこない…', p: 0 }];
 const VEND_COLORS = [['#2a3020', '#3d4a30', '#4a6a38'], ['#2a2010', '#3d3018', '#6a5020'], ['#102030', '#182838', '#204858']];
 
-export function VendGame({ pts, addPts, onBack, isEventMode }) {
+export function VendGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const [choices, setChoices] = useState([]);
     const [screens, setScreens] = useState(['?', '?', '?']);
     const [dimmed, setDimmed] = useState([false, false, false]);
@@ -194,53 +258,83 @@ export function VendGame({ pts, addPts, onBack, isEventMode }) {
     const [showCoin, setShowCoin] = useState(-1);
     const doneRef = useRef(false);
     const choicesRef = useRef([]);
-    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current) pick(rnd(0, 2)); });
+    
+    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current && !isObserver) pick(rnd(0, 2)); });
+
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.choices) setChoices(mgSyncData.choices);
+            if (mgSyncData.screens) setScreens(mgSyncData.screens);
+            if (mgSyncData.dimmed) setDimmed(mgSyncData.dimmed);
+            if (mgSyncData.showCoin !== undefined) setShowCoin(mgSyncData.showCoin);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+        }
+    }, [isObserver, mgSyncData]);
 
     const pick = useCallback(async (idx) => {
-        if (doneRef.current) return;
+        if (doneRef.current || isObserver) return;
         doneRef.current = true; stop();
         const ch = choicesRef.current;
+        
         for (const f of ['⚙️', '🔄', '⚡', '🔄']) {
-            setScreens(prev => { const n = [...prev]; n[idx] = f; return n; });
+            setScreens(prev => { const n = [...prev]; n[idx] = f; syncToStore(isObserver, { screens: n }); return n; });
             await sleep(130);
         }
-        setScreens(prev => { const n = [...prev]; n[idx] = ch[idx].e; return n; });
-        if (ch[idx].p > 0) { setShowCoin(idx); setTimeout(() => setShowCoin(-1), 600); }
+        setScreens(prev => { const n = [...prev]; n[idx] = ch[idx].e; syncToStore(isObserver, { screens: n }); return n; });
+        
+        if (ch[idx].p > 0) { 
+            setShowCoin(idx); syncToStore(isObserver, { showCoin: idx });
+            setTimeout(() => { setShowCoin(-1); syncToStore(isObserver, { showCoin: -1 }); }, 600); 
+        }
         await sleep(250);
         
         for (let i = 0; i < 3; i++) {
             if (i !== idx) {
-                setScreens(prev => { const n = [...prev]; n[i] = ch[i].e; return n; });
-                setDimmed(prev => { const n = [...prev]; n[i] = true; return n; });
+                setScreens(prev => { const n = [...prev]; n[i] = ch[i].e; syncToStore(isObserver, { screens: n }); return n; });
+                setDimmed(prev => { const n = [...prev]; n[i] = true; syncToStore(isObserver, { dimmed: n }); return n; });
                 await sleep(250);
             }
         }
         const pr = ch[idx];
-        if (pr.p > 0) { addPts(pr.p); setResult({ win: true, icon: pr.e, main: pr.l, pts: pr.p }); }
-        else setResult({ win: false, icon: '💀', main: '空っぽ…', sub: '3台のうちハズレを選んだ', pts: 0 });
-    }, [stop, addPts]);
+        let resObj;
+        if (pr.p > 0) { 
+            addPts(pr.p); 
+            resObj = { win: true, icon: pr.e, main: pr.l, pts: pr.p }; 
+        } else {
+            resObj = { win: false, icon: '💀', main: '空っぽ…', sub: '3台のうちハズレを選んだ', pts: 0 };
+        }
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj });
+    }, [stop, addPts, isObserver]);
 
     const init = useCallback(() => {
+        if (isObserver) return;
         doneRef.current = false;
         const win = VEND_WIN[rnd(0, VEND_WIN.length - 1)];
         const losers = [...VEND_LOSE].sort(() => Math.random() - .5).slice(0, 2);
         const ch = [win, ...losers].sort(() => Math.random() - .5);
         choicesRef.current = ch; setChoices(ch);
         setScreens(['?', '?', '?']); setDimmed([false, false, false]); setResult(null); setShowCoin(-1);
+        
+        syncToStore(isObserver, { choices: ch, screens: ['?', '?', '?'], dimmed: [false, false, false], result: null, showCoin: -1 });
         start();
-    }, [start]);
+    }, [start, isObserver]);
 
     useEffect(() => { init(); }, [init]);
 
     return (
         <div style={S.screen}>
-            <GameHeader title="🏧 ボロ自販機ガチャ" pts={pts} timer={time} onBack={onBack} />
+            <GameHeader title="🏧 ボロ自販機ガチャ" pts={pts} timer={displayTime} onBack={onBack} />
             <div style={S.body}>
                 <Instr>3台のうち当たりは1台だけ！はずれ2台は空っぽ！</Instr>
                 <div style={{ display: 'flex', gap: '.8rem', justifyContent: 'center' }}>
                     {choices.map((ch, i) => (
-                        <div key={i} onClick={() => !doneRef.current && !dimmed[i] && pick(i)} style={{
-                            width: 110, height: 180, borderRadius: '8px 8px 4px 4px', cursor: dimmed[i] || doneRef.current ? 'default' : 'pointer',
+                        <div key={i} onPointerDown={() => !doneRef.current && !dimmed[i] && !isObserver && pick(i)} style={{
+                            width: 110, height: 180, borderRadius: '8px 8px 4px 4px', cursor: (dimmed[i] || doneRef.current || isObserver) ? 'default' : 'pointer',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '.5rem .4rem',
                             position: 'relative', border: `3px solid ${VEND_COLORS[i][2]}`,
                             background: `linear-gradient(180deg,${VEND_COLORS[i][0]},${VEND_COLORS[i][1]})`,
@@ -270,41 +364,53 @@ export function VendGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 3: 🪙 スクラッチくじ
+   Game 3: 🪙 スクラッチくじ (完全同期対応版)
 ════════════════════════════════════════ */
 const SC_SYMS = ['🥫', '💰', '🍺', '🐀', '💊', '🎁'];
 
-function ScratchCell({ sym, onRevealed, disabled }) {
+function ScratchCell({ sym, isRevealed, onRevealed, disabled, isObserver }) {
     const cvRef = useRef(null);
-    const revealedRef = useRef(false);
     const scratchRef = useRef(false);
 
     useEffect(() => {
         const cv = cvRef.current; if (!cv) return;
         const ctx = cv.getContext('2d');
-        const g = ctx.createLinearGradient(0, 0, 84, 84);
-        g.addColorStop(0, '#4a3520'); g.addColorStop(.5, '#3a2818'); g.addColorStop(1, '#2e1e10');
-        ctx.fillStyle = g; ctx.fillRect(0, 0, 84, 84);
-        ctx.strokeStyle = 'rgba(180,130,70,.15)'; ctx.lineWidth = 1;
-        for (let y = 8; y < 84; y += 13) { ctx.beginPath(); ctx.moveTo(0, y + (Math.random() - .5) * 3); ctx.lineTo(84, y + (Math.random() - .5) * 3); ctx.stroke(); }
-        ctx.font = 'bold 26px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(220,170,80,.6)'; ctx.fillText('？', 42, 40);
-        ctx.font = '8px sans-serif'; ctx.fillStyle = 'rgba(180,140,70,.45)'; ctx.fillText('¥100', 42, 68);
-    }, []);
+        
+        // 未クリア（裏面）の描画
+        if (!isRevealed) {
+            const g = ctx.createLinearGradient(0, 0, 84, 84);
+            g.addColorStop(0, '#4a3520'); g.addColorStop(.5, '#3a2818'); g.addColorStop(1, '#2e1e10');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, 84, 84);
+            ctx.strokeStyle = 'rgba(180,130,70,.15)'; ctx.lineWidth = 1;
+            for (let y = 8; y < 84; y += 13) { ctx.beginPath(); ctx.moveTo(0, y + (Math.random() - .5) * 3); ctx.lineTo(84, y + (Math.random() - .5) * 3); ctx.stroke(); }
+            ctx.font = 'bold 26px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(220,170,80,.6)'; ctx.fillText('？', 42, 40);
+            ctx.font = '8px sans-serif'; ctx.fillStyle = 'rgba(180,140,70,.45)'; ctx.fillText('¥100', 42, 68);
+            cv.style.pointerEvents = 'auto';
+            cv.style.opacity = 1;
+        } else {
+            // ホストが開けたマスは観戦者側もパカッと開く
+            ctx.clearRect(0, 0, 84, 84);
+            cv.style.pointerEvents = 'none';
+        }
+    }, [isRevealed]);
 
     const doScratch = useCallback((cx, cy) => {
-        if (revealedRef.current || disabled) return;
+        if (isRevealed || disabled || isObserver) return;
         const cv = cvRef.current; if (!cv) return;
         const ctx = cv.getContext('2d');
         ctx.globalCompositeOperation = 'destination-out'; ctx.beginPath(); ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.fill();
+        
         const data = ctx.getImageData(0, 0, 84, 84).data; let tr = 0;
         for (let p = 3; p < data.length; p += 4) if (data[p] < 50) tr++;
-        if (tr / (84 * 84) > .5 && !revealedRef.current) {
-            revealedRef.current = true; cv.style.pointerEvents = 'none'; onRevealed();
+        
+        if (tr / (84 * 84) > .5 && !isRevealed) {
+            cv.style.pointerEvents = 'none'; 
+            onRevealed();
         }
-    }, [disabled, onRevealed]);
+    }, [disabled, onRevealed, isRevealed, isObserver]);
 
-    const handlers = {
+    const handlers = isObserver ? {} : {
         onMouseDown: e => { scratchRef.current = true; const r = cvRef.current.getBoundingClientRect(); doScratch(e.clientX - r.left, e.clientY - r.top); },
         onMouseMove: e => { if (!scratchRef.current) return; const r = cvRef.current.getBoundingClientRect(); doScratch(e.clientX - r.left, e.clientY - r.top); },
         onMouseUp: () => scratchRef.current = false, onMouseLeave: () => scratchRef.current = false,
@@ -315,60 +421,105 @@ function ScratchCell({ sym, onRevealed, disabled }) {
     return (
         <div style={{ width: 84, height: 84, position: 'relative', borderRadius: 8, overflow: 'hidden', border: '2px solid #3d2e1a' }}>
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.1rem', background: '#241a0e' }}>{sym}</div>
-            <canvas ref={cvRef} width={84} height={84} style={{ position: 'absolute', inset: 0, touchAction: 'none', cursor: 'crosshair' }} {...handlers} />
+            <canvas ref={cvRef} width={84} height={84} style={{ position: 'absolute', inset: 0, touchAction: 'none', cursor: isObserver ? 'default' : 'crosshair' }} {...handlers} />
         </div>
     );
 }
 
-export function ScratchGame({ pts, addPts, onBack, isEventMode }) {
+export function ScratchGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const [grid, setGrid] = useState([]);
     const [count, setCount] = useState(0);
     const [result, setResult] = useState(null);
+    const [revealed, setRevealed] = useState(Array(9).fill(false)); // 各マスの削られ状態
+    
     const countRef = useRef(0);
-    const revRef = useRef([]);
+    const revRef = useRef(Array(9).fill(false));
     const gridRef = useRef([]);
     const doneRef = useRef(false);
-    const [gameKey, setGameKey] = useState(0);
-    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current) checkScratch(); });
+    
+    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current && !isObserver) checkScratch(); });
+
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.grid) setGrid(mgSyncData.grid);
+            if (mgSyncData.count !== undefined) setCount(mgSyncData.count);
+            if (mgSyncData.revealed) setRevealed(mgSyncData.revealed);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+        }
+    }, [isObserver, mgSyncData]);
 
     const checkScratch = useCallback(() => {
-        if (doneRef.current) return; doneRef.current = true; stop();
+        if (doneRef.current || isObserver) return; 
+        doneRef.current = true; stop();
+        
         const revSyms = gridRef.current.filter((_, i) => revRef.current[i]);
         const counts = {}; revSyms.forEach(s => counts[s] = (counts[s] || 0) + 1);
         const mx = Math.max(0, ...Object.values(counts));
         const ws = Object.keys(counts).find(k => counts[k] === mx) || '';
+        
+        // ホストがゲームを終了したとき、削ってないマスも全て「クリア」として扱うことでcanvasを透明にする
+        setRevealed(Array(9).fill(true));
+        syncToStore(isObserver, { revealed: Array(9).fill(true) });
+
         const win = mx >= 2; const p = mx >= 3 ? 20 : mx >= 2 ? 5 : 0;
         if (p > 0) addPts(p);
-        setResult({ win, icon: win ? '🎊' : '💀', main: win ? `${ws}×${mx} 揃い！` : '揃わなかった…', sub: `削ったマス: ${revSyms.join(' ')}`, pts: p });
-    }, [stop, addPts]);
+        
+        const resObj = { win, icon: win ? '🎊' : '💀', main: win ? `${ws}×${mx} 揃い！` : '揃わなかった…', sub: `削ったマス: ${revSyms.join(' ')}`, pts: p };
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj });
+    }, [stop, addPts, isObserver]);
 
     const onRevealed = useCallback((i) => {
-        if (revRef.current[i]) return;
-        revRef.current[i] = true; countRef.current++;
+        if (isObserver || revRef.current[i] || doneRef.current) return;
+        revRef.current[i] = true; 
+        countRef.current++;
         setCount(countRef.current);
+        
+        const newRevealed = [...revRef.current];
+        setRevealed(newRevealed);
+        syncToStore(isObserver, { count: countRef.current, revealed: newRevealed });
+        
         if (countRef.current >= 3) { stop(); setTimeout(checkScratch, 600); }
-    }, [stop, checkScratch]);
+    }, [stop, checkScratch, isObserver]);
 
     const init = useCallback(() => {
+        if (isObserver) return;
         doneRef.current = false; countRef.current = 0; revRef.current = Array(9).fill(false);
         let g = Array.from({ length: 9 }, () => SC_SYMS[rnd(0, 5)]);
         if (Math.random() < .25) { const sym = SC_SYMS[rnd(0, 5)]; const pos = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(() => Math.random() - .5).slice(0, 3); pos.forEach(p => g[p] = sym); }
-        gridRef.current = g; setGrid(g); setCount(0); setResult(null);
-        setGameKey(k => k + 1);
+        
+        gridRef.current = g; setGrid(g); setCount(0); setResult(null); setRevealed(Array(9).fill(false));
+        syncToStore(isObserver, { grid: g, count: 0, result: null, revealed: Array(9).fill(false) });
+        
         start();
-    }, [start]);
+    }, [start, isObserver]);
 
     useEffect(() => { init(); }, [init]);
 
     return (
         <div style={S.screen}>
-            <GameHeader title="🪙 スクラッチくじ" pts={pts} timer={time} onBack={onBack} />
+            <GameHeader title="🪙 スクラッチくじ" pts={pts} timer={displayTime} onBack={onBack} />
             <div style={S.body}>
                 <Instr>10秒以内に3マス削れ！2つ以上揃えば成功！</Instr>
                 <div style={{ fontSize: '.95rem', fontWeight: 700, color: '#c97b2a', textAlign: 'center' }}>あと {Math.max(0, 3 - count)} マス削れます</div>
                 <div style={{ background: 'linear-gradient(145deg,#1a1308,#0d0a05)', border: '2px solid #3d2e1a', borderRadius: 14, padding: '.9rem', display: 'inline-block' }}>
-                    <div key={gameKey} style={{ display: 'grid', gridTemplateColumns: 'repeat(3,84px)', gridTemplateRows: 'repeat(3,84px)', gap: '.45rem' }}>
-                        {grid.map((sym, i) => <ScratchCell key={`${i}-${sym}`} sym={sym} disabled={count >= 3 || doneRef.current} onRevealed={() => onRevealed(i)} />)}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,84px)', gridTemplateRows: 'repeat(3,84px)', gap: '.45rem' }}>
+                        {grid.map((sym, i) => (
+                            <ScratchCell 
+                                key={`${i}-${sym}`} 
+                                sym={sym} 
+                                isRevealed={revealed[i]}
+                                disabled={count >= 3 || doneRef.current} 
+                                isObserver={isObserver}
+                                onRevealed={() => onRevealed(i)} 
+                            />
+                        ))}
                     </div>
                 </div>
                 <ResultBox result={result} />
@@ -383,13 +534,12 @@ export function ScratchGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 4: 🃏 ハイ＆ロー (UI・バグ修正版)
+   Game 4: 🃏 ハイ＆ロー (完全同期対応版)
 ════════════════════════════════════════ */
 const SUITS = ['♠', '♥', '♦', '♣'];
 const CVALS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 const CNUMS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 
-// 本物のトランプらしいUIに修正
 const PlayingCard = ({ c, isFaceDown }) => {
     if (isFaceDown || !c) {
         return (
@@ -429,72 +579,103 @@ const PlayingCard = ({ c, isFaceDown }) => {
     );
 };
 
-export function HLGame({ pts, addPts, onBack, isEventMode }) {
+export function HLGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const [deck, setDeck] = useState([]);
     const [idx, setIdx] = useState(0);
     const [streak, setStreak] = useState(0);
-    const [revealedNext, setRevealedNext] = useState(null); // 次のカード（めくった状態を保持）
+    const [revealedNext, setRevealedNext] = useState(null);
     const [result, setResult] = useState(null);
+    
     const doneRef = useRef(false);
     const streakRef = useRef(0);
     const idxRef = useRef(0);
     const deckRef = useRef([]);
     const guessing = useRef(false);
-    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current) endHL(); });
+    
+    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current && !isObserver) endHL(); });
+
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.deck) setDeck(mgSyncData.deck);
+            if (mgSyncData.idx !== undefined) setIdx(mgSyncData.idx);
+            if (mgSyncData.streak !== undefined) setStreak(mgSyncData.streak);
+            if (mgSyncData.revealedNext !== undefined) setRevealedNext(mgSyncData.revealedNext); // null許容
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+        }
+    }, [isObserver, mgSyncData]);
 
     const endHL = useCallback(() => {
-        if (doneRef.current) return;
+        if (doneRef.current || isObserver) return;
         doneRef.current = true; stop();
         const p = streakRef.current * 5;
         const win = streakRef.current >= 3;
         if (win) addPts(p);
-        setResult({ win, icon: win ? '🎉' : '💀', main: win ? `${streakRef.current}連続正解！` : '連続3回に届かず…', sub: `${streakRef.current}連続 × 5P`, pts: win ? p : 0 });
-    }, [stop, addPts]);
+        
+        const resObj = { win, icon: win ? '🎉' : '💀', main: win ? `${streakRef.current}連続正解！` : '連続3回に届かず…', sub: `${streakRef.current}連続 × 5P`, pts: win ? p : 0 };
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj });
+    }, [stop, addPts, isObserver]);
 
     const guess = useCallback(async (dir) => {
-        if (doneRef.current || guessing.current) return;
+        if (doneRef.current || guessing.current || isObserver) return;
         guessing.current = true;
         const cur = deckRef.current[idxRef.current];
         const nxt = deckRef.current[idxRef.current + 1];
         if (!nxt) { endHL(); guessing.current = false; return; }
 
-        setRevealedNext(nxt); // 次のカードを表にして表示
+        setRevealedNext(nxt);
+        syncToStore(isObserver, { revealedNext: nxt });
 
         const ok = (dir === 'h' && nxt.n >= cur.n) || (dir === 'l' && nxt.n <= cur.n);
         
-        await sleep(800); // プレイヤーに結果を見せるための待機時間
+        await sleep(800);
 
         if (ok) {
             streakRef.current++;
             idxRef.current++;
-            // ▼ 同時に更新することで「チラ見えバグ」を完全に解消
+            
             setStreak(streakRef.current);
             setIdx(idxRef.current);
-            setRevealedNext(null); // 左側にスライド＆右側を裏面に戻す
+            setRevealedNext(null);
+            
+            syncToStore(isObserver, { streak: streakRef.current, idx: idxRef.current, revealedNext: null });
             guessing.current = false;
         } else {
             doneRef.current = true; stop();
-            setResult({ win: false, icon: '💀', main: 'ハズレ…', sub: `${streakRef.current}連続で止まった`, pts: 0 });
+            const resObj = { win: false, icon: '💀', main: 'ハズレ…', sub: `${streakRef.current}連続で止まった`, pts: 0 };
+            setResult(resObj);
+            syncToStore(isObserver, { result: resObj });
             guessing.current = false;
         }
-    }, [endHL, stop]);
+    }, [endHL, stop, isObserver]);
 
     const init = useCallback(() => {
+        if (isObserver) return;
         doneRef.current = false; streakRef.current = 0; idxRef.current = 0; guessing.current = false;
         const d = [];
         for (const s of SUITS) for (let i = 0; i < CVALS.length; i++) d.push({ s, v: CVALS[i], n: CNUMS[i] });
         d.sort(() => Math.random() - .5);
-        deckRef.current = d; setDeck(d); setIdx(0); setStreak(0); setRevealedNext(null); setResult(null);
+        deckRef.current = d; 
+        
+        setDeck(d); setIdx(0); setStreak(0); setRevealedNext(null); setResult(null);
+        syncToStore(isObserver, { deck: d, idx: 0, streak: 0, revealedNext: null, result: null });
+        
         start();
-    }, [start]);
+    }, [start, isObserver]);
 
     useEffect(() => { init(); }, [init]);
 
-    const cur = deckRef.current[idxRef.current] || deckRef.current[0];
+    const cur = deck[idx] || deck[0];
 
     return (
         <div style={S.screen}>
-            <GameHeader title="🃏 ハイ＆ロー" pts={pts} timer={time} onBack={onBack} />
+            <GameHeader title="🃏 ハイ＆ロー" pts={pts} timer={displayTime} onBack={onBack} />
             <div style={S.body}>
                 <Instr>10秒間で連続正解を重ねろ！3連続以上で成功！</Instr>
                 <div style={{ fontWeight: 700, color: '#e8b84b', textAlign: 'center', fontSize: '1.1rem' }}>🔥 連続正解: {streak} 回</div>
@@ -507,8 +688,8 @@ export function HLGame({ pts, addPts, onBack, isEventMode }) {
 
                 {!result && (
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '10px' }}>
-                        <button onClick={() => guess('h')} style={{ background: 'linear-gradient(135deg,#2a5a1a,#183a0a)', border: '2px solid #4a8a2a', borderRadius: 12, color: '#a0e080', font: "700 1.1rem 'Noto Sans JP',sans-serif", padding: '.8rem 2rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(74,138,42,.3)', transition: 'transform .1s' }} onMouseDown={e=>e.currentTarget.style.transform='scale(0.95)'} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'}>▲ HIGH</button>
-                        <button onClick={() => guess('l')} style={{ background: 'linear-gradient(135deg,#5a1a1a,#3a0a0a)', border: '2px solid #8a2a2a', borderRadius: 12, color: '#e08080', font: "700 1.1rem 'Noto Sans JP',sans-serif", padding: '.8rem 2rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(138,42,42,.3)', transition: 'transform .1s' }} onMouseDown={e=>e.currentTarget.style.transform='scale(0.95)'} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'}>▼ LOW</button>
+                        <button onPointerDown={() => guess('h')} style={{ background: 'linear-gradient(135deg,#2a5a1a,#183a0a)', border: '2px solid #4a8a2a', borderRadius: 12, color: '#a0e080', font: "700 1.1rem 'Noto Sans JP',sans-serif", padding: '.8rem 2rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(74,138,42,.3)', transition: 'transform .1s' }} onMouseDown={e=>e.currentTarget.style.transform='scale(0.95)'} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'}>▲ HIGH</button>
+                        <button onPointerDown={() => guess('l')} style={{ background: 'linear-gradient(135deg,#5a1a1a,#3a0a0a)', border: '2px solid #8a2a2a', borderRadius: 12, color: '#e08080', font: "700 1.1rem 'Noto Sans JP',sans-serif", padding: '.8rem 2rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(138,42,42,.3)', transition: 'transform .1s' }} onMouseDown={e=>e.currentTarget.style.transform='scale(0.95)'} onMouseUp={e=>e.currentTarget.style.transform='scale(1)'}>▼ LOW</button>
                     </div>
                 )}
                 

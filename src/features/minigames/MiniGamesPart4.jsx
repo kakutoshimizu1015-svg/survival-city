@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep, beep } from './MiniGamesPart1';
+// ▼ 修正: Part1から同期用の syncToStore も読み込む
+import { S, GameHeader, ResultBox, BtnPrim, Instr, StatBox, useTimer, rnd, sleep, beep, syncToStore } from './MiniGamesPart1';
+import { useGameStore } from '../../store/useGameStore';
 
 /* ─── Part 4 専用スタイル ─────────────────────────────── */
 export const MiniGameStylesPart4 = () => (
@@ -33,9 +35,11 @@ export const MiniGameStylesPart4 = () => (
 );
 
 /* ════════════════════════════════════════
-   Game 13: 🙏 物乞いゲーム
+   Game 13: 🙏 物乞いゲーム (完全同期対応版)
 ════════════════════════════════════════ */
-export function BegGame({ pts, addPts, subPts, onBack, isEventMode }) {
+export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }) {
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const NPCS = [
         { e: '🤵', name: 'サラリーマン', p: 5 }, { e: '👩', name: '主婦', p: 0 }, 
         { e: '🧑‍🎓', name: '学生', p: 2 }, { e: '🕴️', name: 'ヤクザ', p: -3 }, 
@@ -60,39 +64,62 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode }) {
     const npcXRef = useRef(112);
     const playingRef = useRef(false);
 
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endBeg(); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endBeg(); });
+
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.earned !== undefined) setEarned(mgSyncData.earned);
+            if (mgSyncData.count !== undefined) setCount(mgSyncData.count);
+            if (mgSyncData.npcX !== undefined) setNpcX(mgSyncData.npcX);
+            if (mgSyncData.curNpc !== undefined) setCurNpc(mgSyncData.curNpc);
+            if (mgSyncData.feedback !== undefined) setFeedback(mgSyncData.feedback);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+        }
+    }, [isObserver, mgSyncData]);
 
     const endBeg = useCallback(() => {
+        if (isObserver) return;
         playingRef.current = false; stop(); cancelAnimationFrame(rafRef.current);
         const p = Math.max(0, earnedRef.current);
         const win = p >= 5;
         
-        setResult({ 
+        const resObj = { 
             win, icon: win ? '💰' : '😔', main: win ? '物乞い成功！' : '稼ぎが足りなかった…', 
             sub: `獲得 ${p}P / 5P以上で成功`, pts: win ? p : 0 
-        });
+        };
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj });
+        
         if (win && p > 0) addPts(p);
-    }, [stop, addPts]);
+    }, [stop, addPts, isObserver]);
 
     const spawnNpc = useCallback(() => {
-        if (!playingRef.current || countRef.current <= 0) return;
+        if (!playingRef.current || countRef.current <= 0 || isObserver) return;
         const npc = NPCS[rnd(0, NPCS.length - 1)];
         setCurNpc(npc);
         npcXRef.current = 112; setNpcX(112);
         setFeedback({ text: '', color: '#7a6a4a' });
         
+        syncToStore(isObserver, { curNpc: npc, npcX: 112, feedback: { text: '', color: '#7a6a4a' } });
+        
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         const spd = rnd(12, 22) / 10;
         
         const tick = () => {
-            if (!playingRef.current) return;
+            if (!playingRef.current || isObserver) return;
             npcXRef.current -= spd;
             setNpcX(npcXRef.current);
+            syncToStore(isObserver, { npcX: npcXRef.current });
             
             if (npcXRef.current < -18) {
-                // 画面外に逃げられた
                 countRef.current--; setCount(countRef.current);
                 setFeedback({ text: '逃した…', color: '#7a6a4a' });
+                syncToStore(isObserver, { count: countRef.current, feedback: { text: '逃した…', color: '#7a6a4a' } });
+                
                 if (countRef.current > 0) setTimeout(spawnNpc, 600);
                 else setTimeout(endBeg, 500);
                 return;
@@ -100,52 +127,57 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode }) {
             rafRef.current = requestAnimationFrame(tick);
         };
         rafRef.current = requestAnimationFrame(tick);
-    }, [endBeg]);
+    }, [endBeg, isObserver, NPCS]);
 
     const doBeg = () => {
-        if (!playingRef.current || npcXRef.current < -18 || npcXRef.current > 112) return;
+        if (!playingRef.current || npcXRef.current < -18 || npcXRef.current > 112 || isObserver) return;
         cancelAnimationFrame(rafRef.current);
         
-        // 当たり判定 (中央38%〜62%を少し緩く)
         const inZone = npcXRef.current >= 35 && npcXRef.current <= 65;
         const npc = curNpc;
         const gain = npc.p;
+        let newFeedback;
         
         if (inZone) {
             earnedRef.current += gain;
             if (gain > 0) addPts(gain); else if (gain < 0) subPts(-gain);
             setEarned(Math.max(0, earnedRef.current));
             
-            setFeedback({ 
+            newFeedback = { 
                 text: `${npc.name}—${BEG_REACT[gain]||''} ${gain > 0 ? '+'+gain+'P' : gain < 0 ? gain+'P' : ''}`, 
                 color: gain > 0 ? '#e8b84b' : gain < 0 ? '#b52e1e' : '#7a6a4a' 
-            });
+            };
         } else {
-            setFeedback({ text: 'タイミングが悪い…無視', color: '#7a6a4a' });
+            newFeedback = { text: 'タイミングが悪い…無視', color: '#7a6a4a' };
         }
+        setFeedback(newFeedback);
         
-        npcXRef.current = -50; setNpcX(-50); // 画面外へ
+        npcXRef.current = -50; setNpcX(-50);
         countRef.current--; setCount(countRef.current);
+        
+        syncToStore(isObserver, { earned: Math.max(0, earnedRef.current), feedback: newFeedback, npcX: -50, count: countRef.current });
         
         if (countRef.current > 0) setTimeout(spawnNpc, 1000); 
         else setTimeout(endBeg, 600);
     };
 
     const init = useCallback(() => {
+        if (isObserver) return;
         playingRef.current = false; cancelAnimationFrame(rafRef.current);
         earnedRef.current = 0; countRef.current = 6; npcXRef.current = 112;
         setEarned(0); setCount(6); setNpcX(112); setFeedback({ text: '', color: '#7a6a4a' }); setResult(null);
+        syncToStore(isObserver, { earned: 0, count: 6, npcX: 112, feedback: { text: '', color: '#7a6a4a' }, result: null });
         
         playingRef.current = true; start();
         spawnNpc();
-    }, [start, spawnNpc]);
+    }, [start, spawnNpc, isObserver]);
 
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); }; }, [init]);
 
     return (
         <div style={S.screen}>
             <MiniGameStylesPart4 />
-            <GameHeader title="🙏 物乞い" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
+            <GameHeader title="🙏 物乞い" pts={pts} timer={playingRef.current ? displayTime : null} onBack={onBack} />
             <div style={S.body}>
                 <Instr>⭐ゾーンにNPCがいるとき押せ！5P以上稼げば成功！</Instr>
                 
@@ -162,7 +194,7 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode }) {
                 </div>
                 
                 <div className="beg-feedback" style={{ color: feedback.color }}>{feedback.text}</div>
-                {!result && <BtnPrim onClick={doBeg} style={{ width: '100%' }}>🙏 お恵みを…</BtnPrim>}
+                {!result && <BtnPrim onClick={doBeg} disabled={isObserver} style={{ width: '100%' }}>🙏 お恵みを…</BtnPrim>}
                 <ResultBox result={result} />
                 {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
@@ -175,14 +207,17 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 14: 🎸 路上ライブ音ゲー (視認性修正版)
+   Game 14: 🎸 路上ライブ音ゲー (完全同期対応版)
 ════════════════════════════════════════ */
-export function MusicGame({ pts, addPts, onBack, isEventMode }) {
+export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const [score, setScore] = useState(0);
     const [combo, setCombo] = useState(0);
     const [result, setResult] = useState(null);
     const [notes, setNotes] = useState([]);
     const [judge, setJudge] = useState({ text: '', color: '', show: false });
+    const [isStarted, setIsStarted] = useState(false);
     
     const rafRef = useRef(null);
     const playingRef = useRef(false);
@@ -199,17 +234,45 @@ export function MusicGame({ pts, addPts, onBack, isEventMode }) {
     ];
     const FALL_DUR = 1.5; 
 
-    const { time, start, stop } = useTimer(10, () => { if (playingRef.current) endMusic(); });
+    const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endMusic(); });
+
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.score !== undefined) setScore(mgSyncData.score);
+            if (mgSyncData.combo !== undefined) setCombo(mgSyncData.combo);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+            if (mgSyncData.notes !== undefined) setNotes(mgSyncData.notes);
+            if (mgSyncData.judge !== undefined) setJudge(mgSyncData.judge);
+            if (mgSyncData.isStarted !== undefined) {
+                setIsStarted(mgSyncData.isStarted);
+                playingRef.current = mgSyncData.isStarted;
+            }
+        }
+    }, [isObserver, mgSyncData]);
 
     const showJudge = useCallback((text, color) => {
+        if (isObserver) return;
         setJudge({ text, color, show: false });
+        syncToStore(isObserver, { judge: { text, color, show: false } });
+        
         clearTimeout(judgeTimerRef.current);
-        requestAnimationFrame(() => setJudge({ text, color, show: true }));
-        judgeTimerRef.current = setTimeout(() => setJudge(j => ({ ...j, show: false })), 400);
-    }, []);
+        requestAnimationFrame(() => {
+            setJudge({ text, color, show: true });
+            syncToStore(isObserver, { judge: { text, color, show: true } });
+        });
+        judgeTimerRef.current = setTimeout(() => {
+            setJudge(j => ({ ...j, show: false }));
+            syncToStore(isObserver, { judge: { text, color, show: false } });
+        }, 400);
+    }, [isObserver]);
 
     const endMusic = useCallback(() => {
-        playingRef.current = false; stop(); cancelAnimationFrame(rafRef.current);
+        if (isObserver) return;
+        playingRef.current = false; setIsStarted(false); stop(); cancelAnimationFrame(rafRef.current);
         
         const total = SEQ.length;
         const hit = notesRef.current.filter(n => n.hit).length;
@@ -218,16 +281,18 @@ export function MusicGame({ pts, addPts, onBack, isEventMode }) {
         const rank = pct >= 90 ? 'S' : pct >= 75 ? 'A' : pct >= 60 ? 'B' : 'C';
         const p = win ? Math.round(scoreRef.current / 5) : 0;
         
-        setResult({ 
+        const resObj = { 
             win, icon: win ? '🎸' : '😔', main: win ? `ランク ${rank}！${pct}%成功！` : `ランク ${rank}…${pct}%しか合わなかった`, 
             sub: `ヒット ${hit}/${total} / スコア ${scoreRef.current}`, pts: p 
-        });
+        };
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj, isStarted: false });
         if (p > 0) addPts(p);
-        setNotes([]);
-    }, [stop, addPts, SEQ.length]);
+        setNotes([]); syncToStore(isObserver, { notes: [] });
+    }, [stop, addPts, SEQ.length, isObserver]);
 
     const animate = useCallback(() => {
-        if (!playingRef.current) return;
+        if (!playingRef.current || isObserver) return;
         const now = performance.now() / 1000 - t0.current;
         const hitY = 240; 
         
@@ -258,18 +323,20 @@ export function MusicGame({ pts, addPts, onBack, isEventMode }) {
             beep(220, 0.1);
         }
         
-        setNotes(notesRef.current.filter(n => !n.hit && !n.missed && n.y > -40).map(n => ({ ...n })));
+        const currentNotes = notesRef.current.filter(n => !n.hit && !n.missed && n.y > -40).map(n => ({ ...n }));
+        setNotes(currentNotes);
+        syncToStore(isObserver, { notes: currentNotes, combo: comboRef.current });
         
         if (allFinished) {
             setTimeout(endMusic, 500);
             return;
         }
         rafRef.current = requestAnimationFrame(animate);
-    }, [endMusic, showJudge]);
+    }, [endMusic, showJudge, isObserver]);
 
     const tap = (e, lane) => {
         e.preventDefault();
-        if (!playingRef.current) return;
+        if (!playingRef.current || isObserver) return;
         
         const hitY = 240;
         const target = notesRef.current.find(n => n.l === lane && !n.hit && !n.missed && n.y > 0);
@@ -287,31 +354,36 @@ export function MusicGame({ pts, addPts, onBack, isEventMode }) {
                 showJudge('MISS', '#ff8070'); beep(220, 0.1);
             }
             setScore(scoreRef.current); setCombo(comboRef.current);
+            syncToStore(isObserver, { score: scoreRef.current, combo: comboRef.current });
         } else {
-            // 空振り
             comboRef.current = 0; setCombo(0);
+            syncToStore(isObserver, { combo: 0 });
         }
     };
 
     const startMusic = useCallback(() => {
-        playingRef.current = true; t0.current = performance.now() / 1000;
+        if (isObserver) return;
+        playingRef.current = true; setIsStarted(true); t0.current = performance.now() / 1000;
         notesRef.current = SEQ.map((n, i) => ({ id: i, ...n, hit: false, missed: false, y: -40 }));
         scoreRef.current = 0; comboRef.current = 0;
+        
         setScore(0); setCombo(0); setResult(null);
+        syncToStore(isObserver, { isStarted: true, score: 0, combo: 0, result: null, notes: notesRef.current });
         
         start(); 
         rafRef.current = requestAnimationFrame(animate);
-    }, [start, animate, SEQ]);
+    }, [start, animate, SEQ, isObserver]);
 
     const init = useCallback(() => {
-        playingRef.current = false; cancelAnimationFrame(rafRef.current);
+        if (isObserver) return;
+        playingRef.current = false; setIsStarted(false); cancelAnimationFrame(rafRef.current);
         setScore(0); setCombo(0); setResult(null); setNotes([]);
         setJudge({ text: '', color: '', show: false });
-    }, []);
+        syncToStore(isObserver, { score: 0, combo: 0, result: null, notes: [], judge: { text: '', color: '', show: false }, isStarted: false });
+    }, [isObserver]);
 
     useEffect(() => { init(); return () => { playingRef.current = false; cancelAnimationFrame(rafRef.current); }; }, [init]);
 
-    // rgba()を利用してブラウザ間で透過が確実に機能するように修正
     const LANE_DATA = [
         { icon: '🎸', bg: 'rgba(201,123,42,0.3)', border: '#c97b2a' },
         { icon: '🥁', bg: 'rgba(78,133,57,0.3)', border: '#4e8539' },
@@ -321,7 +393,7 @@ export function MusicGame({ pts, addPts, onBack, isEventMode }) {
     return (
         <div style={S.screen}>
             <MiniGameStylesPart4 />
-            <GameHeader title="🎸 路上ライブ" pts={pts} timer={playingRef.current ? time : null} onBack={onBack} />
+            <GameHeader title="🎸 路上ライブ" pts={pts} timer={isStarted ? displayTime : null} onBack={onBack} />
             <div style={S.body}>
                 <Instr>ノーツがラインに来たらタップ！60%以上ヒットで成功！</Instr>
                 <div style={{ fontSize: '1.1rem', color: '#e8b84b', fontWeight: 700, textAlign: 'center' }}>SCORE: {score} / COMBO: {combo}</div>
@@ -357,7 +429,7 @@ export function MusicGame({ pts, addPts, onBack, isEventMode }) {
                     </div>
                 </div>
                 
-                {!playingRef.current && !result && <BtnPrim onClick={startMusic} style={{ width: '100%' }}>🎸 演奏スタート！</BtnPrim>}
+                {!isStarted && !result && <BtnPrim onClick={startMusic} disabled={isObserver} style={{ width: '100%' }}>🎸 演奏スタート！</BtnPrim>}
                 <ResultBox result={result} />
                 {result && (
                     <BtnPrim onClick={isEventMode ? onBack : init}>
@@ -370,9 +442,11 @@ export function MusicGame({ pts, addPts, onBack, isEventMode }) {
 }
 
 /* ════════════════════════════════════════
-   Game 15: 💬 闇市交渉ゲーム
+   Game 15: 💬 闇市交渉ゲーム (完全同期対応版)
 ════════════════════════════════════════ */
-export function NegoGame({ pts, addPts, onBack, isEventMode }) {
+export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
+    const mgSyncData = useGameStore(s => s.mgSyncData);
+
     const NEGO_ITEMS = [
         { e: '🥫', name: '缶詰セット×5', desc: '拾い集めた缶詰', max: 20 }, 
         { e: '🔧', name: '謎の工具', desc: '使えるかわからない工具', max: 15 }, 
@@ -397,44 +471,76 @@ export function NegoGame({ pts, addPts, onBack, isEventMode }) {
     const itemsRef = useRef([]);
     const doneRef = useRef(false);
 
-    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current) endNego(); });
+    const { time, start, stop } = useTimer(10, () => { if (!doneRef.current && !isObserver) endNego(); });
+
+    useEffect(() => { if (!isObserver) syncToStore(isObserver, { time }); }, [time, isObserver]);
+    const displayTime = isObserver ? (mgSyncData?.time ?? 10) : time;
+
+    // ▼ 観戦者: 同期
+    useEffect(() => {
+        if (isObserver && mgSyncData) {
+            if (mgSyncData.items) setItems(mgSyncData.items);
+            if (mgSyncData.idx !== undefined) setIdx(mgSyncData.idx);
+            if (mgSyncData.total !== undefined) setTotal(mgSyncData.total);
+            if (mgSyncData.history) setHistory(mgSyncData.history);
+            if (mgSyncData.npc) setNpc(mgSyncData.npc);
+            if (mgSyncData.npcText) setNpcText(mgSyncData.npcText);
+            if (mgSyncData.offers) setOffers(mgSyncData.offers);
+            if (mgSyncData.result !== undefined) setResult(mgSyncData.result);
+        }
+    }, [isObserver, mgSyncData]);
 
     const endNego = useCallback(() => {
-        if (doneRef.current) return; 
+        if (doneRef.current || isObserver) return; 
         doneRef.current = true; stop();
         
         const win = totalRef.current >= 15; 
         const p = win ? totalRef.current : 0; 
         
-        setResult({ 
+        const resObj = { 
             win, icon: win ? '💰' : '😔', main: win ? `合計${totalRef.current}P 交渉成功！` : `合計${totalRef.current}P 稼ぎが足りなかった`, 
             sub: `15P以上で成功`, pts: p 
-        });
+        };
+        setResult(resObj);
+        syncToStore(isObserver, { result: resObj });
         if (p > 0) addPts(p);
-    }, [stop, addPts]);
+    }, [stop, addPts, isObserver]);
 
     const showItem = useCallback((i, its) => {
-        if (doneRef.current) return;
+        if (doneRef.current || isObserver) return;
         const item = its[i]; 
         const n = NEGO_NPCS[rnd(0, NEGO_NPCS.length - 1)];
+        const text = `「${item.name}？…で、いくらで売る？」`;
         setNpc(n); 
-        setNpcText(`「${item.name}？…で、いくらで売る？」`);
+        setNpcText(text);
         setIdx(i);
         
-        // 3つの価格（安い、妥当、高い）
         const o = [Math.floor(item.max * 0.35), Math.floor(item.max * 0.6), Math.floor(item.max * 1.3)].sort(() => Math.random() - .5);
-        setOffers(o.map(v => ({ v, item, npc: n })));
-    }, []);
+        const newOffers = o.map(v => ({ v, item, npc: n }));
+        setOffers(newOffers);
+        
+        syncToStore(isObserver, { npc: n, npcText: text, idx: i, offers: newOffers });
+    }, [isObserver, NEGO_NPCS]);
 
     const makeOffer = useCallback(({ v, item, npc: n }) => {
-        setOffers([]); // ボタンを隠す
+        if (isObserver) return;
+        setOffers([]); 
+        syncToStore(isObserver, { offers: [] });
+        
         const accepted = v <= item.max; 
         const gain = accepted ? v : 0; 
         
         totalRef.current += gain; 
         setTotal(totalRef.current);
-        setNpcText(accepted ? `「${v}P か…わかった！」✅ 成立！` : `「${v}P！？高すぎる！」❌ 交渉決裂`);
-        setHistory(prev => [...prev, `${item.e}→${gain > 0 ? '+' + gain : '✗'}P`]);
+        const text = accepted ? `「${v}P か…わかった！」✅ 成立！` : `「${v}P！？高すぎる！」❌ 交渉決裂`;
+        setNpcText(text);
+        
+        const newHistoryItem = `${item.e}→${gain > 0 ? '+' + gain : '✗'}P`;
+        setHistory(prev => {
+            const newHistory = [...prev, newHistoryItem];
+            syncToStore(isObserver, { total: totalRef.current, npcText: text, history: newHistory });
+            return newHistory;
+        });
         
         const next = idxRef.current + 1; 
         idxRef.current = next;
@@ -444,16 +550,19 @@ export function NegoGame({ pts, addPts, onBack, isEventMode }) {
         } else {
             setTimeout(() => showItem(next, itemsRef.current), 1200);
         }
-    }, [endNego, showItem]);
+    }, [endNego, showItem, isObserver]);
 
     const init = useCallback(() => {
+        if (isObserver) return;
         doneRef.current = false; totalRef.current = 0; idxRef.current = 0;
         const its = [...NEGO_ITEMS].sort(() => Math.random() - .5).slice(0, 3);
         itemsRef.current = its; 
         setItems(its); setIdx(0); setTotal(0); setHistory([]); setResult(null);
+        syncToStore(isObserver, { items: its, idx: 0, total: 0, history: [], result: null });
+        
         start(); 
         showItem(0, its);
-    }, [start, showItem]);
+    }, [start, showItem, isObserver, NEGO_ITEMS]);
 
     useEffect(() => { init(); return () => { doneRef.current = true; }; }, [init]);
 
@@ -462,7 +571,7 @@ export function NegoGame({ pts, addPts, onBack, isEventMode }) {
     return (
         <div style={S.screen}>
             <MiniGameStylesPart4 />
-            <GameHeader title="💬 闇市交渉" pts={pts} timer={!result ? time : null} onBack={onBack} />
+            <GameHeader title="💬 闇市交渉" pts={pts} timer={!result ? displayTime : null} onBack={onBack} />
             <div style={S.body}>
                 <Instr>アイテムを最高値で売れ！相手の上限を超えると失敗！3アイテムで15P以上稼げば成功！</Instr>
                 <StatBox label="アイテム" val={`${Math.min(idx + 1, 3)} / 3`} style={{ width: '100%' }} />
