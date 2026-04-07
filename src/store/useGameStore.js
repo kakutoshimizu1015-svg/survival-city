@@ -1,11 +1,8 @@
 import { create } from 'zustand';
 
 const initialState = {
-    gamePhase: 'title',
-    diceAnim: { active: false, d1: 1, d2: 1, text: '' },
-    turnOrderActive: false,
-    turnOrderData: null,
-    gameOver: false, 
+    gamePhase: 'title', diceAnim: { active: false, d1: 1, d2: 1, text: '' },
+    turnOrderActive: false, turnOrderData: null, gameOver: false, 
     
     isBranchPicking: false, 
     currentBranchOptions: [],
@@ -15,34 +12,11 @@ const initialState = {
     npcSelectActive: false,  
     npcMovePick: null,       
     
-    shopActive: false,
-    shopStock: [],
-    shopStockTurn: -1,
-    shopCart: [],
-
-    // ▼ ミニゲームの観戦同期用ステートを追加
-    mgActive: false,
-    mgType: "",
-    mgValue: 0,
-    mgResult: null,
-    activeMiniGamePlayerId: null,
-    mgSyncState: null,
-
-    storyActive: false,
-    settingsActive: false,
-    rulesActive: false,
-    tutorialActive: false,
-    teamActionActive: false,
-    tutorialStep: 0,
-    sandboxActive: false,
-    sandboxScenario: -1,
-    sandboxStep: 0,
-    turnBanner: null,
-    turnBannerActive: false,
-    eventPopups: [],
-    horrorMode: false,
-    disasterWarning: null,
-    bloodAnim: null,
+    shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
+    mgActive: false, mgType: "", mgValue: 0, mgResult: null, storyActive: false,
+    settingsActive: false, rulesActive: false, tutorialActive: false, teamActionActive: false,
+    tutorialStep: 0, sandboxActive: false, sandboxScenario: -1, sandboxStep: 0,
+    turnBanner: null, turnBannerActive: false, eventPopups: [], horrorMode: false, disasterWarning: null, bloodAnim: null,
     
     jobResult: null,
     logs: [],
@@ -61,23 +35,9 @@ const initialState = {
     tooltipData: null,
     _roundEndInProgress: false,
 
-    players: [],
-    turn: 0,
-    diceRolled: false,
-    canPickedThisTurn: 0,
-    cpuActing: false,
-    
-    mapData: [],
-    territories: {},
-    territoryCosts: {},
-    isRainy: false,
-    weatherState: 'sunny',
-    isNight: false,
-    roundCount: 1,
-    maxRounds: 20,
-    canPrice: 1,
-    trashPrice: 2,
-    destTile: -1,
+    players: [], turn: 0, diceRolled: false, canPickedThisTurn: 0, cpuActing: false,
+    mapData: [], territories: {}, territoryCosts: {}, isRainy: false, weatherState: 'sunny', isNight: false,
+    roundCount: 1, maxRounds: 20, canPrice: 1, trashPrice: 2, destTile: -1,
     
     truckPos: 0, 
     policePos: 0, policeCd: 0, policeHp: 10, policeRespawn: 0,
@@ -89,7 +49,7 @@ const initialState = {
     
     layoutMode: 'auto',
     
-    // ▼ ミニゲームモード用ステート
+    // ▼ ミニゲームモード用ステート追加
     selectedMiniGame: null,
 };
 

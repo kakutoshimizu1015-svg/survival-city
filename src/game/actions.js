@@ -45,10 +45,7 @@ export const actionRollDice = async (isCpuCall = false) => {
 
     if (isZorome && cp.charType === 'gambler') {
         const heal = Math.min(10, 100 - cp.hp);
-        if (heal > 0) { 
-            state.updateCurrentPlayer(p => ({ hp: p.hp + heal })); 
-            logMsg(`🎲 ギャンブラー興奮！HP+${heal}`); 
-        }
+        if (heal > 0) { state.updateCurrentPlayer(p => ({ hp: p.hp + heal })); logMsg(`🎲 ギャンブラー興奮！HP+${heal}`); }
     }
 
     let textResult = `${d1}+${d2}${d3 > 0 ? '+'+d3 : ''}=${d1+d2+d3}AP${isZorome ? " (🎲ゾロ目×2)" : ""}`;
@@ -61,8 +58,7 @@ export const actionRollDice = async (isCpuCall = false) => {
         state.addEventPopup(cp.id, "🎰", "大勝負！", `第3のサイコロ発動(+${d3})`, "good");
     }
     
-    playSfx('success'); 
-    logMsg(`<span style="color:${cp.color}">${cp.name}</span>は${totalAP}AP獲得！`);
+    playSfx('success'); logMsg(`<span style="color:${cp.color}">${cp.name}</span>は${totalAP}AP獲得！`);
     
     await new Promise(r => setTimeout(r, 1800));
     useGameStore.setState(prev => ({ diceAnim: { ...prev.diceAnim, active: false } }));
@@ -72,13 +68,8 @@ export const actionMove = () => {
     const state = useGameStore.getState();
     const currentTile = state.mapData.find(t => t.id === state.players[state.turn].pos);
     const validNextTiles = currentTile.next.filter(id => id !== state.constructionPos);
-    
-    if (validNextTiles.length === 1) {
-        executeMove(validNextTiles[0]);
-    } else if (validNextTiles.length > 1) { 
-        useGameStore.setState({ isBranchPicking: true, currentBranchOptions: validNextTiles }); 
-        logMsg("🛣️ 分岐点！進む道を選んでください。"); 
-    }
+    if (validNextTiles.length === 1) executeMove(validNextTiles[0]);
+    else if (validNextTiles.length > 1) { useGameStore.setState({ isBranchPicking: true, currentBranchOptions: validNextTiles }); logMsg("🛣️ 分岐点！進む道を選んでください。"); }
 };
 
 export const executeMove = (targetTileId) => {
@@ -91,8 +82,7 @@ export const executeMove = (targetTileId) => {
     state.updateCurrentPlayer(p => ({ ap: Math.max(0, p.ap - moveCost), pos: targetTileId, rainGear: state.isRainy ? false : p.rainGear }));
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [], isDashPicking: false });
     
-    logMsg(`🚶 「${tile.name}」に移動。`); 
-    playSfx('move');
+    logMsg(`🚶 「${tile.name}」に移動。`); playSfx('move');
     
     state.incrementGameStat(cp.id, 'tiles', 1);
     if (!cp.isCPU) {
@@ -111,29 +101,25 @@ export const executeMove = (targetTileId) => {
 
     if (tile.type === "koban") {
         state.updateCurrentPlayer(p => ({ ap: 0, cannotMove: true }));
-        logMsg(`<span style="color:#e74c3c">🚓 交番！職務質問で足止め！</span>`); 
-        playSfx('fail');
+        logMsg(`<span style="color:#e74c3c">🚓 交番！職務質問で足止め！</span>`); playSfx('fail');
         state.addEventPopup(cp.id, "🚓", "交番で職務質問", "ターンエンドしてください", "bad");
     }
 
     const sameOrPassed = state.players.filter(op => op.id !== cp.id && (op.pos === targetTileId || op.pos === prevPos) && op.p > 0 && op.hp > 0 && !isSameTeam(cp, op));
     sameOrPassed.forEach(t => {
         if (cp.charType === 'yankee' && (!cp._katsuage || cp._katsuage < 2)) {
-            state.updatePlayer(t.id, p => ({ p: p.p - 1 })); 
-            state.updateCurrentPlayer(p => ({ p: p.p + 1, _katsuage: (p._katsuage||0) + 1 }));
+            state.updatePlayer(t.id, p => ({ p: p.p - 1 })); state.updateCurrentPlayer(p => ({ p: p.p + 1, _katsuage: (p._katsuage||0) + 1 }));
             logMsg(`👊 ${cp.name}が${t.name}から1Pカツアゲ！`);
         }
         if (t.charType === 'yankee' && (!t._katsuage || t._katsuage < 2) && cp.p > 0) {
-            state.updateCurrentPlayer(p => ({ p: p.p - 1 })); 
-            state.updatePlayer(t.id, p => ({ p: p.p + 1, _katsuage: (p._katsuage||0) + 1 }));
+            state.updateCurrentPlayer(p => ({ p: p.p - 1 })); state.updatePlayer(t.id, p => ({ p: p.p + 1, _katsuage: (p._katsuage||0) + 1 }));
             logMsg(`👊 ${t.name}が${cp.name}から1Pカツアゲ！`);
         }
     });
 
     state.players.forEach(m => {
         if (m.id !== cp.id && m.charType === 'musician' && m.hp > 0 && getDistance(m.pos, targetTileId, state.mapData) <= 1) {
-            state.updatePlayer(m.id, p => ({ p: p.p + 3 })); 
-            logMsg(`🎸 ${m.name}【投げ銭】${cp.name}が来て+3P！`);
+            state.updatePlayer(m.id, p => ({ p: p.p + 3 })); logMsg(`🎸 ${m.name}【投げ銭】${cp.name}が来て+3P！`);
         }
     });
 
@@ -141,12 +127,7 @@ export const executeMove = (targetTileId) => {
     if (terrOwnerId !== undefined && terrOwnerId !== cp.id) {
         const det = state.players.find(p => p.id === terrOwnerId && p.charType === 'detective' && p.hp > 0 && !isSameTeam(p, cp));
         if (det && cp.hand.length > 0 && Math.random() < 0.3) {
-            state.updateCurrentPlayer(p => { 
-                const h = [...p.hand]; 
-                const stolen = h.splice(Math.floor(Math.random() * h.length), 1)[0]; 
-                state.updatePlayer(det.id, dp => ({ hand: [...dp.hand, stolen] })); 
-                return { hand: h }; 
-            });
+            state.updateCurrentPlayer(p => { const h = [...p.hand]; const stolen = h.splice(Math.floor(Math.random() * h.length), 1)[0]; state.updatePlayer(det.id, dp => ({ hand: [...dp.hand, stolen] })); return { hand: h }; });
             logMsg(`🕵️ ${det.name}が張り込みで${cp.name}の手札を没収！`);
         }
     }
@@ -164,8 +145,7 @@ export const executeMove = (targetTileId) => {
         }
         
         useGameStore.setState(s => ({ mapData: s.mapData.map(t => t.id === targetTileId ? { ...t, fieldCans: 0, fieldTrash: 0 } : t) }));
-        logMsg(`📦 ドロップアイテムを回収！`); 
-        playSfx('coin');
+        logMsg(`📦 ドロップアイテムを回収！`); playSfx('coin');
     }
 
     checkNpcCollision(cp.id);
@@ -174,13 +154,9 @@ export const executeMove = (targetTileId) => {
         if (Math.random() < 0.3) {
             useGameStore.setState({ storyActive: true, storyIndex: Math.floor(Math.random() * 4) });
         } else {
+            // ▼ 修正: 仮の3種から、実装済みの全15種から抽選するように変更
             const mgTypes = ['box', 'vend', 'scratch', 'hl', 'slot', 'oxo', 'tetris', 'fly', 'rat', 'drunk', 'rain', 'kashi', 'beg', 'music', 'nego'];
-            useGameStore.setState({ 
-                mgActive: true, 
-                mgType: mgTypes[Math.floor(Math.random() * mgTypes.length)],
-                activeMiniGamePlayerId: cp.id, // ▼ 誰が実行したかを記録
-                mgSyncState: null // ▼ 同期状態をリセット
-            });
+            useGameStore.setState({ mgActive: true, mgType: mgTypes[Math.floor(Math.random() * mgTypes.length)] });
         }
     }
 };
@@ -294,29 +270,8 @@ export const actionOccupy = () => {
     }
 };
 
-export const actionExchange = () => { 
-    const s = useGameStore.getState();
-    const cp = s.players[s.turn];
-    const tot = cp.cans * s.canPrice + cp.trash * s.trashPrice; 
-    
-    s.updateCurrentPlayer(p => ({ p: p.p + tot, cans: 0, trash: 0 })); 
-    playSfx('coin'); 
-};
-
-export const actionManhole = () => { 
-    const s = useGameStore.getState();
-    const cp = s.players[s.turn];
-    const mh = s.mapData.filter(t => t.type === "manhole" && t.id !== cp.pos); 
-    
-    if (mh.length > 0) { 
-        s.updateCurrentPlayer(p => ({ 
-            ap: p.ap - 1, 
-            pos: mh[Math.floor(Math.random() * mh.length)].id 
-        })); 
-        playSfx('move'); 
-        checkNpcCollision(cp.id); 
-    } 
-};
+export const actionExchange = () => { const s = useGameStore.getState(), cp = s.players[s.turn], tot = cp.cans * s.canPrice + cp.trash * s.trashPrice; s.updateCurrentPlayer(p => ({ p: p.p + tot, cans: 0, trash: 0 })); playSfx('coin'); };
+export const actionManhole = () => { const s = useGameStore.getState(), cp = s.players[s.turn], mh = s.mapData.filter(t => t.type === "manhole" && t.id !== cp.pos); if (mh.length > 0) { s.updateCurrentPlayer(p => ({ ap: p.ap - 1, pos: mh[Math.floor(Math.random() * mh.length)].id })); playSfx('move'); checkNpcCollision(cp.id); } };
 
 export const actionEndTurn = async () => {
     const state = useGameStore.getState();
@@ -325,34 +280,16 @@ export const actionEndTurn = async () => {
     try {
         const cp = state.players[state.turn];
         
-        let newEquip = { ...cp.equip };
-        let newTimer = { ...cp.equipTimer };
-        
-        if (newEquip.bicycle) { 
-            newTimer.bicycle = (newTimer.bicycle || 5) - 1; 
-            if (newTimer.bicycle <= 0) { 
-                newEquip.bicycle = false; 
-                logMsg(`🚲 自転車が壊れた！`); 
-            } 
-        }
-        if (newEquip.cart) { 
-            newTimer.cart = (newTimer.cart || 5) - 1; 
-            if (newTimer.cart <= 0) { 
-                newEquip.cart = false; 
-                logMsg(`🛒 リヤカーが壊れた！`); 
-            } 
-        }
+        let newEquip = { ...cp.equip }, newTimer = { ...cp.equipTimer };
+        if (newEquip.bicycle) { newTimer.bicycle = (newTimer.bicycle || 5) - 1; if (newTimer.bicycle <= 0) { newEquip.bicycle = false; logMsg(`🚲 自転車が壊れた！`); } }
+        if (newEquip.cart) { newTimer.cart = (newTimer.cart || 5) - 1; if (newTimer.cart <= 0) { newEquip.cart = false; logMsg(`🛒 リヤカーが壊れた！`); } }
 
-        state.updateCurrentPlayer(p => ({ 
-            ap: 0, stealth: false, _katsuage: 0, equip: newEquip, 
-            equipTimer: newTimer, cannotMove: false 
-        })); 
+        state.updateCurrentPlayer(p => ({ ap: 0, stealth: false, _katsuage: 0, equip: newEquip, equipTimer: newTimer, cannotMove: false })); 
         
         useGameStore.setState({ 
             isBranchPicking: false, isDashPicking: false, 
             isSalesVisiting: false, salesTargetId: null, npcSelectActive: false,
-            mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null,
-            activeMiniGamePlayerId: null, mgSyncState: null // ▼ ターン終了時にクリア
+            mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null 
         });
         
         const isLastPlayer = state.turn === state.players.length - 1;
