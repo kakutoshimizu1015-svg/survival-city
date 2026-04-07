@@ -5,10 +5,10 @@ import { GACHA_POOL } from '../constants/characters';
 import { syncGachaData } from '../utils/userLogic';
 
 // ==========================================
-// ▼ 開発者設定
+// ▼ 開発者設定true fale
 // ==========================================
 // 開発者モードボタン（資産+500）を表示するかどうか
-const SHOW_DEV_CONTROLS = true; 
+const SHOW_DEV_CONTROLS = false; 
 
 // ガチャの排出確率とUI設定
 // 開発者はここの `rate` の数値を変更するだけで、自動的に実際の抽選確率に反映されます。
