@@ -33,7 +33,7 @@ export const MiniGameStylesPart4 = () => (
     `}</style>
 );
 
-/* ─── 定数定義（コンポーネントの外に出すことで無限ループを防止） ─── */
+/* ▼ 無限ループ防止のため、固定データ（配列・オブジェクト）はコンポーネントの外に配置 */
 const BEG_NPCS = [
     { e: '🤵', name: 'サラリーマン', p: 5 }, { e: '👩', name: '主婦', p: 0 }, 
     { e: '🧑‍🎓', name: '学生', p: 2 }, { e: '🕴️', name: 'ヤクザ', p: -3 }, 
@@ -85,6 +85,10 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }
     const countRef = useRef(6);
     const npcXRef = useRef(112);
     const playingRef = useRef(false);
+    
+    // 関数を安全に退避
+    const fnsRef = useRef({ addPts, subPts });
+    useEffect(() => { fnsRef.current = { addPts, subPts }; }, [addPts, subPts]);
 
     const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endBeg(); });
 
@@ -115,8 +119,8 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }
         setResult(resObj);
         syncToStore(isObserver, { result: resObj });
         
-        if (win && p > 0) addPts(p);
-    }, [stop, addPts, isObserver]);
+        if (win && p > 0) fnsRef.current.addPts(p);
+    }, [stop, isObserver]);
 
     const spawnNpc = useCallback(() => {
         if (!playingRef.current || countRef.current <= 0 || isObserver) return;
@@ -161,7 +165,7 @@ export function BegGame({ pts, addPts, subPts, onBack, isEventMode, isObserver }
         
         if (inZone) {
             earnedRef.current += gain;
-            if (gain > 0) addPts(gain); else if (gain < 0) subPts(-gain);
+            if (gain > 0) fnsRef.current.addPts(gain); else if (gain < 0) fnsRef.current.subPts(-gain);
             setEarned(Math.max(0, earnedRef.current));
             
             newFeedback = { 
@@ -247,6 +251,9 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const scoreRef = useRef(0);
     const comboRef = useRef(0);
     const judgeTimerRef = useRef(null);
+    const fnsRef = useRef({ addPts });
+
+    useEffect(() => { fnsRef.current = { addPts }; }, [addPts]);
 
     const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endMusic(); });
 
@@ -300,9 +307,9 @@ export function MusicGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         };
         setResult(resObj);
         syncToStore(isObserver, { result: resObj, isStarted: false });
-        if (p > 0) addPts(p);
+        if (p > 0) fnsRef.current.addPts(p);
         setNotes([]); syncToStore(isObserver, { notes: [] });
-    }, [stop, addPts, isObserver]);
+    }, [stop, isObserver]);
 
     const animate = useCallback(() => {
         if (!playingRef.current || isObserver) return;
@@ -467,6 +474,9 @@ export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const idxRef = useRef(0);
     const itemsRef = useRef([]);
     const doneRef = useRef(false);
+    const fnsRef = useRef({ addPts });
+
+    useEffect(() => { fnsRef.current = { addPts }; }, [addPts]);
 
     const { time, start, stop } = useTimer(10, () => { if (!doneRef.current && !isObserver) endNego(); });
 
@@ -499,8 +509,8 @@ export function NegoGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         };
         setResult(resObj);
         syncToStore(isObserver, { result: resObj });
-        if (p > 0) addPts(p);
-    }, [stop, addPts, isObserver]);
+        if (p > 0) fnsRef.current.addPts(p);
+    }, [stop, isObserver]);
 
     const showItem = useCallback((i, its) => {
         if (doneRef.current || isObserver) return;

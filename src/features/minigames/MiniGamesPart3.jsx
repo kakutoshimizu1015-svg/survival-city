@@ -42,7 +42,7 @@ export const MiniGameStylesPart3 = () => (
     `}</style>
 );
 
-/* ─── 定数定義（コンポーネントの外に出すことで無限ループを防止） ─── */
+/* ▼ 無限ループ防止のため、固定データ（配列）はコンポーネントの外に配置 */
 const RAIN_OBS_LIST = [
     { e: '👮', name: '警察', danger: 28 }, 
     { e: '🐕', name: '野良犬', danger: 20 }, 
@@ -51,7 +51,7 @@ const RAIN_OBS_LIST = [
 ];
 
 /* ════════════════════════════════════════
-   Game 9: 🐀 ネズミ追い払い (完全同期対応版)
+   Game 9: 🐀 ネズミ追い払い
 ════════════════════════════════════════ */
 export function RatGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const { addGachaAssets } = useUserStore();
@@ -71,6 +71,9 @@ export function RatGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const hitRef = useRef(0);
     const stolenRef = useRef(0);
     const idRef = useRef(0);
+    const fnsRef = useRef({ addPts });
+
+    useEffect(() => { fnsRef.current = { addPts }; }, [addPts]);
 
     const { time, start, stop } = useTimer(10, () => { if (playingRef.current && !isObserver) endRat(); });
 
@@ -146,11 +149,7 @@ export function RatGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         setRats(currentRats);
         if (stolenOccurred) setStolen(stolenRef.current);
         
-        syncToStore(isObserver, { 
-            rats: currentRats, 
-            stolen: stolenRef.current 
-        });
-        
+        syncToStore(isObserver, { rats: currentRats, stolen: stolenRef.current });
         rafRef.current = requestAnimationFrame(animate);
     }, [addGachaAssets, spawnRat, isObserver]);
 
@@ -192,8 +191,8 @@ export function RatGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         };
         setResult(resObj);
         syncToStore(isObserver, { result: resObj });
-        if (p > 0) addPts(p);
-    }, [stop, addPts, isObserver]);
+        if (p > 0) fnsRef.current.addPts(p);
+    }, [stop, isObserver]);
 
     const init = useCallback(() => {
         if (isObserver) return;
@@ -245,7 +244,7 @@ export function RatGame({ pts, addPts, onBack, isEventMode, isObserver }) {
 }
 
 /* ════════════════════════════════════════
-   Game 10: 🍺 酔っ払いバランス (完全同期対応版)
+   Game 10: 🍺 酔っ払いバランス 
 ════════════════════════════════════════ */
 export function DrunkGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const mgSyncData = useGameStore(s => s.mgSyncData);
@@ -391,7 +390,7 @@ export function DrunkGame({ pts, addPts, onBack, isEventMode, isObserver }) {
 }
 
 /* ════════════════════════════════════════
-   Game 11: ☔ 雨宿りダッシュ (完全同期対応版)
+   Game 11: ☔ 雨宿りダッシュ
 ════════════════════════════════════════ */
 export function RainGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const mgSyncData = useGameStore(s => s.mgSyncData);
@@ -405,6 +404,9 @@ export function RainGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const wetRef = useRef(0);
     const jumpRef = useRef(false);
     const playingRef = useRef(false);
+    const fnsRef = useRef({ addPts });
+
+    useEffect(() => { fnsRef.current = { addPts }; }, [addPts]);
     
     const rafRef = useRef(null);
     const wetIvRef = useRef(null);
@@ -436,8 +438,8 @@ export function RainGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         };
         setResult(resObj);
         syncToStore(isObserver, { result: resObj });
-        if (p > 0) addPts(p);
-    }, [stop, addPts, isObserver]);
+        if (p > 0) fnsRef.current.addPts(p);
+    }, [stop, isObserver]);
 
     const spawnObs = useCallback(() => {
         if (!playingRef.current || isObserver) return;
@@ -529,6 +531,7 @@ export function RainGame({ pts, addPts, onBack, isEventMode, isObserver }) {
                 </div>
                 
                 <div className="rain-arena">
+                    {/* 背景の雨 (同期せず個別に描画でOK) */}
                     {playingRef.current && Array.from({ length: 8 }).map((_, i) => (
                         <div key={i} className="rain-drop" style={{ left: `${rnd(0, 100)}%`, animationDuration: `${rnd(6, 12) / 10}s`, animationDelay: `${rnd(0, 10) / 10}s` }}>|</div>
                     ))}
@@ -573,6 +576,9 @@ export function KashiGame({ pts, addPts, onBack, isEventMode, isObserver }) {
     const bentosRef = useRef([]);
     const moveDirRef = useRef(0);
     const playingRef = useRef(false);
+    const fnsRef = useRef({ addPts });
+
+    useEffect(() => { fnsRef.current = { addPts }; }, [addPts]);
     
     const rafRef = useRef(null);
     const bentoIvRef = useRef(null);
@@ -609,10 +615,10 @@ export function KashiGame({ pts, addPts, onBack, isEventMode, isObserver }) {
         setResult(resObj);
         syncToStore(isObserver, { result: resObj });
         
-        if (p > 0) addPts(p);
+        if (p > 0) fnsRef.current.addPts(p);
         setBentos([]);
         syncToStore(isObserver, { bentos: [] });
-    }, [stop, addPts, isObserver]);
+    }, [stop, isObserver]);
 
     const spawnBento = useCallback(() => {
         if (!playingRef.current || isObserver) return;
