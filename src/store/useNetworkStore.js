@@ -9,6 +9,16 @@ import { processRoundEnd } from '../game/round';
 let isReceivingNetworkData = false;
 let networkReceiveTimer = null; // ▼ 追加: 受信タイマー管理用
 
+// 無料のSTUNサーバー設定（Google + Twilio）
+const peerConfig = {
+    config: {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:global.stun.twilio.com:3478?transport=udp' }
+        ]
+    }
+};
+
 export const useNetworkStore = create((setStore, getStore) => ({
     myUserId: null,
     
@@ -38,7 +48,9 @@ export const useNetworkStore = create((setStore, getStore) => ({
 
     createRoom: async (roomCode, playerName) => {
         setStore({ status: 'connecting', isHost: true, roomId: roomCode });
-        const peer = new Peer();
+        
+        // ▼ 修正: STUNサーバー設定を適用
+        const peer = new Peer(peerConfig);
         
         // ▼ 修正: ホスト側のPeerエラーハンドリングを追加
         peer.on('error', (err) => {
@@ -138,8 +150,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
         const snapshot = await get(roomRef);
         if (!snapshot.exists()) { setStore({ status: 'error' }); return; }
 
-        // ▼ 修正: ゲストのPeerIDを固定(myUserId)からランダムに変更し、競合を回避
-        const peer = new Peer(); 
+        // ▼ 修正: IDのランダム化とSTUNサーバー設定を適用
+        const peer = new Peer(peerConfig); 
         
         // ▼ 修正: ゲスト側のPeerエラーハンドリングを追加
         peer.on('error', (err) => {
