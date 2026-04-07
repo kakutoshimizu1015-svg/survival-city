@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useUserStore } from '../../store/useUserStore';
-import { sendFriendRequestByCode, acceptFriendRequest, removeFriendRequest } from '../../utils/userLogic';
-import { ref, push, set } from 'firebase/database'; // ▼ 追加
-import { db } from '../../lib/firebase'; // ▼ 追加
+// ▼ 修正: userLogic.js にある正しい招待送信関数 (sendRoomInvite) をインポートする
+import { sendFriendRequestByCode, acceptFriendRequest, removeFriendRequest, sendRoomInvite } from '../../utils/userLogic';
 
-export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => { // ▼ currentRoomId を受け取る
-    const { friendCode, friends, friendRequests, playerName } = useUserStore();
+export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => {
+    const { friendCode, friends, friendRequests } = useUserStore();
     const [tab, setTab] = useState('list'); // 'list', 'add', 'requests'
     const [codeInput, setCodeInput] = useState('');
     const [searchMsg, setSearchMsg] = useState({ text: '', type: '' });
@@ -22,20 +21,13 @@ export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => {
         setIsSearching(false);
     };
 
-    // ▼ 追加: フレンドへ招待を送信するロジック
+    // ▼ 修正: userLogic.js の正しい送信関数を使って、相手の正しいDBパスへ送信する
     const handleSendInvite = async (e, friend) => {
         e.stopPropagation(); // プロフィールが開くのを防ぐ
         if (!currentRoomId) return;
 
         try {
-            // 相手の uid の下にある invites ノードへ招待データを書き込む
-            const inviteRef = push(ref(db, `users/${friend.uid}/invites`));
-            await set(inviteRef, {
-                id: inviteRef.key,
-                roomId: currentRoomId,
-                fromName: playerName,
-                timestamp: Date.now()
-            });
+            await sendRoomInvite(friend.uid, currentRoomId);
             alert(`${friend.name} さんに招待を送信しました！`);
         } catch (error) {
             console.error("招待送信エラー:", error);
@@ -96,7 +88,7 @@ export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => {
                                     }}>
                                         <div style={{ fontWeight: 'bold' }}>{f.name}</div>
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                            {/* ▼ 追加: 部屋IDがある場合のみ招待ボタンを表示 */}
+                                            {/* 部屋IDがある場合のみ招待ボタンを表示 */}
                                             {currentRoomId && (
                                                 <button 
                                                     onClick={(e) => handleSendInvite(e, f)}
