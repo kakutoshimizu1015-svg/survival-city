@@ -269,9 +269,9 @@ export const SettingsAndRules = () => {
     }
 
     return (
-        <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={() => setGameState({ settingsActive: false })}>
+        <div className="modal-overlay" style={{ display: 'flex', zIndex: 30000 }} onClick={() => setGameState({ settingsActive: false })}>
             <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723', padding: '15px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
-                
+
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', borderBottom: '2px solid #8d6e63', paddingBottom: '10px' }}>
                     <ClayButton 
                         onClick={() => setActiveTab('player')} 
