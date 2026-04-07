@@ -39,6 +39,13 @@ export const useNetworkStore = create((setStore, getStore) => ({
     createRoom: async (roomCode, playerName) => {
         setStore({ status: 'connecting', isHost: true, roomId: roomCode });
         const peer = new Peer();
+        
+        // ▼ 修正: ホスト側のPeerエラーハンドリングを追加
+        peer.on('error', (err) => {
+            console.error("Host Peer error:", err);
+            setStore({ status: 'error' });
+        });
+
         peer.on('open', async (id) => {
             const roomRef = ref(db, `rooms/${roomCode}`);
             await set(roomRef, { hostPeerId: id, createdAt: Date.now(), hostName: playerName, status: 'waiting' });
@@ -51,6 +58,9 @@ export const useNetworkStore = create((setStore, getStore) => ({
                 setStore(state => ({ connections: [...state.connections, conn] }));
                 conn.on('data', (data) => {
                     if (data.type === 'JOIN') {
+                        // ▼ 修正: ランダムなPeerIDとFirebase UIDを紐付けるために保存
+                        conn.guestUserId = data.user.userId;
+
                         const newPlayer = { ...data.user, isHost: false, isCPU: false };
                         const updatedPlayers = [...getStore().lobbyPlayers, newPlayer];
                         setStore({ lobbyPlayers: updatedPlayers });
@@ -114,7 +124,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
             });
             conn.on('close', () => {
                 setStore(state => ({ connections: state.connections.filter(c => c.peer !== conn.peer) }));
-                const currentPlayers = getStore().lobbyPlayers.filter(p => p.userId !== conn.peer);
+                // ▼ 修正: ゲストの退出判定を conn.peer ではなく、保存した guestUserId で行う
+                const currentPlayers = getStore().lobbyPlayers.filter(p => p.userId !== conn.guestUserId);
                 setStore({ lobbyPlayers: currentPlayers });
                 getStore().broadcast({ type: 'LOBBY_UPDATE', players: currentPlayers });
             });
@@ -127,7 +138,15 @@ export const useNetworkStore = create((setStore, getStore) => ({
         const snapshot = await get(roomRef);
         if (!snapshot.exists()) { setStore({ status: 'error' }); return; }
 
-        const peer = new Peer(getStore().myUserId); 
+        // ▼ 修正: ゲストのPeerIDを固定(myUserId)からランダムに変更し、競合を回避
+        const peer = new Peer(); 
+        
+        // ▼ 修正: ゲスト側のPeerエラーハンドリングを追加
+        peer.on('error', (err) => {
+            console.error("Guest Peer error:", err);
+            setStore({ status: 'error' });
+        });
+
         peer.on('open', () => {
             const conn = peer.connect(snapshot.val().hostPeerId);
             conn.on('open', () => {

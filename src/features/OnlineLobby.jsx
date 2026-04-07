@@ -267,6 +267,8 @@ export const OnlineLobby = () => {
                         <button className="btn-large btn-green" onClick={handleCreate} disabled={status === 'connecting'}>👑 部屋を新しく作る</button>
                         <div style={{ textAlign: 'center', margin: '5px 0' }}>または手動で入力</div>
                         <div style={{ display: 'flex', gap: '10px' }}><input type="text" placeholder="コード入力" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flexGrow: 1, padding: '10px', borderRadius: '4px' }} /><button className="btn-clay btn-blue" onClick={() => handleJoin()} disabled={status === 'connecting' || roomInput === ''}>参加</button></div>
+                        {/* ▼ 追加: エラー時のメッセージ表示 */}
+                        {status === 'error' && <div style={{ color: '#e74c3c', fontSize: '14px', marginTop: '5px', fontWeight: 'bold' }}>接続エラーが発生しました。もう一度お試しください。</div>}
                     </div>
                     <div className="panel" style={{ width: '400px', height: '350px', padding: '20px', display: 'flex', flexDirection: 'column' }}>
                         <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px', marginBottom: '15px' }}>📡 募集中の部屋</h3>
