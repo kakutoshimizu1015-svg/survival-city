@@ -5,6 +5,25 @@ import { useUserStore } from '../../store/useUserStore';
 import { savePlayerName, syncGachaData } from '../../utils/userLogic';
 import { sendGlobalMail } from '../../utils/adminLogic';
 
+// ▼ 追加：お詫びメールのテンプレート定義
+const TEMPLATES = {
+    A: { 
+        name: "【A】重大なバグ・進行不能",
+        title: "【重要】不具合のお詫びとアイテム補填について", 
+        body: "いつも『ホームレスサバイバルシティ』をプレイしていただきありがとうございます。運営チームです。\n\n下記の期間において、ゲームの進行やスコアに重大な影響を与える不具合が発生しておりました。\n\n【修正内容】\n{{DETAIL}}\n\n本件の対象期間中にプレイされていた皆様には、多大なるご迷惑をおかけしましたことを深くお詫び申し上げます。\nお詫びとして、ささやかではございますが本メールにアイテムを添付いたしました。お受け取りいただけますと幸いです。\n\n引き続き、本作をよろしくお願いいたします。" 
+    },
+    B: { 
+        name: "【B】軽微なバグ・表示修正",
+        title: "不具合修正のお知らせとプレゼント", 
+        body: "いつもプレイしていただきありがとうございます！\n本日のアップデートにて、以下の不具合を修正いたしました。\n\n【修正内容】\n{{DETAIL}}\n\nご不便をおかけしたお詫びとして、アイテムをお送りいたします。\n今後とも『ホームレスサバイバルシティ』をお楽しみください！" 
+    },
+    C: { 
+        name: "【C】サーバー障害・メンテ",
+        title: "サーバー障害（緊急メンテナンス）のお詫び", 
+        body: "いつも本作をお楽しみいただきありがとうございます。\n\n先ほど、ネットワーク接続が不安定になる問題が発生したため、緊急の修正対応を実施いたしました。\n\n【対応内容】\n{{DETAIL}}\n\nプレイ中に通信が切断されてしまった皆様へ、心よりお詫び申し上げます。\nお詫びの品を添付いたしましたので、次回プレイ時にお役立てください。" 
+    }
+};
+
 export const SettingsAndRules = () => {
     const { settingsActive, rulesActive, setGameState, resetGame } = useGameStore();
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -19,10 +38,10 @@ export const SettingsAndRules = () => {
     const [activeTab, setActiveTab] = useState('player');
     const [editingName, setEditingName] = useState(playerName);
 
-    // ▼ 開発者用ステート
+    // ▼ 開発者用ステート（テンプレート対応）
     const [devCode, setDevCode] = useState("");
-    const [mailTitle, setMailTitle] = useState("");
-    const [mailText, setMailText] = useState("");
+    const [templateType, setTemplateType] = useState("A"); // テンプレート種類
+    const [mailDetail, setMailDetail] = useState("");      // 修正内容（詳細）
     const [mailP, setMailP] = useState("");
     const [mailCans, setMailCans] = useState("");
     const [isSendingMail, setIsSendingMail] = useState(false);
@@ -46,19 +65,24 @@ export const SettingsAndRules = () => {
         }
     };
 
-    // ▼ 開発者用ロジック
+    // ▼ 開発者用ロジック（テンプレート対応）
     const isDevAuthenticated = devCode === "DEV_MAIL_2026";
 
     const handleSendGlobalMail = async () => {
-        if (!mailTitle || !mailText) return alert("タイトルと本文は必須です");
+        if (!mailDetail) return alert("詳細（修正内容）を入力してください");
         setIsSendingMail(true);
+        
+        const selectedTpl = TEMPLATES[templateType];
+        const finalBodyText = selectedTpl.body.replace('{{DETAIL}}', mailDetail);
+
         const result = await sendGlobalMail(devCode, { 
-            title: mailTitle, text: mailText, p: mailP, cans: mailCans 
+            title: selectedTpl.title, text: finalBodyText, p: mailP, cans: mailCans 
         });
+        
         setIsSendingMail(false);
         if (result.success) {
             alert(result.message);
-            setMailTitle(""); setMailText(""); setMailP(""); setMailCans(""); 
+            setMailDetail(""); setMailP(""); setMailCans(""); 
         } else {
             alert(result.message);
         }
@@ -152,7 +176,7 @@ export const SettingsAndRules = () => {
                             
                             <div style={{ background: '#fce4ec', borderLeft: '4px solid #e91e63', padding: '10px', borderRadius: '0 8px 8px 0', marginBottom: '10px' }}>
                                 <p style={{ margin: 0, fontSize: '12px', color: '#880e4f', fontWeight: 'bold' }}>【NPCの行動ルール】</p>
-                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#333' }}>各NPC（収集車以外）は、毎ラウンド<b>隣接するマスへ1歩ずつ移動</b>します。また、プレイヤーに効果を発 পিতNPCは<b>1ラウンドの間マップから消滅</b>し、その後ランダムな場所に再出現します。</p>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#333' }}>各NPC（収集車以外）は、毎ラウンド<b>隣接するマスへ1歩ずつ移動</b>します。また、プレイヤーに効果を発動したNPCは<b>1ラウンドの間マップから消滅</b>し、その後ランダムな場所に再出現します。</p>
                             </div>
 
                             <ul style={{ fontSize: '13px', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
@@ -393,7 +417,6 @@ export const SettingsAndRules = () => {
                             </div>
                         </div>
 
-                        {/* ▼ 新規追加: マス目ラベル表示トグル */}
                         <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
                             <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                                 <input type="checkbox" checked={showTileLabels} onChange={(e) => setUserData({ showTileLabels: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
@@ -404,7 +427,7 @@ export const SettingsAndRules = () => {
                             </div>
                         </div>
 
-                        {/* ▼ 新規追加: 開発者隠しメニュー */}
+                        {/* ▼ 開発者隠しメニュー（テンプレート送信対応） */}
                         <div style={{ marginBottom: '20px', textAlign: 'left', background: '#3e2723', color: '#fdf5e6', padding: '10px', borderRadius: '8px', border: '1px solid #5c4a44' }}>
                             <div style={{ fontSize: '12px', color: '#95a5a6', marginBottom: '5px' }}>開発者オプション</div>
                             <input 
@@ -415,9 +438,20 @@ export const SettingsAndRules = () => {
                             
                             {isDevAuthenticated && (
                                 <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(0,0,0,0.5)', borderRadius: '8px', border: '1px dashed #e74c3c' }}>
-                                    <div style={{ fontSize: '12px', color: '#e74c3c', fontWeight: 'bold', marginBottom: '8px' }}>🔧 全体メール配布</div>
-                                    <input type="text" placeholder="タイトル (例: お詫び)" value={mailTitle} onChange={e => setMailTitle(e.target.value)} style={{ width: '100%', marginBottom: '5px', padding: '6px', fontSize: '12px' }} />
-                                    <textarea placeholder="本文" value={mailText} onChange={e => setMailText(e.target.value)} style={{ width: '100%', marginBottom: '5px', padding: '6px', fontSize: '12px', minHeight: '50px' }} />
+                                    <div style={{ fontSize: '12px', color: '#e74c3c', fontWeight: 'bold', marginBottom: '8px' }}>🔧 全体メール配布（テンプレート式）</div>
+                                    <select 
+                                        value={templateType} onChange={e => setTemplateType(e.target.value)}
+                                        style={{ width: '100%', marginBottom: '5px', padding: '6px', fontSize: '12px', background: '#2f3640', color: 'white', border: '1px solid #718093' }}
+                                    >
+                                        {Object.entries(TEMPLATES).map(([key, tpl]) => (
+                                            <option key={key} value={key}>{tpl.name}</option>
+                                        ))}
+                                    </select>
+                                    <textarea 
+                                        placeholder="詳細（修正内容や対応内容のみを記入）" 
+                                        value={mailDetail} onChange={e => setMailDetail(e.target.value)} 
+                                        style={{ width: '100%', marginBottom: '5px', padding: '6px', fontSize: '12px', minHeight: '50px', background: '#2f3640', color: 'white', border: '1px solid #718093' }} 
+                                    />
                                     <div style={{ display: 'flex', gap: '5px', marginBottom: '8px' }}>
                                         <input type="number" placeholder="付与 P" value={mailP} onChange={e => setMailP(e.target.value)} style={{ flex: 1, padding: '6px', fontSize: '12px' }} />
                                         <input type="number" placeholder="付与 缶" value={mailCans} onChange={e => setMailCans(e.target.value)} style={{ flex: 1, padding: '6px', fontSize: '12px' }} />
