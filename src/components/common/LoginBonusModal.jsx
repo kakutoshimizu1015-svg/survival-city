@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useUserStore } from '../../store/useUserStore';
 import { syncGachaData } from '../../utils/userLogic';
 import { GACHA_POOL } from '../../constants/characters';
@@ -17,7 +17,8 @@ const LOGIN_REWARDS = [
     { day: 7, type: "skin", skinId: "SSR_boss", amount: 1, fallbackP: 1000, label: "限定スキン", icon: "✨" }, 
 ];
 
-export default function LoginBonusModal() {
+// ▼ 修正: App.jsxから手動開閉用の props を受け取る
+export default function LoginBonusModal({ manualOpen, onCloseManual }) {
     const { 
         loginDays, 
         showLoginBonusToday, 
@@ -30,11 +31,12 @@ export default function LoginBonusModal() {
     const [isClaiming, setIsClaiming] = useState(false);
     const [conversionMessage, setConversionMessage] = useState(null);
 
+    // ▼ 修正: 今日のボーナスが未受取、または手動で開かれた場合のみ描画する
+    if (!showLoginBonusToday && !manualOpen) return null;
+
     // デバッグ・フェイルセーフ用: loginDaysが不正な値にならないように補正
     const currentDay = Math.max(1, Math.min(7, loginDays || 1));
     const todayReward = LOGIN_REWARDS[currentDay - 1];
-
-    if (!showLoginBonusToday) return null;
 
     const handleClaim = async () => {
         if (isClaiming) return;
@@ -48,12 +50,12 @@ export default function LoginBonusModal() {
         } else if (todayReward.type === "skin") {
             const alreadyOwned = unlockedSkins.includes(todayReward.skinId);
             if (alreadyOwned) {
-                // ▼ 重複救済：Pに変換
+                // 重複救済：Pに変換
                 addGachaAssets(0, todayReward.fallbackP);
                 setConversionMessage(`所持済みスキンだったため、${todayReward.fallbackP} Pに変換されました！`);
-                await new Promise(r => setTimeout(r, 2000)); // メッセージを見せるための待機
+                await new Promise(r => setTimeout(r, 2000));
             } else {
-                // ▼ 新規獲得
+                // 新規獲得
                 unlockMultipleSkins([todayReward.skinId]);
             }
         }
@@ -64,9 +66,9 @@ export default function LoginBonusModal() {
         // モーダルを閉じる
         setUserData({ showLoginBonusToday: false });
         setIsClaiming(false);
+        if (onCloseManual) onCloseManual();
     };
 
-    // 7日目のスキン画像を取得（存在しない場合のフォールバック付き）
     const targetSkinData = GACHA_POOL.find(s => s.id === LOGIN_REWARDS[6].skinId);
 
     const BG = "#0C0600";
@@ -109,8 +111,8 @@ export default function LoginBonusModal() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 12 }}>
                     {LOGIN_REWARDS.slice(0, 6).map((reward, i) => {
                         const day = i + 1;
-                        const isPast = day < currentDay;
-                        const isToday = day === currentDay;
+                        const isPast = day < currentDay || (!showLoginBonusToday && day === currentDay);
+                        const isToday = day === currentDay && showLoginBonusToday;
                         const isFuture = day > currentDay;
 
                         return (
@@ -139,8 +141,8 @@ export default function LoginBonusModal() {
                     border: `2px solid ${currentDay === 7 ? '#FFD700' : BORD}`,
                     borderRadius: 12, padding: 14, display: 'flex', alignItems: 'center', gap: 16,
                     opacity: currentDay < 7 ? 0.6 : 1,
-                    animation: currentDay === 7 ? 'pulseHighlight 2s infinite' : 'none',
-                    filter: currentDay > 7 ? 'grayscale(100%) brightness(0.5)' : 'none'
+                    animation: currentDay === 7 && showLoginBonusToday ? 'pulseHighlight 2s infinite' : 'none',
+                    filter: currentDay > 7 || (!showLoginBonusToday && currentDay === 7) ? 'grayscale(100%) brightness(0.5)' : 'none'
                 }}>
                     <div style={{
                         width: 64, height: 64, borderRadius: '50%', background: '#0C0600', 
@@ -149,7 +151,7 @@ export default function LoginBonusModal() {
                     }}>
                         {targetSkinData ? (
                             <>
-                                {currentDay === 7 && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 60%)', animation: 'fadeIn 1s infinite alternate' }} />}
+                                {currentDay === 7 && showLoginBonusToday && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 60%)', animation: 'fadeIn 1s infinite alternate' }} />}
                                 <img src={targetSkinData.front} alt="7日目報酬" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             </>
                         ) : (
@@ -161,7 +163,7 @@ export default function LoginBonusModal() {
                         <div style={{ fontSize: 16, color: LIGHT, fontWeight: 'bold', marginBottom: 2 }}>{LOGIN_REWARDS[6].label}</div>
                         <div style={{ fontSize: 10, color: '#AAA' }}>※所持済みの場合は {LOGIN_REWARDS[6].fallbackP}P に変換</div>
                     </div>
-                    {currentDay > 7 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, color: '#66BB6A', textShadow: '0 0 10px #000' }}>✔</div>}
+                    {(!showLoginBonusToday && currentDay === 7) && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, color: '#66BB6A', textShadow: '0 0 10px #000' }}>✔</div>}
                 </div>
 
                 {/* 変換メッセージ */}
@@ -171,24 +173,32 @@ export default function LoginBonusModal() {
                     </div>
                 )}
 
-                {/* 受け取りボタン */}
-                <button 
-                    onClick={handleClaim} 
-                    disabled={isClaiming}
-                    style={{
-                        marginTop: 24, width: '100%', padding: 16, borderRadius: 12, border: `2px solid ${ACC}`,
-                        background: isClaiming ? '#333' : 'linear-gradient(135deg, #8B2500, #5C1A00)',
-                        color: '#FFF', fontSize: 16, fontWeight: 'bold', cursor: isClaiming ? 'not-allowed' : 'pointer',
-                        boxShadow: isClaiming ? 'none' : '0 4px 10px rgba(0,0,0,0.5)',
-                        transition: 'transform 0.1s, filter 0.1s'
-                    }}
-                    onMouseOver={e => { if(!isClaiming) e.currentTarget.style.filter = 'brightness(1.1)'; }}
-                    onMouseOut={e => { if(!isClaiming) e.currentTarget.style.filter = 'none'; }}
-                    onMouseDown={e => { if(!isClaiming) e.currentTarget.style.transform = 'scale(0.98)'; }}
-                    onMouseUp={e => { if(!isClaiming) e.currentTarget.style.transform = 'scale(1)'; }}
-                >
-                    {isClaiming ? '受け取り処理中...' : '報酬を受け取る！'}
-                </button>
+                {/* ▼ 修正: 未受取の場合は「受け取る」ボタン、受取済みの場合は「閉じる」ボタンを表示 */}
+                {showLoginBonusToday ? (
+                    <button 
+                        onClick={handleClaim} 
+                        disabled={isClaiming}
+                        style={{
+                            marginTop: 24, width: '100%', padding: 16, borderRadius: 12, border: `2px solid ${ACC}`,
+                            background: isClaiming ? '#333' : 'linear-gradient(135deg, #8B2500, #5C1A00)',
+                            color: '#FFF', fontSize: 16, fontWeight: 'bold', cursor: isClaiming ? 'not-allowed' : 'pointer',
+                            boxShadow: isClaiming ? 'none' : '0 4px 10px rgba(0,0,0,0.5)',
+                            transition: 'transform 0.1s, filter 0.1s'
+                        }}
+                    >
+                        {isClaiming ? '受け取り処理中...' : '報酬を受け取る！'}
+                    </button>
+                ) : (
+                    <button 
+                        onClick={onCloseManual} 
+                        style={{
+                            marginTop: 24, width: '100%', padding: 16, borderRadius: 12, border: `2px solid ${BORD}`,
+                            background: '#150800', color: LIGHT, fontSize: 16, fontWeight: 'bold', cursor: 'pointer',
+                        }}
+                    >
+                        閉じる
+                    </button>
+                )}
             </div>
         </div>
     );

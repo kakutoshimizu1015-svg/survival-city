@@ -13,6 +13,7 @@ import { SandboxGuide } from './components/overlays/SandboxGuide';
 import GachaScreen from './features/GachaScreen';
 import MinigamesApp from './features/minigames/MinigamesApp';
 
+import LoginBonusModal from './components/common/LoginBonusModal'; // ▼ 新規追加
 import { GlobalInviteModal } from './components/common/GlobalInviteModal';
 import { FriendListModal } from './components/common/FriendListModal';
 import { UserProfileModal } from './components/common/UserProfileModal';
@@ -27,6 +28,7 @@ function App() {
   const [showFriendModal, setShowFriendModal] = useState(false);
   const [showMailboxModal, setShowMailboxModal] = useState(false);
   const [selectedProfileUid, setSelectedProfileUid] = useState(null);
+  const [showManualLoginBonus, setShowManualLoginBonus] = useState(false); // ▼ 新規追加: 手動でボーナス画面を開くフラグ
 
   // ▼ 修正: Firebaseからオブジェクト形式でデータが届いても絶対にクラッシュしないように配列へ強制変換する
   const safeInbox = Array.isArray(inbox) ? inbox : (inbox ? Object.values(inbox) : []);
@@ -61,6 +63,11 @@ function App() {
   return (
     <>
       <GlobalInviteModal />
+      
+      {/* ▼ 新規追加: モード選択画面のときだけログインボーナスを（自動または手動で）表示する */}
+      {gamePhase === 'mode_select' && (
+        <LoginBonusModal manualOpen={showManualLoginBonus} onCloseManual={() => setShowManualLoginBonus(false)} />
+      )}
 
       {showFriendModal && (
         <FriendListModal onClose={() => setShowFriendModal(false)} onSelectFriend={(targetUid) => setSelectedProfileUid(targetUid)} />
@@ -151,6 +158,13 @@ function App() {
                     background: '#7f8c8d', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
                 }}>
                     ⚙️ 設定
+                </button>
+
+                {/* ▼ 新規追加: いつでもカレンダーを確認できるボタン */}
+                <button onClick={(e) => { e.stopPropagation(); setShowManualLoginBonus(true); }} style={{
+                    background: '#9b59b6', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
+                }}>
+                    🗓 ボーナス
                 </button>
             </div>
             <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '8px' }}>※名前は入力後、枠外をタップで自動保存</div>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useUserStore } from '../store/useUserStore';
 import { useGameStore } from '../store/useGameStore';
 import { GACHA_POOL } from '../constants/characters';
@@ -267,9 +267,7 @@ export default function GachaScreen() {
   const [pendingRes,  setPendingRes]  = useState([]);
   
   const [selectedSkinDetail, setSelectedSkinDetail] = useState(null);
-  const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, scale: 1 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
+  const [viewTransform, setViewTransform] = useState({ scale: 1 }); // ズーム専用ステート
 
   const collection = {};
   GACHA_POOL.forEach(s => {
@@ -390,60 +388,46 @@ export default function GachaScreen() {
 
       {selectedSkinDetail && (
         <div style={{
-          position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.85)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+          position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.92)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20
         }} 
-        onClick={() => { setSelectedSkinDetail(null); setViewTransform({x:0, y:0, scale:1}); }}>
+        onClick={() => { setSelectedSkinDetail(null); setViewTransform({scale: 1}); }}
+        onWheel={(e) => {
+            const zoomAmount = e.deltaY < 0 ? 0.05 : -0.05;
+            setViewTransform(p => ({ scale: Math.max(0.5, Math.min(4, p.scale + zoomAmount)) }));
+        }}>
+            
           <div style={{
-            background: PANEL, border: `2px solid ${RARITY_CFG[selectedSkinDetail.rarity].border}`,
-            borderRadius: 16, padding: 24, maxWidth: 320, width: '100%',
-            textAlign: 'center', boxShadow: `0 0 30px ${RARITY_CFG[selectedSkinDetail.rarity].glow}66`,
-            animation: 'zoomIn 0.3s ease'
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{
                background: RARITY_CFG[selectedSkinDetail.rarity].gold, color: '#000',
-               padding: '2px 12px', borderRadius: 20, display: 'inline-block',
-               fontWeight: 'bold', fontSize: 12, marginBottom: 16
-            }}>{selectedSkinDetail.rarity}</div>
-            
-            <div 
-               onPointerDown={(e) => {
-                 setIsDragging(true);
-                 dragStart.current = { x: e.clientX - viewTransform.x, y: e.clientY - viewTransform.y };
-                 e.currentTarget.setPointerCapture(e.pointerId);
-               }}
-               onPointerMove={(e) => {
-                 if (!isDragging) return;
-                 setViewTransform(p => ({ ...p, x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y }));
-               }}
-               onPointerUp={(e) => {
-                 setIsDragging(false);
-                 e.currentTarget.releasePointerCapture(e.pointerId);
-               }}
-               onWheel={(e) => {
-                 const zoom = e.deltaY < 0 ? 0.1 : -0.1;
-                 setViewTransform(p => ({ ...p, scale: Math.max(0.5, Math.min(3, p.scale + zoom)) }));
-               }}
-               style={{
-               width: 140, height: 140, margin: '0 auto 20px', borderRadius: 12, cursor: isDragging ? 'grabbing' : 'grab',
-               border: `4px solid ${selectedSkinDetail.ring}`, background: selectedSkinDetail.pieceColor,
-               overflow: 'hidden', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)', touchAction: 'none'
-            }}>
-                <img src={selectedSkinDetail.front} alt={selectedSkinDetail.name} 
-                     style={{ 
-                         width: '100%', height: '100%', objectFit: 'cover',
-                         transform: `translate(${viewTransform.x}px, ${viewTransform.y}px) scale(${viewTransform.scale})`,
-                         transition: isDragging ? 'none' : 'transform 0.1s' 
-                     }} 
-                     draggable={false} />
-            </div>
+               padding: '4px 16px', borderRadius: 20, fontWeight: 'bold', fontSize: 14, 
+               position: 'absolute', top: 30, zIndex: 510
+          }} onClick={e => e.stopPropagation()}>{selectedSkinDetail.rarity}</div>
+          
+          <div style={{
+               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%'
+          }}>
+              <img src={selectedSkinDetail.front} alt={selectedSkinDetail.name} 
+                   style={{ 
+                       width: '250px', height: '250px', objectFit: 'contain', 
+                       transform: `scale(${viewTransform.scale})`,
+                       transition: 'transform 0.15s ease-out',
+                       filter: `drop-shadow(0 0 20px ${RARITY_CFG[selectedSkinDetail.rarity].glow}88)`
+                   }} 
+                   draggable={false} />
+          </div>
 
-            <h2 style={{ margin: '0 0 10px 0', color: RARITY_CFG[selectedSkinDetail.rarity].gold }}>{selectedSkinDetail.name}</h2>
-            <p style={{ color: LIGHT, fontSize: 13, lineHeight: 1.5, opacity: 0.9 }}>{selectedSkinDetail.desc}</p>
+          <div style={{
+            background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', 
+            position: 'absolute', bottom: 0, left: 0, right: 0, padding: '40px 20px 20px',
+            textAlign: 'center'
+          }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 10px 0', color: RARITY_CFG[selectedSkinDetail.rarity].gold, fontSize: 24 }}>{selectedSkinDetail.name}</h2>
+            <p style={{ color: LIGHT, fontSize: 14, lineHeight: 1.5, opacity: 0.9 }}>{selectedSkinDetail.desc}</p>
+            <p style={{ color: MUTED, fontSize: 11, marginTop: 10 }}>※マウスホイールでズームイン・アウト</p>
             
-            <button onClick={() => { setSelectedSkinDetail(null); setViewTransform({x:0, y:0, scale:1}); }} style={{
-                marginTop: 24, padding: '10px 30px', borderRadius: 8, border: `1px solid ${BORD}`,
-                background: '#150800', color: LIGHT, cursor: 'pointer', fontWeight: 'bold'
+            <button onClick={() => { setSelectedSkinDetail(null); setViewTransform({scale: 1}); }} style={{
+                marginTop: 20, padding: '12px 40px', borderRadius: 8, border: `1px solid ${BORD}`,
+                background: '#150800', color: LIGHT, cursor: 'pointer', fontWeight: 'bold', fontSize: 16
             }}>閉じる</button>
           </div>
         </div>
@@ -570,44 +554,52 @@ export default function GachaScreen() {
             if (pool.length === 0) return null;
 
             return (
-              <div key={rarity} style={{ marginBottom:18 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
-                  <div style={{ background:cfg.gold, color:"#000", borderRadius:6, padding:"1px 10px", fontSize:11, fontWeight:"bold" }}>{rarity}</div>
+              <div key={rarity} style={{ marginBottom:24 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                  <div style={{ background:cfg.gold, color:"#000", borderRadius:6, padding:"2px 12px", fontSize:12, fontWeight:"bold" }}>{rarity}</div>
                   <div style={{ flex:1, height:1, background:BORD }}/>
-                  <div style={{ fontSize:10, color:MUTED }}>{got}/{pool.length}</div>
+                  <div style={{ fontSize:12, color:MUTED }}>{got}/{pool.length}</div>
                 </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(104px,1fr))", gap:8, gridAutoFlow: "dense" }}>
-                  {pool.map((skin, index) => {
+                
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(124px,1fr))", gap:12 }}>
+                  {pool.map((skin) => {
                     const count = collection[skin.id]||0;
                     const has   = count>0;
-                    const isFirst = index === 0;
                     
                     return (
                       <div 
                         key={skin.id} className="gcitem" 
                         onClick={() => { if(has) setSelectedSkinDetail(skin) }}
                         style={{
-                          gridColumn: isFirst ? "span 2" : "auto", gridRow: isFirst ? "span 2" : "auto",
-                          background: has?PANEL:"#0C0600", border:`2px solid ${has?cfg.border:"#2A1208"}`, borderRadius:12, padding:10, textAlign:"center", opacity: 1, position:"relative", boxShadow: has?`0 0 10px ${cfg.glow}33`:"none", cursor: has ? "pointer" : "default",
+                          background: has ? PANEL : "#0C0600", 
+                          border:`2px solid ${has ? cfg.border : "#2A1208"}`, 
+                          borderRadius: 14, padding: 12, textAlign: "center", 
+                          position: "relative", 
+                          boxShadow: has ? `0 0 12px ${cfg.glow}44` : "none", 
+                          cursor: has ? "pointer" : "default",
                           display: "flex", flexDirection: "column", justifyContent: "center"
                         }}
                       >
-                        <div style={{ position:"relative", display:"inline-block", marginBottom:5 }}>
+                        <div style={{ position:"relative", display:"inline-block", marginBottom:8 }}>
                           <div style={{
-                            width: isFirst ? 88 : 44, height: isFirst ? 88 : 44,
-                            borderRadius:"50%", background: has?skin.pieceColor:"#1A0A00", border:`3px solid ${has?skin.ring:"#333"}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto", overflow:"hidden", position:"relative", boxShadow: has?"0 2px 8px #0006, inset 0 3px 5px #ffffff14":"none",
+                            width: 65, height: 65, 
+                            borderRadius:"50%", background: has?skin.pieceColor:"#1A0A00", 
+                            border:`3px solid ${has?skin.ring:"#444"}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto", overflow:"hidden", position:"relative", 
+                            boxShadow: has ? "0 4px 10px #0008, inset 0 3px 5px #ffffff14" : "none",
                           }}>
-                            {has&&<div style={{ position:"absolute", top:"8%", left:"12%", width:"38%", height:"28%", borderRadius:"50%", background:"rgba(255,255,255,0.18)", transform:"rotate(-25deg)" }}/>}
-                            <img src={skin.front} alt="" style={{ 
+                            {has && <div style={{ position:"absolute", top:"8%", left:"12%", width:"38%", height:"28%", borderRadius:"50%", background:"rgba(255,255,255,0.18)", transform:"rotate(-25deg)" }}/>}
+                            <img src={skin.front} alt={skin.name} style={{ 
                                 width: "100%", height: "100%", objectFit: "cover",
-                                filter: has ? 'none' : 'brightness(0) drop-shadow(0 0 4px #FF6600)', opacity: has ? 1 : 0.6
+                                filter: has ? 'none' : 'brightness(0.35) grayscale(0.5)', 
+                                opacity: has ? 1 : 0.8
                             }} />
                           </div>
-                          {count>1&& <div style={{ position:"absolute", top:-4, right:-4, background:GOLD, color:"#000", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:"bold", display:"flex", alignItems:"center", justifyContent:"center" }}>{count}</div>}
+                          {count>1&& <div style={{ position:"absolute", top:-4, right:-4, background:GOLD, color:"#000", borderRadius:"50%", width:20, height:20, fontSize:11, fontWeight:"bold", display:"flex", alignItems:"center", justifyContent:"center", border: '2px solid #000' }}>{count}</div>}
                         </div>
-                        <div style={{ fontSize:8, color:cfg.gold, fontWeight:"bold", marginBottom:1 }}>{rarity}</div>
-                        <div style={{ fontSize:8, color:has?LIGHT:MUTED, lineHeight:1.3, fontWeight:has?"bold":"normal" }}>{has?skin.name:"???"}</div>
-                        {!has&&<div style={{ fontSize:8, color:"#3D1800", marginTop:1 }}>未取得</div>}
+                        <div style={{ fontSize:9, color:cfg.gold, fontWeight:"bold", marginBottom:2 }}>{rarity}</div>
+                        <div style={{ fontSize: 11, color: has ? LIGHT : "#888", lineHeight: 1.3, fontWeight: has ? "bold" : "normal" }}>
+                            {skin.name}
+                        </div>
                       </div>
                     );
                   })}
