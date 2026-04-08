@@ -233,9 +233,19 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                         background: 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
+                        {/* ▼ 追加: チームカラーのオーラ（リング） */}
+                        {player.teamColor && player.teamColor !== 'none' && (
+                            <div style={{
+                                position: 'absolute', bottom: '10%', left: '50%', transform: 'translateX(-50%)',
+                                width: '110%', height: '110%', borderRadius: '50%',
+                                border: `4px solid ${player.teamColor}`,
+                                boxShadow: `0 0 10px ${player.teamColor} inset, 0 0 10px ${player.teamColor}`,
+                                zIndex: -1, pointerEvents: 'none'
+                            }} />
+                        )}
                         {/* ▼ 修正: CharImageコンポーネントで描画し、それをまとめて反転させる */}
                         <div ref={innerTokenRef} style={{ width: '100%', height: '100%', transform: `scaleX(${facingRef.current})` }}>
-                            <CharImage 
+                            <CharImage
                                 charType={player.charType} 
                                 skinId={player.skinId} // プレイヤーデータ内のスキンIDを渡す
                                 size="100%" 

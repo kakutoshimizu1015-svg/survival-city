@@ -176,9 +176,10 @@ export const recordWin = async (earnedP) => {
 };
 
 export const syncGachaData = async () => {
-  const { uid, gachaCans, gachaPoints, unlockedSkins, equippedSkins } = useUserStore.getState();
+  // ▼ 修正: favoriteSkin も取得して同期データに含める
+  const { uid, gachaCans, gachaPoints, unlockedSkins, equippedSkins, favoriteSkin } = useUserStore.getState();
   if (!uid) return;
-  const syncData = { gachaCans, gachaPoints, unlockedSkins, equippedSkins };
+  const syncData = { gachaCans, gachaPoints, unlockedSkins, equippedSkins, favoriteSkin };
   try {
       await update(ref(db, `users/${uid}`), syncData);
       console.log("ガチャデータ同期成功");

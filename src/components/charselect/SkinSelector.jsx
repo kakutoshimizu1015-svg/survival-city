@@ -78,6 +78,22 @@ export const SkinSelector = ({ charKey, color }) => {
           );
         })}
       </div>
+      
+      {/* ▼ 追加: お気に入り登録ボタン */}
+      <button 
+        onClick={(e) => { 
+            e.stopPropagation(); 
+            useUserStore.getState().setFavoriteSkin({ charKey, skinId: currentSkinId }); 
+            import('../../utils/userLogic').then(m => m.syncGachaData());
+            alert("プロフィールのお気に入りに設定しました！");
+        }}
+        style={{
+            marginTop: 12, padding: '6px 12px', background: '#d35400', color: '#fff',
+            border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer'
+        }}
+      >
+        ⭐ プロフィールのお気に入りに設定
+      </button>
     </div>
   );
 };

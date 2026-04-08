@@ -17,6 +17,7 @@ export const useUserStore = create(
       gachaCans: 0,
       unlockedSkins: [],
       equippedSkins: {}, // { charKey: skinId }
+      favoriteSkin: null, // ▼ 追加: プロフィール表示用のお気に入りスキン { charKey, skinId }
       
       // スタッツ（累計データ）
       totalTilesMoved: 0,
@@ -29,6 +30,7 @@ export const useUserStore = create(
       // 永続化する環境設定
       showSmoke: true,
       liteMode: false,
+      showTileLabels: false, // ▼ 追加: マス目ラベルの表示トグル
       volume: 1.0,
       layoutMode: 'auto',
       showSkipButton: false,
@@ -72,7 +74,10 @@ export const useUserStore = create(
 
       setEquippedSkin: (charKey, skinId) => set((state) => ({
           equippedSkins: { ...state.equippedSkins, [charKey]: skinId }
-      }))
+      })),
+      
+      // ▼ 追加: お気に入りスキンのセット関数
+      setFavoriteSkin: (skinData) => set({ favoriteSkin: skinData })
     }),
     {
       name: 'homeless-survival-user-storage',
@@ -87,6 +92,7 @@ export const useUserStore = create(
         gachaCans: state.gachaCans,
         unlockedSkins: state.unlockedSkins,
         equippedSkins: state.equippedSkins,
+        favoriteSkin: state.favoriteSkin, // ▼ 追加: 次回起動時も保持する
         
         totalTilesMoved: state.totalTilesMoved,
         totalCardsUsed: state.totalCardsUsed,
@@ -97,6 +103,7 @@ export const useUserStore = create(
         
         showSmoke: state.showSmoke,
         liteMode: state.liteMode,
+        showTileLabels: state.showTileLabels, // ▼ 追加: 次回起動時もラベル設定を保持
         volume: state.volume,
         layoutMode: state.layoutMode,
         showSkipButton: state.showSkipButton,

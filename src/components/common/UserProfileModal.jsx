@@ -55,18 +55,16 @@ export const UserProfileModal = ({ uid, onClose }) => {
                             </div>
                         </div>
 
+                        {/* ▼ 修正: 設定したお気に入りスキンをメインで表示 */}
                         <div>
-                            <div style={{ fontSize: '12px', color: '#D4A017', fontWeight: 'bold', marginBottom: '8px' }}>👕 お気に入りスキン (一部)</div>
+                            <div style={{ fontSize: '12px', color: '#D4A017', fontWeight: 'bold', marginBottom: '8px' }}>⭐ お気に入りスキン</div>
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                {Object.keys(profile.equippedSkins || {}).length === 0 ? (
-                                    <div style={{ fontSize: '12px', color: '#7A5A35' }}>スキン未設定</div>
+                                {profile.favoriteSkin ? (
+                                    <div style={{ background: 'radial-gradient(circle, #f39c1244 0%, #000 70%)', borderRadius: '8px', padding: '10px', border: '2px solid #f39c12' }}>
+                                        <CharImage charType={profile.favoriteSkin.charKey} skinId={profile.favoriteSkin.skinId} size={70} />
+                                    </div>
                                 ) : (
-                                    // 装備中のスキンから最初の4つだけアイコン表示
-                                    Object.entries(profile.equippedSkins).slice(0, 4).map(([charKey, skinId]) => (
-                                        <div key={charKey} style={{ background: '#000', borderRadius: '8px', padding: '5px', border: '1px solid #5C3015' }}>
-                                            <CharImage charType={charKey} skinId={skinId} size={40} />
-                                        </div>
-                                    ))
+                                    <div style={{ fontSize: '12px', color: '#7A5A35' }}>お気に入り未設定</div>
                                 )}
                             </div>
                         </div>

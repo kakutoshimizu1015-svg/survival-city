@@ -39,8 +39,9 @@ export const Tile = React.memo(({
     const horrorMode = useGameStore(state => state.horrorMode);
     const isHorrorTruckTile = horrorMode && isTruck;
     
-    // ▼ 修正: liteMode を useUserStore から取得
+    /// ▼ 修正: liteMode を useUserStore から取得
     const liteMode = useUserStore(state => state.liteMode); 
+    const showTileLabels = useUserStore(state => state.showTileLabels); // ▼ 追加: ラベル設定を取得
 
     const touchTimer = useRef(null);
 
@@ -153,6 +154,18 @@ export const Tile = React.memo(({
                 <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9 }}>{tile.name}</div>
             )}
             
+            {/* ▼ 追加: マス目の番号・分岐ラベル表示 */}
+            {showTileLabels && (
+                <div style={{
+                    position: 'absolute', top: '2px', left: '2px', zIndex: 10,
+                    background: 'rgba(0,0,0,0.65)', color: tile.next?.length > 1 ? '#f1c40f' : '#fff', 
+                    padding: '2px 4px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', pointerEvents: 'none',
+                    border: tile.next?.length > 1 ? '1px solid #f1c40f' : 'none'
+                }}>
+                    {tile.next?.length > 1 ? `${tile.id} (分岐)` : tile.id}
+                </div>
+            )}
+
             {isJinchi && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px', zIndex: 3 }}>🚩</div>}
 
             {(tile.fieldCans > 0 || tile.fieldTrash > 0) && (!isFog || isHorrorTruckTile) && (

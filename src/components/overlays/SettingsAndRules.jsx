@@ -12,7 +12,7 @@ export const SettingsAndRules = () => {
     const { 
         playerName, wins, totalEarnedP, showSmoke, setShowSmoke,
         totalTilesMoved, totalCardsUsed, totalCansCollected, totalTrashCollected, totalPSpentAtShop, npcEncounters,
-        liteMode, volume, layoutMode, showSkipButton, autoScrollToPlayer, setUserData,
+        liteMode, volume, layoutMode, showSkipButton, autoScrollToPlayer, showTileLabels, setUserData, // ▼ showTileLabelsを追加
         addGachaAssets
     } = useUserStore();
     
@@ -390,6 +390,17 @@ export const SettingsAndRules = () => {
                             </label>
                             <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '4px', marginLeft: '28px' }}>
                                 ONにするとプレイヤー移動時に煙が出ます。動作が重い場合はOFFにしてください。
+                            </div>
+                        </div>
+
+                        {/* ▼ 新規追加: マス目ラベル表示トグル */}
+                        <div style={{ marginBottom: '20px', textAlign: 'left', background: '#5c4a44', color: '#fdf5e6', padding: '10px', borderRadius: '8px' }}>
+                            <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input type="checkbox" checked={showTileLabels} onChange={(e) => setUserData({ showTileLabels: e.target.checked })} style={{ marginRight: '10px', width: '18px', height: '18px' }} />
+                                🔢 マス目に番号と分岐ラベルを表示する
+                            </label>
+                            <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '4px', marginLeft: '28px' }}>
+                                ONにすると、マップ上の各マスに番号と「分岐」の文字が表示され、ルートが分かりやすくなります。
                             </div>
                         </div>
 
