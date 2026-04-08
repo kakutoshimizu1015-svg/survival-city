@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useUserStore } from '../store/useUserStore';
 import { useGameStore } from '../store/useGameStore';
 import { GACHA_POOL } from '../constants/characters';
@@ -267,6 +267,9 @@ export default function GachaScreen() {
   const [pendingRes,  setPendingRes]  = useState([]);
   
   const [selectedSkinDetail, setSelectedSkinDetail] = useState(null);
+  const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
 
   const collection = {};
   GACHA_POOL.forEach(s => {
@@ -389,7 +392,8 @@ export default function GachaScreen() {
         <div style={{
           position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.85)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
-        }} onClick={() => setSelectedSkinDetail(null)}>
+        }} 
+        onClick={() => { setSelectedSkinDetail(null); setViewTransform({x:0, y:0, scale:1}); }}>
           <div style={{
             background: PANEL, border: `2px solid ${RARITY_CFG[selectedSkinDetail.rarity].border}`,
             borderRadius: 16, padding: 24, maxWidth: 320, width: '100%',
@@ -402,18 +406,42 @@ export default function GachaScreen() {
                fontWeight: 'bold', fontSize: 12, marginBottom: 16
             }}>{selectedSkinDetail.rarity}</div>
             
-            <div style={{
-               width: 140, height: 140, margin: '0 auto 20px', borderRadius: 12,
+            <div 
+               onPointerDown={(e) => {
+                 setIsDragging(true);
+                 dragStart.current = { x: e.clientX - viewTransform.x, y: e.clientY - viewTransform.y };
+                 e.currentTarget.setPointerCapture(e.pointerId);
+               }}
+               onPointerMove={(e) => {
+                 if (!isDragging) return;
+                 setViewTransform(p => ({ ...p, x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y }));
+               }}
+               onPointerUp={(e) => {
+                 setIsDragging(false);
+                 e.currentTarget.releasePointerCapture(e.pointerId);
+               }}
+               onWheel={(e) => {
+                 const zoom = e.deltaY < 0 ? 0.1 : -0.1;
+                 setViewTransform(p => ({ ...p, scale: Math.max(0.5, Math.min(3, p.scale + zoom)) }));
+               }}
+               style={{
+               width: 140, height: 140, margin: '0 auto 20px', borderRadius: 12, cursor: isDragging ? 'grabbing' : 'grab',
                border: `4px solid ${selectedSkinDetail.ring}`, background: selectedSkinDetail.pieceColor,
-               overflow: 'hidden', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
+               overflow: 'hidden', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)', touchAction: 'none'
             }}>
-                <img src={selectedSkinDetail.front} alt={selectedSkinDetail.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={selectedSkinDetail.front} alt={selectedSkinDetail.name} 
+                     style={{ 
+                         width: '100%', height: '100%', objectFit: 'cover',
+                         transform: `translate(${viewTransform.x}px, ${viewTransform.y}px) scale(${viewTransform.scale})`,
+                         transition: isDragging ? 'none' : 'transform 0.1s' 
+                     }} 
+                     draggable={false} />
             </div>
 
             <h2 style={{ margin: '0 0 10px 0', color: RARITY_CFG[selectedSkinDetail.rarity].gold }}>{selectedSkinDetail.name}</h2>
             <p style={{ color: LIGHT, fontSize: 13, lineHeight: 1.5, opacity: 0.9 }}>{selectedSkinDetail.desc}</p>
             
-            <button onClick={() => setSelectedSkinDetail(null)} style={{
+            <button onClick={() => { setSelectedSkinDetail(null); setViewTransform({x:0, y:0, scale:1}); }} style={{
                 marginTop: 24, padding: '10px 30px', borderRadius: 8, border: `1px solid ${BORD}`,
                 background: '#150800', color: LIGHT, cursor: 'pointer', fontWeight: 'bold'
             }}>閉じる</button>
@@ -493,7 +521,6 @@ export default function GachaScreen() {
             })()}
           </div>
           
-          {/* ▼ 開発者モードボタンの制御 */}
           {SHOW_DEV_CONTROLS && (
             <div style={{ width: "100%", maxWidth: 330, marginTop: 10, display: "flex", justifyContent: "center" }}>
               <button
@@ -549,24 +576,32 @@ export default function GachaScreen() {
                   <div style={{ flex:1, height:1, background:BORD }}/>
                   <div style={{ fontSize:10, color:MUTED }}>{got}/{pool.length}</div>
                 </div>
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(104px,1fr))", gap:8 }}>
-                  {pool.map(skin => {
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(104px,1fr))", gap:8, gridAutoFlow: "dense" }}>
+                  {pool.map((skin, index) => {
                     const count = collection[skin.id]||0;
                     const has   = count>0;
+                    const isFirst = index === 0;
+                    
                     return (
                       <div 
                         key={skin.id} className="gcitem" 
                         onClick={() => { if(has) setSelectedSkinDetail(skin) }}
                         style={{
-                          background: has?PANEL:"#0C0600", border:`2px solid ${has?cfg.border:"#2A1208"}`, borderRadius:12, padding:10, textAlign:"center", opacity: has?1:0.35, position:"relative", boxShadow: has?`0 0 10px ${cfg.glow}33`:"none", cursor: has ? "pointer" : "default"
+                          gridColumn: isFirst ? "span 2" : "auto", gridRow: isFirst ? "span 2" : "auto",
+                          background: has?PANEL:"#0C0600", border:`2px solid ${has?cfg.border:"#2A1208"}`, borderRadius:12, padding:10, textAlign:"center", opacity: 1, position:"relative", boxShadow: has?`0 0 10px ${cfg.glow}33`:"none", cursor: has ? "pointer" : "default",
+                          display: "flex", flexDirection: "column", justifyContent: "center"
                         }}
                       >
                         <div style={{ position:"relative", display:"inline-block", marginBottom:5 }}>
                           <div style={{
-                            width:44, height:44, borderRadius:"50%", background: has?skin.pieceColor:"#1A0A00", border:`3px solid ${has?skin.ring:"#333"}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto", overflow:"hidden", position:"relative", boxShadow: has?"0 2px 8px #0006, inset 0 3px 5px #ffffff14":"none",
+                            width: isFirst ? 88 : 44, height: isFirst ? 88 : 44,
+                            borderRadius:"50%", background: has?skin.pieceColor:"#1A0A00", border:`3px solid ${has?skin.ring:"#333"}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto", overflow:"hidden", position:"relative", boxShadow: has?"0 2px 8px #0006, inset 0 3px 5px #ffffff14":"none",
                           }}>
                             {has&&<div style={{ position:"absolute", top:"8%", left:"12%", width:"38%", height:"28%", borderRadius:"50%", background:"rgba(255,255,255,0.18)", transform:"rotate(-25deg)" }}/>}
-                            {has ? <img src={skin.front} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "?"}
+                            <img src={skin.front} alt="" style={{ 
+                                width: "100%", height: "100%", objectFit: "cover",
+                                filter: has ? 'none' : 'brightness(0) drop-shadow(0 0 4px #FF6600)', opacity: has ? 1 : 0.6
+                            }} />
                           </div>
                           {count>1&& <div style={{ position:"absolute", top:-4, right:-4, background:GOLD, color:"#000", borderRadius:"50%", width:16, height:16, fontSize:9, fontWeight:"bold", display:"flex", alignItems:"center", justifyContent:"center" }}>{count}</div>}
                         </div>

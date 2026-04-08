@@ -9,6 +9,12 @@ export const useUserStore = create(
       
       playerName: '名無しサバイバー',
       friendCode: null, // ▼ 新規追加: 8桁の簡単なフレンドコード
+      
+      // ▼ 新規追加: ログインボーナス管理
+      lastLoginDate: null, // 'YYYY-MM-DD'
+      loginDays: 0,        // 連続ログイン日数 (0~7)
+      showLoginBonusToday: false, // 本日のボーナス画面表示フラグ
+      
       gachaPoints: 0,
       wins: 0,
       totalEarnedP: 0,
@@ -85,6 +91,8 @@ export const useUserStore = create(
       partialize: (state) => ({
         playerName: state.playerName,
         friendCode: state.friendCode, // ▼ 新規追加
+        lastLoginDate: state.lastLoginDate, // ▼ 新規追加
+        loginDays: state.loginDays,         // ▼ 新規追加
         gachaPoints: state.gachaPoints,
         wins: state.wins,
         totalEarnedP: state.totalEarnedP,
