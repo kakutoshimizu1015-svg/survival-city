@@ -55,6 +55,23 @@ export const SetupOffline = () => {
         if (players.length > 2) setPlayers(players.filter(p => p.id !== id).map((p, idx) => ({ ...p, id: idx }))); 
     };
 
+    // ▼ 追加: ランダムチーム分けとリセット機能
+    const handleRandomizeTeams = () => {
+        const teamColors = ['red', 'blue', 'green', 'yellow'];
+        const numTeams = Math.min(Math.max(2, Math.floor(players.length / 2)), teamColors.length);
+        const teamPool = teamColors.slice(0, numTeams);
+        const shuffled = [...players].sort(() => Math.random() - 0.5);
+        
+        setPlayers(players.map(p => {
+            const idx = shuffled.findIndex(s => s.id === p.id);
+            return { ...p, teamColor: teamPool[idx % numTeams] };
+        }));
+    };
+
+    const handleClearTeams = () => {
+        setPlayers(players.map(p => ({ ...p, teamColor: 'none' })));
+    };
+
     const drawInitialCard = () => {
         const rarePool = [12, 13, 35, 36, 37];
         const normalPool = [0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
@@ -184,9 +201,12 @@ export const SetupOffline = () => {
                         </div>
                     ))}
                     
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
+                    {/* ▼ 修正: チーム分けとリセットボタンを追加 */}
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px', flexWrap: 'wrap' }}>
                         <button onClick={() => addPlayer(false)} className="btn-clay btn-green" style={{ padding: '8px 12px' }}>＋ 人間</button>
                         <button onClick={() => addPlayer(true)} className="btn-clay btn-blue" style={{ padding: '8px 12px' }}>＋ CPU</button>
+                        <button onClick={handleRandomizeTeams} className="btn-clay" style={{ background: '#8e44ad', color: 'white', padding: '8px 12px' }}>🎲 ランダムチーム</button>
+                        <button onClick={handleClearTeams} className="btn-clay" style={{ background: '#95a5a6', color: 'white', padding: '8px 12px' }}>⚪ チームリセット</button>
                     </div>
                 </div>
                 
