@@ -3,10 +3,11 @@ import { useGameStore } from '../../store/useGameStore';
 import { deckData } from '../../constants/cards';
 import { ClayButton } from '../common/ClayButton';
 import { playSfx } from '../../utils/audio';
-import { generateShopStock } from '../../game/shop'; 
+import { generateShopStock, shopCartBuy } from '../../game/shop'; 
 
 export const ShopOverlay = () => {
-    const { shopActive, shopStock, shopCart, players, turn, setGameState } = useGameStore();
+    // purchasedCards を追加で取得
+    const { shopActive, shopStock, shopCart, players, turn, setGameState, purchasedCards } = useGameStore();
     const cp = players[turn];
 
     useEffect(() => {
@@ -22,6 +23,14 @@ export const ShopOverlay = () => {
     const slotsUsed = cp.hand.length + shopCart.length;
 
     const addToCart = (cardId, price) => {
+        // 在庫の上限チェック
+        const alreadyBought = purchasedCards?.[cardId] || 0;
+        const inCartCount = shopCart.filter(c => c.cardId === cardId).length;
+        if (alreadyBought + inCartCount >= 4) {
+            useGameStore.getState().showToast("このカードは売り切れです！");
+            return;
+        }
+
         if (slotsUsed >= cp.maxHand) {
             useGameStore.getState().showCenterWarning("手札が上限です！これ以上カートに追加できません");
             return;
@@ -35,8 +44,9 @@ export const ShopOverlay = () => {
 
     const buyCart = () => {
         if (shopCart.length === 0) return;
-        useGameStore.getState().updateCurrentPlayer(p => ({ p: p.p - cartTotal, hand: [...p.hand, ...shopCart.map(c => c.cardId)] }));
-        setGameState({ shopCart: [], shopActive: false });
+        // shop.jsの正式な購入処理を呼ぶ
+        shopCartBuy();
+        setGameState({ shopActive: false }); 
         playSfx('coin');
     };
 
@@ -55,15 +65,26 @@ export const ShopOverlay = () => {
                     {shopStock.map((cardId, i) => {
                         const cd = deckData.find(d => d.id === cardId);
                         
-                        // ▼ 修正：営業マンの割引額を 1 から 2 に変更。念のため Math.max(0) でマイナスを防ぐ
                         const basePrice = cd.type === 'weapon' ? Math.max(5, cd.dmg / 5) : cd.type === 'equip' ? 6 : 4;
                         const price = Math.max(0, basePrice - (cp.charType === 'sales' ? 2 : 0));
                         
                         const canAfford = remainP >= price && slotsUsed < cp.maxHand;
                         
+                        // 在庫枚数の計算と売り切れ判定
+                        const alreadyBought = purchasedCards?.[cardId] || 0;
+                        const inCartCount = shopCart.filter(c => c.cardId === cardId).length;
+                        const remainStock = 4 - alreadyBought - inCartCount;
+                        const isSoldOut = remainStock <= 0;
+                        const isClickable = canAfford && !isSoldOut;
+                        
                         return (
-                            <ClayButton key={i} onClick={() => addToCart(cardId, price)} style={{ borderColor: cd.color, textAlign: 'left', opacity: canAfford ? 1 : 0.5 }}>
-                                {cd.icon} {cd.name} (<span style={{ color: canAfford ? '#2ecc71' : '#e74c3c' }}>{price}P</span>)<br/>
+                            <ClayButton key={i} onClick={() => { if (isClickable) addToCart(cardId, price) }} style={{ borderColor: cd.color, textAlign: 'left', opacity: isClickable ? 1 : 0.5, cursor: isClickable ? 'pointer' : 'not-allowed' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>{cd.icon} {cd.name} (<span style={{ color: canAfford ? '#2ecc71' : '#e74c3c' }}>{price}P</span>)</span>
+                                    <span style={{ color: isSoldOut ? '#e74c3c' : '#f39c12', fontWeight: 'bold', fontSize: '12px' }}>
+                                        {isSoldOut ? '売り切れ' : `残り${remainStock}枚`}
+                                    </span>
+                                </div>
                                 <span style={{ fontSize: '10px' }}>{cd.desc}</span>
                             </ClayButton>
                         );

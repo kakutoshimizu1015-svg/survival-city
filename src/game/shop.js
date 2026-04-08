@@ -22,8 +22,12 @@ export const generateShopStock = () => {
         if (isLateGame && isBottom2) rareChance = 0.30; // 終了4ターン前＆下位2名は30%にアップ
 
         // 12:大暴落, 13:下剋上, 35:弁護士の盾, 36:裏取引, 37:反撃の一撃
-        const rarePool = [12, 13, 35, 36, 37];
-        const normalPool = [0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
+        const purchased = state.purchasedCards || {};
+        // ▼ 修正: 既に4枚買われているカードは抽選プールから除外する
+        const rarePool = [12, 13, 35, 36, 37].filter(id => (purchased[id] || 0) < 4);
+        const normalPool = [0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34].filter(id => (purchased[id] || 0) < 4);
+
+        if (normalPool.length === 0) normalPool.push(0); // 万が一全て売り切れた場合のフォールバック
 
         const newStock = [];
         for (let i = 0; i < 6; i++) {
@@ -73,6 +77,7 @@ export const shopCartBuy = () => {
     const names = [];
     const stateForStock = useGameStore.getState();
     let newStock = [...stateForStock.shopStock]; // ▼ 追加: 現在の在庫をコピー
+    const newPurchased = { ...(stateForStock.purchasedCards || {}) }; // ▼ 追加: これまでの購入履歴をコピー
 
     shopCart.forEach(item => {
         newHand.push(item.cardId);
@@ -81,10 +86,14 @@ export const shopCartBuy = () => {
         // ▼ 追加: 在庫から購入したカードを削除
         const stockIdx = newStock.indexOf(item.cardId);
         if (stockIdx !== -1) newStock.splice(stockIdx, 1);
+        
+        // ▼ 追加: 買った枚数をゲーム全体で記録しカウントアップ
+        newPurchased[item.cardId] = (newPurchased[item.cardId] || 0) + 1;
     });
 
     useGameStore.setState(prev => ({
         shopStock: newStock, // ▼ 追加: 減った在庫をStoreに反映
+        purchasedCards: newPurchased, // ▼ 追加: 購入履歴をStoreに保存
         players: prev.players.map(p => {
             if (p.id === cp.id) {
                 // ▼ 修正: 既存のスタッツと初期値テンプレートを完全にマージして欠落を防ぐ

@@ -13,6 +13,7 @@ const initialState = {
     npcMovePick: null,       
     
     shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
+    purchasedCards: {}, // ▼ 追加: ゲーム全体で各カードが何枚買われたかを記憶 { cardId: count }
     mgActive: false, mgType: "", mgValue: 0, mgResult: null, storyActive: false,
     mgSyncData: null, // ▼ 追加: ミニゲームのリアルタイム同期用データ（座標やスコア等）
     mgStarted: false, // ▼ 追加: ミニゲームがスタートしたかを全員で共有するフラグ
