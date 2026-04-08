@@ -5,6 +5,8 @@ import { db } from '../lib/firebase';
 import { useGameStore } from './useGameStore';
 import { useLobbyStore } from './useLobbyStore';
 import { processRoundEnd } from '../game/round';
+import { useUserStore } from './useUserStore'; // ▼ 追加
+import { recordWin, syncGachaData } from '../utils/userLogic'; // ▼ 追加
 
 let isReceivingNetworkData = false;
 let networkReceiveTimer = null;
@@ -178,7 +180,31 @@ export const useNetworkStore = create((setStore, getStore) => ({
                                 logger.scrollTop = logger.scrollHeight;
                             }
 
+                            const prevState = useGameStore.getState(); // ▼ 追加: 更新前の状態を保持
                             useGameStore.setState(data.gameState);
+                            
+                            // ▼ 追加: ゲスト側でのリザルト報酬受け取り処理
+                            if (!prevState.gameOver && data.gameState.gameOver && data.gameState.pendingGameResult) {
+                                const { results, isTeamGame, sortedTeams } = data.gameState.pendingGameResult;
+                                const myUserId = getStore().myUserId;
+                                const isMe = (p) => p.userId === myUserId;
+                                
+                                const myResult = results.find(p => isMe(p));
+                                if (myResult) {
+                                    // 優勝判定
+                                    let isWinner = false;
+                                    if (isTeamGame && sortedTeams && sortedTeams[0].members.some(p => isMe(p))) isWinner = true;
+                                    if (!isTeamGame && isMe(results[0])) isWinner = true;
+                                    
+                                    if (isWinner) recordWin(myResult.totalScore); // 優勝数のカウントとP加算
+                                    
+                                    // 参加報酬(ガチャ資産)の付与とFirebase同期
+                                    useUserStore.getState().addGachaAssets(myResult.cans, myResult.totalScore);
+                                    syncGachaData();
+                                    console.log("[ゲスト戦績セーブ] 報酬を受信・保存しました");
+                                }
+                            }
+
                             networkReceiveTimer = setTimeout(() => { isReceivingNetworkData = false; }, 200);
                         }
                     }

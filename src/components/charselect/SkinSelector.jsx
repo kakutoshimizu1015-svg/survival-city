@@ -1,6 +1,7 @@
 import React from 'react';
 import { useUserStore } from '../../store/useUserStore';
 import { charSkins } from '../../constants/characters';
+import { syncGachaData } from '../../utils/userLogic'; // ▼ 追加: 同期関数のインポート
 
 export const SkinSelector = ({ charKey, color }) => {
   const { unlockedSkins, equippedSkins, setEquippedSkin } = useUserStore();
@@ -33,6 +34,7 @@ export const SkinSelector = ({ charKey, color }) => {
                   e.preventDefault();
                   if (isUnlocked) {
                       setEquippedSkin(charKey, skin.id);
+                      syncGachaData(); // ▼ 追加: 選択直後にFirebaseへ保存して永続化
                   }
               }}
               style={{

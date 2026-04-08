@@ -71,12 +71,20 @@ export const shopCartBuy = () => {
 
     const newHand = [...cp.hand];
     const names = [];
+    const stateForStock = useGameStore.getState();
+    let newStock = [...stateForStock.shopStock]; // ▼ 追加: 現在の在庫をコピー
+
     shopCart.forEach(item => {
         newHand.push(item.cardId);
         names.push(deckData.find(c => c.id === item.cardId).name);
+        
+        // ▼ 追加: 在庫から購入したカードを削除
+        const stockIdx = newStock.indexOf(item.cardId);
+        if (stockIdx !== -1) newStock.splice(stockIdx, 1);
     });
 
     useGameStore.setState(prev => ({
+        shopStock: newStock, // ▼ 追加: 減った在庫をStoreに反映
         players: prev.players.map(p => {
             if (p.id === cp.id) {
                 // ▼ 修正: 既存のスタッツと初期値テンプレートを完全にマージして欠落を防ぐ

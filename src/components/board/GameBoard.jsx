@@ -4,6 +4,7 @@ import { useUserStore } from '../../store/useUserStore';
 import { getDistance, getPathPreviewTiles, getManholeLinkedTiles } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
+import { useNetworkStore } from '../../store/useNetworkStore'; // ▼ 追加: ネットワークStore
 import { BoardPaths } from './BoardPaths';
 import { Tile } from './Tile';
 import { TileTooltip } from '../overlays/TileTooltip';
@@ -240,6 +241,16 @@ export const GameBoard = () => {
 
     const handleTileClick = (tileId) => {
         if (isClickPrevented.current) return;
+
+        // ▼ 追加: オンライン時の他人のターン中の誤操作をブロック
+        const netState = useNetworkStore.getState();
+        if (netState.status === 'connected') {
+            const currentPlayer = players[turn]; // GameBoard内で取得済みのplayersとturnを利用
+            if (currentPlayer && currentPlayer.userId !== netState.myUserId) {
+                return; // 自分のターンでなければ操作を無視
+            }
+        }
+
         if (npcMovePick) {
             const state = useGameStore.getState();
             state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
