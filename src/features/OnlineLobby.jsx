@@ -10,12 +10,15 @@ import { CharImage } from '../components/common/CharImage';
 import { FriendListModal } from '../components/common/FriendListModal'; // ▼ 追加
 import { UserProfileModal } from '../components/common/UserProfileModal'; // ▼ 追加
 
+// ▼ 修正: 6色に拡張（紫、橙を追加）
 const TEAM_COLORS = { 
-    none: { label:'ソロ', color:'transparent', icon:'⚪' }, 
-    red: { label:'赤', color:'#e74c3c', icon:'🔴' }, 
-    blue: { label:'青', color:'#3498db', icon:'🔵' }, 
-    green: { label:'緑', color:'#2ecc71', icon:'🟢' }, 
-    yellow: { label:'黄', color:'#f1c40f', icon:'🟡' } 
+    none:   { label:'ソロ', color:'transparent', icon:'⚪' }, 
+    red:    { label:'赤', color:'#e74c3c', icon:'🔴' }, 
+    blue:   { label:'青', color:'#3498db', icon:'🔵' }, 
+    green:  { label:'緑', color:'#2ecc71', icon:'🟢' }, 
+    yellow: { label:'黄', color:'#f1c40f', icon:'🟡' },
+    purple: { label:'紫', color:'#9b59b6', icon:'🟣' }, 
+    orange: { label:'橙', color:'#e67e22', icon:'🟠' } 
 };
 
 export const OnlineLobby = () => {

@@ -180,11 +180,15 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     }, [player.pos, mapData, showSmoke, liteMode]);
 
     // ▼ 修正: チームカラーがあればその色を、なければ個人の色を発光色として使用
-    const glowColor = player.teamColor && player.teamColor !== 'none' ? player.teamColor : player.color;
+    const isTeam = player.teamColor && player.teamColor !== 'none';
+    const glowColor = isTeam ? player.teamColor : player.color;
 
+    // ▼ 修正: チーム所属時は 0 0 15px の強いオーラを常時発光、さらに軽量モードでも色を出す
     const playerGlowFilter = liteMode 
-        ? (isActiveTurn ? `drop-shadow(0 0 4px ${glowColor})` : 'none')
-        : (isActiveTurn ? `drop-shadow(0 0 12px #ffe066) drop-shadow(0 0 5px ${glowColor})` : `drop-shadow(0 0 8px ${glowColor}) drop-shadow(0 4px 6px rgba(0,0,0,0.6))`);
+        ? (isTeam || isActiveTurn ? `drop-shadow(0 0 6px ${glowColor})` : 'none')
+        : (isActiveTurn 
+            ? `drop-shadow(0 0 15px #ffe066) drop-shadow(0 0 8px ${glowColor})` 
+            : (isTeam ? `drop-shadow(0 0 15px ${glowColor})` : `drop-shadow(0 0 8px ${glowColor}) drop-shadow(0 4px 6px rgba(0,0,0,0.6))`));
 
     return (
         <div style={{

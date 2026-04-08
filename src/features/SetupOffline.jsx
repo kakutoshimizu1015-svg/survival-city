@@ -8,7 +8,16 @@ import { savePlayerName } from '../utils/userLogic';
 import { CharacterSelect } from './CharacterSelect';
 import { CharImage } from '../components/common/CharImage';
 
-const TEAM_COLORS = { none: { label:'ソロ', color:'transparent', icon:'⚪' }, red: { label:'赤', color:'#e74c3c', icon:'🔴' }, blue: { label:'青', color:'#3498db', icon:'🟢' }, yellow: { label:'黄', color:'#f1c40f', icon:'🟡' } };
+// ▼ 修正: 6色に拡張（紫、橙を追加）
+const TEAM_COLORS = { 
+    none:   { label:'ソロ', color:'transparent', icon:'⚪' }, 
+    red:    { label:'赤', color:'#e74c3c', icon:'🔴' }, 
+    blue:   { label:'青', color:'#3498db', icon:'🔵' }, // 🟢から🔵に修正
+    green:  { label:'緑', color:'#2ecc71', icon:'🟢' }, // greenが抜けていたので追加
+    yellow: { label:'黄', color:'#f1c40f', icon:'🟡' },
+    purple: { label:'紫', color:'#9b59b6', icon:'🟣' }, 
+    orange: { label:'橙', color:'#e67e22', icon:'🟠' }  
+};
 
 export const SetupOffline = () => {
     const setGameState = useGameStore(state => state.setGameState);
@@ -57,7 +66,8 @@ export const SetupOffline = () => {
 
     // ▼ 追加: ランダムチーム分けとリセット機能
     const handleRandomizeTeams = () => {
-        const teamColors = ['red', 'blue', 'green', 'yellow'];
+        // ▼ 修正: 抽選プールを6色に増強
+        const teamColors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
         const numTeams = Math.min(Math.max(2, Math.floor(players.length / 2)), teamColors.length);
         const teamPool = teamColors.slice(0, numTeams);
         const shuffled = [...players].sort(() => Math.random() - 0.5);

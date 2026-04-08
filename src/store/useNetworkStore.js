@@ -263,7 +263,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
     randomizeTeams: () => {
         const state = getStore();
         if (!state.isHost) return;
-        const colors = ['red', 'blue', 'green', 'yellow'];
+        // ▼ 修正: 6色に増強
+        const colors = ['red', 'blue', 'green', 'yellow', 'purple', 'orange'];
         const numTeams = Math.min(Math.max(2, Math.floor(state.lobbyPlayers.length / 2)), colors.length);
         const teamPool = colors.slice(0, numTeams);
         const shuffled = [...state.lobbyPlayers].sort(() => Math.random() - 0.5);
