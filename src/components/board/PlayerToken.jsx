@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { charEmoji, TOKEN_CONFIG } from '../../constants/characters';
 import { useUserStore } from '../../store/useUserStore';
 import { getDepthScale } from '../../utils/gameLogic';
-// ▼ 追加：CharImageコンポーネントをインポート
 import { CharImage } from '../common/CharImage';
 
 export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
@@ -14,7 +13,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const wrapRef = useRef(null);
     const tokenWrapperRef = useRef(null);
     const scaleRef = useRef(null);
-    const innerTokenRef = useRef(null); // ▼ 画像と絵文字を両方操作するためのラッパー
+    const innerTokenRef = useRef(null); 
     const shadowRef = useRef(null);
 
     const facingRef = useRef(1);
@@ -89,7 +88,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         let spinRaf, moveRaf;
 
         const updateFacingDOM = (f) => {
-            // ▼ 修正: innerTokenRef全体を反転させる
             if (innerTokenRef.current) innerTokenRef.current.style.transform = `scaleX(${f})`;
         };
 
@@ -181,9 +179,12 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         };
     }, [player.pos, mapData, showSmoke, liteMode]);
 
+    // ▼ 修正: チームカラーがあればその色を、なければ個人の色を発光色として使用
+    const glowColor = player.teamColor && player.teamColor !== 'none' ? player.teamColor : player.color;
+
     const playerGlowFilter = liteMode 
-        ? (isActiveTurn ? `drop-shadow(0 0 4px ${player.color})` : 'none')
-        : (isActiveTurn ? `drop-shadow(0 0 12px #ffe066) drop-shadow(0 0 4px ${player.color})` : `drop-shadow(0 0 8px ${player.color}) drop-shadow(0 4px 6px rgba(0,0,0,0.6))`);
+        ? (isActiveTurn ? `drop-shadow(0 0 4px ${glowColor})` : 'none')
+        : (isActiveTurn ? `drop-shadow(0 0 12px #ffe066) drop-shadow(0 0 5px ${glowColor})` : `drop-shadow(0 0 8px ${glowColor}) drop-shadow(0 4px 6px rgba(0,0,0,0.6))`);
 
     return (
         <div style={{
@@ -233,21 +234,11 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                         background: 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                        {/* ▼ 追加: チームカラーのオーラ（リング） */}
-                        {player.teamColor && player.teamColor !== 'none' && (
-                            <div style={{
-                                position: 'absolute', bottom: '10%', left: '50%', transform: 'translateX(-50%)',
-                                width: '110%', height: '110%', borderRadius: '50%',
-                                border: `4px solid ${player.teamColor}`,
-                                boxShadow: `0 0 10px ${player.teamColor} inset, 0 0 10px ${player.teamColor}`,
-                                zIndex: -1, pointerEvents: 'none'
-                            }} />
-                        )}
-                        {/* ▼ 修正: CharImageコンポーネントで描画し、それをまとめて反転させる */}
+                        {/* ▼ 修正: 不要な枠線を削除し、CharImageを直接描画する */}
                         <div ref={innerTokenRef} style={{ width: '100%', height: '100%', transform: `scaleX(${facingRef.current})` }}>
                             <CharImage
                                 charType={player.charType} 
-                                skinId={player.skinId} // プレイヤーデータ内のスキンIDを渡す
+                                skinId={player.skinId}
                                 size="100%" 
                                 imgStyle={{ filter: playerGlowFilter, bottom: 0, position: 'absolute' }}
                             />

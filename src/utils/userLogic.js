@@ -157,10 +157,23 @@ export const loadUserData = async (uid) => {
 };
 
 export const savePlayerName = async (newName) => {
-  const { uid } = useUserStore.getState();
+  const state = useUserStore.getState();
+  const { uid, friends } = state;
   if (!uid) return;
+  
+  // 1. 自分のデータを更新
   await update(ref(db, `users/${uid}`), { playerName: newName });
-  useUserStore.getState().setUserData({ playerName: newName });
+  
+  // 2. ▼ 追加: 自分のフレンド全員の「フレンドリスト」の中にある自分の名前も更新する
+  if (friends && friends.length > 0) {
+      const updates = {};
+      friends.forEach(f => {
+          updates[`users/${f.uid}/friends/${uid}/name`] = newName;
+      });
+      await update(ref(db), updates);
+  }
+
+  state.setUserData({ playerName: newName });
 };
 
 export const recordWin = async (earnedP) => {
