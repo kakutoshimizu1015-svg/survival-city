@@ -75,6 +75,9 @@ export const actionRollDice = async (isCpuCall = false) => {
         state.updateCurrentPlayer(p => ({ p: p.p + territoryIncome }));
         logMsg(`🏙️ 陣地収入！ ${ownedTilesCount}つの陣地から合計 ${territoryIncome}P を獲得！`);
         playSfx('coin'); // 収入が入った時の効果音
+        
+        // ▼ 追加: ポップアップ表示
+        state.addEventPopup(cp.id, "🏙️", "陣地収入", `合計 ${territoryIncome}P を獲得`, "good");
     }
     // ▲追加ここまで
 
