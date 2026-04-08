@@ -52,6 +52,32 @@ export const actionRollDice = async (isCpuCall = false) => {
     useGameStore.setState({ diceAnim: { active: true, d1, d2, text: textResult }, diceRolled: true, canPickedThisTurn: 0 });
     state.updateCurrentPlayer(p => ({ ap: p.ap + totalAP }));
     
+    // ▼ここから追加：陣地収入の計算と付与
+    let territoryIncome = 0;
+    let ownedTilesCount = 0;
+
+    Object.entries(state.territories).forEach(([tileId, ownerId]) => {
+        if (ownerId === cp.id) {
+            ownedTilesCount++;
+            const tile = state.mapData.find(t => t.id === Number(tileId) || t.id === String(tileId));
+            
+            if (tile && tile.area === 'luxury') {
+                territoryIncome += 3;
+            } else if (tile && tile.area === 'commercial') {
+                territoryIncome += 2;
+            } else {
+                territoryIncome += 1; // スラムエリア(slum)またはデフォルト
+            }
+        }
+    });
+
+    if (territoryIncome > 0) {
+        state.updateCurrentPlayer(p => ({ p: p.p + territoryIncome }));
+        logMsg(`🏙️ 陣地収入！ ${ownedTilesCount}つの陣地から合計 ${territoryIncome}P を獲得！`);
+        playSfx('coin'); // 収入が入った時の効果音
+    }
+    // ▲追加ここまで
+
     if (isGamblerBonus) {
         logMsg(`🎲 <span style="color:#f1c40f">大勝負！ギャンブラーの第3のサイコロ発動（+${d3}）！</span>`);
         playSfx('success');
