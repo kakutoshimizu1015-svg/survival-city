@@ -4,6 +4,7 @@ import { useUserStore } from '../../store/useUserStore'; // ▼ 追加
 import { getDepthScale } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
+import { MAP_CONFIG } from '../../constants/maps'; // ★これを追加
 
 const SHOW_TILE_TEXT = false;
 
@@ -138,15 +139,23 @@ export const Tile = React.memo(({
             onTouchCancel={handleTouchEndOrCancel}
             className={classNameStr}
             style={{ 
-                gridColumn: tile.col, 
-                gridRow: tile.row, 
-                cursor: isClickable ? 'pointer' : 'default', 
-                position: 'relative',
-                transform: `scale(${ds})`,
-                transformOrigin: 'center center',
-                opacity: (isFog && !isHorrorTruckTile) ? 0.2 : 1,
-                zIndex: isHorrorTruckTile ? 9999 : tile.row
-            }}
+            gridColumn: tile.col, 
+            gridRow: tile.row, 
+            cursor: isClickable ? 'pointer' : 'default', 
+            position: 'relative',
+            transform: `scale(${ds})`,
+            transformOrigin: 'center center',
+            opacity: (isFog && !isHorrorTruckTile) ? 0.2 : 1,
+            zIndex: isHorrorTruckTile ? 9999 : tile.row,
+
+            // ★追加：見た目のサイズを見えない箱（セル）のサイズに完全に一致させる
+            width: `${MAP_CONFIG.TILE_SIZE}px`,
+            height: `${MAP_CONFIG.TILE_SIZE}px`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            placeSelf: 'center' // セルの中央にピッタリ配置する
+        }}
         >
             <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
             
