@@ -75,12 +75,17 @@ export const BoardPaths = () => {
                     const ux = dx / len;
                     const uy = dy / len;
 
-                    const x1 = fx + ux * (R + 4);
-                    const y1 = fy + uy * (R + 4);
-                    const x2 = tx - ux * (R + 8);
-                    const y2 = ty - uy * (R + 8);
+                    // ★追加: 開始マスと終了マス、それぞれの遠近法スケール（縮尺）を取得
+                    const f_ds = getDepthScale(tile.row, maxRow);
+                    const t_ds = getDepthScale(nextTile.row, maxRow);
 
-                    // 遠近法スケールの適用
+                    // ★修正: 中心からのオフセットに、それぞれのマスの縮尺（f_ds, t_ds）を掛け合わせる
+                    const x1 = fx + ux * ((R * f_ds) + 4); 
+                    const y1 = fy + uy * ((R * f_ds) + 4);
+                    const x2 = tx - ux * ((R * t_ds) + 8);
+                    const y2 = ty - uy * ((R * t_ds) + 8);
+
+                    // 線の太さ用の平均スケール
                     const avgRow = (tile.row + nextTile.row) / 2;
                     const ds = getDepthScale(avgRow, maxRow);
 
