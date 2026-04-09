@@ -1,21 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-// useGameStore をインポート
 import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
-// getCircularOffset をインポート
 import { getDepthScale, getCircularOffset } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
-import { MAP_CONFIG } from '../../constants/maps'; // ★ 追加: 動的なマスの距離計算用
+import { MAP_CONFIG } from '../../constants/maps';
 
 export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const showSmoke = useUserStore(state => state.showSmoke);
     const liteMode = useUserStore(state => state.liteMode); 
 
-    // Storeから必要な状態を取得
     const players = useGameStore(state => state.players);
     
-    // それぞれ個別に状態を取得する（無限ループ防止）
     const policePos = useGameStore(state => state.policePos);
     const truckPos = useGameStore(state => state.truckPos);
     const unclePos = useGameStore(state => state.unclePos);
@@ -24,13 +20,12 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const loansharkPos = useGameStore(state => state.loansharkPos);
     const friendPos = useGameStore(state => state.friendPos);
 
-    // 取得した値をローカルでオブジェクトにまとめる
     const npcs = { policePos, truckPos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos };
 
     // オフセット値の計算
     const offset = getCircularOffset(player.id, player.pos, players, npcs, TOKEN_CONFIG.player.offsetRadius);
 
-    // ★ 追加: 移動直前の過去のオフセット（立ち位置）を一時記憶しておく
+    // 移動直前の過去のオフセット（立ち位置）を一時記憶しておく
     const prevOffsetRef = useRef({ x: 0, y: 0 });
     const lastPosRef = useRef(player.pos);
     if (lastPosRef.current !== player.pos) {
@@ -106,16 +101,15 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         isAnimatingRef.current = true;
         if (idleRafRef.current) cancelAnimationFrame(idleRafRef.current);
 
-        // ★ 修正: ハードコードされた 80 を廃止し、MAP_CONFIG から動的に距離を計算
         const tileDist = MAP_CONFIG.TILE_SIZE + MAP_CONFIG.GAP;
         
-        // ★ 修正: マス間の距離に「元のマスのオフセット（立ち位置）」を足して正確なスタート地点を計算
+        // 元のマスの「オフセット位置」からスタート
         const sx = (startTile.col - endTile.col) * tileDist + prevOffsetRef.current.x;
         const sy = (startTile.row - endTile.row) * tileDist + prevOffsetRef.current.y;
         
-        // ジャンプの着地点（到着先マスのオフセット位置）
-        const ex = offset.x;
-        const ey = offset.y;
+        // 【変更】到着地点は「目的地のマスの中心(0, 0)」にする
+        const ex = 0;
+        const ey = 0;
 
         const dx = endTile.col - startTile.col;
         let newFacing = facingRef.current;
@@ -178,7 +172,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                 const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
                 const jumpArc = -4 * (t - 0.5) * (t - 0.5) + 1;
                 
-                // ★ ジャンプの高さも距離に応じてスケールアップするように調整
                 const jumpHeight = 44 + Math.abs(ey - sy) * 0.4 + Math.abs(ex - sx) * 0.15;
 
                 const currentX = sx + (ex - sx) * eased;
@@ -193,19 +186,30 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                 if (t < 1) {
                     moveRaf = requestAnimationFrame(animateMove);
                 } else {
-                    // 移動終了時、オフセットを反映した座標にセットする
-                    if (wrapRef.current) wrapRef.current.style.transform = `translate(calc(-50% + ${ex}px), calc(-50% + ${ey}px))`;
+                    // 【変更】移動終了時、まずはマスの中心(0,0)にピッタリ着地させる
+                    if (wrapRef.current) {
+                        wrapRef.current.style.transition = 'none'; // 一瞬固定
+                        wrapRef.current.style.transform = `translate(-50%, -50%)`;
+                    }
                     if (tokenWrapperRef.current) tokenWrapperRef.current.style.transform = `translate(-50%, -100%)`;
                     if (scaleRef.current) scaleRef.current.style.transform = `scaleX(1) rotate(0deg)`;
                     if (shadowRef.current) shadowRef.current.style.opacity = 0.7;
 
                     if (showSmoke) {
-                        setDustTrail(t => [...t.slice(-4), { x: ex - 12, y: ey, id: Date.now() }, { x: ex + 12, y: ey, id: Date.now() + 1 }]);
+                        setDustTrail(t => [...t.slice(-4), { x: -12, y: 0, id: Date.now() }, { x: 12, y: 0, id: Date.now() + 1 }]);
                     }
 
                     prevPosRef.current = player.pos;
                     isAnimatingRef.current = false;
-                    if (!liteMode) idleRafRef.current = requestAnimationFrame(startIdle); 
+                    
+                    // 【追加】次のフレームで、円形の定位置（オフセット）へスライド移動させる
+                    requestAnimationFrame(() => {
+                        if (wrapRef.current) {
+                            wrapRef.current.style.transition = 'transform 0.4s ease-out';
+                            wrapRef.current.style.transform = `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`;
+                        }
+                        if (!liteMode) idleRafRef.current = requestAnimationFrame(startIdle); 
+                    });
                 }
             };
             moveRaf = requestAnimationFrame(animateMove);
@@ -217,13 +221,11 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
             if (spinRaf) cancelAnimationFrame(spinRaf);
             if (moveRaf) cancelAnimationFrame(moveRaf);
         };
-    }, [player.pos, mapData, showSmoke, liteMode, offset]); //依存配列にoffsetを追加
+    }, [player.pos, mapData, showSmoke, liteMode, offset]); 
 
-    // チームカラーがあればその色を、なければ個人の色を発光色として使用
     const isTeam = player.teamColor && player.teamColor !== 'none';
     const glowColor = isTeam ? player.teamColor : player.color;
 
-    // チーム所属時は 0 0 15px の強いオーラを常時発光、さらに軽量モードでも色を出す
     const playerGlowFilter = liteMode 
         ? (isTeam || isActiveTurn ? `drop-shadow(0 0 6px ${glowColor})` : 'none')
         : (isActiveTurn 
@@ -250,9 +252,8 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
 
             <div ref={wrapRef} style={{
                 position: 'absolute', left: '50%', top: '50%',
-                // 静止時にオフセットを反映。アニメーション中でない場合はスッと動く transition を追加
                 transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
-                transition: isAnimatingRef.current ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
+                transition: isAnimatingRef.current ? 'none' : 'transform 0.4s ease-out',
                 display: 'flex', flexDirection: 'column', alignItems: 'center'
             }}>
                 
