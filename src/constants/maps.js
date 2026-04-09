@@ -3,7 +3,7 @@ import mediumBgNight from '../assets/images/map/48_bg_night.jpg';
 
 // ★追加: マップ全体のサイズや遠近感を一元管理する設定
 export const MAP_CONFIG = {
-    TILE_SIZE: 45, // ★ここの数字を変えるだけでマス目が大きくなります（元は80相当、ご希望の45に設定）
+    TILE_SIZE: 105, // ★ここの数字を変えるだけでマス目が大きくなります（元は80相当、ご希望の45に設定）
     GAP: 20,       // マスとマスの隙間
     PADDING: 30    // マップ外周の余白
 };
