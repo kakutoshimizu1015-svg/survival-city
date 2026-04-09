@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { charInfo } from '../constants/characters';
-import { genSmallMap, genMediumMap, genLargeMap } from '../constants/maps';
+import { genSmallMap, genMediumMap, genLargeMap, genCustomMap } from '../constants/maps';
 import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatterPlayerPositions } from '../utils/mapRandomizer';
 import { useUserStore } from '../store/useUserStore';
 import { savePlayerName } from '../utils/userLogic';
@@ -95,7 +95,7 @@ export const SetupOffline = () => {
             await savePlayerName(p1Name);
         }
 
-        let mapData = mapSize === 'small' ? genSmallMap() : mapSize === 'medium' ? genMediumMap() : genLargeMap();
+        let mapData = mapSize === 'small' ? genSmallMap() : mapSize === 'medium' ? genMediumMap() : mapSize === 'midtown' ? genCustomMap() : genLargeMap();
         if (rmapTileType) mapData = randomizeTileTypes(mapData);
         if (rmapLayout) mapData = randomizeTileLayout(mapData);
 
@@ -223,7 +223,7 @@ export const SetupOffline = () => {
                 <div className="panel" style={{ width: '90%', maxWidth: '800px', marginBottom: '20px', padding: '20px', background: '#8d6e63', borderColor: '#4a3b32' }}>
                     <h3 style={{ margin: '0 0 15px 0', color: '#fdf5e6' }}>🗺️ ゲームルール設定</h3>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', marginBottom: '15px' }}>
-                        <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>マップ: <select value={mapSize} onChange={e => setMapSize(e.target.value)} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}><option value="small">小(12)</option><option value="medium">中(48)</option><option value="large">大(75)</option></select></label>
+                      <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>マップ: <select value={mapSize} onChange={e => setMapSize(e.target.value)} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}><option value="small">小(12)</option><option value="medium">中(48)</option><option value="large">大(75)</option><option value="midtown">Midtown(46)</option></select></label>
                         <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>ラウンド: <select value={maxRounds} onChange={e => setMaxRounds(Number(e.target.value))} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}>{[1, 5, 10, 15, 20, 30].map(r => <option key={r} value={r}>{r}R</option>)}</select></label>
                     </div>
                     
