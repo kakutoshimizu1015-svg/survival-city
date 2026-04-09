@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { charInfo } from '../constants/characters';
-import { genSmallMap, genMediumMap, genLargeMap, genCustomMap } from '../constants/maps';
+import { genSmallMap, genMediumMap, genLargeMap } from '../constants/maps';
 import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatterPlayerPositions } from '../utils/mapRandomizer';
 import { useUserStore } from '../store/useUserStore';
 import { savePlayerName } from '../utils/userLogic';
@@ -25,7 +25,7 @@ export const SetupOffline = () => {
     
     const [players, setPlayers] = useState([
         { id: 0, name: globalPlayerName || 'P1', charType: 'athlete', isCPU: false, teamColor: 'none', selectedSkin: null }, 
-        { id: 1, name: 'CPU1', charType: 'sales', isCPU: true, teamColor: 'none', selectedSkin: null }
+        { id: 1, name: 'CPU1', charType: 'sales', isCPU: true, teamColor: 'none', selectedSkin: null, cpuDifficulty: 'normal' }
     ]);
     
     const [mapSize, setMapSize] = useState('medium'); 
@@ -53,7 +53,7 @@ export const SetupOffline = () => {
 
     const addPlayer = (isCPU) => {
         if (players.length >= 8) return;
-        setPlayers([...players, { id: players.length, name: isCPU ? `CPU${players.length + 1}` : `P${players.length + 1}`, charType: 'survivor', isCPU, teamColor: 'none', selectedSkin: null }]);
+        setPlayers([...players, { id: players.length, name: isCPU ? `CPU${players.length + 1}` : `P${players.length + 1}`, charType: 'survivor', isCPU, teamColor: 'none', selectedSkin: null, cpuDifficulty: 'normal' }]);
     };
     
     const updatePlayer = (id, key, value) => {
@@ -95,7 +95,7 @@ export const SetupOffline = () => {
             await savePlayerName(p1Name);
         }
 
-        let mapData = mapSize === 'small' ? genSmallMap() : mapSize === 'medium' ? genMediumMap() : mapSize === 'midtown' ? genCustomMap() : genLargeMap();
+        let mapData = mapSize === 'small' ? genSmallMap() : mapSize === 'medium' ? genMediumMap() : genLargeMap();
         if (rmapTileType) mapData = randomizeTileTypes(mapData);
         if (rmapLayout) mapData = randomizeTileLayout(mapData);
 
@@ -118,9 +118,7 @@ export const SetupOffline = () => {
             }); 
         }
 
-        // ★修正: ID:0決め打ちをやめ、病院マス(center)のIDを自動取得する
-        let startPos = mapData.find(t => t.type === 'center')?.id || mapData[0].id; 
-        let scatterPos = [];
+        let startPos = 0; let scatterPos = [];
         if (rmapScatter) scatterPos = scatterPlayerPositions(mapData, finalPlayers.length);
         else if (rmapStart) startPos = randomizeStartPosition(mapData);
 
@@ -192,6 +190,24 @@ export const SetupOffline = () => {
                                 <option value="cpu">CPU</option>
                             </select>
                             
+                            {/* ▼ 追加: CPU難易度セレクタ */}
+                            {p.isCPU && (
+                                <select 
+                                    value={p.cpuDifficulty || 'normal'} 
+                                    onChange={e => updatePlayer(p.id, 'cpuDifficulty', e.target.value)} 
+                                    title='CPU難易度'
+                                    style={{ 
+                                        padding: '6px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', border: 'none', minWidth: '80px',
+                                        background: p.cpuDifficulty === 'easy' ? '#27ae60' : p.cpuDifficulty === 'hard' ? '#c0392b' : '#e67e22', 
+                                        color: 'white' 
+                                    }}
+                                >
+                                    <option value="easy">弱め</option>
+                                    <option value="normal">普通</option>
+                                    <option value="hard">鬼畜</option>
+                                </select>
+                            )}
+                            
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '90px', justifyContent: 'center' }}>
                                 {charAssignMode === 'random' ? (
                                     <span style={{ fontSize: '12px', color: '#b0a090' }}>🎲 ランダム</span>
@@ -225,7 +241,7 @@ export const SetupOffline = () => {
                 <div className="panel" style={{ width: '90%', maxWidth: '800px', marginBottom: '20px', padding: '20px', background: '#8d6e63', borderColor: '#4a3b32' }}>
                     <h3 style={{ margin: '0 0 15px 0', color: '#fdf5e6' }}>🗺️ ゲームルール設定</h3>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', marginBottom: '15px' }}>
-                      <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>マップ: <select value={mapSize} onChange={e => setMapSize(e.target.value)} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}><option value="small">小(12)</option><option value="medium">中(48)</option><option value="large">大(75)</option><option value="midtown">Midtown(46)</option></select></label>
+                        <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>マップ: <select value={mapSize} onChange={e => setMapSize(e.target.value)} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}><option value="small">小(12)</option><option value="medium">中(48)</option><option value="large">大(75)</option></select></label>
                         <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>ラウンド: <select value={maxRounds} onChange={e => setMaxRounds(Number(e.target.value))} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}>{[1, 5, 10, 15, 20, 30].map(r => <option key={r} value={r}>{r}R</option>)}</select></label>
                     </div>
                     
