@@ -149,7 +149,7 @@ import musician_R_cymbalmonkey from '../assets/images/skins/musician/R_cymbalmon
 import musician_SR_EmptyCanDrummer from '../assets/images/skins/musician/SR_Empty Can Drummer.png';
 import musician_SR_Aonemanbandofjunk from '../assets/images/skins/musician/SR_A one-man band of junk.png';
 import musician_SR_karaokescoresuit from '../assets/images/skins/musician/SR_karaokescoresuit.png';
-import musician_SR_trashcandrum from '../assets/images/skins/musician/SR_trashcandrum.png';
+
 import musician_SSR_dometourstar from '../assets/images/skins/musician/SSR_dome tour star.png';
 import musician_SSR_platinumsinger from '../assets/images/skins/musician/SSR_platinum singer.png';
 import musician_UR_electronicdiva from '../assets/images/skins/musician/UR_electronicdiva.png';
@@ -364,7 +364,7 @@ export const charSkins = {
         { id: "musician_emptycandrummer", charKey: "musician", name: "空き缶ドラマー", rarity: "SR", front: musician_SR_EmptyCanDrummer, pieceColor: "#95a5a6", ring: "#7f8c8d", desc: "空き缶とポリバケツで作ったドラムセットを身に纏う。" },
         { id: "musician_onemanband", charKey: "musician", name: "ガラクタのワンマンバンド", rarity: "SR", front: musician_SR_Aonemanbandofjunk, pieceColor: "#e67e22", ring: "#d35400", desc: "鍋の蓋や自転車のベルなど、全身に鳴り物を付けた姿。" },
         { id: "musician_karaokescoresuit", charKey: "musician", name: "カラオケ採点画面スーツ", rarity: "SR", front: musician_SR_karaokescoresuit, pieceColor: "#3498db", ring: "#f1c40f", desc: "自分の歌の採点グラフを全身にプリントした、自己顕示欲の塊スーツ。" },
-        { id: "musician_trashcandrum", charKey: "musician", name: "ゴミ箱ドラム着ぐるみ", rarity: "SR", front: musician_SR_trashcandrum, pieceColor: "#7f8c8d", ring: "#34495e", desc: "複数のポリバケツやゴミ箱と一体化し、叩かれるといい音が出る。" },
+        
         { id: "musician_dometourstar", charKey: "musician", name: "ドームツアースター", rarity: "SSR", front: musician_SSR_dometourstar, pieceColor: "#f1c40f", ring: "#e67e22", desc: "派手なステージ衣装と黄金のギターを持つロックスター。" },
         { id: "musician_platinumsinger", charKey: "musician", name: "プラチナシンガー", rarity: "SSR", front: musician_SSR_platinumsinger, pieceColor: "#bdc3c7", ring: "#ffffff", desc: "授賞式で着るような煌びやかなタキシード。" },
         { id: "musician_ur_electronicdiva", charKey: "musician", name: "ネギを持つ電子の歌姫", rarity: "UR", front: musician_UR_electronicdiva, pieceColor: "#1abc9c", ring: "#16a085", desc: "青緑のツインテールと近未来的な制服。ネギを持って電子音で歌いながら移動する。" },
