@@ -207,32 +207,6 @@ import detective_UR_kurosawasann from '../assets/images/skins/detective/UR_kuros
 import detective_UR_kurosawa from '../assets/images/skins/detective/UR_kurosawa.png';
 import detective_UR_sweettoothgenius from '../assets/images/skins/detective/UR_sweettoothgenius.png';
 
-// =========================================================
-// ▼ NPC画像のインポート
-// =========================================================
-import policeImg from '../assets/images/NPC/police.png';
-import truckImg from '../assets/images/NPC/truck.png';
-import uncleImg from '../assets/images/NPC/uncle.png';
-import yakuzaImg from '../assets/images/NPC/yakuza.png';
-import loansharkImg from '../assets/images/NPC/loanshark.png';
-import friendImg from '../assets/images/NPC/friend.png';
-import animalImg from '../assets/images/NPC/animal.png';
-
-
-// =========================================================
-// ▼ キャラクターキーと基本画像のマッピング（背面画像は廃止しデフォルトに統合）
-// =========================================================
-export const charImages = {
-    athlete:  { front: athlete_N_default,   back: athlete_N_default },
-    sales:    { front: sales_N_default,     back: sales_N_default },
-    survivor: { front: survivor_N_default,  back: survivor_N_default },
-    yankee:   { front: yankee_N_default,    back: yankee_N_default },
-    hacker:   { front: hacker_N_default,    back: hacker_N_default },
-    musician: { front: musician_N_default,  back: musician_N_default },
-    doctor:   { front: doctor_N_default,    back: doctor_N_default },
-    gambler:  { front: gambler_N_default,   back: gambler_N_default },
-    detective:{ front: detective_N_default, back: detective_N_default },
-};
 
 // =========================================================
 // ▼ 全スキンマスターデータ（ガチャ・選択画面で共通利用）
