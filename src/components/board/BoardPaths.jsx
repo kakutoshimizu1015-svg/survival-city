@@ -1,15 +1,19 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { getDepthScale } from '../../utils/gameLogic';
+import { MAP_CONFIG } from '../../constants/maps';
 
 export const BoardPaths = () => {
     const mapData = useGameStore(state => state.mapData);
 
     if (!mapData || mapData.length === 0) return null;
 
-    const TILE = 80;
-    const GAP = 20;
-    const PAD = 30;
+    const TILE = MAP_CONFIG.TILE_SIZE;
+    const GAP = MAP_CONFIG.GAP;
+    const PAD = MAP_CONFIG.PADDING;
+
+    // 線の基準太さ（TILE_SIZEが80の時に7になる比率）
+    const BASE_STROKE_WIDTH = TILE * (7 / 80);
     const STEP = TILE + GAP;
     const R = TILE / 2;
 
@@ -88,7 +92,8 @@ export const BoardPaths = () => {
                             x2={x2}
                             y2={y2}
                             stroke="rgba(0,0,0,0.85)"
-                            strokeWidth={Math.max(1.5, 7 * ds)}
+                            // ★修正: 遠近感(ds)とマスサイズ(BASE_STROKE_WIDTH)を掛け合わせて自動計算
+                            strokeWidth={Math.max(1.5, BASE_STROKE_WIDTH * ds)}
                             strokeLinecap="round"
                             markerEnd="url(#arr-bk)"
                         />

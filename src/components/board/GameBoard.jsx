@@ -9,7 +9,7 @@ import { BoardPaths } from './BoardPaths';
 import { Tile } from './Tile';
 import { TileTooltip } from '../overlays/TileTooltip';
 import { PlayerToken } from './PlayerToken';
-import { mapBackgrounds } from '../../constants/maps';
+import { mapBackgrounds, MAP_CONFIG } from '../../constants/maps';
 
 export const GameBoard = () => {
     const { 
@@ -88,11 +88,9 @@ export const GameBoard = () => {
         const targetTile = mapData.find(t => t.id === targetTileId);
         if (!targetTile) return;
 
-        const computedStyle = getComputedStyle(document.documentElement);
-        const tileSizeStr = computedStyle.getPropertyValue('--tile-size').trim();
-        const tileSize = parseInt(tileSizeStr, 10) || 60;
-        const gap = 20;     
-        const padding = 30; 
+        const tileSize = MAP_CONFIG.TILE_SIZE;
+        const gap = MAP_CONFIG.GAP;     
+        const padding = MAP_CONFIG.PADDING; 
 
         const tilePixelX = padding + (targetTile.col - 1) * (tileSize + gap) + tileSize / 2;
         const tilePixelY = padding + (targetTile.row - 1) * (tileSize + gap) + tileSize / 2;
@@ -341,7 +339,7 @@ export const GameBoard = () => {
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
                         <div id="game-board" style={{ 
-                            display: 'grid', gap: '20px', padding: '30px', borderRadius: '15px', 
+                            display: 'grid', gap: `${MAP_CONFIG.GAP}px`, padding: `${MAP_CONFIG.PADDING}px`, borderRadius: '15px', 
                             border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', 
                             backgroundImage: currentBgImage ? `url("${currentBgImage}")` : 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)',
                             backgroundSize: '100% 100%',
@@ -350,9 +348,9 @@ export const GameBoard = () => {
                             backgroundColor: isNight ? '#222' : '#fff',
                             transition: 'filter 0.5s ease',
                             width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', 
-                            gridTemplateColumns: `repeat(${maxCol}, var(--tile-size))`, 
-                            gridTemplateRows: `repeat(${maxRow}, var(--tile-size))` 
-                        }}>
+                            gridTemplateColumns: `repeat(${maxCol}, ${MAP_CONFIG.TILE_SIZE}px)`, 
+                            gridTemplateRows: `repeat(${maxRow}, ${MAP_CONFIG.TILE_SIZE}px)` 
+                }}>
                             
                             <BoardPaths />
                             <WeaponArcOverlay />
