@@ -3,7 +3,7 @@ import mediumBgNight from '../assets/images/map/48_bg_night.jpg';
 
 // ★追加: マップ全体のサイズや遠近感を一元管理する設定
 export const MAP_CONFIG = {
-    TILE_SIZE: 80, // ★ここの数字を変えるだけで、マス・矢印・カメラ・線の太さが全て連動します（標準は80）
+    TILE_SIZE: 40, // ★ここの数字を変えるだけで、マス・矢印・カメラ・線の太さが全て連動します（標準は80）
     GAP: 20,        // マスとマスの隙間
     PADDING: 30     // マップ外周の余白
 };
