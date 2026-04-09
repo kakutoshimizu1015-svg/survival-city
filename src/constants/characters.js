@@ -293,8 +293,8 @@ export const npcImages = {
 };
 
 export const TOKEN_CONFIG = {
-    player: { scaleMultiplier: 1.15, imageSize: 450, emojiBgSize: 64, emojiFontSize: 34, nameFontSize: 12, offsetRadius: 180 },
-    npc: { baseSize: 420, truckSize: 450, truckOpacity: 0.65, policeSize: 400, uncleSize: 430, yakuzaSize: 430, loansharkSize: 430, friendSize: 430, animalSize: 420, offsetRadius: 180 }
+    player: { scaleMultiplier: 1.15, imageSize: 350, emojiBgSize: 64, emojiFontSize: 34, nameFontSize: 12, offsetRadius: 120 },
+    npc: { baseSize: 320, truckSize: 350, truckOpacity: 0.65, policeSize: 300, uncleSize: 330, yakuzaSize: 330, loansharkSize: 330, friendSize: 330, animalSize: 320, offsetRadius: 120 }
 };
 
 export const charEmoji = { athlete:'🏃', sales:'💼', survivor:'🌿', yankee:'👊', hacker:'💻', musician:'🎸', doctor:'🩺', gambler:'🎲', detective:'🕵️' };
