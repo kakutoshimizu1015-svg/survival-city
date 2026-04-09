@@ -6,6 +6,7 @@ import { useUserStore } from '../../store/useUserStore';
 import { getDepthScale, getCircularOffset } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
+import { MAP_CONFIG } from '../../constants/maps'; // ★ 追加: 動的なマスの距離計算用
 
 export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const showSmoke = useUserStore(state => state.showSmoke);
@@ -28,6 +29,15 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
 
     // オフセット値の計算
     const offset = getCircularOffset(player.id, player.pos, players, npcs, TOKEN_CONFIG.player.offsetRadius);
+
+    // ★ 追加: 移動直前の過去のオフセット（立ち位置）を一時記憶しておく
+    const prevOffsetRef = useRef({ x: 0, y: 0 });
+    const lastPosRef = useRef(player.pos);
+    if (lastPosRef.current !== player.pos) {
+        lastPosRef.current = player.pos;
+    } else {
+        prevOffsetRef.current = offset;
+    }
 
     const [dustTrail, setDustTrail] = useState([]);
     
@@ -96,9 +106,14 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         isAnimatingRef.current = true;
         if (idleRafRef.current) cancelAnimationFrame(idleRafRef.current);
 
-        const sx = (startTile.col - endTile.col) * 80;
-        const sy = (startTile.row - endTile.row) * 80;
-        // ジャンプの着地点を、計算したオフセット座標へ直接向かわせる
+        // ★ 修正: ハードコードされた 80 を廃止し、MAP_CONFIG から動的に距離を計算
+        const tileDist = MAP_CONFIG.TILE_SIZE + MAP_CONFIG.GAP;
+        
+        // ★ 修正: マス間の距離に「元のマスのオフセット（立ち位置）」を足して正確なスタート地点を計算
+        const sx = (startTile.col - endTile.col) * tileDist + prevOffsetRef.current.x;
+        const sy = (startTile.row - endTile.row) * tileDist + prevOffsetRef.current.y;
+        
+        // ジャンプの着地点（到着先マスのオフセット位置）
         const ex = offset.x;
         const ey = offset.y;
 
@@ -162,6 +177,8 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                 const t = Math.min((now - startTime) / dur, 1);
                 const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
                 const jumpArc = -4 * (t - 0.5) * (t - 0.5) + 1;
+                
+                // ★ ジャンプの高さも距離に応じてスケールアップするように調整
                 const jumpHeight = 44 + Math.abs(ey - sy) * 0.4 + Math.abs(ex - sx) * 0.15;
 
                 const currentX = sx + (ex - sx) * eased;
