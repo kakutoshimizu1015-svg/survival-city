@@ -11,6 +11,9 @@ const SHOW_TILE_TEXT = false;
 export const tileTooltipData = {
     center:    { title:"🏥 病院（スタート地点）", desc:"HPが0になると強制送還。最大15P没収・装備1つロスト。" },
     normal:    { title:"🛣️ 通常の道", desc:"特別な効果なし。移動の通過点。" },
+    normal_slum: { title:"🏚️ スラムの道", desc:"【陣地化可能】コスト:3P / 収入:1P\n治安が悪く、道端にはゴミや空き缶が転がっていることが多い。" },
+    normal_commercial: { title:"🏙️ 商業の道", desc:"【陣地化可能】コスト:5P / 収入:2P\n人通りが多く、バイトやショップへのアクセスが良い。" },
+    normal_luxury: { title:"🏰 高級住宅街の道", desc:"【陣地化可能】コスト:5P / 収入:3P\n閑静な住宅街。家賃収入が高いが、警察のパトロールも多い。" },
     can:       { title:"🥫 空き缶", desc:"1APで缶を拾う（1ターン3回まで）。雨の日は雨具が必要。" },
     trash:     { title:"🗑️ ゴミ山", desc:"2APでゴミを漁る。失敗するとパトカーに補導されAP-2ペナルティ。" },
     exchange:  { title:"💱 買取所", desc:"拾った缶・ゴミを現在相場でP換金（0AP）。" },
@@ -50,8 +53,14 @@ export const Tile = React.memo(({
         if (wrapper && wrapper.classList.contains('dragging')) return;
         if (isClickable) return; 
         
-        const ttKey = tile.type in tileTooltipData ? tile.type : tile.area;
-        const ttData = tileTooltipData[ttKey];
+        let ttKey = tile.type in tileTooltipData ? tile.type : tile.area;
+        
+        // ★追加: 道マス(normal)の場合はエリアごとにキーを分ける
+        if (tile.type === 'normal') {
+            ttKey = `normal_${tile.area}`;
+        }
+
+        const ttData = tileTooltipData[ttKey] || tileTooltipData['normal']; // ★万が一データがない場合の安全対策
         if (ttData) {
             let descText = ttData.desc;
             const npcPosMap = [
