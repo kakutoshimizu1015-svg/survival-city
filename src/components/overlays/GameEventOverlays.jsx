@@ -54,7 +54,7 @@ export const GameEventOverlays = () => {
         }, [mgActive, isMyTurn]);
 
     const victoryPhrases = [
-        "優勝！",
+        
         "空き缶拾って成り上がり！見事、人生カンストだ！！",
         "過酷なサバイバル完了！見事、路上卒業（路卒）だ！！",
         "勝った！勝った！今日の炊き出しは特上ステーキだ！",

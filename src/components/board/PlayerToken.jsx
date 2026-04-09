@@ -1,12 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { charEmoji, TOKEN_CONFIG } from '../../constants/characters';
+// useGameStore をインポート
+import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
-import { getDepthScale } from '../../utils/gameLogic';
+// getCircularOffset をインポート
+import { getDepthScale, getCircularOffset } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
+import { TOKEN_CONFIG } from '../../constants/characters';
 
 export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const showSmoke = useUserStore(state => state.showSmoke);
     const liteMode = useUserStore(state => state.liteMode); 
+
+    // Storeから必要な状態を取得
+    const players = useGameStore(state => state.players);
+    const npcs = useGameStore(state => ({
+        policePos: state.policePos, truckPos: state.truckPos, unclePos: state.unclePos,
+        animalPos: state.animalPos, yakuzaPos: state.yakuzaPos, loansharkPos: state.loansharkPos, friendPos: state.friendPos
+    }));
+
+    // オフセット値の計算
+    const offset = getCircularOffset(player.id, player.pos, players, npcs, TOKEN_CONFIG.player.offsetRadius);
 
     const [dustTrail, setDustTrail] = useState([]);
     
@@ -77,8 +90,9 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
 
         const sx = (startTile.col - endTile.col) * 80;
         const sy = (startTile.row - endTile.row) * 80;
-        const ex = 0;
-        const ey = 0;
+        // ジャンプの着地点を、計算したオフセット座標へ直接向かわせる
+        const ex = offset.x;
+        const ey = offset.y;
 
         const dx = endTile.col - startTile.col;
         let newFacing = facingRef.current;
@@ -154,7 +168,8 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                 if (t < 1) {
                     moveRaf = requestAnimationFrame(animateMove);
                 } else {
-                    if (wrapRef.current) wrapRef.current.style.transform = `translate(-50%, -50%)`;
+                    // 移動終了時、オフセットを反映した座標にセットする
+                    if (wrapRef.current) wrapRef.current.style.transform = `translate(calc(-50% + ${ex}px), calc(-50% + ${ey}px))`;
                     if (tokenWrapperRef.current) tokenWrapperRef.current.style.transform = `translate(-50%, -100%)`;
                     if (scaleRef.current) scaleRef.current.style.transform = `scaleX(1) rotate(0deg)`;
                     if (shadowRef.current) shadowRef.current.style.opacity = 0.7;
@@ -177,13 +192,13 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
             if (spinRaf) cancelAnimationFrame(spinRaf);
             if (moveRaf) cancelAnimationFrame(moveRaf);
         };
-    }, [player.pos, mapData, showSmoke, liteMode]);
+    }, [player.pos, mapData, showSmoke, liteMode, offset]); //依存配列にoffsetを追加
 
-    // ▼ 修正: チームカラーがあればその色を、なければ個人の色を発光色として使用
+    // チームカラーがあればその色を、なければ個人の色を発光色として使用
     const isTeam = player.teamColor && player.teamColor !== 'none';
     const glowColor = isTeam ? player.teamColor : player.color;
 
-    // ▼ 修正: チーム所属時は 0 0 15px の強いオーラを常時発光、さらに軽量モードでも色を出す
+    // チーム所属時は 0 0 15px の強いオーラを常時発光、さらに軽量モードでも色を出す
     const playerGlowFilter = liteMode 
         ? (isTeam || isActiveTurn ? `drop-shadow(0 0 6px ${glowColor})` : 'none')
         : (isActiveTurn 
@@ -209,7 +224,10 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
             `}</style>
 
             <div ref={wrapRef} style={{
-                position: 'absolute', left: '50%', top: '50%', transform: `translate(-50%, -50%)`,
+                position: 'absolute', left: '50%', top: '50%',
+                // 静止時にオフセットを反映。アニメーション中でない場合はスッと動く transition を追加
+                transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
+                transition: isAnimatingRef.current ? 'none' : 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center'
             }}>
                 
@@ -238,7 +256,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                         background: 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
-                        {/* ▼ 修正: 不要な枠線を削除し、CharImageを直接描画する */}
                         <div ref={innerTokenRef} style={{ width: '100%', height: '100%', transform: `scaleX(${facingRef.current})` }}>
                             <CharImage
                                 charType={player.charType} 

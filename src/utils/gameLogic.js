@@ -64,3 +64,39 @@ export const getDepthScale = (row, maxRow) => {
     // 奥行き感を強めるため、一番奥を0.3に設定 (以前は0.45)
     return Math.max(0.35, 0.35 + (row / maxRow) * 0.65);
 };
+
+// --- 同一マス上の円形配置（オフセット）計算 ---
+export const getTileOccupants = (tileId, players, npcs) => {
+    const occupants = [];
+    // プレイヤーの抽出（生存している且つ同じマス）
+    players.filter(p => p.hp > 0 && p.pos === tileId).forEach(p => occupants.push(p.id));
+    
+    // NPCの抽出
+    if (npcs.policePos === tileId) occupants.push('police');
+    if (npcs.truckPos === tileId) occupants.push('truck');
+    if (npcs.unclePos === tileId) occupants.push('uncle');
+    if (npcs.animalPos === tileId) occupants.push('animal');
+    if (npcs.yakuzaPos === tileId) occupants.push('yakuza');
+    if (npcs.loansharkPos === tileId) occupants.push('loanshark');
+    if (npcs.friendPos === tileId) occupants.push('friend');
+
+    // ID順でソートし、描画順を常に一定に保つ
+    return occupants.sort();
+};
+
+export const getCircularOffset = (entityId, tileId, players, npcs, radius) => {
+    const occupants = getTileOccupants(tileId, players, npcs);
+    const N = occupants.length;
+    // 1体しかいない場合は中央に配置
+    if (N <= 1) return { x: 0, y: 0 };
+
+    const i = occupants.indexOf(entityId);
+    if (i === -1) return { x: 0, y: 0 };
+
+    // 円形配置の数式（12時方向を起点に時計回り）
+    const theta = ((2 * Math.PI) / N) * i - (Math.PI / 2);
+    return {
+        x: radius * Math.cos(theta),
+        y: radius * Math.sin(theta)
+    };
+};

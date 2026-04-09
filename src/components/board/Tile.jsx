@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
-import { getDepthScale } from '../../utils/gameLogic';
+import { getDepthScale, getCircularOffset } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
 import { MAP_CONFIG } from '../../constants/maps';
@@ -33,6 +33,7 @@ export const Tile = React.memo(({
     isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass
 }) => {
     const setTooltipData = useGameStore(state => state.setTooltipData);
+    const players = useGameStore(state => state.players); // 追加
     const policePos = useGameStore(state => state.policePos);
     const unclePos = useGameStore(state => state.unclePos);
     const animalPos = useGameStore(state => state.animalPos);
@@ -126,11 +127,17 @@ export const Tile = React.memo(({
     const isJinchi = owner !== null && owner !== undefined;
     const ds = getDepthScale(tile.row, maxRow);
 
-    const npcStyle = { position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '15%', zIndex: 5, pointerEvents: 'none' };
-    const truckStyle = { 
-        ...npcStyle, 
-        bottom: '10%', 
-        opacity: horrorMode ? 1 : TOKEN_CONFIG.npc.truckOpacity,
+    const npcs = { policePos, truckPos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos };
+    
+    // 動的にオフセットを計算する関数に置き換え
+    const getNpcStyle = (npcId, isTruck = false) => {
+        const offset = getCircularOffset(npcId, tile.id, players, npcs, TOKEN_CONFIG.npc.offsetRadius);
+        return {
+            position: 'absolute', left: '50%', bottom: isTruck ? '10%' : '15%', zIndex: 5, pointerEvents: 'none',
+            transform: `translate(calc(-50% + ${offset.x}px), ${offset.y}px)`,
+            opacity: isTruck ? (horrorMode ? 1 : TOKEN_CONFIG.npc.truckOpacity) : 1,
+            transition: 'transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)'
+        };
     };
 
     // ★ 中身がはみ出さないためのサイズ自動計算
@@ -218,15 +225,15 @@ export const Tile = React.memo(({
             )}
             
             {(!isFog || isHorrorTruckTile) && isTruck && (
-                <CharImage charType="truck" size={TOKEN_CONFIG.npc.truckSize} style={truckStyle} className="truck-token" />
+                <CharImage charType="truck" size={TOKEN_CONFIG.npc.truckSize} style={getNpcStyle('truck', true)} className="truck-token" />
             )}
             
-            {!isFog && isPolice    && <CharImage charType="police"    size={TOKEN_CONFIG.npc.policeSize}    style={npcStyle} />}
-            {!isFog && isUncle     && <CharImage charType="uncle"     size={TOKEN_CONFIG.npc.uncleSize}     style={npcStyle} />}
-            {!isFog && isAnimal    && <CharImage charType="animal"    size={TOKEN_CONFIG.npc.animalSize}    style={npcStyle} />}
-            {!isFog && isYakuza    && <CharImage charType="yakuza"    size={TOKEN_CONFIG.npc.yakuzaSize}    style={npcStyle} />}
-            {!isFog && isLoanshark && <CharImage charType="loanshark" size={TOKEN_CONFIG.npc.loansharkSize} style={npcStyle} />}
-            {!isFog && isFriend    && <CharImage charType="friend"    size={TOKEN_CONFIG.npc.friendSize}    style={npcStyle} />}
+            {!isFog && isPolice    && <CharImage charType="police"    size={TOKEN_CONFIG.npc.policeSize}    style={getNpcStyle('police')} />}
+            {!isFog && isUncle     && <CharImage charType="uncle"     size={TOKEN_CONFIG.npc.uncleSize}     style={getNpcStyle('uncle')} />}
+            {!isFog && isAnimal    && <CharImage charType="animal"    size={TOKEN_CONFIG.npc.animalSize}    style={getNpcStyle('animal')} />}
+            {!isFog && isYakuza    && <CharImage charType="yakuza"    size={TOKEN_CONFIG.npc.yakuzaSize}    style={getNpcStyle('yakuza')} />}
+            {!isFog && isLoanshark && <CharImage charType="loanshark" size={TOKEN_CONFIG.npc.loansharkSize} style={getNpcStyle('loanshark')} />}
+            {!isFog && isFriend    && <CharImage charType="friend"    size={TOKEN_CONFIG.npc.friendSize}    style={getNpcStyle('friend')} />}
         </div>
     );
 }, 
