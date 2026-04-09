@@ -49,7 +49,8 @@ export const GameBoard = () => {
 
     const zoomAt = useCallback((px, py, delta) => {
         const prevScale = scale.current;
-        const newScale = Math.min(3.0, Math.max(0.25, prevScale + delta));
+        // ★修正: マップ巨大化に対応するため、最小ズーム制限を 0.02 に緩和
+        const newScale = Math.min(3.0, Math.max(0.02, prevScale + delta));
         const ratio = newScale / prevScale;
         offset.current = { x: px - ratio * (px - offset.current.x), y: py - ratio * (py - offset.current.y) };
         scale.current = newScale;
