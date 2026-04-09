@@ -177,7 +177,7 @@ export const Tile = React.memo(({
                 placeSelf: 'center',
 
                 // ★追加: 道マスのみ色と丸い枠線を適用
-                backgroundColor: areaBgColor,
+                background: areaBgColor, // ★修正: backgroundColor を background に変更してCSS設定を完全に上書きする
                 border: areaBorder,
                 borderRadius: areaBgColor ? '50%' : undefined
             }}
