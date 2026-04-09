@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
 import { getDepthScale, getCircularOffset } from '../../utils/gameLogic';
@@ -88,7 +88,16 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         };
     }, [liteMode]); 
 
+    // 【追加】ジャンプ以外の時に、他人がマスに来たらスッと避けるアニメーション
     useEffect(() => {
+        if (!isAnimatingRef.current && wrapRef.current) {
+            wrapRef.current.style.transition = 'transform 0.4s ease-out';
+            wrapRef.current.style.transform = `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`;
+        }
+    }, [offset.x, offset.y]);
+
+    // 【修正】useEffect を useLayoutEffect に変更（画面に描画される前に強制的に位置を上書きする）
+    useLayoutEffect(() => {
         if (prevPosRef.current === player.pos) return;
         const startTile = mapData.find(t => t.id === prevPosRef.current);
         const endTile = mapData.find(t => t.id === player.pos);
@@ -102,12 +111,15 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         if (idleRafRef.current) cancelAnimationFrame(idleRafRef.current);
 
         const tileDist = MAP_CONFIG.TILE_SIZE + MAP_CONFIG.GAP;
-        
-        // 元のマスの「オフセット位置」からスタート
         const sx = (startTile.col - endTile.col) * tileDist + prevOffsetRef.current.x;
         const sy = (startTile.row - endTile.row) * tileDist + prevOffsetRef.current.y;
         
-        // 【変更】到着地点は「目的地のマスの中心(0, 0)」にする
+        // 【重要】描画される前に、CSSのトランジションを切り、スタート位置に強制配置する！
+        if (wrapRef.current) {
+            wrapRef.current.style.transition = 'none';
+            wrapRef.current.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
+        }
+
         const ex = 0;
         const ey = 0;
 
@@ -145,7 +157,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                     if (innerTokenRef.current) innerTokenRef.current.style.transform = `scaleX(${curFacing})`;
                     if (scaleRef.current) scaleRef.current.style.transform = `scaleX(${spinWidth}) rotate(0deg)`;
                     if (tokenWrapperRef.current) tokenWrapperRef.current.style.transform = `translate(-50%, calc(-100% + ${spinHop}px))`;
-                    if (wrapRef.current) wrapRef.current.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
 
                     if (t < 1) {
                         spinRaf = requestAnimationFrame(animateSpin);
@@ -186,9 +197,8 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                 if (t < 1) {
                     moveRaf = requestAnimationFrame(animateMove);
                 } else {
-                    // 【変更】移動終了時、まずはマスの中心(0,0)にピッタリ着地させる
                     if (wrapRef.current) {
-                        wrapRef.current.style.transition = 'none'; // 一瞬固定
+                        wrapRef.current.style.transition = 'none';
                         wrapRef.current.style.transform = `translate(-50%, -50%)`;
                     }
                     if (tokenWrapperRef.current) tokenWrapperRef.current.style.transform = `translate(-50%, -100%)`;
@@ -202,7 +212,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                     prevPosRef.current = player.pos;
                     isAnimatingRef.current = false;
                     
-                    // 【追加】次のフレームで、円形の定位置（オフセット）へスライド移動させる
+                    // 次のフレームで、円形の定位置（オフセット）へ滑らかにスライド移動させる
                     requestAnimationFrame(() => {
                         if (wrapRef.current) {
                             wrapRef.current.style.transition = 'transform 0.4s ease-out';
@@ -252,8 +262,8 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
 
             <div ref={wrapRef} style={{
                 position: 'absolute', left: '50%', top: '50%',
+                // 【修正】インラインスタイルから transition を削除し、JS側の制御に一本化
                 transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
-                transition: isAnimatingRef.current ? 'none' : 'transform 0.4s ease-out',
                 display: 'flex', flexDirection: 'column', alignItems: 'center'
             }}>
                 
