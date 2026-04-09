@@ -181,6 +181,22 @@ export const OnlineLobby = () => {
                                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center' }}>
                                             <input type="text" value={p.name} onChange={e => updateCpu(p.userId, { name: e.target.value })} style={{ padding: '4px', borderRadius: '4px', width: '70px', fontSize: '12px' }} />
                                             <button onClick={() => setCharSelectTarget(p.userId)} className="btn-clay" style={{ padding: '4px 8px', fontSize: '12px', background: '#e67e22' }}>変更</button>
+                                            
+                                            {/* ▼ 追加: CPU難易度セレクタ */}
+                                            <select 
+                                                value={p.cpuDifficulty || 'normal'} 
+                                                onChange={e => updateCpu(p.userId, { cpuDifficulty: e.target.value })} 
+                                                style={{ 
+                                                    padding: '4px', borderRadius: '4px', fontSize: '12px', border: 'none', fontWeight: 'bold', cursor: 'pointer',
+                                                    background: p.cpuDifficulty === 'easy' ? '#27ae60' : p.cpuDifficulty === 'hard' ? '#c0392b' : '#e67e22', 
+                                                    color: 'white' 
+                                                }}
+                                            >
+                                                <option value="easy">弱め</option>
+                                                <option value="normal">普通</option>
+                                                <option value="hard">鬼畜</option>
+                                            </select>
+                                            
                                             <select value={p.teamColor} onChange={e => updateCpu(p.userId, { teamColor: e.target.value })} style={{ padding: '4px', borderRadius: '4px', fontSize: '12px' }}>
                                                 {Object.entries(TEAM_COLORS).map(([k, t]) => <option key={k} value={k}>{t.icon} {t.label}</option>)}
                                             </select>
