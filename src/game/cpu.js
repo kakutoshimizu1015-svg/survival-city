@@ -546,7 +546,7 @@ export const runCpuTurn = async () => {
             // F. 陣地占領
             // ======================================================
             if (!acted && state.territories[cp.pos] !== cp.id && cp.pos !== state.unclePos) {
-                const occupiable = ['normal', 'can', 'trash', 'job', 'exchange', 'shelter'].includes(currentTile.type);
+                const occupiable = currentTile.type === 'normal'; // ← ここを修正！(normalマスのみ許可)
                 if (occupiable) {
                     const val = tileValue(currentTile);
                     const isEnemy = state.territories[cp.pos] !== undefined;
