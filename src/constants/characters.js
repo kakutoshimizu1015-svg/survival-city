@@ -142,7 +142,6 @@ import musician_R_cymbalmonkey from '../assets/images/skins/musician/R_cymbalmon
 import musician_SR_EmptyCanDrummer from '../assets/images/skins/musician/SR_Empty Can Drummer.png';
 import musician_SR_Aonemanbandofjunk from '../assets/images/skins/musician/SR_A one-man band of junk.png';
 import musician_SR_karaokescoresuit from '../assets/images/skins/musician/SR_karaokescoresuit.png';
-import musician_SR_trashcandrum from '../assets/images/skins/musician/SR_trashcandrum.png';
 import musician_SSR_dometourstar from '../assets/images/skins/musician/SSR_dome tour star.png';
 import musician_SSR_platinumsinger from '../assets/images/skins/musician/SSR_platinum singer.png';
 import musician_UR_electronicdiva from '../assets/images/skins/musician/UR_electronicdiva.png';
