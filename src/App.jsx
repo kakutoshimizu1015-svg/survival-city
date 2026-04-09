@@ -21,7 +21,8 @@ import { MailboxOverlay } from './components/common/MailboxOverlay';
 
 function App() {
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode, rulesActive, tutorialActive, settingsActive, setGameState } = useGameStore();
-  const { isLoggedIn, uid, playerName, wins, totalEarnedP, totalWins, gachaCans, gachaPoints, friendRequests, inbox, claimedMails } = useUserStore();
+  // ▼ 修正: lastClaimedDate を取得するように追加
+  const { isLoggedIn, uid, playerName, wins, totalEarnedP, totalWins, gachaCans, gachaPoints, friendRequests, inbox, claimedMails, lastClaimedDate } = useUserStore();
   
   const [localName, setLocalName] = useState(playerName);
   
@@ -36,6 +37,11 @@ function App() {
   const safeFriendReqs = Array.isArray(friendRequests) ? friendRequests : (friendRequests ? Object.values(friendRequests) : []);
 
   const unreadMailsCount = safeInbox.filter(mail => mail && !safeClaimedMails.includes(mail.id)).length;
+
+  // ▼ 新規追加: 今日の日付文字列を生成し、すでに受け取り済みか判定する
+  const d = new Date();
+  const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const hasClaimedToday = lastClaimedDate === todayStr;
 
   useEffect(() => {
     if (!isLoggedIn) loginAnonymously();
@@ -63,10 +69,15 @@ function App() {
   return (
     <>
       <GlobalInviteModal />
-      
-      {/* ▼ 新規追加: モード選択画面のときだけログインボーナスを（自動または手動で）表示する */}
-      {gamePhase === 'mode_select' && (
-        <LoginBonusModal manualOpen={showManualLoginBonus} onCloseManual={() => setShowManualLoginBonus(false)} />
+
+      {/* ▼ 修正: 未受取の場合（!hasClaimedToday）は自動で開き、手動ボタンでも開けるようにする */}
+      {gamePhase === 'mode_select' && (!hasClaimedToday || showManualLoginBonus) && (
+        <LoginBonusModal 
+           manualOpen={showManualLoginBonus} 
+           onCloseManual={() => setShowManualLoginBonus(false)} 
+           hasClaimedToday={hasClaimedToday} 
+           todayStr={todayStr} 
+        />
       )}
 
       {showFriendModal && (

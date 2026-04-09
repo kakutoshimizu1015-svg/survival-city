@@ -13,15 +13,13 @@ const LOGIN_REWARDS = [
     { day: 4, type: "can", amount: 20, label: "20 缶", icon: "🥫" },
     { day: 5, type: "p", amount: 500, label: "500 P", icon: "💰" },
     { day: 6, type: "can", amount: 50, label: "50 缶", icon: "🥫" },
-    // ▼ 7日目: 限定スキン（マスターデータに存在するIDを指定）。被った場合は fallbackP を付与。
     { day: 7, type: "skin", skinId: "SSR_boss", amount: 1, fallbackP: 1000, label: "限定スキン", icon: "✨" }, 
 ];
 
-// ▼ 修正: App.jsxから手動開閉用の props を受け取る
-export default function LoginBonusModal({ manualOpen, onCloseManual }) {
+export default function LoginBonusModal({ manualOpen, onCloseManual, hasClaimedToday, todayStr }) {
     const { 
         loginDays, 
-        showLoginBonusToday, 
+        lastClaimedDate, 
         unlockedSkins, 
         addGachaAssets, 
         unlockMultipleSkins, 
@@ -31,18 +29,33 @@ export default function LoginBonusModal({ manualOpen, onCloseManual }) {
     const [isClaiming, setIsClaiming] = useState(false);
     const [conversionMessage, setConversionMessage] = useState(null);
 
-    // ▼ 修正: 今日のボーナスが未受取、または手動で開かれた場合のみ描画する
-    if (!showLoginBonusToday && !manualOpen) return null;
+    // ▼ 連続ログイン日数の動的計算（受け取る前でも正しい日数を表示するため）
+    let displayDay = loginDays || 0;
+    if (!hasClaimedToday) {
+        if (!lastClaimedDate) {
+            displayDay = 1; // 初回
+        } else {
+            const lastDate = new Date(lastClaimedDate);
+            const todayDate = new Date(todayStr);
+            const diffTime = Math.abs(todayDate - lastDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            // 1日差なら継続、それ以上空いたら1日にリセット
+            if (diffDays === 1) {
+                displayDay = (loginDays % 7) + 1;
+            } else {
+                displayDay = 1; 
+            }
+        }
+    }
 
-    // デバッグ・フェイルセーフ用: loginDaysが不正な値にならないように補正
-    const currentDay = Math.max(1, Math.min(7, loginDays || 1));
+    const currentDay = Math.max(1, Math.min(7, displayDay));
     const todayReward = LOGIN_REWARDS[currentDay - 1];
 
     const handleClaim = async () => {
         if (isClaiming) return;
         setIsClaiming(true);
 
-        // 報酬付与ロジック
         if (todayReward.type === "p") {
             addGachaAssets(0, todayReward.amount);
         } else if (todayReward.type === "can") {
@@ -50,21 +63,21 @@ export default function LoginBonusModal({ manualOpen, onCloseManual }) {
         } else if (todayReward.type === "skin") {
             const alreadyOwned = unlockedSkins.includes(todayReward.skinId);
             if (alreadyOwned) {
-                // 重複救済：Pに変換
                 addGachaAssets(0, todayReward.fallbackP);
                 setConversionMessage(`所持済みスキンだったため、${todayReward.fallbackP} Pに変換されました！`);
                 await new Promise(r => setTimeout(r, 2000));
             } else {
-                // 新規獲得
                 unlockMultipleSkins([todayReward.skinId]);
             }
         }
 
-        // Firebaseに即座に同期してリロード消失を防ぐ
-        await syncGachaData();
+        // ▼ 受け取った日付と日数を確実にストアに保存！
+        setUserData({ 
+            lastClaimedDate: todayStr,
+            loginDays: currentDay
+        });
 
-        // モーダルを閉じる
-        setUserData({ showLoginBonusToday: false });
+        await syncGachaData();
         setIsClaiming(false);
         if (onCloseManual) onCloseManual();
     };
@@ -107,12 +120,11 @@ export default function LoginBonusModal({ manualOpen, onCloseManual }) {
                     毎日ログインして豪華アイテムをゲットしよう！<br/>（現在 <span style={{ color: ACC, fontWeight: 'bold', fontSize: 16 }}>{currentDay}</span> 日目）
                 </p>
 
-                {/* 1〜6日目のグリッド */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 12 }}>
                     {LOGIN_REWARDS.slice(0, 6).map((reward, i) => {
                         const day = i + 1;
-                        const isPast = day < currentDay || (!showLoginBonusToday && day === currentDay);
-                        const isToday = day === currentDay && showLoginBonusToday;
+                        const isPast = day < currentDay || (hasClaimedToday && day === currentDay);
+                        const isToday = day === currentDay && !hasClaimedToday;
                         const isFuture = day > currentDay;
 
                         return (
@@ -135,14 +147,13 @@ export default function LoginBonusModal({ manualOpen, onCloseManual }) {
                     })}
                 </div>
 
-                {/* 7日目（特別枠） */}
                 <div style={{
                     background: currentDay === 7 ? 'linear-gradient(135deg, #4A1500, #2A0800)' : '#150800',
                     border: `2px solid ${currentDay === 7 ? '#FFD700' : BORD}`,
                     borderRadius: 12, padding: 14, display: 'flex', alignItems: 'center', gap: 16,
                     opacity: currentDay < 7 ? 0.6 : 1,
-                    animation: currentDay === 7 && showLoginBonusToday ? 'pulseHighlight 2s infinite' : 'none',
-                    filter: currentDay > 7 || (!showLoginBonusToday && currentDay === 7) ? 'grayscale(100%) brightness(0.5)' : 'none'
+                    animation: currentDay === 7 && !hasClaimedToday ? 'pulseHighlight 2s infinite' : 'none',
+                    filter: currentDay > 7 || (hasClaimedToday && currentDay === 7) ? 'grayscale(100%) brightness(0.5)' : 'none'
                 }}>
                     <div style={{
                         width: 64, height: 64, borderRadius: '50%', background: '#0C0600', 
@@ -151,7 +162,7 @@ export default function LoginBonusModal({ manualOpen, onCloseManual }) {
                     }}>
                         {targetSkinData ? (
                             <>
-                                {currentDay === 7 && showLoginBonusToday && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 60%)', animation: 'fadeIn 1s infinite alternate' }} />}
+                                {currentDay === 7 && !hasClaimedToday && <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 60%)', animation: 'fadeIn 1s infinite alternate' }} />}
                                 <img src={targetSkinData.front} alt="7日目報酬" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             </>
                         ) : (
@@ -163,18 +174,17 @@ export default function LoginBonusModal({ manualOpen, onCloseManual }) {
                         <div style={{ fontSize: 16, color: LIGHT, fontWeight: 'bold', marginBottom: 2 }}>{LOGIN_REWARDS[6].label}</div>
                         <div style={{ fontSize: 10, color: '#AAA' }}>※所持済みの場合は {LOGIN_REWARDS[6].fallbackP}P に変換</div>
                     </div>
-                    {(!showLoginBonusToday && currentDay === 7) && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, color: '#66BB6A', textShadow: '0 0 10px #000' }}>✔</div>}
+                    {(hasClaimedToday && currentDay === 7) && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, color: '#66BB6A', textShadow: '0 0 10px #000' }}>✔</div>}
                 </div>
 
-                {/* 変換メッセージ */}
                 {conversionMessage && (
                     <div style={{ marginTop: 16, padding: '8px 12px', background: 'rgba(255, 102, 0, 0.2)', border: `1px solid ${ACC}`, borderRadius: 8, color: '#FFD700', fontSize: 12, fontWeight: 'bold', animation: 'fadeIn 0.3s' }}>
                         {conversionMessage}
                     </div>
                 )}
 
-                {/* ▼ 修正: 未受取の場合は「受け取る」ボタン、受取済みの場合は「閉じる」ボタンを表示 */}
-                {showLoginBonusToday ? (
+                {/* ▼ 未受取の場合は必ず「受け取る」ボタンを表示し、閉じさせない！ */}
+                {!hasClaimedToday ? (
                     <button 
                         onClick={handleClaim} 
                         disabled={isClaiming}

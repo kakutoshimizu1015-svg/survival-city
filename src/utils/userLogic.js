@@ -107,33 +107,7 @@ export const loadUserData = async (uid) => {
   try {
     const snapshot = await get(userRef);
     
-    // ▼ 新規追加: ログイン日付の判定ロジック
-    const today = new Date();
-    // タイムゾーンのズレを防ぐためローカルのYYYY-MM-DDを取得
-    const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-    const storeState = useUserStore.getState();
-    let newLoginDays = storeState.loginDays || 0;
-    let shouldShowBonus = false;
-
-    if (storeState.lastLoginDate !== todayStr) {
-        // 連続ログイン判定 (簡略化のため、日付が変わっていれば日数追加とする)
-        const lastDate = new Date(storeState.lastLoginDate || 0);
-        const diffTime = Math.abs(today - lastDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-        
-        if (diffDays === 1 || !storeState.lastLoginDate) {
-            newLoginDays = (newLoginDays % 7) + 1; // 7日周期
-        } else if (diffDays > 1) {
-            newLoginDays = 1; // 途切れたら1日にリセット
-        }
-        
-        shouldShowBonus = true;
-        storeState.setUserData({ 
-            lastLoginDate: todayStr, 
-            loginDays: newLoginDays,
-            showLoginBonusToday: true 
-        });
-    }
+    // ▼ 前回追加した todayStr の判定ロジックをすべて削除し、元の処理にスッキリ戻します
     if (snapshot.exists()) {
       const data = snapshot.val();
       

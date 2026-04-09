@@ -28,7 +28,7 @@ export const OnlineLobby = () => {
     const [playerName, setPlayerName] = useState(globalPlayerName || 'Player' + Math.floor(Math.random() * 1000));
     const [roomInput, setRoomInput] = useState('');
     
-    const [mapSize, setMapSize] = useState('medium'); 
+    const [mapSize, setMapSize] = useState('midtown'); // ★デフォルトをmidtownに変更
     const [maxRounds, setMaxRounds] = useState(20);
     const [skipTurnDice, setSkipTurnDice] = useState(false);
     const [isCreative, setIsCreative] = useState(false);
@@ -239,7 +239,7 @@ export const OnlineLobby = () => {
                             </div>
 
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', marginBottom: '15px' }}>
-                                <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>マップ: <select value={mapSize} onChange={e => setMapSize(e.target.value)} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}><option value="small">小(12)</option><option value="medium">中(48)</option><option value="large">大(75)</option><option value="midtown">Midtown(46)</option></select></label>
+                                <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>マップ: <select value={mapSize} onChange={e => setMapSize(e.target.value)} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}><option value="midtown">midtown(46)</option></select></label>
                                 <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>ラウンド: <select value={maxRounds} onChange={e => setMaxRounds(Number(e.target.value))} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}>{[1, 5, 10, 15, 20, 30].map(r => <option key={r} value={r}>{r}R</option>)}</select></label>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginBottom: '15px' }}>
