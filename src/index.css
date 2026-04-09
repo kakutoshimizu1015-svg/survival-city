@@ -248,7 +248,8 @@ select, .name-input { padding:6px; font-size:14px; border-radius:5px; border:2px
 .npc-token    { z-index:90  !important; }
 
 /* ── Type colors ── */
-.tile.normal   { background:radial-gradient(circle at 35% 28%, #78c6ff, #1565c0) !important; border-color:#b3e0ff !important; }
+/* ▼ 修正: プログラム側(Tile.jsx)でエリア別に色付けするため、CSSでの強制青色指定を無効化 */
+/* .tile.normal   { background:radial-gradient(circle at 35% 28%, #78c6ff, #1565c0) !important; border-color:#b3e0ff !important; } */
 .tile.can      { background:radial-gradient(circle at 35% 28%, #4dd0e1, #006064) !important; border-color:#b2ebf2 !important; }
 .tile.trash    { background:radial-gradient(circle at 35% 28%, #ef9a9a, #b71c1c) !important; border-color:#ffcdd2 !important; }
 .tile.event    { background:radial-gradient(circle at 35% 28%, #ce93d8, #6a1b9a) !important; border-color:#e1bee7 !important; }
