@@ -118,7 +118,9 @@ export const SetupOffline = () => {
             }); 
         }
 
-        let startPos = 0; let scatterPos = [];
+        // ★修正: ID:0決め打ちをやめ、病院マス(center)のIDを自動取得する
+        let startPos = mapData.find(t => t.type === 'center')?.id || mapData[0].id; 
+        let scatterPos = [];
         if (rmapScatter) scatterPos = scatterPlayerPositions(mapData, finalPlayers.length);
         else if (rmapStart) startPos = randomizeStartPosition(mapData);
 
