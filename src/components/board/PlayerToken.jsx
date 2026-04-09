@@ -13,10 +13,18 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
 
     // Storeから必要な状態を取得
     const players = useGameStore(state => state.players);
-    const npcs = useGameStore(state => ({
-        policePos: state.policePos, truckPos: state.truckPos, unclePos: state.unclePos,
-        animalPos: state.animalPos, yakuzaPos: state.yakuzaPos, loansharkPos: state.loansharkPos, friendPos: state.friendPos
-    }));
+    
+    // それぞれ個別に状態を取得する（無限ループ防止）
+    const policePos = useGameStore(state => state.policePos);
+    const truckPos = useGameStore(state => state.truckPos);
+    const unclePos = useGameStore(state => state.unclePos);
+    const animalPos = useGameStore(state => state.animalPos);
+    const yakuzaPos = useGameStore(state => state.yakuzaPos);
+    const loansharkPos = useGameStore(state => state.loansharkPos);
+    const friendPos = useGameStore(state => state.friendPos);
+
+    // 取得した値をローカルでオブジェクトにまとめる
+    const npcs = { policePos, truckPos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos };
 
     // オフセット値の計算
     const offset = getCircularOffset(player.id, player.pos, players, npcs, TOKEN_CONFIG.player.offsetRadius);
