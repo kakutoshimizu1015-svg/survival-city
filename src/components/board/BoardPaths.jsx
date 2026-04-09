@@ -12,7 +12,6 @@ export const BoardPaths = () => {
     const GAP = MAP_CONFIG.GAP;
     const PAD = MAP_CONFIG.PADDING;
 
-    // 線の基準太さ（TILE_SIZEが80の時に7になる比率）
     const BASE_STROKE_WIDTH = TILE * (7 / 80);
     const STEP = TILE + GAP;
     const R = TILE / 2;
@@ -75,17 +74,17 @@ export const BoardPaths = () => {
                     const ux = dx / len;
                     const uy = dy / len;
 
-                    // ★追加: 開始マスと終了マス、それぞれの遠近法スケール（縮尺）を取得
                     const f_ds = getDepthScale(tile.row, maxRow);
                     const t_ds = getDepthScale(nextTile.row, maxRow);
 
-                    // ★修正: 中心からのオフセットに、それぞれのマスの縮尺（f_ds, t_ds）を掛け合わせる
-                    const x1 = fx + ux * ((R * f_ds) + 4); 
-                    const y1 = fy + uy * ((R * f_ds) + 4);
-                    const x2 = tx - ux * ((R * t_ds) + 8);
-                    const y2 = ty - uy * ((R * t_ds) + 8);
+                    // ★ 修正: 矢印が突き刺さらないよう、すき間もTILE_SIZEの割合で自動計算する
+                    const gapBase = TILE * 0.05; // 80pxの時は4px、45pxの時は約2px
 
-                    // 線の太さ用の平均スケール
+                    const x1 = fx + ux * ((R * f_ds) + gapBase); 
+                    const y1 = fy + uy * ((R * f_ds) + gapBase);
+                    const x2 = tx - ux * ((R * t_ds) + gapBase * 2.5); // 先端は少し広めに空ける
+                    const y2 = ty - uy * ((R * t_ds) + gapBase * 2.5);
+
                     const avgRow = (tile.row + nextTile.row) / 2;
                     const ds = getDepthScale(avgRow, maxRow);
 
@@ -97,7 +96,6 @@ export const BoardPaths = () => {
                             x2={x2}
                             y2={y2}
                             stroke="rgba(0,0,0,0.85)"
-                            // ★修正: 遠近感(ds)とマスサイズ(BASE_STROKE_WIDTH)を掛け合わせて自動計算
                             strokeWidth={Math.max(1.5, BASE_STROKE_WIDTH * ds)}
                             strokeLinecap="round"
                             markerEnd="url(#arr-bk)"

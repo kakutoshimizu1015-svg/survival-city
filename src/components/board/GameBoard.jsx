@@ -4,7 +4,7 @@ import { useUserStore } from '../../store/useUserStore';
 import { getDistance, getPathPreviewTiles, getManholeLinkedTiles } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
-import { useNetworkStore } from '../../store/useNetworkStore'; // ▼ 追加: ネットワークStore
+import { useNetworkStore } from '../../store/useNetworkStore';
 import { BoardPaths } from './BoardPaths';
 import { Tile } from './Tile';
 import { TileTooltip } from '../overlays/TileTooltip';
@@ -16,11 +16,9 @@ export const GameBoard = () => {
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
         roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
-        horrorMode,
-        isDashPicking // ▼ 追加: ダッシュ中かどうかのフラグを取得
+        horrorMode, isDashPicking 
     } = useGameStore();
 
-    // ▼ 修正: autoScrollToPlayer の取得元を useUserStore に変更
     const showSmoke = useUserStore(state => state.showSmoke);
     const autoScrollToPlayer = useUserStore(state => state.autoScrollToPlayer); 
 
@@ -240,12 +238,11 @@ export const GameBoard = () => {
     const handleTileClick = (tileId) => {
         if (isClickPrevented.current) return;
 
-        // ▼ 追加: オンライン時の他人のターン中の誤操作をブロック
         const netState = useNetworkStore.getState();
         if (netState.status === 'connected') {
-            const currentPlayer = players[turn]; // GameBoard内で取得済みのplayersとturnを利用
+            const currentPlayer = players[turn];
             if (currentPlayer && currentPlayer.userId !== netState.myUserId) {
-                return; // 自分のターンでなければ操作を無視
+                return;
             }
         }
 
@@ -339,6 +336,7 @@ export const GameBoard = () => {
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
                         <div id="game-board" style={{ 
+                            boxSizing: 'content-box', // ★ 追加: 枠線を外側に計算
                             display: 'grid', gap: `${MAP_CONFIG.GAP}px`, padding: `${MAP_CONFIG.PADDING}px`, borderRadius: '15px', 
                             border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', 
                             backgroundImage: currentBgImage ? `url("${currentBgImage}")` : 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)',
@@ -350,7 +348,7 @@ export const GameBoard = () => {
                             width: 'max-content', margin: '0 auto', position: 'relative', isolation: 'isolate', 
                             gridTemplateColumns: `repeat(${maxCol}, ${MAP_CONFIG.TILE_SIZE}px)`, 
                             gridTemplateRows: `repeat(${maxRow}, ${MAP_CONFIG.TILE_SIZE}px)` 
-                }}>
+                        }}>
                             
                             <BoardPaths />
                             <WeaponArcOverlay />
@@ -360,8 +358,6 @@ export const GameBoard = () => {
                                 const isFog = visibleTiles && !visibleTiles.has(tile.id);
                                 const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
                                 const isClickable = npcMovePick !== null || isBranchTarget;
-                                
-                                // ▼ 追加: 自分がダッシュのターゲットになっているかどうかを個別に判定
                                 const isDashTarget = isClickable && isDashPicking;
                                 
                                 let pathClass = '';
@@ -374,7 +370,7 @@ export const GameBoard = () => {
                                     <Tile 
                                         key={tile.id} tile={tile} owner={owner} isFog={isFog} 
                                         isClickable={isClickable} 
-                                        isDashTarget={isDashTarget} // ▼ Tile に Prop として渡す
+                                        isDashTarget={isDashTarget}
                                         onClick={() => handleTileClick(tile.id)} maxRow={maxRow}
                                         isTruck={tile.id === truckPos} isPolice={tile.id === policePos} isUncle={tile.id === unclePos} isAnimal={tile.id === animalPos} isYakuza={tile.id === yakuzaPos} isLoanshark={tile.id === loansharkPos} isFriend={tile.id === friendPos} pathClass={pathClass}
                                     />

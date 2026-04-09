@@ -1,10 +1,10 @@
 import React, { useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { useUserStore } from '../../store/useUserStore'; // ▼ 追加
+import { useUserStore } from '../../store/useUserStore';
 import { getDepthScale } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
-import { MAP_CONFIG } from '../../constants/maps'; // ★これを追加
+import { MAP_CONFIG } from '../../constants/maps';
 
 const SHOW_TILE_TEXT = false;
 
@@ -40,9 +40,8 @@ export const Tile = React.memo(({
     const horrorMode = useGameStore(state => state.horrorMode);
     const isHorrorTruckTile = horrorMode && isTruck;
     
-    /// ▼ 修正: liteMode を useUserStore から取得
     const liteMode = useUserStore(state => state.liteMode); 
-    const showTileLabels = useUserStore(state => state.showTileLabels); // ▼ 追加: ラベル設定を取得
+    const showTileLabels = useUserStore(state => state.showTileLabels); 
 
     const touchTimer = useRef(null);
 
@@ -115,18 +114,20 @@ export const Tile = React.memo(({
     if (pathClass) classNameStr += ` ${pathClass}`;
 
     const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
-    
     const isJinchi = owner !== null && owner !== undefined;
-
     const ds = getDepthScale(tile.row, maxRow);
 
     const npcStyle = { position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: '15%', zIndex: 5, pointerEvents: 'none' };
-    
     const truckStyle = { 
         ...npcStyle, 
         bottom: '10%', 
         opacity: horrorMode ? 1 : TOKEN_CONFIG.npc.truckOpacity,
     };
+
+    // ★ 中身がはみ出さないためのサイズ自動計算
+    const emojiSize = Math.max(14, MAP_CONFIG.TILE_SIZE * 0.32);
+    const labelSize = Math.max(8, MAP_CONFIG.TILE_SIZE * 0.12);
+    const badgeSize = Math.max(9, MAP_CONFIG.TILE_SIZE * 0.15);
 
     return (
         <div 
@@ -139,46 +140,48 @@ export const Tile = React.memo(({
             onTouchCancel={handleTouchEndOrCancel}
             className={classNameStr}
             style={{ 
-            gridColumn: tile.col, 
-            gridRow: tile.row, 
-            cursor: isClickable ? 'pointer' : 'default', 
-            position: 'relative',
-            transform: `scale(${ds})`,
-            transformOrigin: 'center center',
-            opacity: (isFog && !isHorrorTruckTile) ? 0.2 : 1,
-            zIndex: isHorrorTruckTile ? 9999 : tile.row,
+                gridColumn: tile.col, 
+                gridRow: tile.row, 
+                cursor: isClickable ? 'pointer' : 'default', 
+                position: 'relative',
+                transform: `scale(${ds})`,
+                transformOrigin: 'center center',
+                opacity: (isFog && !isHorrorTruckTile) ? 0.2 : 1,
+                zIndex: isHorrorTruckTile ? 9999 : tile.row,
 
-            // ★追加：見た目のサイズを見えない箱（セル）のサイズに完全に一致させる
-            width: `${MAP_CONFIG.TILE_SIZE}px`,
-            height: `${MAP_CONFIG.TILE_SIZE}px`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            placeSelf: 'center' // セルの中央にピッタリ配置する
-        }}
+                width: `${MAP_CONFIG.TILE_SIZE}px`,
+                height: `${MAP_CONFIG.TILE_SIZE}px`,
+                minWidth: `${MAP_CONFIG.TILE_SIZE}px`,
+                minHeight: `${MAP_CONFIG.TILE_SIZE}px`,
+                boxSizing: 'border-box', // ★ 枠線などを内側に含める
+                flexShrink: 0,           // ★ 潰れるのを防ぐ
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                placeSelf: 'center'
+            }}
         >
-            <div style={{ fontSize: '26px', zIndex: 2, pointerEvents: 'none' }}>{iconStr}</div>
+            <div style={{ fontSize: `${emojiSize}px`, zIndex: 2, pointerEvents: 'none', lineHeight: 1 }}>{iconStr}</div>
             
             {SHOW_TILE_TEXT && (
-                <div style={{ fontSize: '9px', fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.3, maxWidth: '72px', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9 }}>{tile.name}</div>
+                <div style={{ fontSize: `${labelSize}px`, fontWeight: 'bold', zIndex: 2, pointerEvents: 'none', textAlign: 'center', lineHeight: 1.2, maxWidth: '90%', overflow: 'hidden', whiteSpace: 'nowrap', opacity: 0.9 }}>{tile.name}</div>
             )}
             
-            {/* ▼ 追加: マス目の番号・分岐ラベル表示 */}
             {showTileLabels && (
                 <div style={{
                     position: 'absolute', top: '2px', left: '2px', zIndex: 10,
                     background: 'rgba(0,0,0,0.65)', color: tile.next?.length > 1 ? '#f1c40f' : '#fff', 
-                    padding: '2px 4px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', pointerEvents: 'none',
+                    padding: '1px 3px', borderRadius: '3px', fontSize: `${labelSize}px`, fontWeight: 'bold', pointerEvents: 'none',
                     border: tile.next?.length > 1 ? '1px solid #f1c40f' : 'none'
                 }}>
                     {tile.next?.length > 1 ? `${tile.id} (分岐)` : tile.id}
                 </div>
             )}
 
-            {isJinchi && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: '10px', zIndex: 3 }}>🚩</div>}
+            {isJinchi && <div className="owner-mark-clay" style={{ display: 'block', backgroundColor: owner.color, fontSize: `${badgeSize}px`, zIndex: 3, padding: '2px', minWidth: 'auto', minHeight: 'auto' }}>🚩</div>}
 
             {(tile.fieldCans > 0 || tile.fieldTrash > 0) && (!isFog || isHorrorTruckTile) && (
-                <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'2px 4px', fontSize:'12px' }}>
+                <div style={{ position:'absolute', top:'-10%', left:'50%', transform:'translateX(-50%)', display:'flex', gap:'2px', zIndex:5, background:'rgba(0,0,0,0.7)', borderRadius:'5px', padding:'1px 3px', fontSize: `${badgeSize}px`, whiteSpace:'nowrap' }}>
                     {tile.fieldCans > 0 && <span>🥫{tile.fieldCans}</span>}
                     {tile.fieldTrash > 0 && <span>🗑️{tile.fieldTrash}</span>}
                 </div>
