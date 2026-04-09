@@ -51,8 +51,9 @@ export const ActionPanel = () => {
     const canDoCan = isMyTurn && diceRolled && hasAP(1) && tileType === 'can' && canPickedThisTurn < 3 && !isBlockedByAnimal && !isBusy;
     const canDoTrash = isMyTurn && diceRolled && hasAP(cp.equip?.shoes ? 1 : 2) && tileType === 'trash' && !isBlockedByAnimal && !isBusy;
     // ▼ 修正: 動的なコスト(occupyCost) で判定を行うように変更
-    const canDoOccupy = isMyTurn && diceRolled && ["normal","can","trash","job","exchange","shelter"].includes(tileType) && territories[cp.pos] !== cp.id && !isBusy && cp.p >= occupyCost;
-    const canDoJob = isMyTurn && diceRolled && hasAP(3) && tileType === 'job' && !isBusy;
+// ★ 修正: 陣地化できる条件を "normal" (道マス) のみに変更
+const canDoOccupy = isMyTurn && diceRolled && tileType === 'normal' && territories[cp.pos] !== cp.id && !isBusy && cp.p >= occupyCost;
+const canDoJob = isMyTurn && diceRolled && hasAP(3) && tileType === 'job' && !isBusy;
     const canDoExchange = isMyTurn && diceRolled && (cp.cans > 0 || cp.trash > 0) && tileType === 'exchange' && !isBusy;
     const canDoShop = isMyTurn && diceRolled && tileType === 'shop' && !isBusy;
 

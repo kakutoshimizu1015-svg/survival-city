@@ -282,10 +282,18 @@ export const getOccupyCost = (tileId) => {
 export const actionOccupy = () => { 
     const s = useGameStore.getState();
     const cp = s.players[s.turn];
+    const currentTile = s.mapData.find(t => t.id === cp.pos); // ★ 現在のマス情報を取得
+
+    // ★ 修正: マスが道(normal)でない場合は処理を中断
+    if (!currentTile || currentTile.type !== 'normal') {
+        logMsg(`❌ このマスは陣地にできません`);
+        return;
+    }
+
     const cost = getOccupyCost(cp.pos);
 
     if (cp.p >= cost) { 
-        s.updateCurrentPlayer(p => ({ p: p.p - cost })); 
+        s.updateCurrentPlayer(p => ({ p: p.p - cost }));
         useGameStore.setState(st => ({ 
             territories: { ...st.territories, [cp.pos]: cp.id },
             territoryCosts: { ...(st.territoryCosts || {}), [cp.pos]: cost } 

@@ -1,5 +1,6 @@
 // マス種類をランダム化（病院以外）
 export function randomizeTileTypes(md) {
+    if (md[0] && md[0].isCustom) return md; // ★この1行を追加
     const tileTypes = ['normal','can','trash','event','job','shop','exchange','shelter','manhole','koban'];
     const tileNames = {
         normal:'道', can:'空き缶', trash:'ゴミ山', event:'イベント',
@@ -30,6 +31,7 @@ export function randomizeTileTypes(md) {
 
 // マス配置をランダム化（自動迷路生成）
 export function randomizeTileLayout(md) {
+    if (md[0] && md[0].isCustom) return md; // ★この1行を追加
     const center = md.find(t => t.type === 'center') || md[0];
     const byArea = { slum:[], commercial:[], luxury:[] };
     md.forEach(t => { if (t.id !== center.id && byArea[t.area]) byArea[t.area].push(t); });
