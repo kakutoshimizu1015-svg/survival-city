@@ -34,6 +34,7 @@ export const Tile = React.memo(({
 }) => {
     const setTooltipData = useGameStore(state => state.setTooltipData);
     const players = useGameStore(state => state.players); // 追加
+    const truckPos = useGameStore(state => state.truckPos); // ★この1行を追加
     const policePos = useGameStore(state => state.policePos);
     const unclePos = useGameStore(state => state.unclePos);
     const animalPos = useGameStore(state => state.animalPos);
