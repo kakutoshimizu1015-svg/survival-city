@@ -296,7 +296,9 @@ export const useNetworkStore = create((setStore, getStore) => ({
     }
 }));
 
+// ▼ 修正: 単純な遅延(Debounce)から、一定間隔での実行(Throttle)へ変更
 let syncTimeout = null;
+let lastSyncTime = 0; // 最後に同期した時間を記録
 
 useGameStore.subscribe((state) => {
     const netState = useNetworkStore.getState();
@@ -304,12 +306,13 @@ useGameStore.subscribe((state) => {
 
     if (!netState.isHost && state._roundEndInProgress) return;
 
-    if (syncTimeout) clearTimeout(syncTimeout);
+    const now = Date.now();
+    // ▼ 修正: ミニゲーム中は約30fps(33ms)、通常時は負荷軽減のため10fps(100ms)に落とす
+    const syncInterval = state.mgActive ? 33 : 100;
 
-    // ▼ 修正: ミニゲーム中は通信頻度を上げて(16ms)アニメーションを滑らかにし、本編中は負荷軽減(50ms)
-    const syncDelay = state.mgActive ? 16 : 50;
-
-    syncTimeout = setTimeout(() => {
+    // 同期処理を関数化
+    const doSync = () => {
+        lastSyncTime = Date.now();
         const localOnlyKeys = [
             'charInfoModal', 'acquiredCard', 'toastMsg', 'centerWarning', 'tooltipData',
             'settingsActive', 'rulesActive', 'tutorialActive', 'shopActive', 'shopCart',
@@ -331,5 +334,22 @@ useGameStore.subscribe((state) => {
         } else if (netState.hostConnection && netState.hostConnection.open) {
             netState.hostConnection.send(data);
         }
-    }, syncDelay);
+    };
+
+    // 前回同期からの経過時間が syncInterval を超えていれば即時実行
+    if (now - lastSyncTime >= syncInterval) {
+        if (syncTimeout) {
+            clearTimeout(syncTimeout);
+            syncTimeout = null;
+        }
+        doSync();
+    } else {
+        // まだ時間が経過していない場合、最後の更新を確実に届けるためにタイマーをセット
+        if (!syncTimeout) {
+            syncTimeout = setTimeout(() => {
+                syncTimeout = null;
+                doSync();
+            }, syncInterval - (now - lastSyncTime));
+        }
+    }
 });
