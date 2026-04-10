@@ -287,6 +287,7 @@ export const DiceOverlayInner = ({ diceAnim }) => {
   const flashRef = useRef(null);
   const areaRef  = useRef(null);
   const timersRef = useRef([]);
+  const intervalsRef = useRef([]);
 
   const [phase,  setPhase]  = useState('rolling');
   const [result, setResult] = useState({ text: '', color: '#eee', bonus: '', visible: false });
@@ -295,6 +296,12 @@ export const DiceOverlayInner = ({ diceAnim }) => {
   const addTimer = (fn, ms) => {
     const id = setTimeout(fn, ms);
     timersRef.current.push(id);
+    return id;
+  };
+  // ▼追加: インターバルを安全に管理する関数
+  const addInterval = (fn, ms) => {
+    const id = setInterval(fn, ms);
+    intervalsRef.current.push(id);
     return id;
   };
   const wait = ms => new Promise(resolve => { addTimer(resolve, ms); });
@@ -346,14 +353,14 @@ export const DiceOverlayInner = ({ diceAnim }) => {
     const p2 = die2.roll(() => onLand(die2.bw));
 
     // SE スケジュール（audio.js の playSfx を使用）
-    const sfxFast = setInterval(() => { try { playSfx('dice'); } catch(_) {} }, 75);
+    const sfxFast = addInterval(() => { try { playSfx('dice'); } catch(_) {} }, 75);
     addTimer(() => {
       clearInterval(sfxFast);
       setPhase('slowing');
-      const sfxMid = setInterval(() => { try { playSfx('dice'); } catch(_) {} }, 165);
+      const sfxMid = addInterval(() => { try { playSfx('dice'); } catch(_) {} }, 165);
       addTimer(() => {
         clearInterval(sfxMid);
-        const sfxSlow = setInterval(() => { try { playSfx('dice'); } catch(_) {} }, 310);
+        const sfxSlow = addInterval(() => { try { playSfx('dice'); } catch(_) {} }, 310);
         addTimer(() => {
           clearInterval(sfxSlow);
           setPhase('landing');
@@ -421,6 +428,8 @@ export const DiceOverlayInner = ({ diceAnim }) => {
     return () => {
       timersRef.current.forEach(clearTimeout);
       timersRef.current = [];
+      intervalsRef.current.forEach(clearInterval); // ▼追加: 画面が消えたら強制的に音を止める
+      intervalsRef.current = [];                   // ▼追加
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // ↑ 空依存: マウント時に1回だけ実行 = active が true になった瞬間のみ起動
