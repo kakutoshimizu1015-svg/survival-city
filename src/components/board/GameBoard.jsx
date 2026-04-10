@@ -339,6 +339,8 @@ export const GameBoard = () => {
     const bgData = mapBackgrounds[mapSize] || Object.values(mapBackgrounds)[0];
     const currentBgImage = bgData ? (isNight ? bgData.night : bgData.day) : null;
 
+    const zoomBtnStyle = { width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s', padding: 0 };
+
     return (
         <div id="board-area" style={{ flexGrow: 1, overflowX: 'hidden', minWidth: 0, position: 'relative' }}>
             <TileTooltip />
