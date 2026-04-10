@@ -127,8 +127,6 @@ export const Tile = React.memo(({
     const isJinchi = owner !== null && owner !== undefined;
     const ds = getDepthScale(tile.row, maxRow);
 
-    const npcs = { policePos, truckPos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos };
-    
     // 動的にオフセットを計算する関数に置き換え
     const getNpcStyle = (npcId, isTruck = false) => {
         const offset = getCircularOffset(npcId, tile.id, players, npcs, TOKEN_CONFIG.npc.offsetRadius);
