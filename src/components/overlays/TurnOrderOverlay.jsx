@@ -37,8 +37,8 @@ export const TurnOrderOverlay = () => {
                 rolls[i].rolling = true;
                 setAnimState({ step: i, currentRolls: [...rolls], showResult: false });
 
-                // リッチサイコロのアニメーション完了を待つ (約1.8秒)
-                await new Promise(r => setTimeout(r, 1800));
+                // 完全に演出が終わり、結果テキストが表示されるまで待つ (4.6秒)
+                await new Promise(r => setTimeout(r, 4600));
                 
                 if (!isMounted) return;
 
