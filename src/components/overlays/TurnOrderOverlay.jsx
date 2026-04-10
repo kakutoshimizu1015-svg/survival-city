@@ -37,8 +37,8 @@ export const TurnOrderOverlay = () => {
                 rolls[i].rolling = true;
                 setAnimState({ step: i, currentRolls: [...rolls], showResult: false });
 
-                // 完全に演出が終わり、結果テキストが表示されるまで待つ (4.6秒)
-                await new Promise(r => setTimeout(r, 4600));
+                // 【パターンB】サイコロが着地した瞬間に次へ進む (2.8秒)
+                await new Promise(r => setTimeout(r, 2800));
                 
                 if (!isMounted) return;
 

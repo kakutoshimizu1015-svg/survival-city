@@ -401,8 +401,9 @@ export const DiceOverlayInner = ({ diceAnim }) => {
         setResult({ text: txt, color: isDbl ? '#d4a020' : '#eee', bonus, visible: true });
         setPhase('idle');
 
-        // 1.8秒後にオーバーレイを閉じる
-        return wait(1800);
+        // 【パターンA】結果テキストをしっかり表示してから閉じる (2.5秒)
+        // 合計で約4.6秒強の演出になります
+        return wait(2500);
       })
       .then(() => {
         useGameStore.setState(prev => ({
