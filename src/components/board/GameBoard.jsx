@@ -47,18 +47,21 @@ export const GameBoard = () => {
         });
     }, []);
 
-    const zoomAt = useCallback((px, py, delta) => {
+    // 【修正】smoothパラメータを追加。ホイール操作はsmooth=falseで呼ぶことで
+    // 0.45sトランジションの連鎖積み重なりを防ぎ、ズーム感度の過剰反応を解消する。
+    const zoomAt = useCallback((px, py, delta, smooth = true) => {
         const prevScale = scale.current;
         // ★修正: マップ巨大化に対応するため、最小ズーム制限を 0.02 に緩和
         const newScale = Math.min(3.0, Math.max(0.02, prevScale + delta));
         const ratio = newScale / prevScale;
         offset.current = { x: px - ratio * (px - offset.current.x), y: py - ratio * (py - offset.current.y) };
         scale.current = newScale;
-        applyTransform(true);
+        applyTransform(smooth);
     }, [applyTransform]);
 
     const handleZoomBtn = (delta) => {
         if (!wrapperRef.current) return;
+        // ボタン操作はsmooth=true（デフォルト）でなめらかに動く
         zoomAt(wrapperRef.current.clientWidth / 2, wrapperRef.current.clientHeight / 2, delta);
     };
 
@@ -149,7 +152,10 @@ export const GameBoard = () => {
         const handleWheel = (e) => {
             e.preventDefault();
             const rect = wrapper.getBoundingClientRect();
-            zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 0.15 : -0.15);
+            // 【修正】smooth=false を明示することで0.45sトランジションを付けない。
+            // トラックパッドは60fps以上でwheelイベントを発火するため、smooth=trueにすると
+            // トランジションが次々と上書きされ、ズームが過剰反応・慣性がつきすぎる原因になっていた。
+            zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 0.15 : -0.15, false);
         };
 
         const handleMouseDown = (e) => {
@@ -202,7 +208,8 @@ export const GameBoard = () => {
                 const prevDist = Math.hypot(lastTouches.current[0].clientX - lastTouches.current[1].clientX, lastTouches.current[0].clientY - lastTouches.current[1].clientY);
                 const newDist = Math.hypot(currentTouches[0].clientX - currentTouches[1].clientX, currentTouches[0].clientY - currentTouches[1].clientY);
                 const rect = wrapper.getBoundingClientRect();
-                zoomAt(((currentTouches[0].clientX + currentTouches[1].clientX) / 2) - rect.left, ((currentTouches[0].clientY + currentTouches[1].clientY) / 2) - rect.top, (newDist - prevDist) * 0.005);
+                // ピンチズームもsmooth=falseで即座に反映する
+                zoomAt(((currentTouches[0].clientX + currentTouches[1].clientX) / 2) - rect.left, ((currentTouches[0].clientY + currentTouches[1].clientY) / 2) - rect.top, (newDist - prevDist) * 0.005, false);
                 if (e.cancelable) e.preventDefault();
             }
             lastTouches.current = currentTouches;
@@ -337,7 +344,7 @@ export const GameBoard = () => {
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
                         <div id="game-board" style={{ 
-                            boxSizing: 'content-box', // ★ 追加: 枠線を外側に計算
+                            boxSizing: 'content-box',
                             display: 'grid', gap: `${MAP_CONFIG.GAP}px`, padding: `${MAP_CONFIG.PADDING}px`, borderRadius: '15px', 
                             border: '4px solid #3e2f2a', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)', 
                             backgroundImage: currentBgImage ? `url("${currentBgImage}")` : 'linear-gradient(to right,#b0b0b0 0%,#b0b0b0 32%,#f0c830 32%,#f0c830 68%,#f8f8f8 68%,#f8f8f8 100%)',
@@ -369,7 +376,8 @@ export const GameBoard = () => {
 
                                 return (
                                     <Tile 
-                                        key={tile.id} tile={tile} owner={owner} isFog={isFog} 
+                                        key={tile.id} tile={tile} owner={owner} isFog={isFog}
+                                        isNight={isNight}  // 【修正】夜間の照らし演出のためにisNightを渡す
                                         isClickable={isClickable} 
                                         isDashTarget={isDashTarget}
                                         onClick={() => handleTileClick(tile.id)} maxRow={maxRow}

@@ -29,7 +29,7 @@ export const tileTooltipData = {
 };
 
 export const Tile = React.memo(({ 
-    tile, owner, isFog, isClickable, isDashTarget, onClick, maxRow,
+    tile, owner, isFog, isNight, isClickable, isDashTarget, onClick, maxRow,
     isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass
 }) => {
     const setTooltipData = useGameStore(state => state.setTooltipData);
@@ -113,6 +113,8 @@ export const Tile = React.memo(({
 
     let classNameStr = `tile ${tile.type} ${tile.area}`;
     if (isFog && !isHorrorTruckTile) classNameStr += ' night-fog';
+    // 【修正】夜間の可視タイルに温かい発光エフェクトを適用（以前は削除されていた）
+    if (!isFog && isNight && !isHorrorTruckTile) classNameStr += ' night-visible';
     
     if (isClickable) {
         if (isDashTarget) {
@@ -241,6 +243,7 @@ export const Tile = React.memo(({
 (prev, next) => {
     if (prev.tile.id !== next.tile.id) return false;
     if (prev.isFog !== next.isFog) return false;
+    if (prev.isNight !== next.isNight) return false; // 【修正】夜昼切替で再レンダリングされるように追加
     if (prev.isClickable !== next.isClickable) return false;
     if (prev.isDashTarget !== next.isDashTarget) return false; 
     if (prev.pathClass !== next.pathClass) return false;

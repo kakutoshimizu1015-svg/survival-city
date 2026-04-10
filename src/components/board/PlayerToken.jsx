@@ -25,6 +25,12 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     // オフセット値の計算
     const offset = getCircularOffset(player.id, player.pos, players, npcs, TOKEN_CONFIG.player.offsetRadius);
 
+    // 【修正】offsetを常に最新値で参照するためのref。
+    // useLayoutEffectのdepsにoffsetオブジェクトを入れると毎レンダリングで実行されカクつくため、
+    // refで最新値を保持しつつdepsから除外する。
+    const offsetRef = useRef(offset);
+    useEffect(() => { offsetRef.current = offset; }, [offset.x, offset.y]);
+
     // 移動直前の過去のオフセット（立ち位置）を一時記憶しておく
     const prevOffsetRef = useRef({ x: 0, y: 0 });
     const lastPosRef = useRef(player.pos);
@@ -213,10 +219,11 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                     isAnimatingRef.current = false;
                     
                     // 次のフレームで、円形の定位置（オフセット）へ滑らかにスライド移動させる
+                    // offsetRef.currentを使うことで、depsにoffsetオブジェクトを含めずに最新値を参照できる
                     requestAnimationFrame(() => {
                         if (wrapRef.current) {
                             wrapRef.current.style.transition = 'transform 0.4s ease-out';
-                            wrapRef.current.style.transform = `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`;
+                            wrapRef.current.style.transform = `translate(calc(-50% + ${offsetRef.current.x}px), calc(-50% + ${offsetRef.current.y}px))`;
                         }
                         if (!liteMode) idleRafRef.current = requestAnimationFrame(startIdle); 
                     });
@@ -231,7 +238,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
             if (spinRaf) cancelAnimationFrame(spinRaf);
             if (moveRaf) cancelAnimationFrame(moveRaf);
         };
-    }, [player.pos, mapData, showSmoke, liteMode, offset]); 
+    }, [player.pos, mapData, showSmoke, liteMode]); // 【修正】offsetオブジェクトをdepsから除去（毎レンダリング新規オブジェクトになるため）
 
     const isTeam = player.teamColor && player.teamColor !== 'none';
     const glowColor = isTeam ? player.teamColor : player.color;
