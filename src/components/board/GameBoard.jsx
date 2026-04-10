@@ -156,11 +156,11 @@ export const GameBoard = () => {
         const wrapper = wrapperRef.current;
         if (!wrapper) return;
 
+        let pendingTouchRaf = null;
+
         const handleWheel = (e) => {
             e.preventDefault();
             const rect = wrapper.getBoundingClientRect();
-            // smooth=false: 0.45sトランジションの連鎖積み重なりを防ぐ
-            // delta 0.08: 1スクロールあたり8%ズーム（旧15%から引き下げ、一般的なマップ操作と同等の感度）
             zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 0.08 : -0.08, false);
         };
 
@@ -195,37 +195,33 @@ export const GameBoard = () => {
         };
 
         const handleTouchStart = (e) => {
-            lastTouches.current = getTouchCoords(e.touches);
+            if (e.touches.length > 0) {
+                lastTouches.current = getTouchCoords(e.touches);
+            }
             wrapper.classList.add('dragging');
             const inner = document.getElementById('game-board-inner');
             if (inner) inner.style.transition = 'none';
         };
 
-        // 【修正】タッチ移動をRAFで間引く。
-        // タッチイベントはフレームレート非依存で毎ms発火するため、RAFで1フレーム1回に絞ることで
-        // 低スペックスマホでの過剰なDOM更新・カクつきを解消する。
-        const pendingTouchRef = { current: null }; // クロージャ内でRAF IDを管理
         const handleTouchMove = (e) => {
-            if (!lastTouches.current) return;
+            if (!lastTouches.current || e.touches.length === 0) return;
             if (e.cancelable) e.preventDefault();
 
             const currentTouches = getTouchCoords(e.touches);
             const prevTouches = lastTouches.current;
-            lastTouches.current = currentTouches; // 座標は即座に更新して次イベントの差分計算を正確にする
+            lastTouches.current = currentTouches;
 
-            if (pendingTouchRef.current) return; // 前フレームの処理が未完なら今回はスキップ
+            if (pendingTouchRaf) return;
 
-            pendingTouchRef.current = requestAnimationFrame(() => {
-                pendingTouchRef.current = null;
+            pendingTouchRaf = requestAnimationFrame(() => {
+                pendingTouchRaf = null;
 
                 if (currentTouches.length === 1 && prevTouches.length === 1) {
-                    // 1本指パン: sensitivity=1.0（等倍）。指が直接画面を触るスマホでは増幅不要
                     const dx = currentTouches[0].clientX - prevTouches[0].clientX;
                     const dy = currentTouches[0].clientY - prevTouches[0].clientY;
                     offset.current = { x: offset.current.x + dx, y: offset.current.y + dy };
                     applyTransform(false);
                 } else if (currentTouches.length === 2 && prevTouches.length === 2) {
-                    // 2本指ピンチズーム: 倍率0.003（旧0.005から引き下げ、高解像度スマホでの過敏さを緩和）
                     const prevDist = Math.hypot(prevTouches[0].clientX - prevTouches[1].clientX, prevTouches[0].clientY - prevTouches[1].clientY);
                     const newDist = Math.hypot(currentTouches[0].clientX - currentTouches[1].clientX, currentTouches[0].clientY - currentTouches[1].clientY);
                     const rect = wrapper.getBoundingClientRect();
@@ -261,8 +257,7 @@ export const GameBoard = () => {
             wrapper.removeEventListener('touchmove', handleTouchMove);
             wrapper.removeEventListener('touchend', handleTouchEnd);
             wrapper.removeEventListener('touchcancel', handleTouchEnd);
-            // 未処理のタッチRAFをキャンセル
-            if (pendingTouchRef.current) cancelAnimationFrame(pendingTouchRef.current);
+            if (pendingTouchRaf) cancelAnimationFrame(pendingTouchRaf);
         };
     }, [zoomAt, applyTransform]);
 
