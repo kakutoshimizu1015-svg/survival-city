@@ -152,10 +152,9 @@ export const GameBoard = () => {
         const handleWheel = (e) => {
             e.preventDefault();
             const rect = wrapper.getBoundingClientRect();
-            // 【修正】smooth=false を明示することで0.45sトランジションを付けない。
-            // トラックパッドは60fps以上でwheelイベントを発火するため、smooth=trueにすると
-            // トランジションが次々と上書きされ、ズームが過剰反応・慣性がつきすぎる原因になっていた。
-            zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 0.15 : -0.15, false);
+            // smooth=false: 0.45sトランジションの連鎖積み重なりを防ぐ
+            // delta 0.08: 1スクロールあたり8%ズーム（旧15%から引き下げ、一般的なマップ操作と同等の感度）
+            zoomAt(e.clientX - rect.left, e.clientY - rect.top, e.deltaY < 0 ? 0.08 : -0.08, false);
         };
 
         const handleMouseDown = (e) => {
@@ -195,24 +194,39 @@ export const GameBoard = () => {
             if (inner) inner.style.transition = 'none';
         };
 
+        // 【修正】タッチ移動をRAFで間引く。
+        // タッチイベントはフレームレート非依存で毎ms発火するため、RAFで1フレーム1回に絞ることで
+        // 低スペックスマホでの過剰なDOM更新・カクつきを解消する。
+        const pendingTouchRef = { current: null }; // クロージャ内でRAF IDを管理
         const handleTouchMove = (e) => {
             if (!lastTouches.current) return;
-            const currentTouches = getTouchCoords(e.touches);
+            if (e.cancelable) e.preventDefault();
 
-            if (currentTouches.length === 1 && lastTouches.current.length === 1) {
-                const sensitivity = 1.8;
-                offset.current = { x: offset.current.x + (currentTouches[0].clientX - lastTouches.current[0].clientX) * sensitivity, y: offset.current.y + (currentTouches[0].clientY - lastTouches.current[0].clientY) * sensitivity };
-                applyTransform(false);
-                if (e.cancelable) e.preventDefault();
-            } else if (currentTouches.length === 2 && lastTouches.current.length === 2) {
-                const prevDist = Math.hypot(lastTouches.current[0].clientX - lastTouches.current[1].clientX, lastTouches.current[0].clientY - lastTouches.current[1].clientY);
-                const newDist = Math.hypot(currentTouches[0].clientX - currentTouches[1].clientX, currentTouches[0].clientY - currentTouches[1].clientY);
-                const rect = wrapper.getBoundingClientRect();
-                // ピンチズームもsmooth=falseで即座に反映する
-                zoomAt(((currentTouches[0].clientX + currentTouches[1].clientX) / 2) - rect.left, ((currentTouches[0].clientY + currentTouches[1].clientY) / 2) - rect.top, (newDist - prevDist) * 0.005, false);
-                if (e.cancelable) e.preventDefault();
-            }
-            lastTouches.current = currentTouches;
+            const currentTouches = getTouchCoords(e.touches);
+            const prevTouches = lastTouches.current;
+            lastTouches.current = currentTouches; // 座標は即座に更新して次イベントの差分計算を正確にする
+
+            if (pendingTouchRef.current) return; // 前フレームの処理が未完なら今回はスキップ
+
+            pendingTouchRef.current = requestAnimationFrame(() => {
+                pendingTouchRef.current = null;
+
+                if (currentTouches.length === 1 && prevTouches.length === 1) {
+                    // 1本指パン: sensitivity=1.0（等倍）。指が直接画面を触るスマホでは増幅不要
+                    const dx = currentTouches[0].clientX - prevTouches[0].clientX;
+                    const dy = currentTouches[0].clientY - prevTouches[0].clientY;
+                    offset.current = { x: offset.current.x + dx, y: offset.current.y + dy };
+                    applyTransform(false);
+                } else if (currentTouches.length === 2 && prevTouches.length === 2) {
+                    // 2本指ピンチズーム: 倍率0.003（旧0.005から引き下げ、高解像度スマホでの過敏さを緩和）
+                    const prevDist = Math.hypot(prevTouches[0].clientX - prevTouches[1].clientX, prevTouches[0].clientY - prevTouches[1].clientY);
+                    const newDist = Math.hypot(currentTouches[0].clientX - currentTouches[1].clientX, currentTouches[0].clientY - currentTouches[1].clientY);
+                    const rect = wrapper.getBoundingClientRect();
+                    const cx = ((currentTouches[0].clientX + currentTouches[1].clientX) / 2) - rect.left;
+                    const cy = ((currentTouches[0].clientY + currentTouches[1].clientY) / 2) - rect.top;
+                    zoomAt(cx, cy, (newDist - prevDist) * 0.003, false);
+                }
+            });
         };
 
         const handleTouchEnd = () => {
@@ -240,6 +254,8 @@ export const GameBoard = () => {
             wrapper.removeEventListener('touchmove', handleTouchMove);
             wrapper.removeEventListener('touchend', handleTouchEnd);
             wrapper.removeEventListener('touchcancel', handleTouchEnd);
+            // 未処理のタッチRAFをキャンセル
+            if (pendingTouchRef.current) cancelAnimationFrame(pendingTouchRef.current);
         };
     }, [zoomAt, applyTransform]);
 
