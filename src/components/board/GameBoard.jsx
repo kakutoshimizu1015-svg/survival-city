@@ -20,7 +20,10 @@ export const GameBoard = () => {
     } = useGameStore();
 
     const showSmoke = useUserStore(state => state.showSmoke);
-    const autoScrollToPlayer = useUserStore(state => state.autoScrollToPlayer); 
+    const autoScrollToPlayer = useUserStore(state => state.autoScrollToPlayer);
+
+    // モバイル判定（CSSのmaxHeightを上書きしないようインラインstyleを切り替え）
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
     const cp = players[turn];
 
@@ -385,7 +388,14 @@ export const GameBoard = () => {
                     }} />
                 )}
 
-                <div id="game-board-wrapper" ref={wrapperRef} style={{ overflow: 'hidden', width: '100%', maxHeight: 'calc(100vh - 280px)', cursor: 'grab', userSelect: 'none', touchAction: 'none' }}>
+                <div id="game-board-wrapper" ref={wrapperRef} style={{ 
+                    overflow: 'hidden', 
+                    width: '100%', 
+                    // モバイルはCSSの height:50dvh / max-height:500px に委ねる
+                    // PCのみ calc(100vh - 280px) のインラインを適用
+                    maxHeight: isMobile ? undefined : 'calc(100vh - 280px)',
+                    cursor: 'grab', userSelect: 'none', touchAction: 'none' 
+                }}>
                     <div id="game-board-inner" style={{ transformOrigin: 'top left', display: 'inline-block', willChange: 'transform' }}>
                         
                         <div id="game-board" style={{ 

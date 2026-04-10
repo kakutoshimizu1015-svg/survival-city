@@ -855,13 +855,15 @@ body.horror-mode #game-board .tile:has(.truck-token) {
 
     #game-screen, .game-screen { 
         padding: 5px !important; 
-        padding-top: 60px !important; 
+        /* ↓ 60px→45px に削減。歯車ボタンの高さ分だけ確保すれば十分 */
+        padding-top: 45px !important; 
         height: auto !important; 
-        min-height: 100vh !important; 
+        /* ↓ vh→dvh: スマホのアドレスバーを除いた実際の表示領域で計算 */
+        min-height: 100dvh !important; 
         overflow-y: auto !important; 
     }
     
-    #top-bar, .top-bar { flex-direction: column !important; gap: 10px !important; }
+    #top-bar, .top-bar { flex-direction: column !important; gap: 6px !important; }
     #left-status-area, .left-status-area { flex-direction: row !important; overflow-x: auto !important; width: 100% !important; }
     #portrait-active { width: 100% !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: space-around !important; padding: 5px !important; }
     #weather-panel { width:auto !important; min-width:90px !important; flex-shrink:0 !important; }
@@ -869,22 +871,25 @@ body.horror-mode #game-board .tile:has(.truck-token) {
 
     #main-area, .main-area { 
         flex-direction: column !important; 
-        gap: 10px !important; 
+        gap: 8px !important; 
         overflow: visible !important; 
     }
 
     #board-area, .board-area {
-        flex-shrink: 0 !important; /* 絶対にマップを押し潰させない */
+        flex-shrink: 0 !important;
     }
 
     #game-board-container { 
-        padding: 5px !important; 
+        padding: 4px !important; 
     }
     
     #game-board-wrapper { 
-        height: 45vh !important;       
-        min-height: 280px !important; /* 最低保証サイズ */
-        max-height: 400px !important; 
+        /* ↓ 45vh→50dvh に拡大。dvhでアドレスバーを除いた高さを正確に使う */
+        height: 50dvh !important;
+        /* ↓ 最低保証は横持ち・小型機を考慮して維持 */
+        min-height: 280px !important;
+        /* ↓ 400px→500px に拡大。大型スマホ・タブレットで潰れない */
+        max-height: 500px !important;
         overflow: hidden !important;   
         position: relative !important;
         flex-shrink: 0 !important;
@@ -895,25 +900,28 @@ body.horror-mode #game-board .tile:has(.truck-token) {
         width: 100% !important; 
         flex-direction: row !important; 
         gap: 10px !important; 
-        height: 38vh !important; /* ▼ 修正：max-heightではなくheightで高さを完全に固定する */
+        /* ↓ 38vh→30dvh に縮小。マップに空間を譲る */
+        height: 30dvh !important;
+        /* ↓ 小型機での最低保証 */
+        min-height: 200px !important;
         overflow: hidden !important; 
         flex-shrink: 0 !important; 
     }
     
     #action-panel { 
-        width: calc(50% - 5px) !important; /* ▼ 修正：隙間(10px)の半分を引いて横幅ピッタリに */
+        width: calc(50% - 5px) !important;
         display: grid !important; 
         grid-template-columns: repeat(2, 1fr) !important; 
         gap: 6px !important; 
         padding: 8px !important; 
         height: 100% !important; 
-        overflow-y: auto !important; /* これで確実にスクロール可能になります */
+        overflow-y: auto !important;
     }
     
     #player-list-panel { 
-        width: calc(50% - 5px) !important; /* ▼ 修正：隙間(10px)の半分を引いて横幅ピッタリに */
+        width: calc(50% - 5px) !important;
         height: 100% !important; 
-        overflow-y: auto !important; /* これで確実にスクロール可能になります */
+        overflow-y: auto !important;
         padding: 8px !important; 
     }
 
@@ -921,7 +929,7 @@ body.horror-mode #game-board .tile:has(.truck-token) {
     
     /* ターンエンドボタンを大きく押しやすくする */
     .btn-end-clay, .btn-end-highlight, #action-panel > div:last-child { 
-        grid-column: span 2 !important; /* ▼ 修正：2列レイアウトに合わせる */
+        grid-column: span 2 !important;
         font-size: 16px !important; 
         padding: 14px 4px !important; 
         min-height: 48px !important; 
@@ -974,23 +982,12 @@ body.horror-mode #game-board .tile:has(.truck-token) {
     }
 }
 
-/* スマホ用のレイアウト調整 */
+/* スマホ用レイアウト調整（@media と重複しないよう、@media側に一本化済み） */
+/* .layout-mobile クラスは GameMain.jsx で body に付与されるが、
+   スタイルの実体は上記 @media (max-width: 768px) で管理する */
 .layout-mobile .main-area {
     display: flex;
     flex-direction: column;
-    /* 全体の高さを十分に使い切るように */
     flex-grow: 1;
 }
-
-.layout-mobile .GameBoard-container-class,
-.layout-mobile #board-container, 
-.layout-mobile .game-board {
-    /* マップ領域を広く確保（元の環境のクラス名に合わせて効くように複数指定） */
-    flex-grow: 1;
-    min-height: 45vh;
-}
-
-.layout-mobile #right-side-area {
-    /* スマホ時はアクションパネルとプレイヤーリストを横並び等に調整している場合は維持 */
-    margin-top: 10px;
-}
+/* 旧: .layout-mobile #board-container 等の不完全ルールは削除（実在しないクラス名） */
