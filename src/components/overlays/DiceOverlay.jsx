@@ -282,7 +282,7 @@ const PHASE_MAP = {
 //  → useEffect([]) が「アニメーション開始」と同義になる
 // ─────────────────────────────────────────────
 
-const DiceOverlayInner = ({ diceAnim }) => {
+export const DiceOverlayInner = ({ diceAnim }) => {
   const trayRef  = useRef(null);
   const flashRef = useRef(null);
   const areaRef  = useRef(null);
