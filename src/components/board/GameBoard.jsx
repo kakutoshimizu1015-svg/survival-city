@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
-import { getDistance, getPathPreviewTiles, getManholeLinkedTiles } from '../../utils/gameLogic';
+import { getDistance, getPathPreviewTiles, getManholeLinkedTiles, buildMapIndex } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { useNetworkStore } from '../../store/useNetworkStore';
@@ -23,6 +23,10 @@ export const GameBoard = () => {
     const autoScrollToPlayer = useUserStore(state => state.autoScrollToPlayer); 
 
     const cp = players[turn];
+
+    // 【最適化】mapData.find()をO(n)→O(1)にするためのインデックスMap
+    // mapDataが変わった時だけ再生成する（ゲーム開始時のみ）
+    const mapIndex = useMemo(() => buildMapIndex(mapData), [mapData]);
     const scale = useRef(1.0);
     const offset = useRef({ x: 0, y: 0 });
     const wrapperRef = useRef(null);
@@ -87,7 +91,7 @@ export const GameBoard = () => {
 
     const focusTile = useCallback((targetTileId) => {
         if (!wrapperRef.current || !mapData || mapData.length === 0 || gameOver) return;
-        const targetTile = mapData.find(t => t.id === targetTileId);
+        const targetTile = mapIndex.get(targetTileId); // 【最適化】O(n)find→O(1)get
         if (!targetTile) return;
 
         const tileSize = MAP_CONFIG.TILE_SIZE;
@@ -101,7 +105,7 @@ export const GameBoard = () => {
         const wh = wrapperRef.current.clientHeight;
         offset.current = { x: ww / 2 - tilePixelX * scale.current, y: wh / 2 - tilePixelY * scale.current };
         applyTransform(true);
-    }, [mapData, gameOver, applyTransform]);
+    }, [mapIndex, gameOver, applyTransform]);
 
     const focusCurrentPlayer = useCallback(() => {
         if (cp) focusTile(cp.pos);
@@ -283,30 +287,53 @@ export const GameBoard = () => {
         if (!isNight) return null;
         const visible = new Set();
         const viewers = players.filter(p => !p.isCPU || p.id === turn);
+
+        // 【最適化】400回のBFSを「1人1回のBFS展開」に変更。
+        // 旧: 全プレイヤー × 全タイルでgetDistance → プレイヤー数×タイル数回のBFS
+        // 新: プレイヤーの位置から距離3以内をBFSで展開 → プレイヤー数回のBFSのみ
         viewers.forEach(v => {
-            if (v.hp > 0) { mapData.forEach(t => { if (getDistance(v.pos, t.id, mapData) <= 3) visible.add(t.id); }); }
+            if (v.hp <= 0) return;
+            const queue = [v.pos];
+            const distMap = new Map([[v.pos, 0]]);
+            let head = 0;
+            visible.add(v.pos);
+
+            while (head < queue.length) {
+                const currentId = queue[head++];
+                const currentDist = distMap.get(currentId);
+                if (currentDist >= 3) continue; // 距離3で打ち切り
+                const tile = mapIndex.get(currentId); // O(1)
+                if (!tile) continue;
+                for (const nextId of tile.next) {
+                    if (!distMap.has(nextId)) {
+                        distMap.set(nextId, currentDist + 1);
+                        queue.push(nextId);
+                        visible.add(nextId);
+                    }
+                }
+            }
         });
+
         if (isBranchPicking) currentBranchOptions.forEach(id => visible.add(id));
         return visible;
-    }, [isNight, players, mapData, turn, isBranchPicking, currentBranchOptions]);
+    }, [isNight, players, mapIndex, turn, isBranchPicking, currentBranchOptions]);
 
     const pathPreview = useMemo(() => {
         const preview = { path1: new Set(), path2: new Set(), path3: new Set(), manholes: new Set() };
         if (!players || players.length === 0 || gameOver || !cp || cp.isCPU) return preview;
-        const pathData = getPathPreviewTiles(cp.pos, mapData);
+        const pathData = getPathPreviewTiles(cp.pos, mapData, mapIndex); // 【最適化】mapIndex渡し
         preview.path1 = pathData.depth1; preview.path2 = pathData.depth2; preview.path3 = pathData.depth3;
-        const curTile = mapData.find(t => t.id === cp.pos);
+        const curTile = mapIndex.get(cp.pos); // 【最適化】O(n)find→O(1)get
         if (curTile && curTile.type === 'manhole') preview.manholes = getManholeLinkedTiles(cp.pos, mapData);
         return preview;
-    }, [players, gameOver, cp, mapData]);
+    }, [players, gameOver, cp, mapData, mapIndex]);
 
-    const zoomBtnStyle = { width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s', padding: 0 };
-    
-    let maxCol = 0, maxRow = 0;
-    if (mapData && mapData.length > 0) {
-        maxCol = Math.max(...mapData.map(t => t.col));
-        maxRow = Math.max(...mapData.map(t => t.row));
-    }
+    // 【最適化】maxCol/maxRowをMapから直接計算（毎レンダリングのspread展開を排除）
+    const { maxCol, maxRow } = useMemo(() => {
+        let col = 0, row = 0;
+        mapData.forEach(t => { if (t.col > col) col = t.col; if (t.row > row) row = t.row; });
+        return { maxCol: col, maxRow: row };
+    }, [mapData]);
 
     const mapSize = mapData?.length || 0;
     const bgData = mapBackgrounds[mapSize] || Object.values(mapBackgrounds)[0];
@@ -393,11 +420,18 @@ export const GameBoard = () => {
                                 return (
                                     <Tile 
                                         key={tile.id} tile={tile} owner={owner} isFog={isFog}
-                                        isNight={isNight}  // 【修正】夜間の照らし演出のためにisNightを渡す
+                                        isNight={isNight}
                                         isClickable={isClickable} 
                                         isDashTarget={isDashTarget}
                                         onClick={() => handleTileClick(tile.id)} maxRow={maxRow}
-                                        isTruck={tile.id === truckPos} isPolice={tile.id === policePos} isUncle={tile.id === unclePos} isAnimal={tile.id === animalPos} isYakuza={tile.id === yakuzaPos} isLoanshark={tile.id === loansharkPos} isFriend={tile.id === friendPos} pathClass={pathClass}
+                                        isTruck={tile.id === truckPos} isPolice={tile.id === policePos}
+                                        isUncle={tile.id === unclePos} isAnimal={tile.id === animalPos}
+                                        isYakuza={tile.id === yakuzaPos} isLoanshark={tile.id === loansharkPos}
+                                        isFriend={tile.id === friendPos} pathClass={pathClass}
+                                        // 【最適化】NPC位置とplayersをpropsで渡してTile内のZustand購読(9個)を撤廃
+                                        players={players}
+                                        npcs={{ policePos, truckPos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos }}
+                                        horrorMode={horrorMode}
                                     />
                                 );
                             })}

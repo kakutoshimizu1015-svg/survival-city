@@ -30,23 +30,20 @@ export const tileTooltipData = {
 
 export const Tile = React.memo(({ 
     tile, owner, isFog, isNight, isClickable, isDashTarget, onClick, maxRow,
-    isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass
+    isTruck, isPolice, isUncle, isAnimal, isYakuza, isLoanshark, isFriend, pathClass,
+    // 【最適化】GameBoard.jsxからpropsで受け取る（Zustand購読8個を撤廃）
+    players, npcs, horrorMode
 }) => {
+    // setTooltipDataのみ残す（アクション関数はZustand購読してもre-renderを起こさない）
     const setTooltipData = useGameStore(state => state.setTooltipData);
-    const players = useGameStore(state => state.players); // 追加
-    const truckPos = useGameStore(state => state.truckPos); // ★この1行を追加
-    const policePos = useGameStore(state => state.policePos);
-    const unclePos = useGameStore(state => state.unclePos);
-    const animalPos = useGameStore(state => state.animalPos);
-    const yakuzaPos = useGameStore(state => state.yakuzaPos);
-    const loansharkPos = useGameStore(state => state.loansharkPos);
-    const friendPos = useGameStore(state => state.friendPos);
-    
-    const horrorMode = useGameStore(state => state.horrorMode);
+
+    // npcsをdestructure（後方互換：propsがない場合は空オブジェクトで安全に動作）
+    const { truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos } = npcs || {};
+
     const isHorrorTruckTile = horrorMode && isTruck;
     
     const liteMode = useUserStore(state => state.liteMode); 
-    const showTileLabels = useUserStore(state => state.showTileLabels); 
+    const showTileLabels = useUserStore(state => state.showTileLabels);
 
     const touchTimer = useRef(null);
 
@@ -243,7 +240,7 @@ export const Tile = React.memo(({
 (prev, next) => {
     if (prev.tile.id !== next.tile.id) return false;
     if (prev.isFog !== next.isFog) return false;
-    if (prev.isNight !== next.isNight) return false; // 【修正】夜昼切替で再レンダリングされるように追加
+    if (prev.isNight !== next.isNight) return false;
     if (prev.isClickable !== next.isClickable) return false;
     if (prev.isDashTarget !== next.isDashTarget) return false; 
     if (prev.pathClass !== next.pathClass) return false;
@@ -258,5 +255,12 @@ export const Tile = React.memo(({
     if (prev.tile.fieldCans !== next.tile.fieldCans) return false;
     if (prev.tile.fieldTrash !== next.tile.fieldTrash) return false;
     if (prev.maxRow !== next.maxRow) return false;
+    // 【最適化】propsで受け取るようになった値の比較
+    if (prev.horrorMode !== next.horrorMode) return false;
+    // npcsはGameBoardで個別にisXxxフラグとして渡されるため、ここではポインタ比較のみ
+    if (prev.npcs !== next.npcs) return false;
+    // players: 同じマスにいるプレイヤー数が変わる可能性があるため長さで比較
+    if (prev.players?.length !== next.players?.length) return false;
+    if (prev.players?.some((p, i) => p.pos !== next.players?.[i]?.pos || p.hp !== next.players?.[i]?.hp)) return false;
     return true;
 });

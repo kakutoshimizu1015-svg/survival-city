@@ -1,19 +1,35 @@
+// 【最適化】mapDataをO(1)参照できるMap形式に変換するユーティリティ
+// GameBoard等で一度だけ生成し、各関数に渡すことでmapData.find()を全廃する
+export function buildMapIndex(mapData) {
+    const index = new Map();
+    mapData.forEach(t => index.set(t.id, t));
+    return index;
+}
+
 // 2つのマスの間の距離を計算する純粋な関数
-export function getDistance(posA, posB, mapData) {
+// 【最適化①】queue.shift()はO(n)のためインデックス方式に変更してO(1)にする
+// 【最適化②】mapIndex(Map)を受け取ることでBFS内のO(n)find()を全廃
+// mapIndexがない場合はmapDataからフォールバック生成する（後方互換）
+export function getDistance(posA, posB, mapData, mapIndex) {
     if (posA === posB) return 0;
-    let visited = new Set([posA]);
-    let queue = [{ id: posA, dist: 0 }];
-    
-    while (queue.length > 0) {
-        let current = queue.shift();
-        let tile = mapData.find(t => t.id === current.id);
+    const index = mapIndex || buildMapIndex(mapData);
+    const visited = new Set([posA]);
+    const queue = [posA];
+    const distMap = new Map([[posA, 0]]);
+    let head = 0;
+
+    while (head < queue.length) {
+        const currentId = queue[head++]; // O(1)インデックス進め
+        const currentDist = distMap.get(currentId);
+        const tile = index.get(currentId); // O(1)Map参照
         if (!tile) continue;
-        
-        for (let nextId of tile.next) {
-            if (nextId === posB) return current.dist + 1;
+
+        for (const nextId of tile.next) {
+            if (nextId === posB) return currentDist + 1;
             if (!visited.has(nextId)) {
                 visited.add(nextId);
-                queue.push({ id: nextId, dist: current.dist + 1 });
+                distMap.set(nextId, currentDist + 1);
+                queue.push(nextId);
             }
         }
     }
@@ -21,7 +37,9 @@ export function getDistance(posA, posB, mapData) {
 }
 
 // 1〜3マス先のタイルを割り出す関数 (Path Preview用)
-export function getPathPreviewTiles(startPos, mapData) {
+// 【最適化】mapIndex対応でfind()をO(1)参照に変更
+export function getPathPreviewTiles(startPos, mapData, mapIndex) {
+    const index = mapIndex || buildMapIndex(mapData);
     const visited = new Set([startPos]);
     let frontier = [startPos];
     const result = { depth1: new Set(), depth2: new Set(), depth3: new Set() };
@@ -29,15 +47,15 @@ export function getPathPreviewTiles(startPos, mapData) {
     for (let depth = 1; depth <= 3; depth++) {
         const nextFrontier = [];
         frontier.forEach(id => {
-            const tile = mapData.find(t => t.id === id);
+            const tile = index.get(id); // O(1)
             if (!tile) return;
             tile.next.forEach(nid => {
                 if (!visited.has(nid)) {
                     visited.add(nid);
                     nextFrontier.push(nid);
                     if (depth === 1) result.depth1.add(nid);
-                    if (depth === 2) result.depth2.add(nid);
-                    if (depth === 3) result.depth3.add(nid);
+                    else if (depth === 2) result.depth2.add(nid);
+                    else if (depth === 3) result.depth3.add(nid);
                 }
             });
         });
