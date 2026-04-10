@@ -27,11 +27,7 @@ export const actionRollDice = async (isCpuCall = false) => {
     const cp = players[turn];
     if (diceRolled || (!isCpuCall && cp.isCPU)) return;
 
-    useGameStore.setState({ diceAnim: { active: true, d1: 1, d2: 1, text: `${cp.name}がサイコロを振っています...` }});
-    const sfxInterval = setInterval(() => playSfx('dice'), 100);
-    await new Promise(r => setTimeout(r, 1000));
-    clearInterval(sfxInterval);
-
+    // 1. サイコロの計算を最初にすべて行う
     const d1 = Math.floor(Math.random() * 6) + 1;
     const d2 = Math.floor(Math.random() * 6) + 1;
     
@@ -48,11 +44,16 @@ export const actionRollDice = async (isCpuCall = false) => {
         if (heal > 0) { state.updateCurrentPlayer(p => ({ hp: p.hp + heal })); logMsg(`🎲 ギャンブラー興奮！HP+${heal}`); }
     }
 
-    let textResult = `${d1}+${d2}${d3 > 0 ? '+'+d3 : ''}=${d1+d2+d3}AP${isZorome ? " (🎲ゾロ目×2)" : ""}`;
-    useGameStore.setState({ diceAnim: { active: true, d1, d2, text: textResult }, diceRolled: true, canPickedThisTurn: 0 });
+    // 2. 本値を最初から渡してアニメーション開始 (待機時間なし)
+    useGameStore.setState({
+        diceAnim: { active: true, d1, d2, d3, isDouble: isZorome, text: '' },
+        diceRolled: true,
+        canPickedThisTurn: 0
+    });
+
     state.updateCurrentPlayer(p => ({ ap: p.ap + totalAP }));
     
-    // ▼ここから追加：陣地収入の計算と付与
+    // ▼ここから追加：陣地収入の計算と付与 (既存そのまま)
     let territoryIncome = 0;
     let ownedTilesCount = 0;
 
@@ -88,9 +89,6 @@ export const actionRollDice = async (isCpuCall = false) => {
     }
     
     playSfx('success'); logMsg(`<span style="color:${cp.color}">${cp.name}</span>は${totalAP}AP獲得！`);
-    
-    await new Promise(r => setTimeout(r, 1800));
-    useGameStore.setState(prev => ({ diceAnim: { ...prev.diceAnim, active: false } }));
 };
 
 export const actionMove = () => {

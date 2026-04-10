@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
 const initialState = {
-    gamePhase: 'title', diceAnim: { active: false, d1: 1, d2: 1, text: '' },
-    turnOrderActive: false, turnOrderData: null, gameOver: false, 
+    gamePhase: 'title', diceAnim: { active: false, d1: 1, d2: 1, d3: 0, isDouble: false, text: '' },
+    turnOrderActive: false, turnOrderData: null, gameOver: false,
     
     isBranchPicking: false, 
     currentBranchOptions: [],

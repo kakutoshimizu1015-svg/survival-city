@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { CharImage } from '../common/CharImage';
+import { DiceOverlayInner } from './DiceOverlay'; // 新しいリッチサイコロを読み込む
 
 export const TurnOrderOverlay = () => {
     const { turnOrderActive, turnOrderData, setGameState } = useGameStore();
     const [animState, setAnimState] = useState({ step: -1, currentRolls: [], showResult: false });
+    const [activeDiceAnim, setActiveDiceAnim] = useState(null); // リッチサイコロ用のステート
 
     useEffect(() => {
         if (!turnOrderActive || !turnOrderData) return;
@@ -19,27 +21,37 @@ export const TurnOrderOverlay = () => {
 
             for (let i = 0; i < players.length; i++) {
                 if (!isMounted) return;
+                
+                // サイコロの出目を取得
+                const d1 = diceValues[i].d1;
+                const d2 = diceValues[i].d2;
+                
+                // リッチサイコロを画面に表示する
+                setActiveDiceAnim({
+                    active: true,
+                    d1, d2, d3: 0,
+                    isDouble: d1 === d2,
+                    text: ''
+                });
+
                 rolls[i].rolling = true;
                 setAnimState({ step: i, currentRolls: [...rolls], showResult: false });
 
-                let rollInterval = setInterval(() => {
-                    if (!isMounted) { clearInterval(rollInterval); return; }
-                    rolls[i].d1 = Math.floor(Math.random() * 6) + 1;
-                    rolls[i].d2 = Math.floor(Math.random() * 6) + 1;
-                    setAnimState({ step: i, currentRolls: [...rolls], showResult: false });
-                }, 80);
-
-                await new Promise(r => setTimeout(r, 1200));
-                clearInterval(rollInterval);
+                // リッチサイコロのアニメーション完了を待つ (約1.8秒)
+                await new Promise(r => setTimeout(r, 1800));
+                
                 if (!isMounted) return;
 
+                // 演出が終わったらリッチサイコロを非表示にして結果をリストに反映
+                setActiveDiceAnim(null);
                 rolls[i].rolling = false;
                 rolls[i].done = true;
-                rolls[i].d1 = diceValues[i].d1;
-                rolls[i].d2 = diceValues[i].d2;
-                rolls[i].total = diceValues[i].d1 + diceValues[i].d2;
+                rolls[i].d1 = d1;
+                rolls[i].d2 = d2;
+                rolls[i].total = d1 + d2;
+                
                 setAnimState({ step: i, currentRolls: [...rolls], showResult: false });
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 600)); // 次の人へ行く前のちょっとした間
             }
 
             if (!isMounted) return;
@@ -71,6 +83,13 @@ export const TurnOrderOverlay = () => {
 
     return (
         <div className="modal-overlay" style={{ display: 'flex', zIndex: 10000, background: 'rgba(0,0,0,0.85)' }} onClick={handleClose}>
+            {/* ▼ リッチサイコロがアクティブな時だけオーバーレイの最前面に描画する */}
+            {activeDiceAnim && (
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10001, pointerEvents: 'none' }}>
+                    <DiceOverlayInner diceAnim={activeDiceAnim} />
+                </div>
+            )}
+
             <div className="modal-box" style={{ background: 'rgba(62,47,42,0.97)', border: '6px solid #f1c40f', maxWidth: '500px', padding: '25px 30px' }} onClick={e => e.stopPropagation()}>
                 <h2 style={{ color: '#f1c40f', borderBottom: '2px dashed #f1c40f', paddingBottom: '10px', marginTop: 0 }}>🎲 順番決めダイス！</h2>
                 

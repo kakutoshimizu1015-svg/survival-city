@@ -24,7 +24,8 @@ const ActionBtn = ({ action, condition, failMsg, highlight, color, style, childr
 
 export const ActionPanel = () => {
     const state = useGameStore();
-    const { turn, players, mapData, diceRolled, isBranchPicking, mgActive, storyActive, canPickedThisTurn, territories, animalPos, turnBannerActive, showSkipButton, _roundEndInProgress } = state;
+    // ▼ 修正: diceAnim を展開に追加
+    const { turn, players, mapData, diceRolled, diceAnim, isBranchPicking, mgActive, storyActive, canPickedThisTurn, territories, animalPos, turnBannerActive, showSkipButton, _roundEndInProgress } = state;
     const cp = players[turn];
     const { myUserId, status } = useNetworkStore();
 
@@ -37,7 +38,8 @@ export const ActionPanel = () => {
         isMyTurn = !cp.isCPU && cp.userId === myUserId; 
     }
 
-    const isBusy = isBranchPicking || mgActive || storyActive || turnBannerActive || _roundEndInProgress;
+    // ▼ 修正: diceAnim.active を追加
+    const isBusy = isBranchPicking || mgActive || storyActive || turnBannerActive || _roundEndInProgress || diceAnim.active;
     const hasAP = (cost) => cp.ap >= cost;
     const othersOnTile = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
 
