@@ -115,9 +115,9 @@ export const Tile = React.memo(({
     
     if (isClickable) {
         if (isDashTarget) {
-            classNameStr += liteMode ? ' tile-highlight-dash-lite' : ' tile-highlight-dash';
+            classNameStr += ' tile-highlight-dash';
         } else {
-            classNameStr += liteMode ? ' tile-highlight-branch-lite' : ' tile-highlight-branch';
+            classNameStr += ' tile-highlight-branch';
         }
     }
     
