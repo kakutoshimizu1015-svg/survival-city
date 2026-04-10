@@ -248,8 +248,10 @@ select, .name-input { padding:6px; font-size:14px; border-radius:5px; border:2px
 .npc-token    { z-index:90  !important; }
 
 /* ── Type colors ── */
-/* ▼ 修正: プログラム側(Tile.jsx)でエリア別に色付けするため、CSSでの強制青色指定を無効化 */
-/* .tile.normal   { background:radial-gradient(circle at 35% 28%, #78c6ff, #1565c0) !important; border-color:#b3e0ff !important; } */
+/* ▼ 修正: マスの色設定をCSSクラスに一元化 */
+.tile.normal.slum       { background-color: rgba(149, 165, 166, 0.85) !important; border-color: #7f8c8d !important; }
+.tile.normal.commercial { background-color: rgba(52, 152, 219, 0.85) !important; border-color: #2980b9 !important; }
+.tile.normal.luxury     { background-color: rgba(155, 89, 182, 0.85) !important; border-color: #8e44ad !important; }
 .tile.can      { background:radial-gradient(circle at 35% 28%, #4dd0e1, #006064) !important; border-color:#b2ebf2 !important; }
 .tile.trash    { background:radial-gradient(circle at 35% 28%, #ef9a9a, #b71c1c) !important; border-color:#ffcdd2 !important; }
 .tile.event    { background:radial-gradient(circle at 35% 28%, #ce93d8, #6a1b9a) !important; border-color:#e1bee7 !important; }
@@ -275,15 +277,37 @@ select, .name-input { padding:6px; font-size:14px; border-radius:5px; border:2px
 @keyframes path-pulse-2 { 0% { box-shadow:0 0 10px rgba(46,204,113,0.45), 0 0 22px rgba(46,204,113,0.15), 0 4px 8px rgba(0,0,0,0.55); } 100% { box-shadow:0 0 18px rgba(46,204,113,0.7),  0 0 34px rgba(46,204,113,0.25), 0 4px 8px rgba(0,0,0,0.55); } }
 @keyframes path-pulse-3 { 0% { box-shadow:0 0 5px  rgba(39,174,96,0.2),  0 0 12px rgba(39,174,96,0.08), 0 4px 8px rgba(0,0,0,0.55); } 100% { box-shadow:0 0 10px rgba(39,174,96,0.35), 0 0 20px rgba(39,174,96,0.12), 0 4px 8px rgba(0,0,0,0.55); } }
 
-@keyframes pulse-dest { 0%{transform:translateX(-50%) scale(1);} 100%{transform:translateX(-50%) scale(1.3);} }
-.tile-highlight-branch { box-shadow:0 0 20px #f1c40f,inset 0 0 15px rgba(241,196,15,0.8) !important; border:4px solid #f1c40f !important; cursor:pointer; animation:pulse-branch 0.8s infinite alternate; z-index:20 !important; transform:scale(1.15); }
-@keyframes pulse-branch { 0%{box-shadow:0 0 10px #f1c40f,inset 0 0 10px rgba(241,196,15,0.5); transform:scale(1.15);} 100%{box-shadow:0 0 30px #f1c40f,inset 0 0 20px rgba(241,196,15,1); transform:scale(1.25);} }
+@keyframes pulse-dest { 
+    0% { transform: translateX(-50%) scale(1); } 
+    100% { transform: translateX(-50%) scale(1.3); } 
+}
+
+/* ▼ 修正: 詳細度を上げるため .tile.tile-highlight-branch に変更し、枠線を上書き */
+.tile.tile-highlight-branch { 
+    box-shadow: 0 0 20px #f1c40f, inset 0 0 15px rgba(241,196,15,0.8) !important; 
+    border-color: #f1c40f !important; 
+    cursor: pointer !important; 
+    animation: pulse-branch 0.8s infinite alternate !important; 
+    z-index: 20 !important; 
+    transform: scale(1.15) !important; 
+}
+
+@keyframes pulse-branch { 
+    0% {
+        box-shadow: 0 0 10px #f1c40f, inset 0 0 10px rgba(241,196,15,0.5); 
+        transform: scale(1.15);
+    } 
+    100% {
+        box-shadow: 0 0 30px #f1c40f, inset 0 0 20px rgba(241,196,15,1); 
+        transform: scale(1.25);
+    } 
+}
 
 /* ▼ 追加：ダッシュ専用の白い発光クラス（!important で上書き） */
-.tile-highlight-dash { 
+.tile.tile-highlight-dash { 
     box-shadow: 0 0 40px 10px rgba(255, 255, 255, 1), inset 0 0 30px rgba(255, 255, 255, 0.9) !important; 
-    border: 4px solid #ffffff !important; 
-    background-color: rgba(255, 255, 255, 0.6) !important; /* 内側も白く明るく飛ばす */
+    border-color: #ffffff !important; 
+    background-color: rgba(255, 255, 255, 0.6) !important; 
     animation: tilePulseDash 0.6s infinite alternate !important; 
     z-index: 50 !important; 
     transform: scale(1.2) !important; 

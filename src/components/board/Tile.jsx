@@ -143,21 +143,7 @@ export const Tile = React.memo(({
     const labelSize = Math.max(8, MAP_CONFIG.TILE_SIZE * 0.12);
     const badgeSize = Math.max(9, MAP_CONFIG.TILE_SIZE * 0.15);
 
-    // ★追加: 道マス（normal）のエリア別カラー設定
-    let areaBgColor = undefined;
-    let areaBorder = undefined;
-    if (tile.type === 'normal') {
-        if (tile.area === 'slum') {
-            areaBgColor = 'rgba(149, 165, 166, 0.85)'; // スラム：グレー
-            areaBorder = '3px solid #7f8c8d';
-        } else if (tile.area === 'commercial') {
-            areaBgColor = 'rgba(52, 152, 219, 0.85)';  // 商業：ブルー
-            areaBorder = '3px solid #2980b9';
-        } else if (tile.area === 'luxury') {
-            areaBgColor = 'rgba(155, 89, 182, 0.85)';  // 高級：パープル
-            areaBorder = '3px solid #8e44ad';
-        }
-    }
+    // JS側での色計算ロジック（areaBgColor, areaBorder）を削除し、CSSクラス管理に一元化
 
     return (
         <div 
@@ -188,12 +174,8 @@ export const Tile = React.memo(({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                placeSelf: 'center',
-
-                // ★追加: 道マスのみ色と丸い枠線を適用
-                background: areaBgColor, // ★修正: backgroundColor を background に変更してCSS設定を完全に上書きする
-                border: areaBorder,
-                borderRadius: areaBgColor ? '50%' : undefined
+                placeSelf: 'center'
+                // インラインスタイルでの色指定を削除
             }}
         >
             <div style={{ fontSize: `${emojiSize}px`, zIndex: 2, pointerEvents: 'none', lineHeight: 1 }}>{iconStr}</div>
