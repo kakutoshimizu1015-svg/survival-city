@@ -90,9 +90,17 @@ export const actionRollDice = async (isCpuCall = false) => {
     
     playSfx('success'); logMsg(`<span style="color:${cp.color}">${cp.name}</span>は${totalAP}AP獲得！`);
 
-    // ▼ 追加: CPUのターンの場合は、サイコロ演出が完全に終わるまで次の行動を待たせる
+    // ▼ 修正: CPUのターンの場合は「サイコロ画面が閉じるまで」待機する
     if (isCpuCall) {
-        await new Promise(r => setTimeout(r, 4800)); // パターンAのアニメーション長さに合わせて待機
+        await new Promise(resolve => {
+            const checkOverlay = setInterval(() => {
+                // activeがfalse（画面が閉じた）になったら即座に次へ進む
+                if (!useGameStore.getState().diceAnim.active) {
+                    clearInterval(checkOverlay);
+                    resolve();
+                }
+            }, 100);
+        });
     }
 };
 

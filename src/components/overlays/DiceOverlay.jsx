@@ -288,9 +288,41 @@ export const DiceOverlayInner = ({ diceAnim }) => {
   const areaRef  = useRef(null);
   const timersRef = useRef([]);
   const intervalsRef = useRef([]);
+  const isSkippedRef = useRef(false); // ▼追加: スキップ状態の管理
 
   const [phase,  setPhase]  = useState('rolling');
   const [result, setResult] = useState({ text: '', color: '#eee', bonus: '', visible: false });
+
+  // ▼ 追加: タップで演出をスキップする関数
+  const handleSkip = () => {
+    if (isSkippedRef.current) return;
+    isSkippedRef.current = true;
+
+    // すべてのタイマーとSEを強制停止
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+    intervalsRef.current.forEach(clearInterval);
+    intervalsRef.current = [];
+
+    // 結果を即座に計算して表示
+    const d1 = diceAnim.d1 || 1;
+    const d2 = diceAnim.d2 || 1;
+    const d3 = diceAnim.d3 || 0;
+    const isDbl = diceAnim.isDouble ?? (d1 === d2);
+    const sumRaw = d1 + d2 + d3;
+    const txt = `${d1} + ${d2}${d3 ? ' + ' + d3 : ''} = ${sumRaw}AP${isDbl ? ' ×2' : ''}`;
+    const bonus = isDbl ? 'ゾロ目ボーナス — AP ×2' : (d3 > 0 ? '大勝負！ 第3のサイコロ発動' : '');
+
+    setPhase('idle');
+    setResult({ text: txt, color: isDbl ? '#d4a020' : '#eee', bonus, visible: true });
+
+    // 結果を読めるように1.2秒だけ待ってから閉じる
+    setTimeout(() => {
+      useGameStore.setState(prev => ({
+        diceAnim: { ...prev.diceAnim, active: false },
+      }));
+    }, 1200);
+  };
 
   // タイマー管理（コンポーネント破棄時に全クリア）
   const addTimer = (fn, ms) => {
@@ -371,9 +403,11 @@ export const DiceOverlayInner = ({ diceAnim }) => {
     // Promise チェーン
     Promise.all([p1, p2])
       .then(() => {
+        if (isSkippedRef.current) return; // ▼追加
         // ゾロ目演出
         if (isDbl) {
           return wait(170).then(() => {
+            if (isSkippedRef.current) return; // ▼追加
             die1.markDouble();
             die2.markDouble();
             try { playSfx('success'); } catch(_) {}
@@ -381,9 +415,11 @@ export const DiceOverlayInner = ({ diceAnim }) => {
         }
       })
       .then(() => {
+        if (isSkippedRef.current) return; // ▼追加
         // ギャンブラー第3ダイス
         if (d3 > 0) {
           return wait(420).then(() => {
+            if (isSkippedRef.current) return; // ▼追加
             const die3 = new Die(d3, true);
             die3.bw.style.animation = 'diceRollD3in .55s both';
             area.appendChild(die3.bw);
@@ -397,6 +433,7 @@ export const DiceOverlayInner = ({ diceAnim }) => {
       })
       .then(() => wait(200))
       .then(() => {
+        if (isSkippedRef.current) return; // ▼追加
         const sumRaw = d1 + d2 + d3;
         const total  = sumRaw * (isDbl ? 2 : 1);
         const txt    =
@@ -413,6 +450,7 @@ export const DiceOverlayInner = ({ diceAnim }) => {
         return wait(2500);
       })
       .then(() => {
+        if (isSkippedRef.current) return; // ▼追加
         useGameStore.setState(prev => ({
           diceAnim: { ...prev.diceAnim, active: false },
         }));
@@ -443,7 +481,7 @@ export const DiceOverlayInner = ({ diceAnim }) => {
   }[phase];
 
   return (
-    <div style={{
+    <div onClick={handleSkip} style={{ // ▼追加: onClickでスキップ発動
       position:       'fixed',
       inset:          0,
       zIndex:         9000,
@@ -453,7 +491,12 @@ export const DiceOverlayInner = ({ diceAnim }) => {
       alignItems:     'center',
       background:     'rgba(0,0,0,0.75)',
       fontFamily:     '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      cursor:         'pointer', // ▼追加: タップできることを示す
     }}>
+      {/* ▼追加: スキップ案内テキスト */}
+      <div style={{ position: 'absolute', top: 20, right: 20, color: 'rgba(255,255,255,0.4)', fontSize: '12px', fontWeight: 'bold' }}>
+        タップでスキップ ⏭
+      </div>
 
       {/* フェーズバッジ */}
       <div style={{
