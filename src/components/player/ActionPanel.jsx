@@ -5,7 +5,7 @@ import { deckData } from '../../constants/cards';
 import { ClayButton } from '../common/ClayButton';
 // ▼ 修正: getOccupyCost をインポート
 import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, actionManhole, getOccupyCost } from '../../game/actions';
-import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap } from '../../game/skills';
+import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap, setupSetTrap } from '../../game/skills';
 
 const ActionBtn = ({ action, condition, failMsg, highlight, color, style, children, isMyTurn, isBusy }) => (
     <ClayButton 
@@ -24,14 +24,18 @@ const ActionBtn = ({ action, condition, failMsg, highlight, color, style, childr
 
 export const ActionPanel = () => {
     const state = useGameStore();
-    // ▼ 修正: diceAnim を展開に追加
-    const { turn, players, mapData, diceRolled, diceAnim, isBranchPicking, mgActive, storyActive, canPickedThisTurn, territories, animalPos, turnBannerActive, showSkipButton, _roundEndInProgress } = state;
+    // ▼ 修正: isTrapPicking を展開に追加
+    const { turn, players, mapData, diceRolled, diceAnim, isBranchPicking, mgActive, storyActive, canPickedThisTurn, territories, animalPos, turnBannerActive, showSkipButton, _roundEndInProgress, isTrapPicking } = state;
     const cp = players[turn];
     const { myUserId, status } = useNetworkStore();
 
     if (!cp) return null;
     const currentTile = mapData.find(t => t.id === cp.pos) || {};
     const tileType = currentTile.type;
+
+    // ▼ 追加: 現在の移動コストを動的に計算（雨ペナルティ＋アンコール等のデバフ）
+    const baseMoveCost = (state.isRainy && !cp.rainGear && cp.charType !== "athlete") ? 2 : 1;
+    const currentMoveCost = baseMoveCost + (cp.nextMoveCostPenalty || 0);
 
     let isMyTurn = !cp.isCPU; 
     if (status === 'connected') { 
@@ -44,7 +48,8 @@ export const ActionPanel = () => {
     const othersOnTile = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
 
     const canRoll = isMyTurn && !diceRolled && !isBusy;
-    const canMove = isMyTurn && diceRolled && hasAP(1) && !cp.cannotMove && !isBusy;
+    // ▼ 修正: hasAP(1) を hasAP(currentMoveCost) に変更
+    const canMove = isMyTurn && diceRolled && hasAP(currentMoveCost) && !cp.cannotMove && !isBusy;
     const isBlockedByAnimal = cp.pos === animalPos;
     
     // ▼ 修正: ボタンに表示する動的な価格を取得
@@ -89,10 +94,26 @@ const canDoJob = isMyTurn && diceRolled && hasAP(3) && tileType === 'job' && !is
         };
     }, [cp.ap, cp.hand.length, cp.maxHand, diceRolled, isBusy, isMyTurn, tileType, territories, cp.pos, cp.p, cp.cans, cp.trash, isHandOverLimit]);
 
+    // ▼ 追加: 罠の設置モードがONの場合、通常のアクションパネルを隠して「罠選択UI」を表示する
+    if (isTrapPicking && isMyTurn) {
+        return (
+            <div id="action-panel" className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ textAlign: 'center', color: '#fdf5e6', fontWeight: 'bold', marginBottom: '4px' }}>
+                    🪤 設置する罠を選んでください
+                </div>
+                <ClayButton onClick={() => setupSetTrap('police')} style={{ background: '#3498db' }}>👮 警察罠 (AP減少)</ClayButton>
+                <ClayButton onClick={() => setupSetTrap('pitfall')} style={{ background: '#e74c3c' }}>🕳️ 落とし穴 (ダメージ)</ClayButton>
+                <ClayButton onClick={() => setupSetTrap('jamming')} style={{ background: '#9b59b6' }}>📡 情報撹乱 (手札破棄)</ClayButton>
+                <ClayButton onClick={() => useGameStore.setState({ isTrapPicking: false })} style={{ background: '#95a5a6', marginTop: '4px' }}>✖ キャンセル</ClayButton>
+            </div>
+        );
+    }
+
     return (
         <div id="action-panel" className="panel">
             <div id="btn-roll"><ActionBtn action={actionRollDice} condition={canRoll} failMsg={diceRolled ? "すでにサイコロを振っています" : "今は振れません"} highlight={canRoll} isMyTurn={isMyTurn} isBusy={isBusy}>🎲 サイコロを振る</ActionBtn></div>
-            <div id="btn-move"><ActionBtn action={actionMove} condition={canMove} failMsg={cp.cannotMove ? "足止めされています！" : !diceRolled ? "サイコロを振ってください" : "APが不足しています"} highlight={canMove} isMyTurn={isMyTurn} isBusy={isBusy}>🚶 移動 (1AP)</ActionBtn></div>
+            {/* ▼ 修正: テキストを (1AP) から ({currentMoveCost}AP) に変更 */}
+            <div id="btn-move"><ActionBtn action={actionMove} condition={canMove} failMsg={cp.cannotMove ? "足止めされています！" : !diceRolled ? "サイコロを振ってください" : "APが不足しています"} highlight={canMove} isMyTurn={isMyTurn} isBusy={isBusy}>🚶 移動 ({currentMoveCost}AP)</ActionBtn></div>
             <div id="btn-can"><ActionBtn action={actionCan} condition={canDoCan} failMsg={isBlockedByAnimal ? "野良犬がいて拾えません！" : canPickedThisTurn >= 3 ? "1ターンの拾う上限です" : "AP不足か場所が違います"} isMyTurn={isMyTurn} isBusy={isBusy}>🥫 缶拾い (1AP)</ActionBtn></div>
             <div id="btn-trash"><ActionBtn action={actionTrash} condition={canDoTrash} failMsg={isBlockedByAnimal ? "野良犬がいて漁れません！" : "AP不足か場所が違います"} isMyTurn={isMyTurn} isBusy={isBusy}>🗑️ ゴミ漁り ({cp.equip?.shoes ? 1 : 2}AP)</ActionBtn></div>
             {/* ▼ 修正: ボタンテキストに occupyCost を表示 */}

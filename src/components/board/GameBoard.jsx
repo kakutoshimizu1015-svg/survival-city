@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
 import { getDistance, getPathPreviewTiles, getManholeLinkedTiles, buildMapIndex } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
+import { executeSetTrap } from '../../game/skills';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { BoardPaths } from './BoardPaths';
@@ -16,7 +17,7 @@ export const GameBoard = () => {
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
         roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
-        horrorMode, isDashPicking 
+        horrorMode, isDashPicking, isTrapPicking 
     } = useGameStore();
 
     const showSmoke = useUserStore(state => state.showSmoke);
@@ -277,6 +278,9 @@ export const GameBoard = () => {
             const state = useGameStore.getState();
             state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
             useGameStore.setState({ [npcMovePick]: tileId, npcMovePick: null });
+        } else if (isTrapPicking) {
+            executeSetTrap(tileId);
+            useGameStore.setState({ isTrapPicking: false, selectedTrapType: null });
         } else if (isBranchPicking && currentBranchOptions.includes(tileId)) {
             executeMove(tileId);
         }
@@ -348,7 +352,12 @@ export const GameBoard = () => {
                     🕵️ 移動先マスをタップしてください（タップでキャンセル）
                 </div>
             )}
-            {isBranchPicking && !npcMovePick && (
+            {isTrapPicking && (
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(142,68,173,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ isTrapPicking: false, selectedTrapType: null }); useGameStore.getState().showToast("罠の設置をキャンセルしました"); }}>
+                    🪤 罠を仕掛けるマスをタップしてください（タップでキャンセル）
+                </div>
+            )}
+            {isBranchPicking && !npcMovePick && !isTrapPicking && (
                 <div id="branch-prompt" style={{ display: 'block' }}>🛣️ 光っているマスをタップして進む道を選んでください</div>
             )}
 
@@ -416,7 +425,7 @@ export const GameBoard = () => {
                                 const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
                                 const isFog = visibleTiles && !visibleTiles.has(tile.id);
                                 const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
-                                const isClickable = npcMovePick !== null || isBranchTarget;
+                                const isClickable = npcMovePick !== null || isTrapPicking || isBranchTarget;
                                 const isDashTarget = isClickable && isDashPicking;
                                 
                                 let pathClass = '';
