@@ -128,3 +128,28 @@ const canDoJob = isMyTurn && diceRolled && hasAP(3) && tileType === 'job' && !is
         </div>
     );
 };
+// 探偵のターンの場合のみ表示するボタン
+{currentPlayer.charType === 'detective' && (
+    <div style={{ display: 'flex', gap: '8px' }}>
+        {/* 長押しスキャンボタン */}
+        <button
+            onPointerDown={() => useGameStore.setState({ isTrapScanActive: true })}
+            onPointerUp={() => useGameStore.setState({ isTrapScanActive: false })}
+            onPointerLeave={() => useGameStore.setState({ isTrapScanActive: false })}
+            style={{ 
+                userSelect: 'none', WebkitUserSelect: 'none', touchAction: 'none', // 長押し時のテキスト選択・メニューを防止
+                background: '#4834d4', color: '#fff' 
+            }}
+        >
+            👁️ 長押しで罠スキャン
+        </button>
+
+        {/* 罠の設置ボタン */}
+        <button 
+            onClick={() => actionSetTrap()} 
+            disabled={currentPlayer.ap < 2}
+        >
+            🪤 罠の設置 (2AP)
+        </button>
+    </div>
+)}

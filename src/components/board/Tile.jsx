@@ -37,6 +37,11 @@ export const Tile = React.memo(({
     // setTooltipDataのみ残す（アクション関数はZustand購読してもre-renderを起こさない）
     const setTooltipData = useGameStore(state => state.setTooltipData);
 
+    // ▼ 探偵の罠システム用ステート
+    const traps = useGameStore(state => state.traps);
+    const isTrapScanActive = useGameStore(state => state.isTrapScanActive);
+    const turnPlayer = useGameStore(state => state.players[state.turn]);
+
     // npcsをdestructure（後方互換：propsがない場合は空オブジェクトで安全に動作）
     const { truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos } = npcs || {};
 
@@ -211,6 +216,25 @@ export const Tile = React.memo(({
             {!isFog && isYakuza    && <CharImage charType="yakuza"    size={TOKEN_CONFIG.npc.yakuzaSize}    style={getNpcStyle('yakuza')} />}
             {!isFog && isLoanshark && <CharImage charType="loanshark" size={TOKEN_CONFIG.npc.loansharkSize} style={getNpcStyle('loanshark')} />}
             {!isFog && isFriend    && <CharImage charType="friend"    size={TOKEN_CONFIG.npc.friendSize}    style={getNpcStyle('friend')} />}
+
+            {/* ▼ 罠の描画（透過して表示） */}
+            {traps?.map((trap, idx) => {
+                if (trap.tileId !== tile.id) return null;
+                // 罠の持ち主か、スキャンONの探偵しか見えない
+                const isOwner = turnPlayer?.id === trap.ownerId;
+                const isVisible = isOwner || (isTrapScanActive && turnPlayer?.charType === 'detective');
+                if (!isVisible) return null;
+                
+                const trapEmoji = trap.type === 'police' ? '👮' : trap.type === 'pitfall' ? '🕳️' : '📡';
+                return (
+                    <div key={`trap-${idx}`} style={{
+                        position: 'absolute', bottom: '2px', right: '2px', zIndex: 4, pointerEvents: 'none',
+                        fontSize: `${badgeSize * 1.5}px`, opacity: 0.8, filter: 'drop-shadow(0 0 3px red)'
+                    }}>
+                        {trapEmoji}
+                    </div>
+                );
+            })}
         </div>
     );
 }, 

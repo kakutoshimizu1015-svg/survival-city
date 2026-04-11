@@ -242,11 +242,15 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const isTeam = player.teamColor && player.teamColor !== 'none';
     const glowColor = isTeam ? player.teamColor : player.color;
 
+    // ▼ 毒状態の視覚化フィルター
+    const isPoisoned = player.statusEffects?.poison > 0;
+    const poisonFilter = `drop-shadow(0 0 10px #9b59b6) sepia(0.5) hue-rotate(250deg) saturate(2)`;
+
     const playerGlowFilter = liteMode 
-        ? (isTeam || isActiveTurn ? `drop-shadow(0 0 6px ${glowColor})` : 'none')
-        : (isActiveTurn 
+        ? (isPoisoned ? poisonFilter : (isTeam || isActiveTurn ? `drop-shadow(0 0 6px ${glowColor})` : 'none'))
+        : (isPoisoned ? poisonFilter : (isActiveTurn 
             ? `drop-shadow(0 0 15px #ffe066) drop-shadow(0 0 8px ${glowColor})` 
-            : (isTeam ? `drop-shadow(0 0 15px ${glowColor})` : `drop-shadow(0 0 8px ${glowColor}) drop-shadow(0 4px 6px rgba(0,0,0,0.6))`));
+            : (isTeam ? `drop-shadow(0 0 15px ${glowColor})` : `drop-shadow(0 0 8px ${glowColor}) drop-shadow(0 4px 6px rgba(0,0,0,0.6))`)));
 
     return (
         <div style={{
@@ -312,8 +316,10 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                         position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
                         marginTop: 2, fontSize: TOKEN_CONFIG.player.nameFontSize, fontWeight: 900, color: player.color,
                         textShadow: '1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap', display: 'flex', flexDirection: 'column', alignItems: 'center'
                     }}>
+                        {/* ▼ 毒状態なら名前の上に明滅するドクロを表示 */}
+                        {isPoisoned && <span style={{ fontSize: '14px', filter: 'drop-shadow(0 0 2px #9b59b6)', animation: 'pulse 1.5s infinite' }}>☠️</span>}
                         {player.name}
                     </div>
                 </div>

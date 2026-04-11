@@ -27,6 +27,18 @@ export const actionRollDice = async (isCpuCall = false) => {
     const cp = players[turn];
     if (diceRolled || (!isCpuCall && cp.isCPU)) return;
 
+    // ▼ 闇医者のパッシブ【再生能力】
+    if (cp.charType === 'doctor') {
+        const healAmt = cp.hp <= 50 ? 16 : 8; // ピンチ時は回復量2倍
+        const actualHeal = Math.min(healAmt, 100 - cp.hp);
+        if (actualHeal > 0) {
+            state.updateCurrentPlayer(p => ({ hp: p.hp + actualHeal }));
+            logMsg(`🩸 闇医者の再生能力！HPが${actualHeal}回復！`);
+            playSfx('success');
+            state.addEventPopup(cp.id, "🩸", "再生能力", `HP+${actualHeal}`, "good");
+        }
+    }
+
     // 1. サイコロの計算を最初にすべて行う
     const d1 = Math.floor(Math.random() * 6) + 1;
     const d2 = Math.floor(Math.random() * 6) + 1;
@@ -134,9 +146,18 @@ export const executeMove = (targetTileId) => {
     const tile = state.mapData.find(t => t.id === targetTileId);
     const cp = state.players[state.turn];
     const prevPos = cp.pos;
-    const moveCost = (state.isRainy && !cp.rainGear && cp.charType !== "athlete") ? 2 : 1;
+    
+    // ▼ ミュージシャンのアンコール等による移動ペナルティ加算
+    const baseMoveCost = (state.isRainy && !cp.rainGear && cp.charType !== "athlete") ? 2 : 1;
+    const penaltyCost = cp.nextMoveCostPenalty || 0;
+    const moveCost = baseMoveCost + penaltyCost;
 
-    state.updateCurrentPlayer(p => ({ ap: Math.max(0, p.ap - moveCost), pos: targetTileId, rainGear: state.isRainy ? false : p.rainGear }));
+    state.updateCurrentPlayer(p => ({ 
+        ap: Math.max(0, p.ap - moveCost), 
+        pos: targetTileId, 
+        rainGear: state.isRainy ? false : p.rainGear,
+        nextMoveCostPenalty: 0 // 一度移動したらペナルティ解除
+    }));
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [], isDashPicking: false });
     
     logMsg(`🚶 「${tile.name}」に移動。`); playSfx('move');
@@ -214,6 +235,48 @@ export const executeMove = (targetTileId) => {
             // ▼ 修正: 仮の3種から、実装済みの全15種から抽選するように変更
             const mgTypes = ['box', 'vend', 'scratch', 'hl', 'slot', 'oxo', 'tetris', 'fly', 'rat', 'drunk', 'rain', 'kashi', 'beg', 'music', 'nego'];
             useGameStore.setState({ mgActive: true, mgType: mgTypes[Math.floor(Math.random() * mgTypes.length)] });
+        }
+    }
+
+    // ▼ 罠の踏み抜き判定
+    const trapIndex = state.traps?.findIndex(t => t.tileId === targetTileId);
+    if (trapIndex !== undefined && trapIndex !== -1) {
+        const trap = state.traps[trapIndex];
+        if (trap.ownerId !== cp.id) {
+            const trapNames = { police: '警察罠', pitfall: '落とし穴', jamming: '情報撹乱' };
+            logMsg(`⚠️ <span style="color:#e74c3c">${cp.name}は罠（${trapNames[trap.type]}）を踏んでしまった！</span>`);
+            playSfx('fail');
+            
+            if (trap.type === 'police') {
+                state.updateCurrentPlayer(p => ({ penaltyAP: (p.penaltyAP || 0) + 2 }));
+                state.addEventPopup(cp.id, "🚓", "警察罠", "次回AP-2", "bad");
+            } else if (trap.type === 'pitfall') {
+                // HPを減らして死亡判定（病院送り）も行う
+                const hospitalTile = state.mapData.find(t => t.type === 'center');
+                const hospitalId = hospitalTile ? hospitalTile.id : (state.mapData[0]?.id ?? 0);
+                const newHp = cp.hp - 20;
+                if (newHp <= 0) {
+                    logMsg(`☠️ 落とし穴のダメージで倒れた！`);
+                    state.updateCurrentPlayer(p => ({ hp: 100, p: Math.floor(p.p*0.66), pos: hospitalId, deaths: (p.deaths || 0) + 1, respawnShield: 2 }));
+                } else {
+                    state.updateCurrentPlayer(p => ({ hp: newHp }));
+                }
+                state.addEventPopup(cp.id, "🕳️", "落とし穴", "20ダメージ", "damage");
+            } else if (trap.type === 'jamming') {
+                state.updateCurrentPlayer(p => {
+                    const h = [...p.hand];
+                    if (h.length > 0) h.splice(Math.floor(Math.random() * h.length), 1);
+                    return { hand: h };
+                });
+                state.addEventPopup(cp.id, "📡", "情報撹乱", "手札1枚破棄", "bad");
+            }
+            
+            // 発動した罠を消去
+            useGameStore.setState(prev => {
+                const newTraps = [...prev.traps];
+                newTraps.splice(trapIndex, 1);
+                return { traps: newTraps };
+            });
         }
     }
 };
@@ -318,7 +381,23 @@ export const actionOccupy = () => {
         return;
     }
 
-    const cost = getOccupyCost(cp.pos);
+    let cost = getOccupyCost(cp.pos);
+
+    // ▼ ミュージシャンのパッシブ【カリスマ】: 陣地コスト-2P
+    if (cp.charType === 'musician') {
+        cost = Math.max(1, cost - 2);
+    }
+
+    // ▼ カリスマ: 滞在中の陣地への攻撃無効
+    const currentOwner = s.territories[cp.pos];
+    if (currentOwner !== undefined && currentOwner !== cp.id) {
+        const ownerPlayer = s.players.find(p => p.id === currentOwner);
+        if (ownerPlayer && ownerPlayer.charType === 'musician' && ownerPlayer.pos === cp.pos) {
+            logMsg(`🎤 カリスマ発動！${ownerPlayer.name}が滞在中のためこの陣地は奪えません！`);
+            useGameStore.getState().showToast("ミュージシャン滞在中の陣地は奪えません");
+            return;
+        }
+    }
 
     if (cp.p >= cost) { 
         s.updateCurrentPlayer(p => ({ p: p.p - cost }));
@@ -358,12 +437,34 @@ export const actionEndTurn = async () => {
             cannotMove: false,
             // ✅ Fix1: 復活後の無敵ターンをターン終了ごとに1減算（0未満にはならない）
             respawnShield: Math.max(0, (p.respawnShield || 0) - 1),
+            drawCountThisTurn: 0 // ▼ ギャンブラーのドロー回数リセット
         }));
+
+        // ▼ 闇医者の毒ダメージ処理
+        if (cp.statusEffects?.poison > 0) {
+            logMsg(`☠️ <span style="color:#9b59b6">${cp.name}は毒の副作用を受けた！(残り${cp.statusEffects.poison}ターン)</span>`);
+            const hospitalTile = state.mapData.find(t => t.type === 'center');
+            const hospitalId = hospitalTile ? hospitalTile.id : (state.mapData[0]?.id ?? 0);
+            
+            const newHp = cp.hp - 8;
+            if (newHp <= 0) {
+                logMsg(`☠️ 毒により死亡...`);
+                state.updateCurrentPlayer(p => ({ hp: 100, p: Math.floor(p.p*0.66), pos: hospitalId, deaths: (p.deaths || 0) + 1, respawnShield: 2 }));
+            } else {
+                state.updateCurrentPlayer(p => ({ hp: newHp }));
+            }
+            state.updateCurrentPlayer(p => ({
+                statusEffects: { ...p.statusEffects, poison: p.statusEffects.poison - 1 }
+            }));
+            state.addEventPopup(cp.id, "☠️", "毒ダメージ", "8ダメージ", "damage");
+            playSfx('hit');
+        }
         
         useGameStore.setState({ 
             isBranchPicking: false, isDashPicking: false, 
             isSalesVisiting: false, salesTargetId: null, npcSelectActive: false,
-            mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null 
+            mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null,
+            isTrapScanActive: false, isTrapPicking: false // ▼ スキャン＆設置モードをターン終了で強制解除
         });
         
         const isLastPlayer = state.turn === state.players.length - 1;

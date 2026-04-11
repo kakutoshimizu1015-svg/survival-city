@@ -11,6 +11,11 @@ const initialState = {
     salesTargetId: null,     
     npcSelectActive: false,  
     npcMovePick: null,       
+
+    traps: [],               // ▼ 探偵の罠データ { tileId, type, ownerId }
+    isTrapScanActive: false, // ▼ 探偵の罠スキャン状態（長押しでtrue）
+    isTrapPicking: false,    // ▼ 罠設置モード
+    selectedTrapType: null,  // ▼ 選択中の罠タイプ
     
     shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
     purchasedCards: {}, // ▼ 追加: ゲーム全体で各カードが何枚買われたかを記憶 { cardId: count }

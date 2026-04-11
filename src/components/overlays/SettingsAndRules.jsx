@@ -153,10 +153,10 @@ export const SettingsAndRules = () => {
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🌿</span><b>サバイバー —【危機察知】</b>ゴミ漁り失敗のパトカーペナ無効 ／ <b>【野宿】</b>2AP: その場でHP+15回復</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>👊</span><b>元ヤン —【威圧】</b>同マス/すれ違いで自動1Pカツアゲ（1ターン2P上限）／ <b>【殴る】</b>2AP: 同マス相手に10ダメージ</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💻</span><b>元ハッカー —【クラウドストレージ】</b>手札上限+2（デフォルト9枚）／ <b>【遠隔ハッキング】</b>3AP: どこからでもショップ在庫を強制入替え＆1枚購入</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🎸</span><b>ストリートミュージシャン —【投げ銭】</b>他者が同マスor隣接に来るたび銀行から+3P ／ <b>【路上ライブ】</b>4AP: 周囲2マス以内の全員を強制引き寄せ</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🩺</span><b>闇医者 —【自己治癒】</b>ターン開始時に自動HP+5 ／ <b>【闇診療】</b>2AP: 同マスの相手HP+30の代わりに5P強制徴収</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🎲</span><b>ギャンブラー —【アドレナリン】</b>ゾロ目でAP倍＋HP+10回復。<b>さらに25%の確率で3つ目のサイコロが追加！</b> ／ <b>【イカサマ勝負】</b>2AP: 同マスの相手と1d6対決・勝者が5P奪取（同点は仕掛け側の負け）</li>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🕵️</span><b>元探偵 —【張り込み】</b>自陣地に相手が完全に止まると<b>30%の確率で</b>手札1枚没収 ／ <b>【情報操作】</b>3AP: <b>好きなNPCを1体選んで</b>任意のマスへ強制移動<b>(クールタイム3R)</b></li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🎸</span><b>ストリートミュージシャン —【カリスマ】</b>他者が同マスor隣接に来るたび+3P ＆ 自身のいるマスは陣地コスト-2P・攻撃無効 ／ <b>【アンコール】</b>3AP: 周囲2マス以内の全員を強制引き寄せ＆人数×2P獲得＆相手の次移動AP+1</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🩺</span><b>闇医者 —【再生能力】</b>ターン開始時に自動HP+8（HP50以下なら+16） ／ <b>【毒入り治療】</b>2AP: 同マスの相手HP+30の代わりに5P強制徴収＆3ターン毒状態（毎ターン8ダメ）にする</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🎲</span><b>ギャンブラー —【アドレナリン】</b>ゾロ目でAP倍＋HP+10回復。<b>さらに25%の確率で3つ目のサイコロが追加！</b> ／ <b>【ドロー勝負】</b>3AP: 山札からカードを1枚引く（1ターン最大3回まで）</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🕵️</span><b>元探偵 —【張り込み】</b>自陣地に相手が完全に止まると<b>50%の確率で</b>手札1枚没収 ／ <b>【情報操作/罠の設置】</b>3AP: 好きなNPCを強制移動(CD:3R) ／ 2AP: 自分にしか見えない罠(警察/落とし穴/情報撹乱)を設置</li>
                             </ul>
                         </div>
 
