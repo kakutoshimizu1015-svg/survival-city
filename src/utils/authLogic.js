@@ -1,37 +1,69 @@
-import { signInAnonymously, linkWithPopup } from 'firebase/auth';
+import { signInAnonymously, linkWithPopup, onAuthStateChanged } from 'firebase/auth';
 import { ref, update } from 'firebase/database';
 import { useUserStore } from '../store/useUserStore';
 import { auth, googleProvider, db } from '../lib/firebase'; 
 import { useNetworkStore } from '../store/useNetworkStore';
 import { loadUserData } from './userLogic';
 
-export const loginAnonymously = async () => {
-  try {
-    const userCredential = await signInAnonymously(auth);
-    const user = userCredential.user;
+export const loginAnonymously = () => {
+  // ▼ Promiseを使って、ログイン（復元）が完了するまで待機する構造に変更
+  return new Promise((resolve) => {
+    // ▼ onAuthStateChanged: Firebaseがブラウザに保存されたセッションをチェックする
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      
+      // 1回チェックしたら監視を解除（ゲーム起動時の初期化でのみ使うため）
+      unsubscribe();
+      
+      if (user) {
+        // ==========================================
+        // ① すでにログイン済み（セッション復元）の場合
+        // ==========================================
+        const isLinked = user.providerData && user.providerData.some(p => p.providerId === 'google.com');
+        
+        useUserStore.getState().setUserData({
+          uid: user.uid,
+          isLoggedIn: true,
+          isLinked: isLinked,
+          linkedEmail: isLinked ? user.providerData.find(p => p.providerId === 'google.com')?.email : null
+        });
 
-    // 既にリンクされているかチェック
-    const isLinked = user.providerData && user.providerData.some(p => p.providerId === 'google.com');
+        useNetworkStore.getState().setMyUserId(user.uid);
+        await loadUserData(user.uid);
+        
+        console.log(`自動ログイン成功！ (${isLinked ? 'Google連携済み' : 'ゲストデータ'})`);
+        resolve(user.uid);
 
-    useUserStore.getState().setUserData({
-      uid: user.uid,
-      isLoggedIn: true,
-      isLinked: isLinked,
-      linkedEmail: isLinked ? user.providerData.find(p => p.providerId === 'google.com')?.email : null
+      } else {
+        // ==========================================
+        // ② 全くの初回プレイ（未ログイン）の場合
+        // ==========================================
+        try {
+          const userCredential = await signInAnonymously(auth);
+          const newUser = userCredential.user;
+
+          useUserStore.getState().setUserData({
+            uid: newUser.uid,
+            isLoggedIn: true,
+            isLinked: false,
+            linkedEmail: null
+          });
+
+          useNetworkStore.getState().setMyUserId(newUser.uid);
+          await loadUserData(newUser.uid);
+          
+          console.log("新規ゲストプレイとしてログインしました");
+          resolve(newUser.uid);
+
+        } catch (error) {
+          console.error("ゲストログイン失敗:", error);
+          resolve(null);
+        }
+      }
     });
-
-    useNetworkStore.getState().setMyUserId(user.uid);
-    await loadUserData(user.uid);
-
-    console.log("ログイン・データ同期成功!");
-    return user.uid;
-  } catch (error) {
-    console.error("ログイン失敗:", error);
-    return null;
-  }
+  });
 };
 
-// ▼ 追加: 現在の匿名データをGoogleアカウントに紐づける
+// ▼ 現在の匿名データをGoogleアカウントに紐づける
 export const linkGoogleAccount = async () => {
     try {
         if (!auth.currentUser) return { success: false, message: "エラー：未ログイン状態です" };
@@ -47,7 +79,7 @@ export const linkGoogleAccount = async () => {
             linkedEmail: email
         });
         
-        // データベースにも連携済みフラグを立てる（オプション）
+        // データベースにも連携済みフラグを立てる
         await update(ref(db, `users/${user.uid}`), {
             isLinked: true,
             linkedEmail: email
