@@ -17,19 +17,16 @@ export const GameBoard = () => {
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
         roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
-        horrorMode, isDashPicking, isTrapPicking 
+        horrorMode, isDashPicking, isTrapTilePicking 
     } = useGameStore();
 
     const showSmoke = useUserStore(state => state.showSmoke);
     const autoScrollToPlayer = useUserStore(state => state.autoScrollToPlayer);
 
-    // モバイル判定（CSSのmaxHeightを上書きしないようインラインstyleを切り替え）
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
     const cp = players[turn];
 
-    // 【最適化】mapData.find()をO(n)→O(1)にするためのインデックスMap
-    // mapDataが変わった時だけ再生成する（ゲーム開始時のみ）
     const mapIndex = useMemo(() => buildMapIndex(mapData), [mapData]);
     const scale = useRef(1.0);
     const offset = useRef({ x: 0, y: 0 });
@@ -55,12 +52,8 @@ export const GameBoard = () => {
         });
     }, []);
 
-    // 【修正】smoothパラメータを追加。ホイール操作はsmooth=falseで呼ぶことで
-    // 0.45sトランジションの連鎖積み重なりを防ぎ、ズーム感度の過剰反応を解消する。
     const zoomAt = useCallback((px, py, delta, smooth = true) => {
         const prevScale = scale.current;
-        // ★修正: 盤面サイズを小さく保ったまま、カメラを近づけて巨大に表示させるために最大ズーム制限を 10.0 に引き上げ
-        // （最小ズーム制限も、盤面が小さくなったことに合わせて 0.2 などに戻します）
         const newScale = Math.min(10.0, Math.max(0.2, prevScale + delta));
         const ratio = newScale / prevScale;
         offset.current = { x: px - ratio * (px - offset.current.x), y: py - ratio * (py - offset.current.y) };
@@ -70,7 +63,6 @@ export const GameBoard = () => {
 
     const handleZoomBtn = (delta) => {
         if (!wrapperRef.current) return;
-        // ボタン操作はsmooth=true（デフォルト）でなめらかに動く
         zoomAt(wrapperRef.current.clientWidth / 2, wrapperRef.current.clientHeight / 2, delta);
     };
 
@@ -96,7 +88,7 @@ export const GameBoard = () => {
 
     const focusTile = useCallback((targetTileId) => {
         if (!wrapperRef.current || !mapData || mapData.length === 0 || gameOver) return;
-        const targetTile = mapIndex.get(targetTileId); // 【最適化】O(n)find→O(1)get
+        const targetTile = mapIndex.get(targetTileId); 
         if (!targetTile) return;
 
         const tileSize = MAP_CONFIG.TILE_SIZE;
@@ -278,9 +270,8 @@ export const GameBoard = () => {
             const state = useGameStore.getState();
             state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
             useGameStore.setState({ [npcMovePick]: tileId, npcMovePick: null });
-        } else if (isTrapPicking) {
+        } else if (isTrapTilePicking) {
             executeSetTrap(tileId);
-            useGameStore.setState({ isTrapPicking: false, selectedTrapType: null });
         } else if (isBranchPicking && currentBranchOptions.includes(tileId)) {
             executeMove(tileId);
         }
@@ -291,9 +282,6 @@ export const GameBoard = () => {
         const visible = new Set();
         const viewers = players.filter(p => !p.isCPU || p.id === turn);
 
-        // 【最適化】400回のBFSを「1人1回のBFS展開」に変更。
-        // 旧: 全プレイヤー × 全タイルでgetDistance → プレイヤー数×タイル数回のBFS
-        // 新: プレイヤーの位置から距離3以内をBFSで展開 → プレイヤー数回のBFSのみ
         viewers.forEach(v => {
             if (v.hp <= 0) return;
             const queue = [v.pos];
@@ -304,8 +292,8 @@ export const GameBoard = () => {
             while (head < queue.length) {
                 const currentId = queue[head++];
                 const currentDist = distMap.get(currentId);
-                if (currentDist >= 3) continue; // 距離3で打ち切り
-                const tile = mapIndex.get(currentId); // O(1)
+                if (currentDist >= 3) continue;
+                const tile = mapIndex.get(currentId);
                 if (!tile) continue;
                 for (const nextId of tile.next) {
                     if (!distMap.has(nextId)) {
@@ -324,14 +312,13 @@ export const GameBoard = () => {
     const pathPreview = useMemo(() => {
         const preview = { path1: new Set(), path2: new Set(), path3: new Set(), manholes: new Set() };
         if (!players || players.length === 0 || gameOver || !cp || cp.isCPU) return preview;
-        const pathData = getPathPreviewTiles(cp.pos, mapData, mapIndex); // 【最適化】mapIndex渡し
+        const pathData = getPathPreviewTiles(cp.pos, mapData, mapIndex);
         preview.path1 = pathData.depth1; preview.path2 = pathData.depth2; preview.path3 = pathData.depth3;
-        const curTile = mapIndex.get(cp.pos); // 【最適化】O(n)find→O(1)get
+        const curTile = mapIndex.get(cp.pos);
         if (curTile && curTile.type === 'manhole') preview.manholes = getManholeLinkedTiles(cp.pos, mapData);
         return preview;
     }, [players, gameOver, cp, mapData, mapIndex]);
 
-    // 【最適化】maxCol/maxRowをMapから直接計算（毎レンダリングのspread展開を排除）
     const { maxCol, maxRow } = useMemo(() => {
         let col = 0, row = 0;
         mapData.forEach(t => { if (t.col > col) col = t.col; if (t.row > row) row = t.row; });
@@ -352,12 +339,12 @@ export const GameBoard = () => {
                     🕵️ 移動先マスをタップしてください（タップでキャンセル）
                 </div>
             )}
-            {isTrapPicking && (
-                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(142,68,173,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ isTrapPicking: false, selectedTrapType: null }); useGameStore.getState().showToast("罠の設置をキャンセルしました"); }}>
+            {isTrapTilePicking && (
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(142,68,173,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ isTrapTilePicking: false, selectedTrapType: null }); useGameStore.getState().showToast("罠の設置をキャンセルしました"); }}>
                     🪤 罠を仕掛けるマスをタップしてください（タップでキャンセル）
                 </div>
             )}
-            {isBranchPicking && !npcMovePick && !isTrapPicking && (
+            {isBranchPicking && !npcMovePick && !isTrapTilePicking && (
                 <div id="branch-prompt" style={{ display: 'block' }}>🛣️ 光っているマスをタップして進む道を選んでください</div>
             )}
 
@@ -396,8 +383,6 @@ export const GameBoard = () => {
                 <div id="game-board-wrapper" ref={wrapperRef} style={{ 
                     overflow: 'hidden', 
                     width: '100%', 
-                    // モバイルはCSSの height:50dvh / max-height:500px に委ねる
-                    // PCのみ calc(100vh - 280px) のインラインを適用
                     maxHeight: isMobile ? undefined : 'calc(100vh - 280px)',
                     cursor: 'grab', userSelect: 'none', touchAction: 'none' 
                 }}>
@@ -425,7 +410,7 @@ export const GameBoard = () => {
                                 const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
                                 const isFog = visibleTiles && !visibleTiles.has(tile.id);
                                 const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
-                                const isClickable = npcMovePick !== null || isTrapPicking || isBranchTarget;
+                                const isClickable = npcMovePick !== null || isTrapTilePicking || isBranchTarget;
                                 const isDashTarget = isClickable && isDashPicking;
                                 
                                 let pathClass = '';
@@ -445,7 +430,6 @@ export const GameBoard = () => {
                                         isUncle={tile.id === unclePos} isAnimal={tile.id === animalPos}
                                         isYakuza={tile.id === yakuzaPos} isLoanshark={tile.id === loansharkPos}
                                         isFriend={tile.id === friendPos} pathClass={pathClass}
-                                        // 【最適化】NPC位置とplayersをpropsで渡してTile内のZustand購読(9個)を撤廃
                                         players={players}
                                         npcs={{ policePos, truckPos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos }}
                                         horrorMode={horrorMode}

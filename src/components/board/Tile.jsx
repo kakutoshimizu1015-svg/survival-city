@@ -220,9 +220,9 @@ export const Tile = React.memo(({
             {/* ▼ 罠の描画（透過して表示） */}
             {traps?.map((trap, idx) => {
                 if (trap.tileId !== tile.id) return null;
-                // 罠の持ち主か、スキャンONの探偵しか見えない
-                const isOwner = turnPlayer?.id === trap.ownerId;
-                const isVisible = isOwner || (isTrapScanActive && turnPlayer?.charType === 'detective');
+                
+                // ▼ スキャンボタンを押している（isTrapScanActive） 且つ 自分が仕掛けた罠（trap.ownerId === turnPlayer?.id）の場合のみ可視化
+                const isVisible = isTrapScanActive && trap.ownerId === turnPlayer?.id;
                 if (!isVisible) return null;
                 
                 const trapEmoji = trap.type === 'police' ? '👮' : trap.type === 'pitfall' ? '🕳️' : '📡';

@@ -132,19 +132,34 @@ export const actionDarkCure = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const targets = state.players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
+    
     if (targets.length === 0 || cp.ap < 2) return;
 
-    const target = targets[0];
+    if (targets.length === 1) {
+        executeDarkCure(targets[0].id);
+    } else {
+        useGameStore.setState({ isDarkCurePicking: true, darkCureTargets: targets.map(t => t.id) });
+    }
+};
+
+export const executeDarkCure = (targetId) => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    const target = state.players.find(p => p.id === targetId);
+
+    if (!target || cp.ap < 2) return;
+
     const healed = Math.min(30, 100 - target.hp);
     const fee = Math.min(5, Math.max(0, target.p));
 
     state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p + fee }));
-    // ▼ 対象に「治療済み」の毒ステータスを付与（3ターン継続）
     state.updatePlayer(target.id, p => ({ 
         hp: p.hp + healed, 
         p: p.p - fee, 
         statusEffects: { ...(p.statusEffects || {}), poison: 3 } 
     }));
+    
+    useGameStore.setState({ isDarkCurePicking: false, darkCureTargets: [] });
     logMsg(`🩺 毒入り治療！${target.name}のHPを${healed}回復させ、治療費${fee}Pを徴収！`);
     logMsg(`☠️ ${target.name}は「治療済み」となり、今後3ターンの間毒ダメージを受ける...`);
 };
@@ -212,12 +227,12 @@ export const actionSetTrap = () => {
         return;
     }
     
-    useGameStore.setState({ isTrapPicking: true });
+    useGameStore.setState({ isTrapTypePicking: true });
     logMsg(`🪤 罠の準備！仕掛ける種類を選んでください。`);
 };
 
 export const setupSetTrap = (trapType) => {
-    useGameStore.setState({ isTrapPicking: false, selectedTrapType: trapType });
+    useGameStore.setState({ isTrapTypePicking: false, isTrapTilePicking: true, selectedTrapType: trapType });
     logMsg(`🪤 罠を仕掛けるマスをタップしてください。`);
 };
 
@@ -231,6 +246,7 @@ export const executeSetTrap = (tileId) => {
     state.updateCurrentPlayer(p => ({ ap: p.ap - 2 }));
     useGameStore.setState(prev => ({
         traps: [...(prev.traps || []), { tileId, type, ownerId: cp.id }],
+        isTrapTilePicking: false,
         selectedTrapType: null
     }));
     

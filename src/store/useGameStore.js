@@ -14,8 +14,12 @@ const initialState = {
 
     traps: [],               // ▼ 探偵の罠データ { tileId, type, ownerId }
     isTrapScanActive: false, // ▼ 探偵の罠スキャン状態（長押しでtrue）
-    isTrapPicking: false,    // ▼ 罠設置モード
+    isTrapTypePicking: false, // ▼ 罠の「種類」を選ぶモード
+    isTrapTilePicking: false, // ▼ 罠を「設置するマス」を選ぶモード
     selectedTrapType: null,  // ▼ 選択中の罠タイプ
+    
+    isDarkCurePicking: false, // ▼ 毒入り治療の「ターゲット」を選ぶモード
+    darkCureTargets: [],      // ▼ ターゲット候補のID配列
     
     shopActive: false, shopStock: [], shopStockTurn: -1, shopCart: [],
     purchasedCards: {}, // ▼ 追加: ゲーム全体で各カードが何枚買われたかを記憶 { cardId: count }
