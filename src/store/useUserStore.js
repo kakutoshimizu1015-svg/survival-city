@@ -7,24 +7,25 @@ export const useUserStore = create(
       uid: null,
       isLoggedIn: false,
       
-      playerName: '名無しサバイバー',
-      friendCode: null, // ▼ 新規追加: 8桁の簡単なフレンドコード
+      // ▼ 追加: Google連携状態の管理
+      isLinked: false,
+      linkedEmail: null,
       
-      // ▼ 修正: 確実に受け取り日を記録する仕様に変更
-      lastClaimedDate: null, // 'YYYY-MM-DD'
+      playerName: '名無しサバイバー',
+      friendCode: null, 
+      
+      lastClaimedDate: null, 
       loginDays: 0,
       
       gachaPoints: 0,
       wins: 0,
       totalEarnedP: 0,
       
-      // ガチャ資産とスキンデータ
       gachaCans: 0,
       unlockedSkins: [],
-      equippedSkins: {}, // { charKey: skinId }
-      favoriteSkin: null, // ▼ 追加: プロフィール表示用のお気に入りスキン { charKey, skinId }
+      equippedSkins: {}, 
+      favoriteSkin: null, 
       
-      // スタッツ（累計データ）
       totalTilesMoved: 0,
       totalCardsUsed: 0,
       totalCansCollected: 0,
@@ -32,21 +33,18 @@ export const useUserStore = create(
       totalPSpentAtShop: 0,
       npcEncounters: { police: 0, uncle: 0, yakuza: 0, loanshark: 0, friend: 0 },
       
-      // 永続化する環境設定
       showSmoke: true,
       liteMode: false,
-      showTileLabels: false, // ▼ 追加: マス目ラベルの表示トグル
+      showTileLabels: false, 
       volume: 1.0,
       layoutMode: 'auto',
       showSkipButton: false,
       autoScrollToPlayer: true,
 
-      // フレンド・招待機能用ステート
       friends: [], 
       friendRequests: [],
       invites: [],
 
-      // メール機能用ステート
       claimedMails: [], 
       inbox: [],        
 
@@ -63,7 +61,6 @@ export const useUserStore = create(
           }
       })),
 
-      // リロードバグ対策。計算結果を確実に反映させるため状態をディープコピーして更新
       addGachaAssets: (cansAmount, pointsAmount) => set((state) => {
           const newCans = Math.max(0, (state.gachaCans || 0) + cansAmount);
           const newPoints = Math.max(0, (state.gachaPoints || 0) + pointsAmount);
@@ -71,7 +68,6 @@ export const useUserStore = create(
       }),
 
       unlockMultipleSkins: (skinIds) => set((state) => {
-          // 重複を防ぎながら追加
           const currentSkins = state.unlockedSkins || [];
           const newSkins = skinIds.filter(id => !currentSkins.includes(id));
           return { unlockedSkins: [...currentSkins, ...newSkins] };
@@ -81,16 +77,18 @@ export const useUserStore = create(
           equippedSkins: { ...state.equippedSkins, [charKey]: skinId }
       })),
       
-      // ▼ 追加: お気に入りスキンのセット関数
       setFavoriteSkin: (skinData) => set({ favoriteSkin: skinData })
     }),
     {
       name: 'homeless-survival-user-storage',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
+        uid: state.uid,             // ▼ 追加: 永続化にUIDも含める（連携判定のため）
+        isLinked: state.isLinked,   // ▼ 追加
+        linkedEmail: state.linkedEmail, // ▼ 追加
         playerName: state.playerName,
-        friendCode: state.friendCode, // ▼ 新規追加
-        lastClaimedDate: state.lastClaimedDate, // ▼ 修正: ここで受け取り日をブラウザに永続保存
+        friendCode: state.friendCode, 
+        lastClaimedDate: state.lastClaimedDate, 
         loginDays: state.loginDays,
         gachaPoints: state.gachaPoints,
         wins: state.wins,
@@ -99,7 +97,7 @@ export const useUserStore = create(
         gachaCans: state.gachaCans,
         unlockedSkins: state.unlockedSkins,
         equippedSkins: state.equippedSkins,
-        favoriteSkin: state.favoriteSkin, // ▼ 追加: 次回起動時も保持する
+        favoriteSkin: state.favoriteSkin, 
         
         totalTilesMoved: state.totalTilesMoved,
         totalCardsUsed: state.totalCardsUsed,
@@ -110,7 +108,7 @@ export const useUserStore = create(
         
         showSmoke: state.showSmoke,
         liteMode: state.liteMode,
-        showTileLabels: state.showTileLabels, // ▼ 追加: 次回起動時もラベル設定を保持
+        showTileLabels: state.showTileLabels, 
         volume: state.volume,
         layoutMode: state.layoutMode,
         showSkipButton: state.showSkipButton,
