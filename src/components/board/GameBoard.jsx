@@ -58,8 +58,8 @@ export const GameBoard = () => {
     // 0.45sトランジションの連鎖積み重なりを防ぎ、ズーム感度の過剰反応を解消する。
     const zoomAt = useCallback((px, py, delta, smooth = true) => {
         const prevScale = scale.current;
-        // ★修正: マップ巨大化に対応するため、最小ズーム制限を 0.02 に緩和
-        const newScale = Math.min(3.0, Math.max(0.02, prevScale + delta));
+        // ★修正: マップ巨大化に対応するため、最小ズーム制限を 0.005 に緩和
+        const newScale = Math.min(3.0, Math.max(0.005, prevScale + delta));
         const ratio = newScale / prevScale;
         offset.current = { x: px - ratio * (px - offset.current.x), y: py - ratio * (py - offset.current.y) };
         scale.current = newScale;

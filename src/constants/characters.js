@@ -474,8 +474,8 @@ export const charImages = {
 // ▼ ゲーム内設定とUI定数
 // =========================================================
 export const TOKEN_CONFIG = {
-    player: { scaleMultiplier: 1.15, imageSize: 350, emojiBgSize: 64, emojiFontSize: 34, nameFontSize: 12, offsetRadius: 120 },
-    npc: { baseSize: 320, truckSize: 350, truckOpacity: 0.65, policeSize: 300, uncleSize: 330, yakuzaSize: 330, loansharkSize: 330, friendSize: 330, animalSize: 320, offsetRadius: 120 }
+    player: { scaleMultiplier: 1.15, imageSize: 650, emojiBgSize: 520, emojiFontSize: 276, nameFontSize: 97, offsetRadius: 280 },
+    npc: { baseSize: 600, truckSize: 650, truckOpacity: 0.65, policeSize: 560, uncleSize: 600, yakuzaSize: 600, loansharkSize: 600, friendSize: 600, animalSize: 600, offsetRadius: 280 }
 };
 
 export const charEmoji = { athlete:'🏃', sales:'💼', survivor:'🌿', yankee:'👊', hacker:'💻', musician:'🎸', doctor:'🩺', gambler:'🎲', detective:'🕵️' };
