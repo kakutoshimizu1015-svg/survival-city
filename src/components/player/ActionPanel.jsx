@@ -5,7 +5,7 @@ import { deckData } from '../../constants/cards';
 import { ClayButton } from '../common/ClayButton';
 // ▼ 修正: getOccupyCost をインポート
 import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, actionManhole, getOccupyCost } from '../../game/actions';
-import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove } from '../../game/skills';
+import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap } from '../../game/skills';
 
 const ActionBtn = ({ action, condition, failMsg, highlight, color, style, children, isMyTurn, isBusy }) => (
     <ClayButton 
@@ -108,10 +108,31 @@ const canDoJob = isMyTurn && diceRolled && hasAP(3) && tileType === 'job' && !is
             {cp.charType === 'survivor' && <ActionBtn action={actionCamp} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="green" isMyTurn={isMyTurn} isBusy={isBusy}>⛺ 野宿 (2AP)</ActionBtn>}
             {cp.charType === 'sales' && othersOnTile.length > 0 && <ActionBtn action={actionSalesVisit} condition={hasAP(2) && cp.hand.length > 0 && isMyTurn && !isBusy} failMsg="AP不足か手札がありません" style={{borderColor:'#f39c12'}} isMyTurn={isMyTurn} isBusy={isBusy}>📦 訪問販売 (2AP)</ActionBtn>}
             {cp.charType === 'hacker' && <ActionBtn action={actionHack} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" color="blue" isMyTurn={isMyTurn} isBusy={isBusy}>💻 ハッキング (3AP)</ActionBtn>}
-            {cp.charType === 'musician' && <ActionBtn action={actionConcert} condition={hasAP(4) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#9b59b6'}} isMyTurn={isMyTurn} isBusy={isBusy}>🎸 路上ライブ (4AP)</ActionBtn>}
-            {cp.charType === 'doctor' && othersOnTile.length > 0 && <ActionBtn action={actionDarkCure} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="red" isMyTurn={isMyTurn} isBusy={isBusy}>🩺 闇診療 (2AP)</ActionBtn>}
-            {cp.charType === 'gambler' && othersOnTile.length > 0 && <ActionBtn action={actionGamble} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#f1c40f'}} isMyTurn={isMyTurn} isBusy={isBusy}>🎲 イカサマ勝負 (2AP)</ActionBtn>}
-            {cp.charType === 'detective' && <ActionBtn action={actionNpcMove} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#95a5a6'}} isMyTurn={isMyTurn} isBusy={isBusy}>🕵️ 情報操作 (3AP)</ActionBtn>}
+            {cp.charType === 'musician' && <ActionBtn action={actionConcert} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#9b59b6'}} isMyTurn={isMyTurn} isBusy={isBusy}>🎸 アンコール (3AP)</ActionBtn>}
+            {cp.charType === 'doctor' && othersOnTile.length > 0 && <ActionBtn action={actionDarkCure} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="red" isMyTurn={isMyTurn} isBusy={isBusy}>🩺 毒入り治療 (2AP)</ActionBtn>}
+            {cp.charType === 'gambler' && <ActionBtn action={actionGamble} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#f1c40f'}} isMyTurn={isMyTurn} isBusy={isBusy}>🎲 ドロー勝負 (3AP)</ActionBtn>}
+            
+            {/* ▼ 探偵のスキルボタン（情報操作＆罠の設置）と長押しスキャン */}
+            {cp.charType === 'detective' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                        <ActionBtn action={actionNpcMove} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" style={{flex: 1, borderColor:'#95a5a6'}} isMyTurn={isMyTurn} isBusy={isBusy}>🕵️ 情報操作(3AP)</ActionBtn>
+                        <ActionBtn action={actionSetTrap} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" style={{flex: 1, borderColor:'#95a5a6'}} isMyTurn={isMyTurn} isBusy={isBusy}>🪤 罠の設置(2AP)</ActionBtn>
+                    </div>
+                    <button
+                        onPointerDown={() => useGameStore.setState({ isTrapScanActive: true })}
+                        onPointerUp={() => useGameStore.setState({ isTrapScanActive: false })}
+                        onPointerLeave={() => useGameStore.setState({ isTrapScanActive: false })}
+                        style={{ 
+                            width: '100%', padding: '10px', borderRadius: '8px', border: '2px solid #4834d4',
+                            background: 'rgba(72,52,212,0.2)', color: '#fff', fontWeight: 'bold', cursor: 'pointer',
+                            userSelect: 'none', WebkitUserSelect: 'none', touchAction: 'none' // 長押し時のテキスト選択・メニューを防止
+                        }}
+                    >
+                        👁️ 長押しで罠スキャン
+                    </button>
+                </div>
+            )}
 
             <div style={{ flexGrow: 1, minHeight: '5px' }}></div>
             
@@ -128,28 +149,3 @@ const canDoJob = isMyTurn && diceRolled && hasAP(3) && tileType === 'job' && !is
         </div>
     );
 };
-// 探偵のターンの場合のみ表示するボタン
-{currentPlayer.charType === 'detective' && (
-    <div style={{ display: 'flex', gap: '8px' }}>
-        {/* 長押しスキャンボタン */}
-        <button
-            onPointerDown={() => useGameStore.setState({ isTrapScanActive: true })}
-            onPointerUp={() => useGameStore.setState({ isTrapScanActive: false })}
-            onPointerLeave={() => useGameStore.setState({ isTrapScanActive: false })}
-            style={{ 
-                userSelect: 'none', WebkitUserSelect: 'none', touchAction: 'none', // 長押し時のテキスト選択・メニューを防止
-                background: '#4834d4', color: '#fff' 
-            }}
-        >
-            👁️ 長押しで罠スキャン
-        </button>
-
-        {/* 罠の設置ボタン */}
-        <button 
-            onClick={() => actionSetTrap()} 
-            disabled={currentPlayer.ap < 2}
-        >
-            🪤 罠の設置 (2AP)
-        </button>
-    </div>
-)}
