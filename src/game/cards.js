@@ -16,7 +16,12 @@ export const actionUseCard = (handIndex, cardId) => {
 
     const newHand = [...cp.hand];
     newHand.splice(handIndex, 1);
-    state.updateCurrentPlayer(p => ({ ap: p.ap - apCost, hand: newHand }));
+    
+    // ▼ 修正: 状態更新を1回にまとめるためのオブジェクトを作成（ここで即座に更新しない）
+    let playerUpdates = {
+        ap: cp.ap - apCost,
+        hand: newHand
+    };
 
     logMsg(`🎴 「${cardData.name}」を使用！`);
     
@@ -28,7 +33,6 @@ export const actionUseCard = (handIndex, cardId) => {
     if (cardData.type === 'weapon') {
         const playerTargets = players.filter(op => op.id !== cp.id && op.hp > 0);
         
-        // ▼ 武器の対象にNPCを追加
         const npcs = [
             { id: 'npc_police', name: 'パトカー', pos: state.policePos, hp: state.policeHp, type: 'npc' },
             { id: 'npc_uncle', name: '厄介なおじさん', pos: state.unclePos, hp: state.uncleHp, type: 'npc' },
@@ -38,14 +42,17 @@ export const actionUseCard = (handIndex, cardId) => {
         ].filter(n => n.hp > 0 && n.pos !== 999);
 
         const targets = [...playerTargets, ...npcs];
+        // ▼ 修正: 武器の場合はここで更新内容を適用して終了
+        state.updateCurrentPlayer(playerUpdates);
         useGameStore.setState({ weaponArcData: { cardData, targets, attacker: cp } });
         return;
     }
 
+    // ▼ 修正: 各カードの効果を `playerUpdates` オブジェクトにマージしていく
     switch (cardId) {
-        case 0: state.updateCurrentPlayer(p => ({ stealth: true })); logMsg(`🔵 ステルス発動！次の敵をやり過ごす`); break;
-        case 1: state.updateCurrentPlayer(p => ({ rainGear: true })); logMsg(`🌂 雨具装備！次の雨ペナルティを無効化`); break;
-        case 2: state.updateCurrentPlayer(p => ({ hasID: true, p: p.p + 1 })); logMsg(`🪪 身分証！+1P＆次の警察回避`); break;
+        case 0: playerUpdates.stealth = true; logMsg(`🔵 ステルス発動！次の敵をやり過ごす`); break;
+        case 1: playerUpdates.rainGear = true; logMsg(`🌂 雨具装備！次の雨ペナルティを無効化`); break;
+        case 2: playerUpdates.hasID = true; playerUpdates.p = cp.p + 1; logMsg(`🪪 身分証！+1P＆次の警察回避`); break;
         case 3: 
             const others1 = players.filter(t => t.id !== cp.id);
             if(others1.length > 0) {
@@ -60,7 +67,7 @@ export const actionUseCard = (handIndex, cardId) => {
                 const tgt = others2[Math.floor(Math.random() * others2.length)];
                 const stolen = Math.min(2, tgt.p);
                 state.updatePlayer(tgt.id, p => ({ p: p.p - stolen }));
-                state.updateCurrentPlayer(p => ({ p: p.p + stolen }));
+                playerUpdates.p = cp.p + stolen;
                 logMsg(`🤑 缶泥棒！${tgt.name}から${stolen}P奪取！`);
             }
             break;
@@ -80,24 +87,24 @@ export const actionUseCard = (handIndex, cardId) => {
                 } else { logMsg(`🚩 奪える領土がありませんでした`); }
             } else { logMsg(`🚩 領土挑戦(出目${dice})失敗...`); }
             break;
-        case 6: state.updateCurrentPlayer(p => ({ p: p.p + 5, bonusAP: (p.bonusAP || 0) + 2 })); logMsg(`🤝 支援面談！+5P＆次回AP+2！`); break;
-        case 7: state.updateCurrentPlayer(p => ({ p: p.p + 3 })); logMsg(`🍲 炊き出し！+3P！`); break;
-        case 8: state.updateCurrentPlayer(p => ({ maxHand: p.maxHand + 2, equip: {...p.equip, backpack: true} })); logMsg(`🎒 リュック装備！手札上限+2`); break;
+        case 6: playerUpdates.p = cp.p + 5; playerUpdates.bonusAP = (cp.bonusAP || 0) + 2; logMsg(`🤝 支援面談！+5P＆次回AP+2！`); break;
+        case 7: playerUpdates.p = cp.p + 3; logMsg(`🍲 炊き出し！+3P！`); break;
+        case 8: playerUpdates.maxHand = cp.maxHand + 2; playerUpdates.equip = {...cp.equip, backpack: true}; logMsg(`🎒 リュック装備！手札上限+2`); break;
         case 9:
-            if(Math.random() > 0.5) { state.updateCurrentPlayer(p => ({ p: p.p + 3 })); logMsg(`🔮 運勢良し！+3P`); }
-            else { state.updateCurrentPlayer(p => ({ p: Math.max(0, p.p - 3) })); logMsg(`🔮 凶...-3P`); }
+            if(Math.random() > 0.5) { playerUpdates.p = cp.p + 3; logMsg(`🔮 運勢良し！+3P`); }
+            else { playerUpdates.p = Math.max(0, cp.p - 3); logMsg(`🔮 凶...-3P`); }
             break;
-        case 10: state.updateCurrentPlayer(p => ({ p: p.p + 2 })); logMsg(`🐱 野良猫の導き！+2P`); break;
+        case 10: playerUpdates.p = cp.p + 2; logMsg(`🐱 野良猫の導き！+2P`); break;
         case 11:
-            if(Math.random() > 0.5) { state.updateCurrentPlayer(p => ({ p: p.p + 6 })); logMsg(`💼 密かなバイト成功！+6P`); }
-            else { state.updateCurrentPlayer(p => ({ p: Math.max(0, p.p - 3) })); logMsg(`💼 密かなバイト失敗... -3P`); }
+            if(Math.random() > 0.5) { playerUpdates.p = cp.p + 6; logMsg(`💼 密かなバイト成功！+6P`); }
+            else { playerUpdates.p = Math.max(0, cp.p - 3); logMsg(`💼 密かなバイト失敗... -3P`); }
             break;
         case 12:
             players.forEach(op => {
                 if(op.id === cp.id) return;
                 if(op.reaction === 'reflect') {
                     state.updatePlayer(op.id, p => ({ reaction: null }));
-                    state.updateCurrentPlayer(p => ({ p: Math.floor(p.p / 2) }));
+                    playerUpdates.p = Math.floor(cp.p / 2);
                     logMsg(`🤝 ${op.name}の裏取引で大暴落を反射された！`);
                 } else {
                     state.updatePlayer(op.id, p => ({ p: Math.floor(p.p / 2) }));
@@ -111,43 +118,47 @@ export const actionUseCard = (handIndex, cardId) => {
                 const top = richer.reduce((a,b) => a.p > b.p ? a : b);
                 if (top.reaction === 'reflect') {
                     state.updatePlayer(top.id, p => ({ reaction: null }));
-                    state.updateCurrentPlayer(p => ({ p: Math.max(0, p.p - 10) }));
+                    playerUpdates.p = Math.max(0, cp.p - 10);
                     logMsg(`🤝 ${top.name}の裏取引で下剋上を反射され10P失った！`);
                 } else {
                     const steal = Math.min(15, Math.floor((top.p - cp.p) * 0.3));
                     state.updatePlayer(top.id, p => ({ p: p.p - steal }));
-                    state.updateCurrentPlayer(p => ({ p: p.p + steal }));
+                    playerUpdates.p = cp.p + steal;
                     logMsg(`🔥 下剋上！${top.name}から${steal}P奪取！`);
                 }
             } else { logMsg(`🔥 自分がトップなので何も起きない...`); }
             break;
         case 14:
-            if(Math.random() < 0.1) { state.updateCurrentPlayer(p => ({ p: p.p + 15 })); logMsg(`🎉 宝くじ当選！+15P！`); }
+            if(Math.random() < 0.1) { playerUpdates.p = cp.p + 15; logMsg(`🎉 宝くじ当選！+15P！`); }
             else { logMsg(`📄 宝くじハズレ...`); }
             break;
-        case 15: state.updateCurrentPlayer(p => ({ ap: p.ap + 5 })); logMsg(`⚡ エナドリ！即座にAP+5`); break;
-        case 16: state.updateCurrentPlayer(p => ({ bonusAP: (p.bonusAP || 0) + 5 })); logMsg(`🛹 スケボー！次回ダイスAP+5`); break;
-        case 24: state.updateCurrentPlayer(p => ({ equip: {...p.equip, bicycle: true}, equipTimer: {...(p.equipTimer||{}), bicycle: 5} })); logMsg(`🚲 自転車装備！5ターンAP+2`); break;
-        case 25: state.updateCurrentPlayer(p => ({ equip: {...p.equip, shoes: true} })); logMsg(`👢 安全靴装備！ゴミ漁りが1APに`); break;
-        case 26: state.updateCurrentPlayer(p => ({ equip: {...p.equip, cart: true}, equipTimer: {...(p.equipTimer||{}), cart: 5} })); logMsg(`🛒 リヤカー装備！5ターン陣地収入2倍`); break;
-        case 27: state.updateCurrentPlayer(p => ({ equip: {...p.equip, shield: true} })); logMsg(`🛡️ 段ボールの盾装備！50%でダメージ半減`); break;
-        case 28: state.updateCurrentPlayer(p => ({ equip: {...p.equip, helmet: true} })); logMsg(`🪖 ヘルメット装備！次のダメージ確実半減`); break;
-        case 29: state.updateCurrentPlayer(p => ({ equip: {...p.equip, doll: true} })); logMsg(`🎎 身代わり人形装備！NPC妨害を1回無効`); break;
-        case 35: state.updateCurrentPlayer(p => ({ reaction: 'block' })); logMsg(`⚖️ 弁護士の盾！次の攻撃/カツアゲを無効化`); break;
-        case 36: state.updateCurrentPlayer(p => ({ reaction: 'reflect' })); logMsg(`🤝 裏取引！次の大暴落/下剋上を反射`); break;
-        case 37: state.updateCurrentPlayer(p => ({ reaction: 'counter' })); logMsg(`🔄 反撃の一撃！次のダメージを相手に返す`); break;
+        case 15: playerUpdates.ap = playerUpdates.ap + 5; logMsg(`⚡ エナドリ！即座にAP+5`); break;
+        case 16: playerUpdates.bonusAP = (cp.bonusAP || 0) + 5; logMsg(`🛹 スケボー！次回ダイスAP+5`); break;
+        case 24: playerUpdates.equip = {...cp.equip, bicycle: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), bicycle: 5}; logMsg(`🚲 自転車装備！5ターンAP+2`); break;
+        case 25: playerUpdates.equip = {...cp.equip, shoes: true}; logMsg(`👢 安全靴装備！ゴミ漁りが1APに`); break;
+        case 26: playerUpdates.equip = {...cp.equip, cart: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), cart: 5}; logMsg(`🛒 リヤカー装備！5ターン陣地収入2倍`); break;
+        case 27: playerUpdates.equip = {...cp.equip, shield: true}; logMsg(`🛡️ 段ボールの盾装備！50%でダメージ半減`); break;
+        case 28: playerUpdates.equip = {...cp.equip, helmet: true}; logMsg(`🪖 ヘルメット装備！次のダメージ確実半減`); break;
+        case 29: playerUpdates.equip = {...cp.equip, doll: true}; logMsg(`🎎 身代わり人形装備！NPC妨害を1回無効`); break;
+        case 35: playerUpdates.reaction = 'block'; logMsg(`⚖️ 弁護士の盾！次の攻撃/カツアゲを無効化`); break;
+        case 36: playerUpdates.reaction = 'reflect'; logMsg(`🤝 裏取引！次の大暴落/下剋上を反射`); break;
+        case 37: playerUpdates.reaction = 'counter'; logMsg(`🔄 反撃の一撃！次のダメージを相手に返す`); break;
         default:
             if (cardData.type === 'heal') {
                 if (cardData.risk > 0 && Math.random() < 0.5) {
-                    state.updateCurrentPlayer(p => ({ hp: Math.max(1, p.hp - cardData.risk) }));
+                    playerUpdates.hp = Math.max(1, cp.hp - cardData.risk);
                     logMsg(`🤢 ${cardData.name}...食中毒！${cardData.risk}ダメージ！`);
                 } else {
-                    state.updateCurrentPlayer(p => ({ hp: Math.min(100, p.hp + cardData.heal), ap: p.ap + (cardData.apBonus || 0) }));
+                    playerUpdates.hp = Math.min(100, cp.hp + cardData.heal);
+                    playerUpdates.ap = playerUpdates.ap + (cardData.apBonus || 0);
                     logMsg(`💊 ${cardData.name}でHP+${cardData.heal}回復！`);
                 }
             }
             break;
     }
+
+    // ▼ 修正: 最後に1回だけ状態を更新する（アトミックな更新）
+    state.updateCurrentPlayer(playerUpdates);
 };
 
 export const actionDiscardCard = (handIndex) => {
