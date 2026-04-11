@@ -30,7 +30,7 @@ export const StatusPanel = () => {
 
             {/* アバター部分をCharImageに差し替え */}
             <div className="avatar-large" style={{ borderColor: currentPlayer.color, overflow: 'hidden', padding: 0 }}>
-                <CharImage charType={currentPlayer.charType} size={68} />
+                <CharImage charType={currentPlayer.charType} skinId={currentPlayer.skinId} size={68} />
             </div>
 
             <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#f1c40f', marginBottom: '5px', textAlign: 'center' }}>

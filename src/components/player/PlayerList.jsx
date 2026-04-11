@@ -122,7 +122,7 @@ export const PlayerList = () => {
                             title={`${p.name}のキャラ詳細を表示`}
                         >
                             <div className="avatar-small-clay" style={{ borderColor: p.color, overflow: 'hidden', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <CharImage charType={p.charType} size={32} />
+                                <CharImage charType={p.charType} skinId={p.skinId} size={32} />
                             </div>
                             
                             <div style={{ fontSize: '10px', fontWeight: 'bold', lineHeight: '1.3', overflow: 'hidden', flex: 1 }}>
