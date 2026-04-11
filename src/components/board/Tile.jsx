@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
-import { getDepthScale, getCircularOffset } from '../../utils/gameLogic';
+import { getCircularOffset } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
 import { MAP_CONFIG } from '../../constants/maps';
@@ -125,7 +125,6 @@ export const Tile = React.memo(({
 
     const iconStr = tile.type === 'can' ? '🥫' : tile.type === 'trash' ? '🗑️' : tile.type === 'shop' ? '🛒' : tile.type === 'job' ? '💼' : tile.type === 'koban' ? '👮' : tile.type === 'event' ? '❗' : tile.type === 'exchange' ? '💰' : tile.type === 'shelter' ? '🏕️' : tile.type === 'center' ? '🏥' : '';
     const isJinchi = owner !== null && owner !== undefined;
-    const ds = getDepthScale(tile.row, maxRow);
 
     // 動的にオフセットを計算する関数に置き換え
     const getNpcStyle = (npcId, isTruck = false) => {
@@ -160,8 +159,6 @@ export const Tile = React.memo(({
                 gridRow: tile.row, 
                 cursor: isClickable ? 'pointer' : 'default', 
                 position: 'relative',
-                transform: `scale(${ds})`,
-                transformOrigin: 'center center',
                 opacity: (isFog && !isHorrorTruckTile) ? 0.2 : 1,
                 zIndex: isHorrorTruckTile ? 9999 : tile.row,
 

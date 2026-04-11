@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { getDepthScale } from '../../utils/gameLogic';
 import { MAP_CONFIG } from '../../constants/maps';
 
 // React.memo で親(GameBoard)からの不要な再レンダリングをブロック
@@ -73,25 +72,19 @@ export const BoardPaths = React.memo(() => {
                         const ux = dx / len;
                         const uy = dy / len;
 
-                        const f_ds = getDepthScale(tile.row, maxRow);
-                        const t_ds = getDepthScale(nextTile.row, maxRow);
-
                         const gapBase = TILE * 0.05;
 
-                        const x1 = fx + ux * ((R * f_ds) + gapBase); 
-                        const y1 = fy + uy * ((R * f_ds) + gapBase);
-                        const x2 = tx - ux * ((R * t_ds) + gapBase * 2.5);
-                        const y2 = ty - uy * ((R * t_ds) + gapBase * 2.5);
-
-                        const avgRow = (tile.row + nextTile.row) / 2;
-                        const ds = getDepthScale(avgRow, maxRow);
+                        const x1 = fx + ux * (R + gapBase); 
+                        const y1 = fy + uy * (R + gapBase);
+                        const x2 = tx - ux * (R + gapBase * 2.5);
+                        const y2 = ty - uy * (R + gapBase * 2.5);
 
                         return (
                             <line
                                 key={`path-${tile.id}-${nextId}`}
                                 x1={x1} y1={y1} x2={x2} y2={y2}
                                 stroke="rgba(0,0,0,0.85)"
-                                strokeWidth={Math.max(1.5, BASE_STROKE_WIDTH * ds)}
+                                strokeWidth={Math.max(1.5, BASE_STROKE_WIDTH)}
                                 strokeLinecap="round"
                                 markerEnd="url(#arr-bk)"
                             />

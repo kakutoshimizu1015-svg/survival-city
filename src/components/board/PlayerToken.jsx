@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
-import { getDepthScale, getCircularOffset } from '../../utils/gameLogic';
+import { getCircularOffset } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
 import { MAP_CONFIG } from '../../constants/maps';
@@ -57,8 +57,7 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const currentTile = mapData.find(t => t.id === player.pos) || mapData[0];
     const zIndexBase = 50 + currentTile.row * 10;
     
-    const baseScale = getDepthScale(currentTile.row, maxRow);
-    const ds = baseScale * TOKEN_CONFIG.player.scaleMultiplier;
+    const ds = TOKEN_CONFIG.player.scaleMultiplier;
 
     const tokenWidth = TOKEN_CONFIG.player.imageSize;
     const tokenHeight = TOKEN_CONFIG.player.imageSize;
