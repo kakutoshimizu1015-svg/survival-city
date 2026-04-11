@@ -544,5 +544,5 @@ export const DiceOverlayInner = ({ diceAnim }) => {
 export const DiceOverlay = () => {
   const diceAnim = useGameStore(state => state.diceAnim);
   if (!diceAnim.active) return null;
-  return <DiceOverlayInner key={Date.now()} diceAnim={diceAnim} />;
+  return <DiceOverlayInner diceAnim={diceAnim} />;
 };

@@ -89,6 +89,11 @@ export const actionRollDice = async (isCpuCall = false) => {
     }
     
     playSfx('success'); logMsg(`<span style="color:${cp.color}">${cp.name}</span>は${totalAP}AP獲得！`);
+
+    // ▼ 追加: CPUのターンの場合は、サイコロ演出が完全に終わるまで次の行動を待たせる
+    if (isCpuCall) {
+        await new Promise(r => setTimeout(r, 4800)); // パターンAのアニメーション長さに合わせて待機
+    }
 };
 
 export const actionMove = () => {
