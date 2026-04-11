@@ -282,7 +282,7 @@ const PHASE_MAP = {
 //  → useEffect([]) が「アニメーション開始」と同義になる
 // ─────────────────────────────────────────────
 
-export const DiceOverlayInner = ({ diceAnim }) => {
+export const DiceOverlayInner = ({ diceAnim, onClose }) => {
   const trayRef  = useRef(null);
   const flashRef = useRef(null);
   const areaRef  = useRef(null);
@@ -316,12 +316,14 @@ export const DiceOverlayInner = ({ diceAnim }) => {
     setPhase('idle');
     setResult({ text: txt, color: isDbl ? '#d4a020' : '#eee', bonus, visible: true });
 
-    // 結果を読めるように1.2秒だけ待ってから閉じる
+    // 結果を読めるように1秒だけ待ってから閉じる
     setTimeout(() => {
-      useGameStore.setState(prev => ({
-        diceAnim: { ...prev.diceAnim, active: false },
-      }));
-    }, 1200);
+      if (onClose) {
+        onClose();
+      } else {
+        useGameStore.setState(prev => ({ diceAnim: { ...prev.diceAnim, active: false } }));
+      }
+    }, 1000);
   };
 
   // タイマー管理（コンポーネント破棄時に全クリア）
@@ -451,15 +453,19 @@ export const DiceOverlayInner = ({ diceAnim }) => {
       })
       .then(() => {
         if (isSkippedRef.current) return; // ▼追加
-        useGameStore.setState(prev => ({
-          diceAnim: { ...prev.diceAnim, active: false },
-        }));
+        if (onClose) {
+          onClose();
+        } else {
+          useGameStore.setState(prev => ({ diceAnim: { ...prev.diceAnim, active: false } }));
+        }
       })
       .catch(err => {
         console.warn('[DiceOverlay]', err);
-        useGameStore.setState(prev => ({
-          diceAnim: { ...prev.diceAnim, active: false },
-        }));
+        if (onClose) {
+          onClose();
+        } else {
+          useGameStore.setState(prev => ({ diceAnim: { ...prev.diceAnim, active: false } }));
+        }
       });
 
     // クリーンアップ
@@ -586,6 +592,25 @@ export const DiceOverlayInner = ({ diceAnim }) => {
 
 export const DiceOverlay = () => {
   const diceAnim = useGameStore(state => state.diceAnim);
-  if (!diceAnim.active) return null;
-  return <DiceOverlayInner diceAnim={diceAnim} />;
+  const roundCount = useGameStore(state => state.roundCount);
+  const turn = useGameStore(state => state.turn);
+  const [skippedSig, setSkippedSig] = useState(null);
+
+  // ラウンド、ターン、出目から「このターンのサイコロ」の一意な識別子を作る
+  const currentSig = `R${roundCount}-T${turn}-${diceAnim?.d1}-${diceAnim?.d2}`;
+
+  if (!diceAnim?.active) return null;
+  
+  // オンラインマルチプレイ時、ホストから「active: true」が遅れて送られてきても、
+  // 既にスキップ済みのロールなら無視して再表示を防ぐ
+  if (skippedSig === currentSig) return null;
+
+  const handleClose = () => {
+    setSkippedSig(currentSig);
+    useGameStore.setState(prev => ({
+      diceAnim: { ...prev.diceAnim, active: false }
+    }));
+  };
+
+  return <DiceOverlayInner diceAnim={diceAnim} onClose={handleClose} />;
 };
