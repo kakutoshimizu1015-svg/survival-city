@@ -37,7 +37,17 @@ export const actionRollDice = async (isCpuCall = false) => {
     let totalAP = d1 + d2 + d3;
     const isZorome = d1 === d2;
     if (isZorome) totalAP *= 2; 
-    if (cp.equip?.bicycle) totalAP += 2; 
+    if (cp.equip?.bicycle) totalAP += 2;
+
+    // ✅ Fix2: ゴミ漁り失敗・補導によるAPペナルティを適用して消費
+    if (cp.penaltyAP > 0) {
+        const penalty = cp.penaltyAP;
+        totalAP = Math.max(0, totalAP - penalty);
+        state.updateCurrentPlayer(p => ({ penaltyAP: 0 }));
+        logMsg(`<span style="color:#e74c3c">🚓 ペナルティ発動！AP-${penalty}</span>`);
+        state.addEventPopup(cp.id, "🚓", `AP-${penalty}ペナルティ`, "前回の補導の影響", "bad");
+        playSfx('fail');
+    }
 
     if (isZorome && cp.charType === 'gambler') {
         const heal = Math.min(10, 100 - cp.hp);
@@ -332,7 +342,16 @@ export const actionEndTurn = async () => {
         if (newEquip.bicycle) { newTimer.bicycle = (newTimer.bicycle || 5) - 1; if (newTimer.bicycle <= 0) { newEquip.bicycle = false; logMsg(`🚲 自転車が壊れた！`); } }
         if (newEquip.cart) { newTimer.cart = (newTimer.cart || 5) - 1; if (newTimer.cart <= 0) { newEquip.cart = false; logMsg(`🛒 リヤカーが壊れた！`); } }
 
-        state.updateCurrentPlayer(p => ({ ap: 0, stealth: false, _katsuage: 0, equip: newEquip, equipTimer: newTimer, cannotMove: false })); 
+        state.updateCurrentPlayer(p => ({
+            ap: 0,
+            stealth: false,
+            _katsuage: 0,
+            equip: newEquip,
+            equipTimer: newTimer,
+            cannotMove: false,
+            // ✅ Fix1: 復活後の無敵ターンをターン終了ごとに1減算（0未満にはならない）
+            respawnShield: Math.max(0, (p.respawnShield || 0) - 1),
+        }));
         
         useGameStore.setState({ 
             isBranchPicking: false, isDashPicking: false, 
