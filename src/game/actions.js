@@ -117,6 +117,13 @@ export const actionRollDice = async (isCpuCall = false) => {
 export const actionMove = () => {
     const state = useGameStore.getState();
     const currentTile = state.mapData.find(t => t.id === state.players[state.turn].pos);
+
+    // ✅ Fix: タイルが見つからない場合はクラッシュを防ぐ（pos不整合の安全網）
+    if (!currentTile) {
+        logMsg(`❌ 現在地のマス情報が見つかりません（pos: ${state.players[state.turn].pos}）`);
+        return;
+    }
+
     const validNextTiles = currentTile.next.filter(id => id !== state.constructionPos);
     if (validNextTiles.length === 1) executeMove(validNextTiles[0]);
     else if (validNextTiles.length > 1) { useGameStore.setState({ isBranchPicking: true, currentBranchOptions: validNextTiles }); logMsg("🛣️ 分岐点！進む道を選んでください。"); }

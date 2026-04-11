@@ -128,7 +128,12 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
 
         logMsg(`<span style="color:#e74c3c">☠️ ${target.name}が死亡！病院へ搬送...</span>`); playSfx('death');
         state.addEventPopup(targetId, "☠️", "死亡", "病院へ搬送...", "damage");
-        state.updatePlayer(targetId, { hp: 100, p: target.p - dropP - lostP, pos: 0, ap: 0, cans: 0, trash: 0, deaths: (target.deaths || 0) + 1, respawnShield: 2, equip: newEquip });
+
+        // ✅ Fix: 病院タイルのIDをマップデータから動的に取得（pos:0 決め打ちを廃止）
+        const hospitalTile = state.mapData.find(t => t.type === 'center');
+        const hospitalId = hospitalTile ? hospitalTile.id : (state.mapData[0]?.id ?? 0);
+
+        state.updatePlayer(targetId, { hp: 100, p: target.p - dropP - lostP, pos: hospitalId, ap: 0, cans: 0, trash: 0, deaths: (target.deaths || 0) + 1, respawnShield: 2, equip: newEquip });
         if (attacker) state.updatePlayer(attackerId, p => ({ kills: (p.kills || 0) + 1 }));
     } else {
         state.updatePlayer(targetId, { hp: newHp, p: target.p - dropP });
