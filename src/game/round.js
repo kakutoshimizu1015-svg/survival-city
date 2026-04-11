@@ -10,15 +10,24 @@ import { checkNpcCollision } from './npc';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-const getDestRandom = (start, steps, mapData) => {
-    let current = start, hitList = [];
+const getDestRandom = (start, steps, mapData, initialPrevPos = -1) => {
+    let current = start, previous = initialPrevPos, hitList = [];
     for (let i = 0; i < steps; i++) {
         let tile = mapData.find(t => t.id === current);
         if (!tile || tile.next.length === 0) break;
-        current = tile.next[Math.floor(Math.random() * tile.next.length)];
+        
+        // 逆走防止：直前にいたマスを除外した候補リストを作成
+        let validNexts = tile.next.filter(id => id !== previous);
+        
+        // 行き止まり（候補が0）の場合は、例外的に逆走を許可して全隣接マスから選ぶ
+        if (validNexts.length === 0) validNexts = tile.next; 
+        
+        let nextPos = validNexts[Math.floor(Math.random() * validNexts.length)];
+        previous = current; // 現在地を「直前の位置」として更新
+        current = nextPos;
         hitList.push(current);
     }
-    return { finalPos: current, hitList };
+    return { finalPos: current, hitList, finalPrevPos: previous };
 };
 
 const endGame = () => {
@@ -234,7 +243,8 @@ export const processRoundEnd = async () => {
         await sleep(800);
         
         let truckRoll = Math.floor(Math.random()*6)+1 + Math.floor(Math.random()*6)+1;
-        let truckMove = getDestRandom(state.truckPos, truckRoll, md);
+        let truckMove = getDestRandom(state.truckPos, truckRoll, md, state.truckPrevPos);
+        useGameStore.setState({ truckPrevPos: truckMove.finalPrevPos });
         
         const hitPlayers = [];
         const allTruckPath = [state.truckPos, ...truckMove.hitList];
@@ -302,7 +312,8 @@ export const processRoundEnd = async () => {
                     logMsg(`🚓 パトカーは ${policeRoll} マス移動する...`);
                     await sleep(800);
 
-                    let pMove = getDestRandom(newPolicePos, policeRoll, md);
+                    let pMove = getDestRandom(newPolicePos, policeRoll, md, state.policePrevPos);
+                    useGameStore.setState({ policePrevPos: pMove.finalPrevPos });
                     let hitSomeone = false;
 
                     for (let stepId of pMove.hitList) {

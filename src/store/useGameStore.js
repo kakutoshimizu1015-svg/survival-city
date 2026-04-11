@@ -42,8 +42,8 @@ const initialState = {
     mapData: [], territories: {}, territoryCosts: {}, isRainy: false, weatherState: 'sunny', isNight: false,
     roundCount: 1, maxRounds: 20, canPrice: 1, trashPrice: 2, destTile: -1,
     
-    truckPos: 0, 
-    policePos: 0, policeCd: 0, policeHp: 10, policeRespawn: 0,
+    truckPos: 0, truckPrevPos: -1,
+    policePos: 0, policePrevPos: -1, policeCd: 0, policeHp: 10, policeRespawn: 0,
     unclePos: 0, uncleCd: 0, uncleHp: 10, uncleRespawn: 0,
     animalPos: 0, animalCd: 0, animalHp: 10, animalRespawn: 0,
     yakuzaPos: 0, yakuzaCd: 0, yakuzaHp: 10, yakuzaRespawn: 0,

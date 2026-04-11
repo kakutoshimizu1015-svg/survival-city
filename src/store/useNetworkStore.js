@@ -64,7 +64,11 @@ export const useNetworkStore = create((setStore, getStore) => ({
             const roomRef = ref(db, `rooms/${roomCode}`);
             await set(roomRef, { hostPeerId: id, createdAt: Date.now(), hostName: playerName, status: 'waiting' });
             onDisconnect(roomRef).remove(); 
-            setStore({ peer, status: 'connected', lobbyPlayers: [{ userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none', isHost: true, isCPU: false }] });
+            
+            // ▼ 修正: 最初から装備中のスキンを取得して設定する
+            const initialChar = 'athlete';
+            const initialSkin = useUserStore.getState().equippedSkins[initialChar] || 'default';
+            setStore({ peer, status: 'connected', lobbyPlayers: [{ userId: getStore().myUserId, name: playerName, charType: initialChar, skinId: initialSkin, teamColor: 'none', isHost: true, isCPU: false }] });
         });
 
         peer.on('connection', (conn) => {
@@ -160,7 +164,11 @@ export const useNetworkStore = create((setStore, getStore) => ({
             const conn = peer.connect(snapshot.val().hostPeerId);
             conn.on('open', () => {
                 setStore({ peer, hostConnection: conn, status: 'connected' });
-                conn.send({ type: 'JOIN', user: { userId: getStore().myUserId, name: playerName, charType: 'athlete', teamColor: 'none' } }); 
+                
+                // ▼ 修正: ゲストの接続要求(JOIN)のパケットにも、初期設定としてスキンIDを含める
+                const initialChar = 'athlete';
+                const initialSkin = useUserStore.getState().equippedSkins[initialChar] || 'default';
+                conn.send({ type: 'JOIN', user: { userId: getStore().myUserId, name: playerName, charType: initialChar, skinId: initialSkin, teamColor: 'none' } }); 
                 
                 conn.on('data', (data) => {
                     if (data.type === 'LOBBY_UPDATE') setStore({ lobbyPlayers: data.players });
@@ -241,7 +249,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
     addCpu: () => {
         const state = getStore();
         if (!state.isHost || state.lobbyPlayers.length >= 8) return;
-        const newCpu = { userId: 'cpu-' + Math.random().toString(36).substring(2, 8), name: `CPU${state.lobbyPlayers.length + 1}`, charType: 'survivor', teamColor: 'none', isHost: false, isCPU: true };
+        // ▼ 修正: CPUオブジェクトにも skinId: 'default' を明記する
+        const newCpu = { userId: 'cpu-' + Math.random().toString(36).substring(2, 8), name: `CPU${state.lobbyPlayers.length + 1}`, charType: 'survivor', skinId: 'default', teamColor: 'none', isHost: false, isCPU: true };
         const updatedPlayers = [...state.lobbyPlayers, newCpu];
         setStore({ lobbyPlayers: updatedPlayers });
         state.broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
