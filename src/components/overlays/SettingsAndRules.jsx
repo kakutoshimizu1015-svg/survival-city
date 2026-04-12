@@ -350,29 +350,44 @@ export const SettingsAndRules = () => {
                             </div>
                         </div>
 
-                        {/* ▼ 追加: Googleアカウント連携セクション */}
+                        {/* ▼ 修正: Googleアカウント連携＆引き継ぎセクション */}
                         <div style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '8px', marginTop: '15px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '13px', color: '#bdc3c7', marginBottom: '8px' }}>🔐 データの保護・引き継ぎ</div>
+                            <div style={{ fontSize: '13px', color: '#bdc3c7', marginBottom: '8px' }}>🔐 アカウント連携とデータ引き継ぎ</div>
+                            
                             {useUserStore.getState().isLinked ? (
-                                <div style={{ background: 'rgba(46, 204, 113, 0.2)', border: '1px solid #2ecc71', color: '#2ecc71', padding: '10px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold' }}>
-                                    ✅ Googleアカウント連携済み<br/>
-                                    <span style={{ fontSize: '11px', color: '#bdc3c7', fontWeight: 'normal' }}>{useUserStore.getState().linkedEmail}</span>
+                                <div style={{ background: 'rgba(46, 204, 113, 0.2)', border: '1px solid #2ecc71', color: '#2ecc71', padding: '10px', borderRadius: '6px' }}>
+                                    <div style={{ fontSize: '13px', fontWeight: 'bold' }}>✅ アカウント連携済み</div>
+                                    <div style={{ fontSize: '11px', color: '#bdc3c7' }}>{useUserStore.getState().linkedEmail}</div>
                                 </div>
                             ) : (
-                                <div>
-                                    <p style={{ fontSize: '11px', color: '#e74c3c', margin: '0 0 10px 0', lineHeight: 1.4 }}>
-                                        現在ゲストプレイ中です。ブラウザの履歴を消去するとデータが失われます。<br/>連携してデータを保護してください。（トレード機能の利用にも必須です）
-                                    </p>
-                                    <ClayButton 
-                                        onClick={async () => {
-                                            const res = await linkGoogleAccount();
-                                            alert(res.message);
-                                        }} 
-                                        style={{ background: '#4285F4', color: '#fff', width: '100%', padding: '12px' }}
-                                    >
-                                        <span style={{ background: '#fff', borderRadius: '50%', padding: '2px 6px', marginRight: '8px', color: '#4285F4' }}>G</span>
-                                        Googleアカウントと連携する
-                                    </ClayButton>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div>
+                                        <p style={{ fontSize: '10px', color: '#f39c12', margin: '0 0 5px 0' }}>【今のデータを守る】</p>
+                                        <ClayButton 
+                                            onClick={async () => {
+                                                const res = await linkGoogleAccount();
+                                                alert(res.message);
+                                            }} 
+                                            style={{ background: '#4285F4', color: '#fff', width: '100%', fontSize: '12px' }}
+                                        >
+                                            現在のデータをGoogleに紐づける
+                                        </ClayButton>
+                                    </div>
+                                    
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+                                        <p style={{ fontSize: '10px', color: '#3498db', margin: '0 0 5px 0' }}>【他の端末のデータを呼び出す】</p>
+                                        <ClayButton 
+                                            onClick={async () => {
+                                                if (window.confirm("Googleアカウントに保存されているデータをロードしますか？\n（現在の未連携データは上書きされます）")) {
+                                                    const res = await loginWithGoogle();
+                                                    alert(res.message);
+                                                }
+                                            }} 
+                                            style={{ background: 'transparent', border: '1px solid #4285F4', color: '#4285F4', width: '100%', fontSize: '12px' }}
+                                        >
+                                            Googleログインしてロード
+                                        </ClayButton>
+                                    </div>
                                 </div>
                             )}
                         </div>

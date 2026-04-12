@@ -14,8 +14,7 @@ const firebaseConfig = {
   measurementId: "G-CDRNJEQCQ8"
 };
 
-// ▼ ここに export を追加します
 export const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
-export const auth = getAuth(app); // ▼ 追加: Authインスタンスの共通化
-export const googleProvider = new GoogleAuthProvider(); // ▼ 追加: Googleログインプロバイダ
+export const auth = getAuth(app); // ▼ 追加: 認証インスタンス
+export const googleProvider = new GoogleAuthProvider(); // ▼ 追加: Googleプロバイダ

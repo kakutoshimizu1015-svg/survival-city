@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGameStore } from './store/useGameStore';
 import { useUserStore } from './store/useUserStore';
-import { loginAnonymously } from './utils/authLogic';
+import { initAuth } from './utils/authLogic';
 import { savePlayerName } from './utils/userLogic';
 
 import { GameMain } from './features/GameMain';
@@ -13,7 +13,7 @@ import { SandboxGuide } from './components/overlays/SandboxGuide';
 import GachaScreen from './features/GachaScreen';
 import MinigamesApp from './features/minigames/MinigamesApp';
 
-import LoginBonusModal from './components/common/LoginBonusModal'; // ▼ 新規追加
+import LoginBonusModal from './components/common/LoginBonusModal';
 import { GlobalInviteModal } from './components/common/GlobalInviteModal';
 import { FriendListModal } from './components/common/FriendListModal';
 import { UserProfileModal } from './components/common/UserProfileModal';
@@ -21,31 +21,30 @@ import { MailboxOverlay } from './components/common/MailboxOverlay';
 
 function App() {
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode, rulesActive, tutorialActive, settingsActive, setGameState } = useGameStore();
-  // ▼ 修正: lastClaimedDate を取得するように追加
-  const { isLoggedIn, uid, playerName, wins, totalEarnedP, totalWins, gachaCans, gachaPoints, friendRequests, inbox, claimedMails, lastClaimedDate } = useUserStore();
+  const { isAuthResolved, uid, playerName, wins, totalEarnedP, totalWins, gachaCans, gachaPoints, friendRequests, inbox, claimedMails, lastClaimedDate } = useUserStore();
   
   const [localName, setLocalName] = useState(playerName);
   
   const [showFriendModal, setShowFriendModal] = useState(false);
   const [showMailboxModal, setShowMailboxModal] = useState(false);
   const [selectedProfileUid, setSelectedProfileUid] = useState(null);
-  const [showManualLoginBonus, setShowManualLoginBonus] = useState(false); // ▼ 新規追加: 手動でボーナス画面を開くフラグ
+  const [showManualLoginBonus, setShowManualLoginBonus] = useState(false);
 
-  // ▼ 修正: Firebaseからオブジェクト形式でデータが届いても絶対にクラッシュしないように配列へ強制変換する
   const safeInbox = Array.isArray(inbox) ? inbox : (inbox ? Object.values(inbox) : []);
   const safeClaimedMails = Array.isArray(claimedMails) ? claimedMails : (claimedMails ? Object.values(claimedMails) : []);
   const safeFriendReqs = Array.isArray(friendRequests) ? friendRequests : (friendRequests ? Object.values(friendRequests) : []);
 
   const unreadMailsCount = safeInbox.filter(mail => mail && !safeClaimedMails.includes(mail.id)).length;
 
-  // ▼ 新規追加: 今日の日付文字列を生成し、すでに受け取り済みか判定する
   const d = new Date();
   const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const hasClaimedToday = lastClaimedDate === todayStr;
 
   useEffect(() => {
-    if (!isLoggedIn) loginAnonymously();
-  }, [isLoggedIn]);
+    initAuth().then((resolvedUid) => {
+      if (resolvedUid) console.log("Auth Initialized!");
+    });
+  }, []);
 
   useEffect(() => {
     if (playerName) setLocalName(playerName);
@@ -66,11 +65,21 @@ function App() {
     }
   };
 
+  // ▼ データ破損を防ぐための「ローディングガード」
+  if (!isAuthResolved) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f0f14', color: '#f1c40f', fontWeight: 'bold' }}>
+        <div style={{ fontSize: '40px', marginBottom: '20px', animation: 'spin 1s linear infinite' }}>🔄</div>
+        <div>サーバーと同期中...</div>
+        <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
   return (
     <>
       <GlobalInviteModal />
 
-      {/* ▼ 修正: 未受取の場合（!hasClaimedToday）は自動で開き、手動ボタンでも開けるようにする */}
       {gamePhase === 'mode_select' && (!hasClaimedToday || showManualLoginBonus) && (
         <LoginBonusModal 
            manualOpen={showManualLoginBonus} 
@@ -90,7 +99,6 @@ function App() {
         <MailboxOverlay onClose={() => setShowMailboxModal(false)} />
       )}
 
-      {/* トップバー */}
       {(gamePhase === 'title' || gamePhase === 'mode_select' || gamePhase === 'setup_offline') && !rulesActive && !tutorialActive && !settingsActive && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%',
@@ -106,12 +114,10 @@ function App() {
         </div>
       )}
 
-      {/* 設定ボタン */}
       {gamePhase !== 'title' && gamePhase !== 'gacha' && gamePhase !== 'minigames' && gamePhase !== 'mode_select' && (
         <button id="settings-btn" onClick={(e) => { e.stopPropagation(); setGameState({ settingsActive: true }); }}>⚙️</button>
       )}
 
-      {/* タイトル画面 */}
       {gamePhase === 'title' && (
         <div id="title-screen-overlay" onClick={() => setGameState({ gamePhase: 'mode_select' })}>
           <div style={{ fontSize: '80px', marginBottom: '20px', marginTop: '60px' }}>🏠</div>
@@ -135,7 +141,6 @@ function App() {
         </div>
       )}
 
-      {/* モード選択画面 */}
       {gamePhase === 'mode_select' && (
         <div id="mode-select-overlay" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           
@@ -154,7 +159,6 @@ function App() {
                     background: '#2980b9', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', position: 'relative'
                 }}>
                     👥 フレンド
-                    {/* ▼ 安全な配列でカウントする */}
                     {safeFriendReqs.length > 0 && <span style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#e74c3c', color: '#FFF', fontSize: '10px', padding: '2px 6px', borderRadius: '50%', border: '2px solid #fff' }}>{safeFriendReqs.length}</span>}
                 </button>
 
@@ -171,7 +175,6 @@ function App() {
                     ⚙️ 設定
                 </button>
 
-                {/* ▼ 新規追加: いつでもカレンダーを確認できるボタン */}
                 <button onClick={(e) => { e.stopPropagation(); setShowManualLoginBonus(true); }} style={{
                     background: '#9b59b6', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
                 }}>
