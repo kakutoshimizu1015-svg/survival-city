@@ -2,10 +2,11 @@ import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
 import { getDistance, getPathPreviewTiles, getManholeLinkedTiles, buildMapIndex } from '../../utils/gameLogic';
-import { executeMove } from '../../game/actions';
+// ▼ 修正: executeManhole は actions.js からインポートする
+import { executeMove, executeManhole } from '../../game/actions';
 import { executeSetTrap } from '../../game/skills';
-// ▼ 変更: 新規カードの実行関数をインポート
-import { executeSubway, executeManhole } from '../../game/cards';
+// ▼ 修正: executeSubway のみを cards.js からインポートする
+import { executeSubway } from '../../game/cards';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { BoardPaths } from './BoardPaths';
