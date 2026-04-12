@@ -4,14 +4,23 @@ import { get, ref } from 'firebase/database';
 import { db } from '../../lib/firebase';
 import { sendTradeOffer } from '../../utils/tradeLogic';
 import { ClayButton } from './ClayButton';
+import { charSkins } from '../../constants/characters'; // ▼ 追加: スキン画像のマスターデータをインポート
 
-// ▼ 修正: コンポーネントの「外」に切り出して独立させることで、複数選択バグ（再マウントの誤作動）を完全に防ぎます。
+// ▼ 修正: マスターデータから正しい画像URLを取得する
 const SkinItem = ({ skin, isSelected, onClick, highlightColor }) => {
     const [imgError, setImgError] = useState(false);
     
-    // スキンID (例: 'athlete_default') からベースキャラ名 ('athlete') を抽出して画像を読み込む
+    // スキンID (例: 'athlete_default') からベースキャラ名 ('athlete') を抽出
     const baseCharName = skin.split('_')[0];
-    const imagePath = `/assets/characters/${baseCharName}.png`;
+    
+    // マスターデータから該当キャラクターの全スキンを取得し、一致するスキンデータを探す
+    let imgSrc = null;
+    if (charSkins[baseCharName]) {
+        const skinData = charSkins[baseCharName].find(s => s.id === skin);
+        if (skinData && skinData.front) {
+            imgSrc = skinData.front; // 正しいインポート済みの画像URLを取得
+        }
+    }
     
     return (
         <div 
@@ -32,9 +41,9 @@ const SkinItem = ({ skin, isSelected, onClick, highlightColor }) => {
                 boxShadow: isSelected ? `0 0 8px ${highlightColor}` : 'none'
             }}
         >
-            {!imgError ? (
+            {imgSrc && !imgError ? (
                 <img 
-                    src={imagePath} 
+                    src={imgSrc} 
                     alt={skin} 
                     style={{ width: '40px', height: '40px', objectFit: 'contain', marginBottom: '4px' }}
                     onError={() => setImgError(true)}
@@ -67,7 +76,7 @@ export const SkinTradeModal = ({ targetUid, targetName, onClose }) => {
     const [request, setRequest] = useState({ p: 0, cans: 0, skins: [] });
     const [isSending, setIsSending] = useState(false);
 
-    // ▼ 念のため、スキンリストの重複を排除して表示バグを防ぐ
+    // スキンリストの重複を排除
     const uniqueMySkins = Array.from(new Set(unlockedSkins || []));
 
     useEffect(() => {
