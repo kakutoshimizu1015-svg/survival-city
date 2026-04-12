@@ -1,4 +1,4 @@
-import { ref, get, update, push, set, onValue, remove } from 'firebase/database';
+import { ref, get, update, push, set, onValue } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useUserStore } from '../store/useUserStore';
 
@@ -27,16 +27,11 @@ export const listenToTrades = (uid) => {
 
 /**
  * トレードの提案を送信する
- * @param {string} targetUid 相手のUID
- * @param {string} targetName 相手の名前
- * @param {object} offer 自分が提示するアイテム { p: 0, cans: 0, skins: ['skin_A'] }
- * @param {object} request 相手に要求するアイテム { p: 0, cans: 0, skins: ['skin_B'] }
  */
 export const sendTradeOffer = async (targetUid, targetName, offer, request) => {
     const state = useUserStore.getState();
     if (!state.uid || !targetUid) return { success: false, message: '通信エラー：ユーザー情報がありません' };
 
-    // ▼ 事前チェック: 自分が提示するアイテムを本当に持っているか確認
     if (state.gachaPoints < offer.p || state.gachaCans < offer.cans) {
         return { success: false, message: '提示するPまたは空き缶が不足しています' };
     }
@@ -83,7 +78,6 @@ export const acceptTrade = async (trade) => {
     if (state.uid !== trade.toUid) return { success: false, message: '権限がありません' };
 
     try {
-        // 1. 相手(from)と自分(to)の最新データを取得
         const fromSnap = await get(ref(db, `users/${trade.fromUid}`));
         const toSnap = await get(ref(db, `users/${trade.toUid}`));
         const tradeSnap = await get(ref(db, `trades/${trade.id}`));
@@ -106,31 +100,36 @@ export const acceptTrade = async (trade) => {
         toUser.gachaCans = toUser.gachaCans || 0;
         toUser.unlockedSkins = toUser.unlockedSkins || [];
 
-        // 2. 資産の最終チェック（相手が提示品を持っているか、自分が要求品を持っているか）
-        if (fromUser.gachaPoints < trade.offer.p || fromUser.gachaCans < trade.offer.cans) return { success: false, message: '相手の資産が不足しているため成立しませんでした' };
-        if (toUser.gachaPoints < trade.request.p || toUser.gachaCans < trade.request.cans) return { success: false, message: 'あなたの資産が不足しています' };
+        // ▼ 修正: Firebaseの空配列削除仕様に対応するためのフォールバック
+        const offerSkins = trade.offer.skins || [];
+        const requestSkins = trade.request.skins || [];
+        const offerP = trade.offer.p || 0;
+        const offerCans = trade.offer.cans || 0;
+        const requestP = trade.request.p || 0;
+        const requestCans = trade.request.cans || 0;
+
+        if (fromUser.gachaPoints < offerP || fromUser.gachaCans < offerCans) return { success: false, message: '相手の資産が不足しているため成立しませんでした' };
+        if (toUser.gachaPoints < requestP || toUser.gachaCans < requestCans) return { success: false, message: 'あなたの資産が不足しています' };
         
-        const fromHasSkins = trade.offer.skins.every(s => fromUser.unlockedSkins.includes(s));
-        const toHasSkins = trade.request.skins.every(s => toUser.unlockedSkins.includes(s));
+        const fromHasSkins = offerSkins.every(s => fromUser.unlockedSkins.includes(s));
+        const toHasSkins = requestSkins.every(s => toUser.unlockedSkins.includes(s));
         
         if (!fromHasSkins) return { success: false, message: '相手が約束のスキンを持っていません' };
         if (!toHasSkins) return { success: false, message: 'あなたが約束のスキンを持っていません' };
 
         // 3. アイテムの増減計算
-        // Pと缶の移動
-        const newFromP = fromUser.gachaPoints - trade.offer.p + trade.request.p;
-        const newFromCans = fromUser.gachaCans - trade.offer.cans + trade.request.cans;
-        const newToP = toUser.gachaPoints - trade.request.p + trade.offer.p;
-        const newToCans = toUser.gachaCans - trade.request.cans + trade.offer.cans;
+        const newFromP = fromUser.gachaPoints - offerP + requestP;
+        const newFromCans = fromUser.gachaCans - offerCans + requestCans;
+        const newToP = toUser.gachaPoints - requestP + offerP;
+        const newToCans = toUser.gachaCans - requestCans + offerCans;
 
-        // スキンの移動（配列から削除し、相手に追加する）
-        const newFromSkins = fromUser.unlockedSkins.filter(s => !trade.offer.skins.includes(s));
-        trade.request.skins.forEach(s => { if (!newFromSkins.includes(s)) newFromSkins.push(s); });
+        const newFromSkins = fromUser.unlockedSkins.filter(s => !offerSkins.includes(s));
+        requestSkins.forEach(s => { if (!newFromSkins.includes(s)) newFromSkins.push(s); });
 
-        const newToSkins = toUser.unlockedSkins.filter(s => !trade.request.skins.includes(s));
-        trade.offer.skins.forEach(s => { if (!newToSkins.includes(s)) newToSkins.push(s); });
+        const newToSkins = toUser.unlockedSkins.filter(s => !requestSkins.includes(s));
+        offerSkins.forEach(s => { if (!newToSkins.includes(s)) newToSkins.push(s); });
 
-        // 4. アトミックな一括書き込み（どれか1つでも失敗したら全て無効になるため安全）
+        // 4. アトミックな一括書き込み
         const updates = {};
         updates[`users/${trade.fromUid}/gachaPoints`] = newFromP;
         updates[`users/${trade.fromUid}/gachaCans`] = newFromCans;
@@ -151,11 +150,11 @@ export const acceptTrade = async (trade) => {
             unlockedSkins: newToSkins
         });
 
-        // ※装備中スキンがトレードで失われた場合は外す安全処理
+        // 装備中スキンがトレードで失われた場合は外す
         const equipped = { ...state.equippedSkins };
         let equippedChanged = false;
         Object.keys(equipped).forEach(charKey => {
-            if (trade.request.skins.includes(equipped[charKey])) {
+            if (requestSkins.includes(equipped[charKey])) {
                 equipped[charKey] = `${charKey}_default`;
                 equippedChanged = true;
             }
