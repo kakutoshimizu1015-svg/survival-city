@@ -5,7 +5,7 @@ import { logMsg } from './actions';
 
 export const actionUseCard = (handIndex, cardId) => {
     const state = useGameStore.getState();
-    const { turn, players, territories, mapData } = state;
+    const { turn, players, territories, mapData, isCreativeMode } = state; // ▼ 追加: isCreativeMode を取得
     const cp = players[turn];
     const cardData = deckData.find(c => c.id === cardId);
 
@@ -14,15 +14,17 @@ export const actionUseCard = (handIndex, cardId) => {
     let apCost = cardData.type === 'weapon' ? 2 : 0;
     if ([3, 4, 13].includes(cardId)) apCost = 1; 
 
-    if (cp.ap < apCost) { logMsg("⚡ APが足りません！"); return; }
+    // ▼ 修正: クリエイティブモード時はAP不足を無視
+    if (!isCreativeMode && cp.ap < apCost) { logMsg("⚡ APが足りません！"); return; }
 
     const alivePlayers = players.filter(p => p.hp > 0);
     const isLowestP = alivePlayers.every(p => cp.p <= p.p);
     
-    if (cardId === 12) {
+    // ▼ 修正: クリエイティブモード時は条件を無視
+    if (cardId === 12 && !isCreativeMode) {
         if (!isLowestP) { logMsg("❌ 大暴落は所持Pが最下位の時のみ使用可能です！"); return; }
     }
-    if (cardId === 13) {
+    if (cardId === 13 && !isCreativeMode) {
         const topPlayer = alivePlayers.reduce((a, b) => a.p > b.p ? a : b, alivePlayers[0]);
         if (!isLowestP || (topPlayer.p - cp.p) < 30) {
             logMsg("❌ 下剋上は最下位かつ、1位との差が30P以上ないと使えません！"); return;
@@ -30,16 +32,20 @@ export const actionUseCard = (handIndex, cardId) => {
     }
 
     const newHand = [...cp.hand];
-    newHand.splice(handIndex, 1);
+    // ▼ 修正: クリエイティブモード時はカードを消費しない
+    if (!isCreativeMode) {
+        newHand.splice(handIndex, 1);
+    }
     
     let playerUpdates = {
-        ap: cp.ap - apCost,
+        ap: isCreativeMode ? cp.ap : cp.ap - apCost, // コスト無視
         hand: newHand
     };
 
     if (cardId === 12) {
-        playerUpdates.hp = Math.ceil(cp.hp / 2); 
-        logMsg(`🩸 大暴落の代償としてHPを半分消費した！`);
+        // ▼ 修正: 大暴落のHP半減コストも免除
+        if (!isCreativeMode) playerUpdates.hp = Math.ceil(cp.hp / 2); 
+        logMsg(`🩸 大暴落を発動した！`);
     }
 
     logMsg(`🎴 「${cardData.name}」を使用！`);
@@ -168,7 +174,8 @@ export const actionUseCard = (handIndex, cardId) => {
         case 41: useGameStore.setState({ isRecyclePicking: true }); logMsg(`♻️ 廃品再生！捨てるカードを選んでください`); break;
         case 42:
             const isReallyLowest = alivePlayers.every(op => cp.p <= op.p);
-            if (isReallyLowest) { playerUpdates.p += 8; logMsg(`🏦 行政の見落とし！銀行から8Pを受け取った！`); }
+            // ▼ 修正: クリエイティブモード時は条件を無視
+            if (isReallyLowest || isCreativeMode) { playerUpdates.p += 8; logMsg(`🏦 行政の見落とし！銀行から8Pを受け取った！`); }
             else { logMsg(`❌ 自分は最下位ではなかった…`); }
             break;
         case 43:
@@ -215,8 +222,9 @@ export const actionCancelWeapon = (cardId) => {
     if (!cardData || cardData.type !== 'weapon') return;
 
     state.updateCurrentPlayer(p => ({
-        ap: p.ap + 2,
-        hand: [...p.hand, cardId]
+        ap: state.isCreativeMode ? p.ap : p.ap + 2,
+        // ▼ 修正: クリエイティブモード時はカードを戻さない（元々減っていないため）
+        hand: state.isCreativeMode ? p.hand : [...p.hand, cardId]
     }));
     useGameStore.setState({ weaponArcData: null });
     logMsg(`🔙 武器の使用をキャンセルしました`);

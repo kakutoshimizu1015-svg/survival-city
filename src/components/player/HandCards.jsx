@@ -7,8 +7,8 @@ import { actionUseCard, actionDiscardCard, executeRecycle } from '../../game/car
 import { executeSalesVisit } from '../../game/skills'; 
 
 export const HandCards = () => {
-    // ▼ 変更: isRecyclePicking ステートを追加で取得
-    const { players, turn, diceRolled, mgActive, isBranchPicking, isSalesVisiting, isRecyclePicking } = useGameStore();
+    // ▼ 修正: isCreativeMode と setGameState を追加で取得
+    const { players, turn, diceRolled, mgActive, isBranchPicking, isSalesVisiting, isRecyclePicking, isCreativeMode, setGameState } = useGameStore();
     const cp = players[turn];
     const { myUserId, status } = useNetworkStore();
 
@@ -38,7 +38,31 @@ export const HandCards = () => {
     const isRecycleMode = isMyTurn && isRecyclePicking; // ▼ 追加: 廃品再生モード
 
     return (
-        <div id="hand-cards-area" style={{ flexGrow: 1, display: 'flex', overflowX: 'auto', minWidth: 0 }}>
+        <div id="hand-cards-area" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            
+            {/* ▼ 追加: クリエイティブモード用コントロールパネル（自分のターンの時だけ表示） */}
+            {isMyTurn && (
+                <div style={{ display: 'flex', gap: '10px', padding: '0 10px 5px', justifyContent: 'flex-end' }}>
+                    <button 
+                        onClick={() => setGameState({ isCreativeMode: !isCreativeMode })}
+                        style={{ padding: '4px 8px', fontSize: '10px', background: isCreativeMode ? '#e74c3c' : '#bdc3c7', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                        {isCreativeMode ? '🛠️ クリエイティブ: ON' : '🛠️ クリエイティブ: OFF'}
+                    </button>
+                    {isCreativeMode && (
+                        <button 
+                            onClick={() => {
+                                const allCards = deckData.map(c => c.id);
+                                useGameStore.getState().updateCurrentPlayer({ hand: allCards });
+                            }}
+                            style={{ padding: '4px 8px', fontSize: '10px', background: '#f39c12', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                            🃏 全カード取得
+                        </button>
+                    )}
+                </div>
+            )}
+
             <div id="card-panel-clay" className="panel" style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center', width: '100%', padding: '10px', margin: 0, minHeight: '120px' }}>
                 {cp.hand.length === 0 && <div style={{ color: '#fdf5e6', width: '100%', textAlign: 'center' }}>手札なし</div>}
                 
@@ -49,8 +73,8 @@ export const HandCards = () => {
                     let apCost = cardData.type === 'weapon' ? 2 : 0;
                     if ([3, 4, 13].includes(cardId)) apCost = 1;
                     
-                    // ▼ 変更: 廃品再生モード中も「使用」をロックし、「捨てる」ボタンを「売却」に切り替える
-                    const isDisabled = !isMyTurn || !diceRolled || cp.ap < (isSalesMode ? 2 : apCost) || mgActive || isBranchPicking || isRecycleMode;
+                    // ▼ 修正: クリエイティブモード中は、AP不足等の Disabled 条件を完全に無視する
+                    const isDisabled = !isCreativeMode && (!isMyTurn || !diceRolled || cp.ap < (isSalesMode ? 2 : apCost) || mgActive || isBranchPicking || isRecycleMode);
                     const isDiscardDisabled = !isMyTurn || mgActive || isBranchPicking || isSalesMode; 
 
                     return (

@@ -11,7 +11,7 @@ const initialState = {
     salesTargetId: null,     
     npcSelectActive: false,  
     npcMovePick: null, 
-     
+
     // ▼ 新規追加: フェーズ2用ステート
     fixedWeather: null,
     fixedMarket: false,
@@ -21,6 +21,8 @@ const initialState = {
     isSubwayPicking: false,
     isManholePicking: false, 
     manholeOptions: [],     
+
+    isCreativeMode: false,   // ▼ 追加: クリエイティブ（デバッグ）モード
 
     traps: [],               // ▼ 探偵の罠データ { tileId, type, ownerId }
     isTrapScanActive: false, // ▼ 探偵の罠スキャン状態（長押しでtrue）
