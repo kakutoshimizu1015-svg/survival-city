@@ -4,7 +4,7 @@ import { useUserStore } from '../store/useUserStore';
 import { checkNpcCollision } from './npc';
 import { processRoundEnd } from './round';
 import { playSfx } from '../utils/audio';
-import { getDistance } from './combat';
+import { getDistance, dealDamage } from './combat';
 
 export const logMsg = (htmlMsg) => { 
     useGameStore.setState(state => {
@@ -29,7 +29,7 @@ export const actionRollDice = async (isCpuCall = false) => {
 
     // ▼ 闇医者のパッシブ【再生能力】
     if (cp.charType === 'doctor') {
-        const healAmt = cp.hp <= 50 ? 16 : 8; // ピンチ時は回復量2倍
+        const healAmt = cp.hp <= 50 ? 16 : 8; 
         const actualHeal = Math.min(healAmt, 100 - cp.hp);
         if (actualHeal > 0) {
             state.updateCurrentPlayer(p => ({ hp: p.hp + actualHeal }));
@@ -39,7 +39,6 @@ export const actionRollDice = async (isCpuCall = false) => {
         }
     }
 
-    // 1. サイコロの計算を最初にすべて行う
     const d1 = Math.floor(Math.random() * 6) + 1;
     const d2 = Math.floor(Math.random() * 6) + 1;
     
@@ -51,7 +50,6 @@ export const actionRollDice = async (isCpuCall = false) => {
     if (isZorome) totalAP *= 2; 
     if (cp.equip?.bicycle) totalAP += 2;
 
-    // ✅ Fix2: ゴミ漁り失敗・補導によるAPペナルティを適用して消費
     if (cp.penaltyAP > 0) {
         const penalty = cp.penaltyAP;
         totalAP = Math.max(0, totalAP - penalty);
@@ -66,7 +64,6 @@ export const actionRollDice = async (isCpuCall = false) => {
         if (heal > 0) { state.updateCurrentPlayer(p => ({ hp: p.hp + heal })); logMsg(`🎲 ギャンブラー興奮！HP+${heal}`); }
     }
 
-    // 2. 本値を最初から渡してアニメーション開始 (待機時間なし)
     useGameStore.setState({
         diceAnim: { active: true, d1, d2, d3, isDouble: isZorome, text: '' },
         diceRolled: true,
@@ -75,7 +72,6 @@ export const actionRollDice = async (isCpuCall = false) => {
 
     state.updateCurrentPlayer(p => ({ ap: p.ap + totalAP }));
     
-    // ▼ここから追加：陣地収入の計算と付与 (既存そのまま)
     let territoryIncome = 0;
     let ownedTilesCount = 0;
 
@@ -89,20 +85,21 @@ export const actionRollDice = async (isCpuCall = false) => {
             } else if (tile && tile.area === 'commercial') {
                 territoryIncome += 2;
             } else {
-                territoryIncome += 1; // スラムエリア(slum)またはデフォルト
+                territoryIncome += 1;
             }
         }
     });
 
     if (territoryIncome > 0) {
-        state.updateCurrentPlayer(p => ({ p: p.p + territoryIncome }));
-        logMsg(`🏙️ 陣地収入！ ${ownedTilesCount}つの陣地から合計 ${territoryIncome}P を獲得！`);
-        playSfx('coin'); // 収入が入った時の効果音
-        
-        // ▼ 追加: ポップアップ表示
-        state.addEventPopup(cp.id, "🏙️", "陣地収入", `合計 ${territoryIncome}P を獲得`, "good");
+        if (cp.fakeInfoDebuff > 0) {
+            logMsg(`📰 ニセ情報の影響で陣地からの収入がゼロになった！`);
+        } else {
+            state.updateCurrentPlayer(p => ({ p: p.p + territoryIncome }));
+            logMsg(`🏙️ 陣地収入！ ${ownedTilesCount}つの陣地から合計 ${territoryIncome}P を獲得！`);
+            playSfx('coin');
+            state.addEventPopup(cp.id, "🏙️", "陣地収入", `合計 ${territoryIncome}P を獲得`, "good");
+        }
     }
-    // ▲追加ここまで
 
     if (isGamblerBonus) {
         logMsg(`🎲 <span style="color:#f1c40f">大勝負！ギャンブラーの第3のサイコロ発動（+${d3}）！</span>`);
@@ -112,11 +109,9 @@ export const actionRollDice = async (isCpuCall = false) => {
     
     playSfx('success'); logMsg(`<span style="color:${cp.color}">${cp.name}</span>は${totalAP}AP獲得！`);
 
-    // ▼ 修正: CPUのターンの場合は「サイコロ画面が閉じるまで」待機する
     if (isCpuCall) {
         await new Promise(resolve => {
             const checkOverlay = setInterval(() => {
-                // activeがfalse（画面が閉じた）になったら即座に次へ進む
                 if (!useGameStore.getState().diceAnim.active) {
                     clearInterval(checkOverlay);
                     resolve();
@@ -130,7 +125,6 @@ export const actionMove = () => {
     const state = useGameStore.getState();
     const currentTile = state.mapData.find(t => t.id === state.players[state.turn].pos);
 
-    // ✅ Fix: タイルが見つからない場合はクラッシュを防ぐ（pos不整合の安全網）
     if (!currentTile) {
         logMsg(`❌ 現在地のマス情報が見つかりません（pos: ${state.players[state.turn].pos}）`);
         return;
@@ -147,8 +141,7 @@ export const executeMove = (targetTileId) => {
     const cp = state.players[state.turn];
     const prevPos = cp.pos;
     
-    // ▼ ミュージシャンのアンコール等による移動ペナルティ加算
-    const baseMoveCost = (state.isRainy && !cp.rainGear && cp.charType !== "athlete") ? 2 : 1;
+    const baseMoveCost = (state.isRainy && !cp.rainGear && cp.charType !== "athlete" && !cp.equip?.foldBike) ? 2 : 1;
     const penaltyCost = cp.nextMoveCostPenalty || 0;
     const moveCost = baseMoveCost + penaltyCost;
 
@@ -156,7 +149,7 @@ export const executeMove = (targetTileId) => {
         ap: Math.max(0, p.ap - moveCost), 
         pos: targetTileId, 
         rainGear: state.isRainy ? false : p.rainGear,
-        nextMoveCostPenalty: 0 // 一度移動したらペナルティ解除
+        nextMoveCostPenalty: 0 
     }));
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [], isDashPicking: false });
     
@@ -165,6 +158,13 @@ export const executeMove = (targetTileId) => {
     state.incrementGameStat(cp.id, 'tiles', 1);
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalTilesMoved', 1);
+    }
+
+    if (cp.equip?.shoppingCart && Math.random() < 0.2) {
+        const getCan = Math.random() < 0.5;
+        state.updateCurrentPlayer(p => ({ cans: p.cans + (getCan ? 1 : 0), trash: p.trash + (getCan ? 0 : 1) }));
+        logMsg(`🛒 カートに${getCan ? '空き缶' : 'ゴミ'}を放り込んだ！`);
+        playSfx('coin');
     }
 
     if (tile.type === "center") {
@@ -232,18 +232,16 @@ export const executeMove = (targetTileId) => {
         if (Math.random() < 0.3) {
             useGameStore.setState({ storyActive: true, storyIndex: Math.floor(Math.random() * 4) });
         } else {
-            // ▼ 修正: 仮の3種から、実装済みの全15種から抽選するように変更
             const mgTypes = ['box', 'vend', 'scratch', 'hl', 'slot', 'oxo', 'tetris', 'fly', 'rat', 'drunk', 'rain', 'kashi', 'beg', 'music', 'nego'];
             useGameStore.setState({ mgActive: true, mgType: mgTypes[Math.floor(Math.random() * mgTypes.length)] });
         }
     }
 
-    // ▼ 罠の踏み抜き判定
     const trapIndex = state.traps?.findIndex(t => t.tileId === targetTileId);
     if (trapIndex !== undefined && trapIndex !== -1) {
         const trap = state.traps[trapIndex];
         if (trap.ownerId !== cp.id) {
-            const trapNames = { police: '警察罠', pitfall: '落とし穴', jamming: '情報撹乱' };
+            const trapNames = { police: '警察罠', pitfall: '落とし穴', jamming: '情報撹乱', bottle: '割れたビール瓶' };
             logMsg(`⚠️ <span style="color:#e74c3c">${cp.name}は罠（${trapNames[trap.type]}）を踏んでしまった！</span>`);
             playSfx('fail');
             
@@ -251,7 +249,6 @@ export const executeMove = (targetTileId) => {
                 state.updateCurrentPlayer(p => ({ penaltyAP: (p.penaltyAP || 0) + 2 }));
                 state.addEventPopup(cp.id, "🚓", "警察罠", "次回AP-2", "bad");
             } else if (trap.type === 'pitfall') {
-                // HPを減らして死亡判定（病院送り）も行う
                 const hospitalTile = state.mapData.find(t => t.type === 'center');
                 const hospitalId = hospitalTile ? hospitalTile.id : (state.mapData[0]?.id ?? 0);
                 const newHp = cp.hp - 20;
@@ -269,9 +266,17 @@ export const executeMove = (targetTileId) => {
                     return { hand: h };
                 });
                 state.addEventPopup(cp.id, "📡", "情報撹乱", "手札1枚破棄", "bad");
+            } else if (trap.type === 'bottle') {
+                let dropText = "";
+                if (Math.random() < 0.3 && cp.cans > 0) {
+                    state.updateCurrentPlayer(p => ({ cans: p.cans - 1 }));
+                    useGameStore.setState(s => ({ mapData: s.mapData.map(t => t.id === targetTileId ? { ...t, fieldCans: (t.fieldCans||0) + 1 } : t) }));
+                    dropText = " 空き缶を1つ落とした！";
+                }
+                dealDamage(cp.id, 15, "割れたビール瓶");
+                state.addEventPopup(cp.id, "🍾", "割れたビール瓶", `15ダメージ${dropText}`, "damage");
             }
             
-            // 発動した罠を消去
             useGameStore.setState(prev => {
                 const newTraps = [...prev.traps];
                 newTraps.splice(trapIndex, 1);
@@ -341,7 +346,7 @@ export const actionJob = () => {
     const cp = s.players[s.turn];
     const isSales = cp.charType === "sales";
     const win = Math.random() < (isSales ? 0.8 : 0.6); 
-    const reward = isSales ? 14 : 12; // 元営業マンは14P
+    const reward = isSales ? 14 : 12; 
     
     s.updateCurrentPlayer(p => ({ ap: p.ap - 3, p: p.p + (win ? reward : 0) })); 
     
@@ -375,9 +380,8 @@ export const getOccupyCost = (tileId) => {
 export const actionOccupy = () => { 
     const s = useGameStore.getState();
     const cp = s.players[s.turn];
-    const currentTile = s.mapData.find(t => t.id === cp.pos); // ★ 現在のマス情報を取得
+    const currentTile = s.mapData.find(t => t.id === cp.pos); 
 
-    // ★ 修正: マスが道(normal)でない場合は処理を中断
     if (!currentTile || currentTile.type !== 'normal') {
         logMsg(`❌ このマスは陣地にできません`);
         return;
@@ -385,12 +389,10 @@ export const actionOccupy = () => {
 
     let cost = getOccupyCost(cp.pos);
 
-    // ▼ ミュージシャンのパッシブ【カリスマ】: 陣地コスト-2P
     if (cp.charType === 'musician') {
         cost = Math.max(1, cost - 2);
     }
 
-    // ▼ カリスマ: 滞在中の陣地への攻撃無効
     const currentOwner = s.territories[cp.pos];
     if (currentOwner !== undefined && currentOwner !== cp.id) {
         const ownerPlayer = s.players.find(p => p.id === currentOwner);
@@ -417,7 +419,29 @@ export const actionOccupy = () => {
 };
 
 export const actionExchange = () => { const s = useGameStore.getState(), cp = s.players[s.turn], tot = cp.cans * s.canPrice + cp.trash * s.trashPrice; s.updateCurrentPlayer(p => ({ p: p.p + tot, cans: 0, trash: 0 })); playSfx('coin'); };
-export const actionManhole = () => { const s = useGameStore.getState(), cp = s.players[s.turn], mh = s.mapData.filter(t => t.type === "manhole" && t.id !== cp.pos); if (mh.length > 0) { s.updateCurrentPlayer(p => ({ ap: p.ap - 1, pos: mh[Math.floor(Math.random() * mh.length)].id })); playSfx('move'); checkNpcCollision(cp.id); } };
+
+export const actionManhole = () => { 
+    const s = useGameStore.getState(), cp = s.players[s.turn], mh = s.mapData.filter(t => t.type === "manhole" && t.id !== cp.pos); 
+    if (mh.length > 0) { 
+        if (cp.equip?.foldBike && mh.length >= 2) {
+            const shuffled = [...mh].sort(() => 0.5 - Math.random());
+            useGameStore.setState({ isManholePicking: true, manholeOptions: [shuffled[0].id, shuffled[1].id] });
+            s.updateCurrentPlayer(p => ({ ap: p.ap - 1 }));
+            logMsg(`🚲 どこに出るか選んでください！`);
+        } else {
+            s.updateCurrentPlayer(p => ({ ap: p.ap - 1, pos: mh[Math.floor(Math.random() * mh.length)].id })); 
+            playSfx('move'); checkNpcCollision(cp.id); 
+        }
+    } 
+};
+
+export const executeManhole = (tileId) => {
+    const s = useGameStore.getState(), cp = s.players[s.turn];
+    s.updateCurrentPlayer({ pos: tileId });
+    useGameStore.setState({ isManholePicking: false, manholeOptions: [] });
+    playSfx('move'); checkNpcCollision(cp.id);
+    logMsg(`🚇 マンホールから出現した！`);
+};
 
 export const actionEndTurn = async () => {
     const state = useGameStore.getState();
@@ -429,20 +453,22 @@ export const actionEndTurn = async () => {
         let newEquip = { ...cp.equip }, newTimer = { ...cp.equipTimer };
         if (newEquip.bicycle) { newTimer.bicycle = (newTimer.bicycle || 5) - 1; if (newTimer.bicycle <= 0) { newEquip.bicycle = false; logMsg(`🚲 自転車が壊れた！`); } }
         if (newEquip.cart) { newTimer.cart = (newTimer.cart || 5) - 1; if (newTimer.cart <= 0) { newEquip.cart = false; logMsg(`🛒 リヤカーが壊れた！`); } }
+        if (newEquip.foldBike) { newTimer.foldBike = (newTimer.foldBike || 5) - 1; if (newTimer.foldBike <= 0) { newEquip.foldBike = false; logMsg(`🚲 折りたたみ自転車が壊れた！`); } }
+        if (newEquip.shoppingCart) { newTimer.shoppingCart = (newTimer.shoppingCart || 5) - 1; if (newTimer.shoppingCart <= 0) { newEquip.shoppingCart = false; logMsg(`🛒 ショッピングカートが壊れた！`); } }
+
 
         state.updateCurrentPlayer(p => ({
             ap: 0,
             stealth: false,
+            ignoreNightVision: false,
             _katsuage: 0,
             equip: newEquip,
             equipTimer: newTimer,
             cannotMove: false,
-            // ✅ Fix1: 復活後の無敵ターンをターン終了ごとに1減算（0未満にはならない）
             respawnShield: Math.max(0, (p.respawnShield || 0) - 1),
-            drawCountThisTurn: 0 // ▼ ギャンブラーのドロー回数リセット
+            drawCountThisTurn: 0 
         }));
 
-        // ▼ 闇医者の毒ダメージ処理
         if (cp.statusEffects?.poison > 0) {
             logMsg(`☠️ <span style="color:#9b59b6">${cp.name}は毒の副作用を受けた！(残り${cp.statusEffects.poison}ターン)</span>`);
             const hospitalTile = state.mapData.find(t => t.type === 'center');
@@ -466,7 +492,9 @@ export const actionEndTurn = async () => {
             isBranchPicking: false, isDashPicking: false, 
             isSalesVisiting: false, salesTargetId: null, npcSelectActive: false,
             mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null,
-            isTrapScanActive: false, isTrapPicking: false // ▼ スキャン＆設置モードをターン終了で強制解除
+            isTrapScanActive: false, isTrapPicking: false,
+            isRecyclePicking: false, isFakeInfoPicking: false, isSubwayPicking: false, isManholePicking: false,
+            fakeInfoTargets: [], manholeOptions: []
         });
         
         const isLastPlayer = state.turn === state.players.length - 1;

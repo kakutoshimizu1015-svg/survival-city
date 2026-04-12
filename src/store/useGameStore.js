@@ -10,7 +10,17 @@ const initialState = {
     isSalesVisiting: false,  
     salesTargetId: null,     
     npcSelectActive: false,  
-    npcMovePick: null,       
+    npcMovePick: null, 
+     
+    // ▼ 新規追加: フェーズ2用ステート
+    fixedWeather: null,
+    fixedMarket: false,
+    isRecyclePicking: false,
+    isFakeInfoPicking: false, 
+    fakeInfoTargets: [],
+    isSubwayPicking: false,
+    isManholePicking: false, 
+    manholeOptions: [],     
 
     traps: [],               // ▼ 探偵の罠データ { tileId, type, ownerId }
     isTrapScanActive: false, // ▼ 探偵の罠スキャン状態（長押しでtrue）

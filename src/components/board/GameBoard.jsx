@@ -4,6 +4,8 @@ import { useUserStore } from '../../store/useUserStore';
 import { getDistance, getPathPreviewTiles, getManholeLinkedTiles, buildMapIndex } from '../../utils/gameLogic';
 import { executeMove } from '../../game/actions';
 import { executeSetTrap } from '../../game/skills';
+// ▼ 変更: 新規カードの実行関数をインポート
+import { executeSubway, executeManhole } from '../../game/cards';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { BoardPaths } from './BoardPaths';
@@ -17,7 +19,9 @@ export const GameBoard = () => {
         mapData, players, turn, territories, truckPos, policePos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos, 
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
         roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
-        horrorMode, isDashPicking, isTrapTilePicking 
+        horrorMode, isDashPicking, isTrapTilePicking,
+        // ▼ 変更: 新規カードのUIモードステートを取得
+        isSubwayPicking, isManholePicking, manholeOptions 
     } = useGameStore();
 
     const showSmoke = useUserStore(state => state.showSmoke);
@@ -255,6 +259,7 @@ export const GameBoard = () => {
         };
     }, [zoomAt, applyTransform]);
 
+    // ▼ 変更: 各モードに対するクリック処理を追加
     const handleTileClick = (tileId) => {
         if (isClickPrevented.current) return;
 
@@ -274,6 +279,17 @@ export const GameBoard = () => {
             executeSetTrap(tileId);
         } else if (isBranchPicking && currentBranchOptions.includes(tileId)) {
             executeMove(tileId);
+        } else if (isSubwayPicking) {
+            // 地下鉄の切符のワープ判定
+            const tile = mapData.find(t => t.id === tileId);
+            const isMyTerritory = territories[tileId] === cp?.id;
+            const isAreaTarget = tile && ['slum', 'commercial', 'luxury'].includes(tile.area);
+            if (isMyTerritory || isAreaTarget) {
+                executeSubway(tileId);
+            }
+        } else if (isManholePicking && manholeOptions.includes(tileId)) {
+            // マンホールのワープ判定
+            executeManhole(tileId);
         }
     };
 
@@ -284,6 +300,12 @@ export const GameBoard = () => {
 
         viewers.forEach(v => {
             if (v.hp <= 0) return;
+            // ▼ 変更: 夜行性フラグがあれば全マス可視化
+            if (v.ignoreNightVision) {
+                mapData.forEach(t => visible.add(t.id));
+                return;
+            }
+
             const queue = [v.pos];
             const distMap = new Map([[v.pos, 0]]);
             let head = 0;
@@ -306,8 +328,9 @@ export const GameBoard = () => {
         });
 
         if (isBranchPicking) currentBranchOptions.forEach(id => visible.add(id));
+        if (isManholePicking) manholeOptions.forEach(id => visible.add(id));
         return visible;
-    }, [isNight, players, mapIndex, turn, isBranchPicking, currentBranchOptions]);
+    }, [isNight, players, mapIndex, turn, isBranchPicking, currentBranchOptions, isManholePicking, manholeOptions, mapData]);
 
     const pathPreview = useMemo(() => {
         const preview = { path1: new Set(), path2: new Set(), path3: new Set(), manholes: new Set() };
@@ -334,6 +357,8 @@ export const GameBoard = () => {
     return (
         <div id="board-area" style={{ flexGrow: 1, overflowX: 'hidden', minWidth: 0, position: 'relative' }}>
             <TileTooltip />
+            
+            {/* ▼ 変更: 新規追加カード用のUIプロンプトを追加 */}
             {npcMovePick && (
                 <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ npcMovePick: null }); useGameStore.getState().showToast("情報操作をキャンセルしました"); }}>
                     🕵️ 移動先マスをタップしてください（タップでキャンセル）
@@ -344,7 +369,17 @@ export const GameBoard = () => {
                     🪤 罠を仕掛けるマスをタップしてください（タップでキャンセル）
                 </div>
             )}
-            {isBranchPicking && !npcMovePick && !isTrapTilePicking && (
+            {isSubwayPicking && (
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(44,62,80,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ isSubwayPicking: false }); useGameStore.getState().showToast("地下鉄の切符をキャンセルしました"); }}>
+                    🚇 ワープ先をタップしてください（自陣地 or 各エリア / タップでキャンセル）
+                </div>
+            )}
+            {isManholePicking && (
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(46,204,113,0.95)' }}>
+                    🚲 ワープ先のマンホールをタップしてください
+                </div>
+            )}
+            {isBranchPicking && !npcMovePick && !isTrapTilePicking && !isSubwayPicking && (
                 <div id="branch-prompt" style={{ display: 'block' }}>🛣️ 光っているマスをタップして進む道を選んでください</div>
             )}
 
@@ -410,7 +445,15 @@ export const GameBoard = () => {
                                 const owner = territories[tile.id] !== undefined ? players.find(p => p.id === territories[tile.id]) : null;
                                 const isFog = visibleTiles && !visibleTiles.has(tile.id);
                                 const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
-                                const isClickable = npcMovePick !== null || isTrapTilePicking || isBranchTarget;
+                                
+                                // ▼ 変更: 地下鉄とマンホールのクリッカブル判定を追加
+                                let isClickable = npcMovePick !== null || isTrapTilePicking || isBranchTarget;
+                                if (isSubwayPicking) {
+                                    isClickable = territories[tile.id] === cp?.id || ['slum', 'commercial', 'luxury'].includes(tile.area);
+                                } else if (isManholePicking) {
+                                    isClickable = manholeOptions.includes(tile.id);
+                                }
+                                
                                 const isDashTarget = isClickable && isDashPicking;
                                 
                                 let pathClass = '';

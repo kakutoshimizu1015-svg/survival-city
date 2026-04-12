@@ -162,12 +162,15 @@ export const processRoundEnd = async () => {
 
         state.players.forEach(p => {
             if (p.detectiveCd > 0) useGameStore.getState().updatePlayer(p.id, { detectiveCd: p.detectiveCd - 1 });
+            if (p.fakeInfoDebuff > 0) useGameStore.getState().updatePlayer(p.id, { fakeInfoDebuff: p.fakeInfoDebuff - 1 }); // ニセ情報の解除
         });
 
-        let weather = Math.random() < 0.2 ? "rainy" : Math.random() < 0.4 ? "cloudy" : "sunny";
+        let weather = state.fixedWeather ? state.fixedWeather : (Math.random() < 0.2 ? "rainy" : Math.random() < 0.4 ? "cloudy" : "sunny");
         let isNight = Math.floor(newRound / 3) % 2 === 1;
-        let canPrice = Math.max(1, Math.floor(Math.random() * 4));
-        let trashPrice = Math.max(1, Math.floor(Math.random() * 6));
+        let canPrice = state.fixedMarket ? 3 : Math.max(1, Math.floor(Math.random() * 4));
+        let trashPrice = state.fixedMarket ? 5 : Math.max(1, Math.floor(Math.random() * 6));
+        
+        useGameStore.setState({ fixedWeather: null, fixedMarket: false }); // 固定フラグのリセット
 
         summaryDigest.push(weather === "rainy" ? "🌧️ 雨" : weather === "cloudy" ? "☁️ 曇り" : "☀️ 晴れ");
         summaryDigest.push(isNight ? "🌙 夜になった" : "☀️ 昼になった");

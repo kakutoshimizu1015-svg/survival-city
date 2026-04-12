@@ -37,4 +37,14 @@ export const deckData = [
     {id:35,name:"弁護士の盾",icon:"⚖️",desc:"次の攻撃/カツアゲ完全無効",color:"#16a085",type:"reaction",effect:"block"},
     {id:36,name:"裏取引",icon:"🤝",desc:"次の下剋上/大暴落を反射",color:"#8e44ad",type:"reaction",effect:"reflect"},
     {id:37,name:"反撃の一撃",icon:"🔄",desc:"受けたダメージを相手に返す",color:"#c0392b",type:"reaction",effect:"counter"},
+    {id:38, name:"晴れ男/晴れ女", icon:"☀️", desc:"次ラウンドの天候を晴れに固定", color:"#f39c12", type:"action"},
+    {id:39, name:"夜行性", icon:"🦉", desc:"夜間限定。このターン視界制限無効", color:"#34495e", type:"action"},
+    {id:40, name:"相場操作", icon:"📈", desc:"次ラウンドの買取相場を最大に固定", color:"#27ae60", type:"action"},
+    {id:41, name:"廃品再生", icon:"♻️", desc:"手札1枚をゴミ相場(3~6P)で売却", color:"#8d6e63", type:"action"},
+    {id:42, name:"行政の見落とし", icon:"🏦", desc:"最下位限定。銀行から8P獲得", color:"#3498db", type:"action"},
+    {id:43, name:"ニセ情報", icon:"📰", desc:"対象の次ラウンド陣地収入をゼロに", color:"#8e44ad", type:"action"},
+    {id:44, name:"地下鉄の切符", icon:"🚇", desc:"自陣地か各エリアの好きなマスへワープ", color:"#2c3e50", type:"action"},
+    {id:45, name:"折りたたみ自転車", icon:"🚲", desc:"5ターン移動1AP＆マンホールワープ選択", color:"#2ecc71", type:"equip"},
+    {id:46, name:"ショッピングカート", icon:"🛒", desc:"5ターン移動通過時に20%でアイテム獲得", color:"#e67e22", type:"equip"},
+    {id:47, name:"割れたビール瓶", icon:"🍾", desc:"見えない罠。15ダメ＆確率で空き缶ドロップ", color:"#c0392b", type:"action"}
 ];

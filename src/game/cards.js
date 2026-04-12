@@ -12,11 +12,10 @@ export const actionUseCard = (handIndex, cardId) => {
     if (!cardData) return;
 
     let apCost = cardData.type === 'weapon' ? 2 : 0;
-    if ([3, 4, 13].includes(cardId)) apCost = 1; // 通報(3), 缶泥棒(4), 下剋上(13)を1APに変更
+    if ([3, 4, 13].includes(cardId)) apCost = 1; 
 
     if (cp.ap < apCost) { logMsg("⚡ APが足りません！"); return; }
 
-    // ▼ 使用条件の事前チェック（大暴落・下剋上）
     const alivePlayers = players.filter(p => p.hp > 0);
     const isLowestP = alivePlayers.every(p => cp.p <= p.p);
     
@@ -39,7 +38,7 @@ export const actionUseCard = (handIndex, cardId) => {
     };
 
     if (cardId === 12) {
-        playerUpdates.hp = Math.ceil(cp.hp / 2); // 大暴落はHP半減コスト
+        playerUpdates.hp = Math.ceil(cp.hp / 2); 
         logMsg(`🩸 大暴落の代償としてHPを半分消費した！`);
     }
 
@@ -62,13 +61,11 @@ export const actionUseCard = (handIndex, cardId) => {
         ].filter(n => n.hp > 0 && n.pos !== 999);
 
         const targets = [...playerTargets, ...npcs];
-        // ▼ 修正: 武器の場合はここで更新内容を適用して終了
         state.updateCurrentPlayer(playerUpdates);
         useGameStore.setState({ weaponArcData: { cardData, targets, attacker: cp } });
         return;
     }
 
-    // ▼ 修正: 各カードの効果を `playerUpdates` オブジェクトにマージしていく
     switch (cardId) {
         case 0: playerUpdates.stealth = true; logMsg(`🔵 ステルス発動！次の敵をやり過ごす`); break;
         case 1: playerUpdates.rainGear = true; logMsg(`🌂 雨具装備！次の雨ペナルティを無効化`); break;
@@ -163,6 +160,30 @@ export const actionUseCard = (handIndex, cardId) => {
         case 35: playerUpdates.reaction = 'block'; logMsg(`⚖️ 弁護士の盾！次の攻撃/カツアゲを無効化`); break;
         case 36: playerUpdates.reaction = 'reflect'; logMsg(`🤝 裏取引！次の大暴落/下剋上を反射`); break;
         case 37: playerUpdates.reaction = 'counter'; logMsg(`🔄 反撃の一撃！次のダメージを相手に返す`); break;
+        
+        // ▼ 新規追加: フェーズ2のカード
+        case 38: useGameStore.setState({ fixedWeather: 'sunny' }); logMsg(`☀️ 晴れ男/晴れ女！次のラウンドは晴れ確定！`); break;
+        case 39: playerUpdates.ignoreNightVision = true; logMsg(`🦉 夜行性！このターンはマップ全体が見える！`); break;
+        case 40: useGameStore.setState({ fixedMarket: true }); logMsg(`📈 相場操作！次のラウンドは買取相場が最大に！`); break;
+        case 41: useGameStore.setState({ isRecyclePicking: true }); logMsg(`♻️ 廃品再生！捨てるカードを選んでください`); break;
+        case 42:
+            const isReallyLowest = alivePlayers.every(op => cp.p <= op.p);
+            if (isReallyLowest) { playerUpdates.p += 8; logMsg(`🏦 行政の見落とし！銀行から8Pを受け取った！`); }
+            else { logMsg(`❌ 自分は最下位ではなかった…`); }
+            break;
+        case 43:
+            const fiTargets = players.filter(op => op.id !== cp.id && op.hp > 0);
+            useGameStore.setState({ isFakeInfoPicking: true, fakeInfoTargets: fiTargets.map(t=>t.id) });
+            logMsg(`📰 ニセ情報！対象のプレイヤーを選んでください`);
+            break;
+        case 44: useGameStore.setState({ isSubwayPicking: true }); logMsg(`🚇 地下鉄の切符！ワープ先を選んでください`); break;
+        case 45: playerUpdates.equip = {...cp.equip, foldBike: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), foldBike: 5}; logMsg(`🚲 折りたたみ自転車！5ターン雨天無視＆マンホール選択`); break;
+        case 46: playerUpdates.equip = {...cp.equip, shoppingCart: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), shoppingCart: 5}; logMsg(`🛒 ショッピングカート！5ターン通過時にアイテム獲得チャンス`); break;
+        case 47:
+            useGameStore.setState(prev => ({ traps: [...(prev.traps||[]), { tileId: cp.pos, type: 'bottle', ownerId: cp.id }] }));
+            logMsg(`🍾 割れたビール瓶を設置した！（他プレイヤーには見えません）`);
+            break;
+
         default:
             if (cardData.type === 'heal') {
                 if (cardData.risk > 0 && Math.random() < 0.5) {
@@ -177,7 +198,6 @@ export const actionUseCard = (handIndex, cardId) => {
             break;
     }
 
-    // ▼ 修正: 最後に1回だけ状態を更新する（アトミックな更新）
     state.updateCurrentPlayer(playerUpdates);
 };
 
@@ -200,4 +220,29 @@ export const actionCancelWeapon = (cardId) => {
     }));
     useGameStore.setState({ weaponArcData: null });
     logMsg(`🔙 武器の使用をキャンセルしました`);
+};
+
+// ▼ 新規追加: フェーズ2のUI選択確定アクション群
+export const executeRecycle = (handIndex) => {
+    const state = useGameStore.getState(), cp = state.players[state.turn];
+    if (cp.hand.length <= handIndex) return;
+    const newHand = [...cp.hand]; newHand.splice(handIndex, 1);
+    const finalPrice = Math.max(3, Math.min(6, state.trashPrice + 1));
+    state.updateCurrentPlayer({ hand: newHand, p: cp.p + finalPrice });
+    useGameStore.setState({ isRecyclePicking: false });
+    logMsg(`♻️ 不要なカードを ${finalPrice}P で売却した！`);
+};
+
+export const executeFakeInfo = (targetId) => {
+    const state = useGameStore.getState(), target = state.players.find(p=>p.id===targetId);
+    state.updatePlayer(targetId, { fakeInfoDebuff: 1 });
+    useGameStore.setState({ isFakeInfoPicking: false, fakeInfoTargets: [] });
+    logMsg(`📰 ${target.name}にニセ情報を流した！次のラウンドまで陣地収入ゼロ！`);
+};
+
+export const executeSubway = (tileId) => {
+    const state = useGameStore.getState();
+    state.updateCurrentPlayer({ pos: tileId });
+    useGameStore.setState({ isSubwayPicking: false });
+    logMsg(`🚇 地下鉄でワープした！`);
 };

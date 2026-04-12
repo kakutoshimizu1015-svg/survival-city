@@ -5,12 +5,15 @@ import { getCircularOffset } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
 import { MAP_CONFIG } from '../../constants/maps';
+// ▼ 変更: ニセ情報の実行関数をインポート
+import { executeFakeInfo } from '../../game/cards';
 
 export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const showSmoke = useUserStore(state => state.showSmoke);
     const liteMode = useUserStore(state => state.liteMode); 
 
-    const players = useGameStore(state => state.players);
+    // ▼ 変更: ニセ情報モードのステートを取得
+    const { players, isFakeInfoPicking, fakeInfoTargets } = useGameStore();
     
     const policePos = useGameStore(state => state.policePos);
     const truckPos = useGameStore(state => state.truckPos);
@@ -22,16 +25,11 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
 
     const npcs = { policePos, truckPos, unclePos, animalPos, yakuzaPos, loansharkPos, friendPos };
 
-    // オフセット値の計算
     const offset = getCircularOffset(player.id, player.pos, players, npcs, TOKEN_CONFIG.player.offsetRadius);
 
-    // 【修正】offsetを常に最新値で参照するためのref。
-    // useLayoutEffectのdepsにoffsetオブジェクトを入れると毎レンダリングで実行されカクつくため、
-    // refで最新値を保持しつつdepsから除外する。
     const offsetRef = useRef(offset);
     useEffect(() => { offsetRef.current = offset; }, [offset.x, offset.y]);
 
-    // 移動直前の過去のオフセット（立ち位置）を一時記憶しておく
     const prevOffsetRef = useRef({ x: 0, y: 0 });
     const lastPosRef = useRef(player.pos);
     if (lastPosRef.current !== player.pos) {
@@ -93,7 +91,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         };
     }, [liteMode]); 
 
-    // 【追加】ジャンプ以外の時に、他人がマスに来たらスッと避けるアニメーション
     useEffect(() => {
         if (!isAnimatingRef.current && wrapRef.current) {
             wrapRef.current.style.transition = 'transform 0.4s ease-out';
@@ -101,7 +98,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         }
     }, [offset.x, offset.y]);
 
-    // 【修正】useEffect を useLayoutEffect に変更（画面に描画される前に強制的に位置を上書きする）
     useLayoutEffect(() => {
         if (prevPosRef.current === player.pos) return;
         const startTile = mapData.find(t => t.id === prevPosRef.current);
@@ -119,7 +115,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
         const sx = (startTile.col - endTile.col) * tileDist + prevOffsetRef.current.x;
         const sy = (startTile.row - endTile.row) * tileDist + prevOffsetRef.current.y;
         
-        // 【重要】描画される前に、CSSのトランジションを切り、スタート位置に強制配置する！
         if (wrapRef.current) {
             wrapRef.current.style.transition = 'none';
             wrapRef.current.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
@@ -217,8 +212,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                     prevPosRef.current = player.pos;
                     isAnimatingRef.current = false;
                     
-                    // 次のフレームで、円形の定位置（オフセット）へ滑らかにスライド移動させる
-                    // offsetRef.currentを使うことで、depsにoffsetオブジェクトを含めずに最新値を参照できる
                     requestAnimationFrame(() => {
                         if (wrapRef.current) {
                             wrapRef.current.style.transition = 'transform 0.4s ease-out';
@@ -237,12 +230,11 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
             if (spinRaf) cancelAnimationFrame(spinRaf);
             if (moveRaf) cancelAnimationFrame(moveRaf);
         };
-    }, [player.pos, mapData, showSmoke, liteMode]); // 【修正】offsetオブジェクトをdepsから除去（毎レンダリング新規オブジェクトになるため）
+    }, [player.pos, mapData, showSmoke, liteMode]); 
 
     const isTeam = player.teamColor && player.teamColor !== 'none';
     const glowColor = isTeam ? player.teamColor : player.color;
 
-    // ▼ 毒状態の視覚化フィルター
     const isPoisoned = player.statusEffects?.poison > 0;
     const poisonFilter = `drop-shadow(0 0 10px #9b59b6) sepia(0.5) hue-rotate(250deg) saturate(2)`;
 
@@ -252,27 +244,42 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
             ? `drop-shadow(0 0 15px #ffe066) drop-shadow(0 0 8px ${glowColor})` 
             : (isTeam ? `drop-shadow(0 0 15px ${glowColor})` : `drop-shadow(0 0 8px ${glowColor}) drop-shadow(0 4px 6px rgba(0,0,0,0.6))`)));
 
+    // ▼ 変更: ニセ情報の対象プレイヤーかどうかを判定し、クリックイベントを付与
+    const isTargetable = isFakeInfoPicking && fakeInfoTargets.includes(player.id);
+    const handleClick = () => {
+        if (isTargetable) {
+            executeFakeInfo(player.id);
+        }
+    };
+
     return (
         <div style={{
             gridColumn: currentTile.col,
             gridRow: currentTile.row,
             position: 'relative',
             width: '100%', height: '100%',
-            zIndex: zIndexBase + 10,
-            pointerEvents: 'none',
+            zIndex: isTargetable ? 9999 : (zIndexBase + 10), // ▼ 変更: ターゲット時は最前面へ
+            pointerEvents: isTargetable ? 'auto' : 'none',   // ▼ 変更: ターゲット時のみクリック可能に
             transform: `scale(${ds})`,
-            transformOrigin: 'center center'
-        }}>
+            transformOrigin: 'center center',
+            cursor: isTargetable ? 'pointer' : 'default'     // ▼ 変更: マウスカーソルをポインターに
+        }}
+        onClick={handleClick} // ▼ 変更: クリックイベントをバインド
+        >
             <style>{`
                 @keyframes tokenDustAnim {
                     0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.6; }
                     100% { transform: translate(-50%, -200%) scale(2.5); opacity: 0; }
                 }
+                @keyframes targetPulse {
+                    0% { filter: drop-shadow(0 0 5px red) brightness(1); transform: scale(1); }
+                    50% { filter: drop-shadow(0 0 15px red) brightness(1.2); transform: scale(1.1); }
+                    100% { filter: drop-shadow(0 0 5px red) brightness(1); transform: scale(1); }
+                }
             `}</style>
 
             <div ref={wrapRef} style={{
                 position: 'absolute', left: '50%', top: '50%',
-                // 【修正】インラインスタイルから transition を削除し、JS側の制御に一本化
                 transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))`,
                 display: 'flex', flexDirection: 'column', alignItems: 'center'
             }}>
@@ -301,6 +308,8 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                         position: 'relative', transformOrigin: 'bottom center',
                         background: 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        // ▼ 変更: ターゲット時のアニメーションを付与
+                        animation: isTargetable ? 'targetPulse 1s infinite' : 'none'
                     }}>
                         <div ref={innerTokenRef} style={{ width: '100%', height: '100%', transform: `scaleX(${facingRef.current})` }}>
                             <CharImage
@@ -318,7 +327,6 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
                         textShadow: '1px 1px 2px #000, -1px -1px 2px #000, 1px -1px 2px #000, -1px 1px 2px #000',
                         whiteSpace: 'nowrap', display: 'flex', flexDirection: 'column', alignItems: 'center'
                     }}>
-                        {/* ▼ 毒状態なら名前の上に明滅するドクロを表示 */}
                         {isPoisoned && <span style={{ fontSize: '14px', filter: 'drop-shadow(0 0 2px #9b59b6)', animation: 'pulse 1.5s infinite' }}>☠️</span>}
                         {player.name}
                     </div>

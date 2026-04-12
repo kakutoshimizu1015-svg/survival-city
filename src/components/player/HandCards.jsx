@@ -2,12 +2,13 @@ import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
-import { actionUseCard, actionDiscardCard } from '../../game/cards';
-import { executeSalesVisit } from '../../game/skills'; // ▼ 追加：営業マンのカード押し付け処理
+// ▼ 変更: executeRecycle を追加インポート
+import { actionUseCard, actionDiscardCard, executeRecycle } from '../../game/cards';
+import { executeSalesVisit } from '../../game/skills'; 
 
 export const HandCards = () => {
-    // ▼ 追加：isSalesVisiting ステートを取得
-    const { players, turn, diceRolled, mgActive, isBranchPicking, isSalesVisiting } = useGameStore();
+    // ▼ 変更: isRecyclePicking ステートを追加で取得
+    const { players, turn, diceRolled, mgActive, isBranchPicking, isSalesVisiting, isRecyclePicking } = useGameStore();
     const cp = players[turn];
     const { myUserId, status } = useNetworkStore();
 
@@ -33,8 +34,8 @@ export const HandCards = () => {
         );
     }
 
-    // ▼ 追加：営業マンの訪問販売でカードを選択するモードかどうか
     const isSalesMode = isMyTurn && isSalesVisiting;
+    const isRecycleMode = isMyTurn && isRecyclePicking; // ▼ 追加: 廃品再生モード
 
     return (
         <div id="hand-cards-area" style={{ flexGrow: 1, display: 'flex', overflowX: 'auto', minWidth: 0 }}>
@@ -48,16 +49,15 @@ export const HandCards = () => {
                     let apCost = cardData.type === 'weapon' ? 2 : 0;
                     if ([3, 4, 13].includes(cardId)) apCost = 1;
                     
-                    // ▼ 修正：営業モード中はAP条件や使用不可判定を専用のものに切り替える
-                    const isDisabled = !isMyTurn || !diceRolled || cp.ap < (isSalesMode ? 2 : apCost) || mgActive || isBranchPicking;
-                    const isDiscardDisabled = !isMyTurn || mgActive || isBranchPicking || isSalesMode;
+                    // ▼ 変更: 廃品再生モード中も「使用」をロックし、「捨てる」ボタンを「売却」に切り替える
+                    const isDisabled = !isMyTurn || !diceRolled || cp.ap < (isSalesMode ? 2 : apCost) || mgActive || isBranchPicking || isRecycleMode;
+                    const isDiscardDisabled = !isMyTurn || mgActive || isBranchPicking || isSalesMode; 
 
                     return (
                         <div key={index} style={{ background: '#fdf5e6', border: `3px solid ${cardData.color || '#8d6e63'}`, borderRadius: '8px', padding: '8px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', minWidth: '110px', display: 'flex', flexDirection: 'column', gap: '3px', color: '#333', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)' }}>
                             <div style={{ fontSize: '12px', borderBottom: '1px solid #ccc', paddingBottom: '2px' }}>{cardData.icon} {cardData.name}</div>
                             <div style={{ flexGrow: 1, marginTop: '3px' }}>{cardData.desc}</div>
                             <div style={{ display: 'flex', gap: '5px', width: '100%', justifyContent: 'center', marginTop: '3px' }}>
-                                {/* ▼ 修正：営業モード中は executeSalesVisit を呼び出し、ボタン名と色を変える */}
                                 <button 
                                     onClick={() => isSalesMode ? executeSalesVisit(index) : actionUseCard(index, cardId)} 
                                     disabled={isDisabled} 
@@ -66,11 +66,11 @@ export const HandCards = () => {
                                     {isSalesMode ? '売りつける' : (cardId === 12 ? '使用(HP半減)' : (apCost > 0 ? `使用(${apCost}AP)` : '使用'))}
                                 </button>
                                 <button 
-                                    onClick={() => actionDiscardCard(index)} 
+                                    onClick={() => isRecycleMode ? executeRecycle(index) : actionDiscardCard(index)} 
                                     disabled={isDiscardDisabled} 
-                                    style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDiscardDisabled ? 'not-allowed' : 'pointer', border: '2px solid #c0392b', background: isDiscardDisabled ? '#eee' : '#fff', opacity: isDiscardDisabled ? 0.5 : 1 }}
+                                    style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDiscardDisabled ? 'not-allowed' : 'pointer', border: `2px solid ${isRecycleMode ? '#27ae60' : '#c0392b'}`, background: isDiscardDisabled ? '#eee' : (isRecycleMode ? '#d5f5e3' : '#fff'), opacity: isDiscardDisabled ? 0.5 : 1, color: isRecycleMode ? '#27ae60' : '#333' }}
                                 >
-                                    捨てる
+                                    {isRecycleMode ? '売却する' : '捨てる'}
                                 </button>
                             </div>
                         </div>
