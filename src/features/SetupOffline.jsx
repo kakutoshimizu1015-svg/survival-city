@@ -7,7 +7,7 @@ import { useUserStore } from '../store/useUserStore';
 import { savePlayerName } from '../utils/userLogic';
 import { CharacterSelect } from './CharacterSelect';
 import { CharImage } from '../components/common/CharImage';
-import { MissionModal } from '../components/common/mission/MissionModal'; // ▼ ミッションモーダルを追加
+import { MissionContainer } from '../components/common/mission/MissionContainer'; // ▼ ミッションモーダルを追加
 
 // ▼ 修正: 6色に拡張（紫、橙を追加）
 const TEAM_COLORS = { 
@@ -301,7 +301,7 @@ export const SetupOffline = () => {
                     targetName={players.find(p => p.id === charSelectTarget)?.name || ""}
                 />
             </div>
-            <MissionModal isOpen={showMissionModal} onClose={() => setShowMissionModal(false)} />
+            <MissionContainer isOpen={showMissionModal} onClose={() => setShowMissionModal(false)} />
         </div>
     );
 };
