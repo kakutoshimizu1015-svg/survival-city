@@ -96,7 +96,23 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
     if (target.equip?.helmet) { state.updatePlayer(targetId, p => ({ equip: { ...p.equip, helmet: false } })); actualDmg = Math.floor(actualDmg / 2); playSfx('success'); }
     if (target.equip?.shield) {
         state.updatePlayer(targetId, p => ({ equip: { ...p.equip, shield: false } }));
-        if (Math.random() < 0.5) { actualDmg = Math.floor(actualDmg / 2); playSfx('hit'); }
+        if (Math.random() < 0.5) { 
+            actualDmg = Math.floor(actualDmg / 2); 
+            playSfx('hit'); 
+            // 段ボールの盾の反射追加
+            if (attackerId) {
+                logMsg(`🛡️ 段ボールの盾で防御！さらに${attacker?.name || '相手'}に10ダメージ反射！`);
+                dealDamage(attackerId, 10, "段ボールの盾");
+            } else {
+                logMsg(`🛡️ 段ボールの盾でダメージを半減した！`);
+            }
+        }
+    }
+
+    // 釘バットの出血デバフ追加
+    if (source && source.includes("釘バット")) {
+        state.updatePlayer(targetId, p => ({ penaltyAP: (p.penaltyAP || 0) + 1 }));
+        logMsg(`🩸 釘バットの出血効果！${target.name}は次ターンAP-1！`);
     }
 
     let newHp = target.hp - actualDmg;

@@ -339,9 +339,11 @@ export const actionTrash = () => {
 export const actionJob = () => { 
     const s = useGameStore.getState();
     const cp = s.players[s.turn];
-    const win = Math.random() < (cp.charType === "sales" ? 0.8 : 0.6); 
+    const isSales = cp.charType === "sales";
+    const win = Math.random() < (isSales ? 0.8 : 0.6); 
+    const reward = isSales ? 14 : 12; // 元営業マンは14P
     
-    s.updateCurrentPlayer(p => ({ ap: p.ap - 3, p: p.p + (win ? 12 : 0) })); 
+    s.updateCurrentPlayer(p => ({ ap: p.ap - 3, p: p.p + (win ? reward : 0) })); 
     
     if (win) {
         playSfx('success');
@@ -350,11 +352,11 @@ export const actionJob = () => {
         playSfx('fail');
     }
 
-    const msg = win ? `💼 バイト成功！12P獲得！` : `💼 バイト失敗...`;
+    const msg = win ? `💼 バイト成功！${reward}P獲得！` : `💼 バイト失敗...`;
     logMsg(msg);
-    s.addEventPopup(cp.id, win ? "💼" : "😞", win ? "バイト成功！" : "バイト失敗...", win ? "+12P獲得" : "次回がんばろう", win ? "good" : "bad");
+    s.addEventPopup(cp.id, win ? "💼" : "😞", win ? "バイト成功！" : "バイト失敗...", win ? `+${reward}P獲得` : "次回がんばろう", win ? "good" : "bad");
 
-    useGameStore.setState({ jobResult: { active: true, isSuccess: win, points: win ? 12 : 0 } });
+    useGameStore.setState({ jobResult: { active: true, isSuccess: win, points: win ? reward : 0 } });
 };
 
 export const getOccupyCost = (tileId) => {

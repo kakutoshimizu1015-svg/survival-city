@@ -11,17 +11,37 @@ export const actionUseCard = (handIndex, cardId) => {
 
     if (!cardData) return;
 
-    const apCost = cardData.type === 'weapon' ? 2 : 0;
+    let apCost = cardData.type === 'weapon' ? 2 : 0;
+    if ([3, 4, 13].includes(cardId)) apCost = 1; // 通報(3), 缶泥棒(4), 下剋上(13)を1APに変更
+
     if (cp.ap < apCost) { logMsg("⚡ APが足りません！"); return; }
+
+    // ▼ 使用条件の事前チェック（大暴落・下剋上）
+    const alivePlayers = players.filter(p => p.hp > 0);
+    const isLowestP = alivePlayers.every(p => cp.p <= p.p);
+    
+    if (cardId === 12) {
+        if (!isLowestP) { logMsg("❌ 大暴落は所持Pが最下位の時のみ使用可能です！"); return; }
+    }
+    if (cardId === 13) {
+        const topPlayer = alivePlayers.reduce((a, b) => a.p > b.p ? a : b, alivePlayers[0]);
+        if (!isLowestP || (topPlayer.p - cp.p) < 30) {
+            logMsg("❌ 下剋上は最下位かつ、1位との差が30P以上ないと使えません！"); return;
+        }
+    }
 
     const newHand = [...cp.hand];
     newHand.splice(handIndex, 1);
     
-    // ▼ 修正: 状態更新を1回にまとめるためのオブジェクトを作成（ここで即座に更新しない）
     let playerUpdates = {
         ap: cp.ap - apCost,
         hand: newHand
     };
+
+    if (cardId === 12) {
+        playerUpdates.hp = Math.ceil(cp.hp / 2); // 大暴落はHP半減コスト
+        logMsg(`🩸 大暴落の代償としてHPを半分消費した！`);
+    }
 
     logMsg(`🎴 「${cardData.name}」を使用！`);
     

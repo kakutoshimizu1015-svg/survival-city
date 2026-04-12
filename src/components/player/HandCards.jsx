@@ -45,7 +45,8 @@ export const HandCards = () => {
                     const cardData = deckData.find(c => c.id === cardId);
                     if (!cardData) return null;
 
-                    const apCost = cardData.type === 'weapon' ? 2 : 0;
+                    let apCost = cardData.type === 'weapon' ? 2 : 0;
+                    if ([3, 4, 13].includes(cardId)) apCost = 1;
                     
                     // ▼ 修正：営業モード中はAP条件や使用不可判定を専用のものに切り替える
                     const isDisabled = !isMyTurn || !diceRolled || cp.ap < (isSalesMode ? 2 : apCost) || mgActive || isBranchPicking;
@@ -62,7 +63,7 @@ export const HandCards = () => {
                                     disabled={isDisabled} 
                                     style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDisabled ? 'not-allowed' : 'pointer', border: `2px solid ${isSalesMode ? '#f39c12' : '#8d6e63'}`, background: isDisabled ? '#eee' : (isSalesMode ? '#fdebd0' : '#fff'), opacity: isDisabled ? 0.5 : 1, color: isSalesMode ? '#d35400' : '#333' }}
                                 >
-                                    {isSalesMode ? '売りつける' : (apCost > 0 ? `使用(${apCost}AP)` : '使用')}
+                                    {isSalesMode ? '売りつける' : (cardId === 12 ? '使用(HP半減)' : (apCost > 0 ? `使用(${apCost}AP)` : '使用'))}
                                 </button>
                                 <button 
                                     onClick={() => actionDiscardCard(index)} 
