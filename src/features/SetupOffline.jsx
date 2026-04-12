@@ -7,6 +7,7 @@ import { useUserStore } from '../store/useUserStore';
 import { savePlayerName } from '../utils/userLogic';
 import { CharacterSelect } from './CharacterSelect';
 import { CharImage } from '../components/common/CharImage';
+import { MissionModal } from '../components/common/mission/MissionModal'; // ▼ ミッションモーダルを追加
 
 // ▼ 修正: 6色に拡張（紫、橙を追加）
 const TEAM_COLORS = { 
@@ -42,6 +43,8 @@ export const SetupOffline = () => {
     const [charAssignMode, setCharAssignMode] = useState('choose'); 
     
     const [charSelectTarget, setCharSelectTarget] = useState(null);
+
+    const [showMissionModal, setShowMissionModal] = useState(false); // ▼ ミッションモーダル制御用のステートを追加
 
     const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e91e8c'];
 
@@ -170,7 +173,16 @@ export const SetupOffline = () => {
         <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fdf5e6', width: '100vw', overflowY: 'auto' }}>
             
             <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                <h2 style={{ fontSize: '32px', textShadow: '2px 2px 4px #000', margin: '10px 0' }}>🏠 ゲーム設定</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', margin: '10px 0' }}>
+                    <h2 style={{ fontSize: '32px', textShadow: '2px 2px 4px #000', margin: 0 }}>🏠 ゲーム設定</h2>
+                    <button 
+                        onClick={() => setShowMissionModal(true)} 
+                        className="btn-clay" 
+                        style={{ background: '#e67e22', padding: '8px 16px', fontSize: '16px', fontWeight: 'bold' }}
+                    >
+                        🏆 ミッション
+                    </button>
+                </div>
                 
                 <div className="panel" style={{ width: '90%', maxWidth: '800px', marginBottom: '15px', padding: '20px' }}>
                     <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '5px', margin: '0 0 10px 0', color: '#5c4a44' }}>👥 プレイヤー設定 ({players.length}/8人)</h3>
@@ -289,6 +301,7 @@ export const SetupOffline = () => {
                     targetName={players.find(p => p.id === charSelectTarget)?.name || ""}
                 />
             </div>
+            <MissionModal isOpen={showMissionModal} onClose={() => setShowMissionModal(false)} />
         </div>
     );
 };

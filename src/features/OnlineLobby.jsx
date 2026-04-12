@@ -9,6 +9,7 @@ import { CharacterSelect } from './CharacterSelect';
 import { CharImage } from '../components/common/CharImage';
 import { FriendListModal } from '../components/common/FriendListModal'; // ▼ 追加
 import { UserProfileModal } from '../components/common/UserProfileModal'; // ▼ 追加
+import { MissionModal } from '../components/common/mission/MissionModal'; // ▼ ミッションモーダルを追加
 
 // ▼ 修正: 6色に拡張（紫、橙を追加）
 const TEAM_COLORS = { 
@@ -43,8 +44,9 @@ export const OnlineLobby = () => {
     // ▼ 追加: フレンドモーダル制御用のステート
     const [showFriendModal, setShowFriendModal] = useState(false);
     const [selectedProfileUid, setSelectedProfileUid] = useState(null);
+    const [showMissionModal, setShowMissionModal] = useState(false); // ▼ ミッションモーダル制御用のステートを追加
     
-    const { 
+    const {
         createRoom, joinRoom, leaveRoom, status, roomId, lobbyPlayers, isHost, broadcast, 
         activeRooms, subscribeToRooms, unsubscribeFromRooms, updateRoomStatus,
         myUserId, updateMyInfo, addCpu, updateCpu, removeCpu, randomizeTeams, clearTeams
@@ -153,7 +155,16 @@ export const OnlineLobby = () => {
         return (
             <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fdf5e6', overflowY: 'auto', height: '100vh', width: '100%' }}>
                 <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                    <h2>🌐 ロビー: 部屋コード【 {roomId} 】</h2>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: '650px' }}>
+                        <h2>🌐 ロビー: 部屋コード【 {roomId} 】</h2>
+                        <button 
+                            onClick={() => setShowMissionModal(true)} 
+                            className="btn-clay" 
+                            style={{ background: '#e67e22', padding: '8px 16px', fontSize: '14px', fontWeight: 'bold' }}
+                        >
+                            🏆 ミッション
+                        </button>
+                    </div>
                     
                     <div className="panel" style={{ width: '100%', maxWidth: '650px', marginBottom: '20px' }}>
                         {/* ▼ 修正: 参加者リストのヘッダーにフレンド招待ボタンを追加 */}
@@ -299,6 +310,7 @@ export const OnlineLobby = () => {
                         onClose={() => setSelectedProfileUid(null)} 
                     />
                 )}
+                <MissionModal isOpen={showMissionModal} onClose={() => setShowMissionModal(false)} />
             </div>
         );
     }
@@ -306,7 +318,16 @@ export const OnlineLobby = () => {
     return (
         <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fdf5e6', width: '100vw', height: '100vh' }}>
             <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <h2 style={{ fontSize: '32px' }}>🌐 オンライン対戦</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', margin: '10px 0 20px 0' }}>
+                    <h2 style={{ fontSize: '32px', margin: 0 }}>🌐 オンライン対戦</h2>
+                    <button 
+                        onClick={() => setShowMissionModal(true)} 
+                        className="btn-clay" 
+                        style={{ background: '#e67e22', padding: '8px 16px', fontSize: '16px', fontWeight: 'bold' }}
+                    >
+                        🏆 ミッション
+                    </button>
+                </div>
                 <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
                     <div className="panel" style={{ width: '350px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         <div>
@@ -336,6 +357,7 @@ export const OnlineLobby = () => {
                 </div>
                 <button className="btn-large" style={{ marginTop: '30px', background: '#7f8c8d' }} onClick={() => setGameState({ gamePhase: 'mode_select' })}>◀ 戻る</button>
             </div>
+            <MissionModal isOpen={showMissionModal} onClose={() => setShowMissionModal(false)} />
         </div>
     );
 };

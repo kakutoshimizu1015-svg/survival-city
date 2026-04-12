@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 export const useUserStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({ // getを追加して現在のステートを参照可能に
       uid: null,
       isLoggedIn: false,
       isLinked: false,
@@ -40,8 +40,10 @@ export const useUserStore = create(
       claimedMails: [], 
       inbox: [],
       
-      // ▼ 追加: 進行中のトレードリスト
       activeTrades: [],
+
+      // ▼ ミッション関連の追加ステート
+      claimedMissions: [], // 受け取り済みのミッションIDリスト 
 
       setUserData: (data) => set((state) => ({ ...state, ...data })),
       setShowSmoke: (show) => set({ showSmoke: show }), 
@@ -67,7 +69,31 @@ export const useUserStore = create(
       setEquippedSkin: (charKey, skinId) => set((state) => ({
           equippedSkins: { ...state.equippedSkins, [charKey]: skinId }
       })),
-      setFavoriteSkin: (skinData) => set({ favoriteSkin: skinData })
+      setFavoriteSkin: (skinData) => set({ favoriteSkin: skinData }),
+
+      // ▼ ミッション報酬受け取りアクション 
+      claimMissionReward: (missionId, reward) => {
+        const state = get();
+        if (state.claimedMissions.includes(missionId)) return;
+
+        // 報酬内容の解析と付与
+        if (reward.nm.includes('缶')) {
+          // 例: "+100缶" から数値を抽出して加算
+          const amount = parseInt(reward.nm.replace(/[^0-9]/g, '')) || 0;
+          state.addGachaAssets(amount, 0);
+        } else if (reward.g === 'CHAR' || reward.g !== '') {
+          // スキンまたはキャラクター解放
+          state.unlockMultipleSkins([reward.nm]);
+        } else if (reward.nm.includes('P')) {
+          const amount = parseInt(reward.nm.replace(/[^0-9]/g, '')) || 0;
+          state.addGachaAssets(0, amount);
+        }
+
+        // 受け取り済みリストを更新
+        set({ claimedMissions: [...state.claimedMissions, missionId] });
+        
+        // Firebase同期が必要な場合はここで呼び出す（例: get().syncGachaData?.()）
+      }
     }),
     {
       name: 'homeless-survival-user-storage',
@@ -102,6 +128,8 @@ export const useUserStore = create(
         autoScrollToPlayer: state.autoScrollToPlayer,
         friends: state.friends,
         claimedMails: state.claimedMails,
+        // ▼ 永続化対象に追加 
+        claimedMissions: state.claimedMissions,
       }),
     }
   )
