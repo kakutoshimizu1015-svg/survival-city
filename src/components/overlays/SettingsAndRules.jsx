@@ -4,9 +4,8 @@ import { ClayButton } from '../common/ClayButton';
 import { useUserStore } from '../../store/useUserStore';
 import { savePlayerName, syncGachaData } from '../../utils/userLogic';
 import { sendGlobalMail } from '../../utils/adminLogic';
-import { linkGoogleAccount } from '../../utils/authLogic'; // ▼ 追加
+import { linkGoogleAccount, loginWithGoogle } from '../../utils/authLogic'; // ▼ 修正: loginWithGoogle を追加
 
-// ▼ 追加：お詫びメール・お知らせのテンプレート定義
 const TEMPLATES = {
     A: { 
         name: "【A】重大なバグ・進行不能",
@@ -42,17 +41,16 @@ export const SettingsAndRules = () => {
     const { 
         playerName, wins, totalEarnedP, showSmoke, setShowSmoke,
         totalTilesMoved, totalCardsUsed, totalCansCollected, totalTrashCollected, totalPSpentAtShop, npcEncounters,
-        liteMode, volume, layoutMode, showSkipButton, autoScrollToPlayer, showTileLabels, setUserData, // ▼ showTileLabelsを追加
-        addGachaAssets
+        liteMode, volume, layoutMode, showSkipButton, autoScrollToPlayer, showTileLabels, setUserData,
+        addGachaAssets, isLinked, linkedEmail
     } = useUserStore();
     
     const [activeTab, setActiveTab] = useState('player');
     const [editingName, setEditingName] = useState(playerName);
 
-    // ▼ 開発者用ステート（テンプレート対応）
     const [devCode, setDevCode] = useState("");
-    const [templateType, setTemplateType] = useState("A"); // テンプレート種類
-    const [mailDetail, setMailDetail] = useState("");      // 修正内容（詳細）
+    const [templateType, setTemplateType] = useState("A"); 
+    const [mailDetail, setMailDetail] = useState("");      
     const [mailP, setMailP] = useState("");
     const [mailCans, setMailCans] = useState("");
     const [isSendingMail, setIsSendingMail] = useState(false);
@@ -76,7 +74,6 @@ export const SettingsAndRules = () => {
         }
     };
 
-    // ▼ 開発者用ロジック（テンプレート対応）
     const isDevAuthenticated = devCode === "DEV_MAIL_2026";
 
     const handleSendGlobalMail = async () => {
@@ -308,18 +305,8 @@ export const SettingsAndRules = () => {
             <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723', padding: '15px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', borderBottom: '2px solid #8d6e63', paddingBottom: '10px' }}>
-                    <ClayButton 
-                        onClick={() => setActiveTab('player')} 
-                        style={{ flex: 1, padding: '10px', background: activeTab === 'player' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'player' ? 1 : 0.7 }}
-                    >
-                        👤 プレイヤー
-                    </ClayButton>
-                    <ClayButton 
-                        onClick={() => setActiveTab('settings')} 
-                        style={{ flex: 1, padding: '10px', background: activeTab === 'settings' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'settings' ? 1 : 0.7 }}
-                    >
-                        ⚙️ 設定
-                    </ClayButton>
+                    <ClayButton onClick={() => setActiveTab('player')} style={{ flex: 1, padding: '10px', background: activeTab === 'player' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'player' ? 1 : 0.7 }}>👤 プレイヤー</ClayButton>
+                    <ClayButton onClick={() => setActiveTab('settings')} style={{ flex: 1, padding: '10px', background: activeTab === 'settings' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'settings' ? 1 : 0.7 }}>⚙️ 設定</ClayButton>
                 </div>
 
                 {activeTab === 'player' && (
@@ -354,10 +341,10 @@ export const SettingsAndRules = () => {
                         <div style={{ background: 'rgba(0,0,0,0.3)', padding: '15px', borderRadius: '8px', marginTop: '15px', textAlign: 'center' }}>
                             <div style={{ fontSize: '13px', color: '#bdc3c7', marginBottom: '8px' }}>🔐 アカウント連携とデータ引き継ぎ</div>
                             
-                            {useUserStore.getState().isLinked ? (
+                            {isLinked ? (
                                 <div style={{ background: 'rgba(46, 204, 113, 0.2)', border: '1px solid #2ecc71', color: '#2ecc71', padding: '10px', borderRadius: '6px' }}>
                                     <div style={{ fontSize: '13px', fontWeight: 'bold' }}>✅ アカウント連携済み</div>
-                                    <div style={{ fontSize: '11px', color: '#bdc3c7' }}>{useUserStore.getState().linkedEmail}</div>
+                                    <div style={{ fontSize: '11px', color: '#bdc3c7' }}>{linkedEmail}</div>
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -480,7 +467,6 @@ export const SettingsAndRules = () => {
                             </div>
                         </div>
 
-                        {/* ▼ 開発者隠しメニュー（テンプレート送信対応） */}
                         <div style={{ marginBottom: '20px', textAlign: 'left', background: '#3e2723', color: '#fdf5e6', padding: '10px', borderRadius: '8px', border: '1px solid #5c4a44' }}>
                             <div style={{ fontSize: '12px', color: '#95a5a6', marginBottom: '5px' }}>開発者オプション</div>
                             <input 
