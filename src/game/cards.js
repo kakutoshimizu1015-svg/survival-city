@@ -5,7 +5,7 @@ import { logMsg } from './actions';
 
 export const actionUseCard = (handIndex, cardId) => {
     const state = useGameStore.getState();
-    const { turn, players, territories, mapData, isCreativeMode } = state; // ▼ 追加: isCreativeMode を取得
+    const { turn, players, territories, mapData, isCreativeMode } = state;
     const cp = players[turn];
     const cardData = deckData.find(c => c.id === cardId);
 
@@ -14,13 +14,11 @@ export const actionUseCard = (handIndex, cardId) => {
     let apCost = cardData.type === 'weapon' ? 2 : 0;
     if ([3, 4, 13].includes(cardId)) apCost = 1; 
 
-    // ▼ 修正: クリエイティブモード時はAP不足を無視
     if (!isCreativeMode && cp.ap < apCost) { logMsg("⚡ APが足りません！"); return; }
 
     const alivePlayers = players.filter(p => p.hp > 0);
     const isLowestP = alivePlayers.every(p => cp.p <= p.p);
     
-    // ▼ 修正: クリエイティブモード時は条件を無視
     if (cardId === 12 && !isCreativeMode) {
         if (!isLowestP) { logMsg("❌ 大暴落は所持Pが最下位の時のみ使用可能です！"); return; }
     }
@@ -32,20 +30,18 @@ export const actionUseCard = (handIndex, cardId) => {
     }
 
     const newHand = [...cp.hand];
-    // ▼ 修正: クリエイティブモード時はカードを消費しない
     if (!isCreativeMode) {
         newHand.splice(handIndex, 1);
     }
     
     let playerUpdates = {
-        ap: isCreativeMode ? cp.ap : cp.ap - apCost, // コスト無視
+        ap: isCreativeMode ? cp.ap : cp.ap - apCost,
         hand: newHand
     };
 
     if (cardId === 12) {
-        // ▼ 修正: 大暴落のHP半減コストも免除
         if (!isCreativeMode) playerUpdates.hp = Math.ceil(cp.hp / 2); 
-        logMsg(`🩸 大暴落を発動した！`);
+        logMsg(`🩸 大暴落の代償としてHPを半分消費した！`);
     }
 
     logMsg(`🎴 「${cardData.name}」を使用！`);
@@ -73,15 +69,26 @@ export const actionUseCard = (handIndex, cardId) => {
     }
 
     switch (cardId) {
-        case 0: playerUpdates.stealth = true; logMsg(`🔵 ステルス発動！次の敵をやり過ごす`); break;
-        case 1: playerUpdates.rainGear = true; logMsg(`🌂 雨具装備！次の雨ペナルティを無効化`); break;
-        case 2: playerUpdates.hasID = true; playerUpdates.p = cp.p + 1; logMsg(`🪪 身分証！+1P＆次の警察回避`); break;
+        case 0: 
+            playerUpdates.stealth = true; logMsg(`🔵 ステルス発動！次の敵をやり過ごす`); 
+            state.addEventPopup(cp.id, "🔵", "ステルス発動", "次の敵を回避", "good");
+            break;
+        case 1: 
+            playerUpdates.rainGear = true; logMsg(`🌂 雨具装備！次の雨ペナルティを無効化`); 
+            state.addEventPopup(cp.id, "🌂", "雨具装備", "雨ペナルティ無効", "good");
+            break;
+        case 2: 
+            playerUpdates.hasID = true; playerUpdates.p = cp.p + 1; logMsg(`🪪 身分証！+1P＆次の警察回避`); 
+            state.addEventPopup(cp.id, "🪪", "身分証提示", "+1P & 警察回避", "good");
+            break;
         case 3: 
             const others1 = players.filter(t => t.id !== cp.id);
             if(others1.length > 0) {
                 const tgt = others1[Math.floor(Math.random() * others1.length)];
                 state.updatePlayer(tgt.id, p => ({ penaltyAP: (p.penaltyAP || 0) + 2 }));
                 logMsg(`📢 通報！${tgt.name}に次回AP-2ペナルティ！`);
+                state.addEventPopup(cp.id, "📢", "通報完了", `${tgt.name}にAP-2`, "neutral");
+                state.addEventPopup(tgt.id, "📢", "通報された！", "次回AP-2", "bad");
             }
             break;
         case 4:
@@ -92,6 +99,7 @@ export const actionUseCard = (handIndex, cardId) => {
                 state.updatePlayer(tgt.id, p => ({ p: p.p - stolen }));
                 playerUpdates.p = cp.p + stolen;
                 logMsg(`🤑 缶泥棒！${tgt.name}から${stolen}P奪取！`);
+                state.addEventPopup(cp.id, "🤑", "缶泥棒", `${tgt.name}から${stolen}P奪取`, "good");
             }
             break;
         case 5:
@@ -103,24 +111,53 @@ export const actionUseCard = (handIndex, cardId) => {
                         const targetT = enemyTerritories[Math.floor(Math.random() * enemyTerritories.length)];
                         useGameStore.setState({ territories: { ...territories, [targetT]: cp.id } });
                         logMsg(`🚩 領土挑戦(出目${dice})成功！ランダムな敵陣地を1つ奪った！`);
+                        state.addEventPopup(cp.id, "🚩", `領土挑戦成功(${dice})`, "陣地を乗っ取った", "good");
                     } else {
                         logMsg(`🚩 領土挑戦(出目${dice})成功！奪う陣地を選んでください。`);
+                        state.addEventPopup(cp.id, "🚩", `領土挑戦成功(${dice})`, "奪う陣地を選択", "good");
                         useGameStore.setState({ territorySelectOptions: enemyTerritories });
                     }
                 } else { logMsg(`🚩 奪える領土がありませんでした`); }
-            } else { logMsg(`🚩 領土挑戦(出目${dice})失敗...`); }
+            } else { 
+                logMsg(`🚩 領土挑戦(出目${dice})失敗...`); 
+                state.addEventPopup(cp.id, "❌", `領土挑戦失敗(${dice})`, "", "bad");
+            }
             break;
-        case 6: playerUpdates.p = cp.p + 5; playerUpdates.bonusAP = (cp.bonusAP || 0) + 2; logMsg(`🤝 支援面談！+5P＆次回AP+2！`); break;
-        case 7: playerUpdates.p = cp.p + 3; logMsg(`🍲 炊き出し！+3P！`); break;
-        case 8: playerUpdates.maxHand = cp.maxHand + 2; playerUpdates.equip = {...cp.equip, backpack: true}; logMsg(`🎒 リュック装備！手札上限+2`); break;
+        case 6: 
+            playerUpdates.p = cp.p + 5; playerUpdates.bonusAP = (cp.bonusAP || 0) + 2; logMsg(`🤝 支援面談！+5P＆次回AP+2！`); 
+            state.addEventPopup(cp.id, "🤝", "支援面談", "+5P & 次回AP+2", "good");
+            break;
+        case 7: 
+            playerUpdates.p = cp.p + 3; logMsg(`🍲 炊き出し！+3P！`); 
+            state.addEventPopup(cp.id, "🍲", "炊き出し", "+3P", "good");
+            break;
+        case 8: 
+            playerUpdates.maxHand = cp.maxHand + 2; playerUpdates.equip = {...cp.equip, backpack: true}; logMsg(`🎒 リュック装備！手札上限+2`); 
+            state.addEventPopup(cp.id, "🎒", "リュック装備", "手札上限+2", "good");
+            break;
         case 9:
-            if(Math.random() > 0.5) { playerUpdates.p = cp.p + 3; logMsg(`🔮 運勢良し！+3P`); }
-            else { playerUpdates.p = Math.max(0, cp.p - 3); logMsg(`🔮 凶...-3P`); }
+            if(Math.random() > 0.5) { 
+                playerUpdates.p = cp.p + 3; logMsg(`🔮 運勢良し！+3P`); 
+                state.addEventPopup(cp.id, "🔮", "大吉", "+3P", "good");
+            }
+            else { 
+                playerUpdates.p = Math.max(0, cp.p - 3); logMsg(`🔮 凶...-3P`); 
+                state.addEventPopup(cp.id, "🔮", "凶", "-3P", "bad");
+            }
             break;
-        case 10: playerUpdates.p = cp.p + 2; logMsg(`🐱 野良猫の導き！+2P`); break;
+        case 10: 
+            playerUpdates.p = cp.p + 2; logMsg(`🐱 野良猫の導き！+2P`); 
+            state.addEventPopup(cp.id, "🐱", "野良猫の導き", "+2P", "good");
+            break;
         case 11:
-            if(Math.random() > 0.5) { playerUpdates.p = cp.p + 6; logMsg(`💼 密かなバイト成功！+6P`); }
-            else { playerUpdates.p = Math.max(0, cp.p - 3); logMsg(`💼 密かなバイト失敗... -3P`); }
+            if(Math.random() > 0.5) { 
+                playerUpdates.p = cp.p + 6; logMsg(`💼 密かなバイト成功！+6P`); 
+                state.addEventPopup(cp.id, "💼", "バイト成功", "+6P", "good");
+            }
+            else { 
+                playerUpdates.p = Math.max(0, cp.p - 3); logMsg(`💼 密かなバイト失敗... -3P`); 
+                state.addEventPopup(cp.id, "💼", "バイト失敗", "-3P", "bad");
+            }
             break;
         case 12:
             players.forEach(op => {
@@ -129,11 +166,14 @@ export const actionUseCard = (handIndex, cardId) => {
                     state.updatePlayer(op.id, p => ({ reaction: null }));
                     playerUpdates.p = Math.floor(cp.p / 2);
                     logMsg(`🤝 ${op.name}の裏取引で大暴落を反射された！`);
+                    state.addEventPopup(op.id, "🤝", "裏取引発動", "大暴落を反射", "good");
                 } else {
                     state.updatePlayer(op.id, p => ({ p: Math.floor(p.p / 2) }));
+                    state.addEventPopup(op.id, "📉", "大暴落", "Pが半減", "bad");
                 }
             });
             logMsg(`📉 大暴落発動！他プレイヤーのPが半分に！`);
+            state.addEventPopup(cp.id, "📉", "大暴落発動", "他人のP半減", "good");
             break;
         case 13:
             const richer = players.filter(op => op.id !== cp.id && op.p > cp.p);
@@ -143,52 +183,122 @@ export const actionUseCard = (handIndex, cardId) => {
                     state.updatePlayer(top.id, p => ({ reaction: null }));
                     playerUpdates.p = Math.max(0, cp.p - 10);
                     logMsg(`🤝 ${top.name}の裏取引で下剋上を反射され10P失った！`);
+                    state.addEventPopup(cp.id, "🤝", "反射された！", "-10P", "bad");
                 } else {
                     const steal = Math.min(15, Math.floor((top.p - cp.p) * 0.3));
                     state.updatePlayer(top.id, p => ({ p: p.p - steal }));
                     playerUpdates.p = cp.p + steal;
                     logMsg(`🔥 下剋上！${top.name}から${steal}P奪取！`);
+                    state.addEventPopup(cp.id, "🔥", "下剋上成功", `${steal}P奪取`, "good");
+                    state.addEventPopup(top.id, "🔥", "下剋上された", `${steal}P奪われた`, "bad");
                 }
             } else { logMsg(`🔥 自分がトップなので何も起きない...`); }
             break;
         case 14:
-            if(Math.random() < 0.1) { playerUpdates.p = cp.p + 15; logMsg(`🎉 宝くじ当選！+15P！`); }
-            else { logMsg(`📄 宝くじハズレ...`); }
+            if(Math.random() < 0.1) { 
+                playerUpdates.p = cp.p + 15; logMsg(`🎉 宝くじ当選！+15P！`); 
+                state.addEventPopup(cp.id, "🎉", "宝くじ大当たり", "+15P", "good");
+            }
+            else { 
+                logMsg(`📄 宝くじハズレ...`); 
+                state.addEventPopup(cp.id, "📄", "ハズレ", "", "neutral");
+            }
             break;
-        case 15: playerUpdates.ap = playerUpdates.ap + 5; logMsg(`⚡ エナドリ！即座にAP+5`); break;
-        case 16: playerUpdates.bonusAP = (cp.bonusAP || 0) + 5; logMsg(`🛹 スケボー！次回ダイスAP+5`); break;
-        case 24: playerUpdates.equip = {...cp.equip, bicycle: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), bicycle: 5}; logMsg(`🚲 自転車装備！5ターンAP+2`); break;
-        case 25: playerUpdates.equip = {...cp.equip, shoes: true}; logMsg(`👢 安全靴装備！ゴミ漁りが1APに`); break;
-        case 26: playerUpdates.equip = {...cp.equip, cart: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), cart: 5}; logMsg(`🛒 リヤカー装備！5ターン陣地収入2倍`); break;
-        case 27: playerUpdates.equip = {...cp.equip, shield: true}; logMsg(`🛡️ 段ボールの盾装備！50%でダメージ半減`); break;
-        case 28: playerUpdates.equip = {...cp.equip, helmet: true}; logMsg(`🪖 ヘルメット装備！次のダメージ確実半減`); break;
-        case 29: playerUpdates.equip = {...cp.equip, doll: true}; logMsg(`🎎 身代わり人形装備！NPC妨害を1回無効`); break;
-        case 35: playerUpdates.reaction = 'block'; logMsg(`⚖️ 弁護士の盾！次の攻撃/カツアゲを無効化`); break;
-        case 36: playerUpdates.reaction = 'reflect'; logMsg(`🤝 裏取引！次の大暴落/下剋上を反射`); break;
-        case 37: playerUpdates.reaction = 'counter'; logMsg(`🔄 反撃の一撃！次のダメージを相手に返す`); break;
+        case 15: 
+            playerUpdates.ap = playerUpdates.ap + 5; logMsg(`⚡ エナドリ！即座にAP+5`); 
+            state.addEventPopup(cp.id, "⚡", "エナドリ", "AP+5", "good");
+            break;
+        case 16: 
+            playerUpdates.bonusAP = (cp.bonusAP || 0) + 5; logMsg(`🛹 スケボー！次回ダイスAP+5`); 
+            state.addEventPopup(cp.id, "🛹", "スケボー", "次回AP+5", "good");
+            break;
+        case 24: 
+            playerUpdates.equip = {...cp.equip, bicycle: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), bicycle: 5}; logMsg(`🚲 自転車装備！5ターンAP+2`); 
+            state.addEventPopup(cp.id, "🚲", "自転車装備", "5ターンAP+2", "good");
+            break;
+        case 25: 
+            playerUpdates.equip = {...cp.equip, shoes: true}; logMsg(`👢 安全靴装備！ゴミ漁りが1APに`); 
+            state.addEventPopup(cp.id, "👢", "安全靴装備", "ゴミ漁り1AP", "good");
+            break;
+        case 26: 
+            playerUpdates.equip = {...cp.equip, cart: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), cart: 5}; logMsg(`🛒 リヤカー装備！5ターン陣地収入2倍`); 
+            state.addEventPopup(cp.id, "🛒", "リヤカー装備", "5ターン収入2倍", "good");
+            break;
+        case 27: 
+            playerUpdates.equip = {...cp.equip, shield: true}; logMsg(`🛡️ 段ボールの盾装備！50%でダメージ半減`); 
+            state.addEventPopup(cp.id, "🛡️", "段ボールの盾", "確率でダメ半減", "good");
+            break;
+        case 28: 
+            playerUpdates.equip = {...cp.equip, helmet: true}; logMsg(`🪖 ヘルメット装備！次のダメージ確実半減`); 
+            state.addEventPopup(cp.id, "🪖", "ヘルメット", "次ダメ半減", "good");
+            break;
+        case 29: 
+            playerUpdates.equip = {...cp.equip, doll: true}; logMsg(`🎎 身代わり人形装備！NPC妨害を1回無効`); 
+            state.addEventPopup(cp.id, "🎎", "身代わり人形", "NPC妨害無効", "good");
+            break;
+        case 35: 
+            playerUpdates.reaction = 'block'; logMsg(`⚖️ 弁護士の盾！次の攻撃/カツアゲを無効化`); 
+            state.addEventPopup(cp.id, "⚖️", "弁護士の盾", "次攻撃無効化", "good");
+            break;
+        case 36: 
+            playerUpdates.reaction = 'reflect'; logMsg(`🤝 裏取引！次の大暴落/下剋上を反射`); 
+            state.addEventPopup(cp.id, "🤝", "裏取引準備", "魔法カードを反射", "good");
+            break;
+        case 37: 
+            playerUpdates.reaction = 'counter'; logMsg(`🔄 反撃の一撃！次のダメージを相手に返す`); 
+            state.addEventPopup(cp.id, "🔄", "反撃の構え", "次ダメージを返す", "good");
+            break;
         
         // ▼ 新規追加: フェーズ2のカード
-        case 38: useGameStore.setState({ fixedWeather: 'sunny' }); logMsg(`☀️ 晴れ男/晴れ女！次のラウンドは晴れ確定！`); break;
-        case 39: playerUpdates.ignoreNightVision = true; logMsg(`🦉 夜行性！このターンはマップ全体が見える！`); break;
-        case 40: useGameStore.setState({ fixedMarket: true }); logMsg(`📈 相場操作！次のラウンドは買取相場が最大に！`); break;
-        case 41: useGameStore.setState({ isRecyclePicking: true }); logMsg(`♻️ 廃品再生！捨てるカードを選んでください`); break;
+        case 38: 
+            useGameStore.setState({ fixedWeather: 'sunny' }); logMsg(`☀️ 晴れ男/晴れ女！次のラウンドは晴れ確定！`); 
+            state.addEventPopup(cp.id, "☀️", "晴れ男/晴れ女", "次ラウンドは晴れ", "good");
+            break;
+        case 39: 
+            playerUpdates.ignoreNightVision = true; logMsg(`🦉 夜行性！このターンはマップ全体が見える！`); 
+            state.addEventPopup(cp.id, "🦉", "夜行性", "視界制限を無効化", "good");
+            break;
+        case 40: 
+            useGameStore.setState({ fixedMarket: true }); logMsg(`📈 相場操作！次のラウンドは買取相場が最大に！`); 
+            state.addEventPopup(cp.id, "📈", "相場操作", "次ラウンド相場MAX", "good");
+            break;
+        case 41: 
+            useGameStore.setState({ isRecyclePicking: true }); logMsg(`♻️ 廃品再生！捨てるカードを選んでください`); 
+            state.addEventPopup(cp.id, "♻️", "廃品再生", "売却カードを選択", "neutral");
+            break;
         case 42:
             const isReallyLowest = alivePlayers.every(op => cp.p <= op.p);
-            // ▼ 修正: クリエイティブモード時は条件を無視
-            if (isReallyLowest || isCreativeMode) { playerUpdates.p += 8; logMsg(`🏦 行政の見落とし！銀行から8Pを受け取った！`); }
-            else { logMsg(`❌ 自分は最下位ではなかった…`); }
+            if (isReallyLowest || isCreativeMode) { 
+                playerUpdates.p += 8; logMsg(`🏦 行政の見落とし！銀行から8Pを受け取った！`); 
+                state.addEventPopup(cp.id, "🏦", "行政の見落とし", "8P獲得", "good");
+            }
+            else { 
+                logMsg(`❌ 自分は最下位ではなかった…`); 
+                state.addEventPopup(cp.id, "❌", "発動失敗", "最下位ではない", "bad");
+            }
             break;
         case 43:
             const fiTargets = players.filter(op => op.id !== cp.id && op.hp > 0);
             useGameStore.setState({ isFakeInfoPicking: true, fakeInfoTargets: fiTargets.map(t=>t.id) });
             logMsg(`📰 ニセ情報！対象のプレイヤーを選んでください`);
+            state.addEventPopup(cp.id, "📰", "ニセ情報", "対象プレイヤーを選択", "neutral");
             break;
-        case 44: useGameStore.setState({ isSubwayPicking: true }); logMsg(`🚇 地下鉄の切符！ワープ先を選んでください`); break;
-        case 45: playerUpdates.equip = {...cp.equip, foldBike: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), foldBike: 5}; logMsg(`🚲 折りたたみ自転車！5ターン雨天無視＆マンホール選択`); break;
-        case 46: playerUpdates.equip = {...cp.equip, shoppingCart: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), shoppingCart: 5}; logMsg(`🛒 ショッピングカート！5ターン通過時にアイテム獲得チャンス`); break;
+        case 44: 
+            useGameStore.setState({ isSubwayPicking: true }); logMsg(`🚇 地下鉄の切符！ワープ先を選んでください`); 
+            state.addEventPopup(cp.id, "🚇", "地下鉄の切符", "ワープ先を選択", "neutral");
+            break;
+        case 45: 
+            playerUpdates.equip = {...cp.equip, foldBike: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), foldBike: 5}; logMsg(`🚲 折りたたみ自転車！5ターン雨天無視＆マンホール選択`); 
+            state.addEventPopup(cp.id, "🚲", "折畳み自転車", "5ターン移動1AP等", "good");
+            break;
+        case 46: 
+            playerUpdates.equip = {...cp.equip, shoppingCart: true}; playerUpdates.equipTimer = {...(cp.equipTimer||{}), shoppingCart: 5}; logMsg(`🛒 ショッピングカート！5ターン通過時にアイテム獲得チャンス`); 
+            state.addEventPopup(cp.id, "🛒", "カート装備", "通過時にアイテム獲得", "good");
+            break;
         case 47:
             useGameStore.setState(prev => ({ traps: [...(prev.traps||[]), { tileId: cp.pos, type: 'bottle', ownerId: cp.id }] }));
             logMsg(`🍾 割れたビール瓶を設置した！（他プレイヤーには見えません）`);
+            state.addEventPopup(cp.id, "🍾", "ビール瓶設置", "罠を仕掛けた", "good");
             break;
 
         default:
@@ -196,10 +306,12 @@ export const actionUseCard = (handIndex, cardId) => {
                 if (cardData.risk > 0 && Math.random() < 0.5) {
                     playerUpdates.hp = Math.max(1, cp.hp - cardData.risk);
                     logMsg(`🤢 ${cardData.name}...食中毒！${cardData.risk}ダメージ！`);
+                    state.addEventPopup(cp.id, "🤢", "食中毒", `${cardData.risk}ダメージ`, "damage");
                 } else {
                     playerUpdates.hp = Math.min(100, cp.hp + cardData.heal);
                     playerUpdates.ap = playerUpdates.ap + (cardData.apBonus || 0);
                     logMsg(`💊 ${cardData.name}でHP+${cardData.heal}回復！`);
+                    state.addEventPopup(cp.id, "💊", "回復", `HP+${cardData.heal}`, "good");
                 }
             }
             break;
@@ -223,7 +335,6 @@ export const actionCancelWeapon = (cardId) => {
 
     state.updateCurrentPlayer(p => ({
         ap: state.isCreativeMode ? p.ap : p.ap + 2,
-        // ▼ 修正: クリエイティブモード時はカードを戻さない（元々減っていないため）
         hand: state.isCreativeMode ? p.hand : [...p.hand, cardId]
     }));
     useGameStore.setState({ weaponArcData: null });
@@ -239,18 +350,24 @@ export const executeRecycle = (handIndex) => {
     state.updateCurrentPlayer({ hand: newHand, p: cp.p + finalPrice });
     useGameStore.setState({ isRecyclePicking: false });
     logMsg(`♻️ 不要なカードを ${finalPrice}P で売却した！`);
+    state.addEventPopup(cp.id, "♻️", "廃品再生", `${finalPrice}Pで売却`, "good");
 };
 
 export const executeFakeInfo = (targetId) => {
     const state = useGameStore.getState(), target = state.players.find(p=>p.id===targetId);
+    const cp = state.players[state.turn];
     state.updatePlayer(targetId, { fakeInfoDebuff: 1 });
     useGameStore.setState({ isFakeInfoPicking: false, fakeInfoTargets: [] });
     logMsg(`📰 ${target.name}にニセ情報を流した！次のラウンドまで陣地収入ゼロ！`);
+    state.addEventPopup(cp.id, "📰", "情報操作完了", `${target.name}の収入ゼロ`, "good");
+    state.addEventPopup(targetId, "📰", "ニセ情報！", "次ラウンド陣地収入ゼロ", "bad");
 };
 
 export const executeSubway = (tileId) => {
     const state = useGameStore.getState();
+    const cp = state.players[state.turn];
     state.updateCurrentPlayer({ pos: tileId });
     useGameStore.setState({ isSubwayPicking: false });
     logMsg(`🚇 地下鉄でワープした！`);
+    state.addEventPopup(cp.id, "🚇", "地下鉄移動", "ワープ完了", "good");
 };
