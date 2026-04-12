@@ -1,6 +1,7 @@
 import { ref, get, set, update, push, onValue, remove } from 'firebase/database';
 import { db } from '../lib/firebase';
 import { useUserStore } from '../store/useUserStore';
+import { listenToTrades } from './tradeLogic'
 
 /**
  * ▼ 新規追加: 8桁のランダムなフレンドコード（英数字）を生成する
@@ -152,6 +153,11 @@ export const loadUserData = async (uid) => {
 
     listenToFriendsAndInvites(uid);
     listenToMails(uid); 
+    
+    // ▼ 追加: トレード監視を開始
+    // ※ import { listenToTrades } from './tradeLogic'; をファイルの最上部に追加してください
+    const { listenToTrades } = await import('./tradeLogic');
+    listenToTrades(uid);
 
   } catch (error) {
     console.error("データ読み込み失敗:", error);

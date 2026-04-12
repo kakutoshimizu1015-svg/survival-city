@@ -6,11 +6,9 @@ export const useUserStore = create(
     (set) => ({
       uid: null,
       isLoggedIn: false,
-      
-      // ▼ 追加: Google連携状態の管理
       isLinked: false,
       linkedEmail: null,
-      isAuthResolved: false, // ▼ 追加: 認証・データロードが完了したかどうかのフラグ
+      isAuthResolved: false, 
       
       playerName: '名無しサバイバー',
       friendCode: null, 
@@ -40,7 +38,10 @@ export const useUserStore = create(
       friendRequests: [],
       invites: [],
       claimedMails: [], 
-      inbox: [],        
+      inbox: [],
+      
+      // ▼ 追加: 進行中のトレードリスト
+      activeTrades: [],
 
       setUserData: (data) => set((state) => ({ ...state, ...data })),
       setShowSmoke: (show) => set({ showSmoke: show }), 
@@ -75,7 +76,6 @@ export const useUserStore = create(
         uid: state.uid,
         isLinked: state.isLinked,
         linkedEmail: state.linkedEmail,
-        // isAuthResolved は毎回 false でスタートさせるため保存しない
         playerName: state.playerName,
         friendCode: state.friendCode, 
         lastClaimedDate: state.lastClaimedDate, 
