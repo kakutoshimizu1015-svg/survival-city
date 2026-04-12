@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useUserStore } from '../../store/useUserStore';
-// ▼ 修正: userLogic.js にある正しい招待送信関数 (sendRoomInvite) をインポートする
 import { sendFriendRequestByCode, acceptFriendRequest, removeFriendRequest, sendRoomInvite } from '../../utils/userLogic';
 
-export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => {
+export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId, onStartTrade }) => {
     const { friendCode, friends, friendRequests } = useUserStore();
-    const [tab, setTab] = useState('list'); // 'list', 'add', 'requests'
+    const [tab, setTab] = useState('list'); 
     const [codeInput, setCodeInput] = useState('');
     const [searchMsg, setSearchMsg] = useState({ text: '', type: '' });
     const [isSearching, setIsSearching] = useState(false);
@@ -21,9 +20,8 @@ export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => {
         setIsSearching(false);
     };
 
-    // ▼ 修正: userLogic.js の正しい送信関数を使って、相手の正しいDBパスへ送信する
     const handleSendInvite = async (e, friend) => {
-        e.stopPropagation(); // プロフィールが開くのを防ぐ
+        e.stopPropagation(); 
         if (!currentRoomId) return;
 
         try {
@@ -53,7 +51,6 @@ export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => {
                 display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.8)'
             }} onClick={e => e.stopPropagation()}>
                 
-                {/* ヘッダー */}
                 <div style={{ padding: '15px 20px', background: 'linear-gradient(180deg, #2D1800, #1A0D00)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #3D1F00' }}>
                     <div style={{ color: '#D4A017', fontSize: '18px', fontWeight: 'bold' }}>👥 フレンド管理</div>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#bdc3c7', fontSize: '24px', cursor: 'pointer' }}>✕</button>
@@ -64,7 +61,6 @@ export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => {
                     <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#FFF', letterSpacing: '2px', userSelect: 'all' }}>{friendCode || '読込中...'}</div>
                 </div>
 
-                {/* タブ */}
                 <div style={{ display: 'flex', borderBottom: '2px solid #3D1F00' }}>
                     <div onClick={() => setTab('list')} style={tabStyle(tab === 'list')}>一覧 ({friends.length})</div>
                     <div onClick={() => setTab('add')} style={tabStyle(tab === 'add')}>追加</div>
@@ -73,9 +69,7 @@ export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => {
                     </div>
                 </div>
 
-                {/* コンテンツ領域 */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '15px' }}>
-                    
                     {tab === 'list' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {friends.length === 0 ? (
@@ -88,7 +82,18 @@ export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => {
                                     }}>
                                         <div style={{ fontWeight: 'bold' }}>{f.name}</div>
                                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                            {/* 部屋IDがある場合のみ招待ボタンを表示 */}
+                                            {onStartTrade && (
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); onStartTrade(f.uid, f.name); }}
+                                                    style={{ 
+                                                        background: '#8e44ad', color: '#fff', border: 'none', 
+                                                        padding: '6px 12px', borderRadius: '6px', fontSize: '11px', 
+                                                        fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.4)'
+                                                    }}
+                                                >
+                                                    🤝 トレード
+                                                </button>
+                                            )}
                                             {currentRoomId && (
                                                 <button 
                                                     onClick={(e) => handleSendInvite(e, f)}
@@ -101,7 +106,7 @@ export const FriendListModal = ({ onClose, onSelectFriend, currentRoomId }) => {
                                                     ✉️ 招待
                                                 </button>
                                             )}
-                                            <div style={{ fontSize: '11px', color: '#D4A017' }}>プロフを見る ▶</div>
+                                            <div style={{ fontSize: '11px', color: '#D4A017', marginLeft: '4px' }}>プロフ ▶</div>
                                         </div>
                                     </div>
                                 ))

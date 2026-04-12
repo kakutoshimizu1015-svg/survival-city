@@ -19,6 +19,9 @@ import { FriendListModal } from './components/common/FriendListModal';
 import { UserProfileModal } from './components/common/UserProfileModal';
 import { MailboxOverlay } from './components/common/MailboxOverlay';
 
+import { SkinTradeModal } from './components/common/SkinTradeModal';
+import { TradeNotificationOverlay } from './components/overlays/TradeNotificationOverlay';
+
 function App() {
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode, rulesActive, tutorialActive, settingsActive, setGameState } = useGameStore();
   const { isAuthResolved, uid, playerName, wins, totalEarnedP, totalWins, gachaCans, gachaPoints, friendRequests, inbox, claimedMails, lastClaimedDate } = useUserStore();
@@ -29,6 +32,8 @@ function App() {
   const [showMailboxModal, setShowMailboxModal] = useState(false);
   const [selectedProfileUid, setSelectedProfileUid] = useState(null);
   const [showManualLoginBonus, setShowManualLoginBonus] = useState(false);
+  
+  const [tradeTarget, setTradeTarget] = useState(null); 
 
   const safeInbox = Array.isArray(inbox) ? inbox : (inbox ? Object.values(inbox) : []);
   const safeClaimedMails = Array.isArray(claimedMails) ? claimedMails : (claimedMails ? Object.values(claimedMails) : []);
@@ -65,7 +70,6 @@ function App() {
     }
   };
 
-  // ▼ データ破損を防ぐための「ローディングガード」
   if (!isAuthResolved) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f0f14', color: '#f1c40f', fontWeight: 'bold' }}>
@@ -79,6 +83,15 @@ function App() {
   return (
     <>
       <GlobalInviteModal />
+      <TradeNotificationOverlay />
+
+      {tradeTarget && (
+        <SkinTradeModal 
+          targetUid={tradeTarget.uid} 
+          targetName={tradeTarget.name} 
+          onClose={() => setTradeTarget(null)} 
+        />
+      )}
 
       {gamePhase === 'mode_select' && (!hasClaimedToday || showManualLoginBonus) && (
         <LoginBonusModal 
@@ -90,11 +103,20 @@ function App() {
       )}
 
       {showFriendModal && (
-        <FriendListModal onClose={() => setShowFriendModal(false)} onSelectFriend={(targetUid) => setSelectedProfileUid(targetUid)} />
+        <FriendListModal 
+          onClose={() => setShowFriendModal(false)} 
+          onSelectFriend={(targetUid) => setSelectedProfileUid(targetUid)}
+          onStartTrade={(tUid, tName) => {
+              setTradeTarget({ uid: tUid, name: tName });
+              setShowFriendModal(false);
+          }}
+        />
       )}
+
       {selectedProfileUid && (
         <UserProfileModal uid={selectedProfileUid} onClose={() => setSelectedProfileUid(null)} />
       )}
+
       {showMailboxModal && (
         <MailboxOverlay onClose={() => setShowMailboxModal(false)} />
       )}
