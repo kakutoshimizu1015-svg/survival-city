@@ -71,9 +71,57 @@ export const SkinTradeModal = ({ targetUid, targetName, onClose }) => {
     const panelStyle = { flex: 1, background: '#2c1e16', padding: '15px', borderRadius: '8px', border: '2px solid #5c4a44' };
     const labelStyle = { fontSize: '12px', color: '#bdc3c7', marginBottom: '5px' };
 
+    // スキン選択用の画像付きパネルコンポーネント
+    const SkinItem = ({ skin, isSelected, onClick, highlightColor }) => {
+        const [imgError, setImgError] = useState(false);
+        
+        return (
+            <div 
+                onClick={onClick}
+                style={{
+                    width: '65px',
+                    height: '85px',
+                    background: isSelected ? highlightColor : '#1a1a1a',
+                    border: `2px solid ${isSelected ? '#fff' : '#333'}`,
+                    borderRadius: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    transition: 'all 0.2s',
+                    boxShadow: isSelected ? `0 0 8px ${highlightColor}` : 'none'
+                }}
+            >
+                {!imgError ? (
+                    <img 
+                        src={`/assets/characters/${skin}.png`} 
+                        alt={skin} 
+                        style={{ width: '40px', height: '40px', objectFit: 'contain', marginBottom: '4px' }}
+                        onError={() => setImgError(true)}
+                    />
+                ) : (
+                    <div style={{ fontSize: '24px', marginBottom: '4px' }}>👕</div>
+                )}
+                
+                <div style={{ 
+                    fontSize: '9px', 
+                    color: isSelected ? '#fff' : '#bdc3c7', 
+                    textAlign: 'center', 
+                    lineHeight: '1.2', 
+                    wordBreak: 'break-word',
+                    fontWeight: isSelected ? 'bold' : 'normal'
+                }}>
+                    {skin.split('_').join('\n')}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 90000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px' }} onClick={onClose}>
-            <div style={{ background: '#1A0D00', border: '3px solid #D4A017', borderRadius: '16px', width: '100%', maxWidth: '600px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: '#fdf5e6' }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: '#1A0D00', border: '3px solid #D4A017', borderRadius: '16px', width: '100%', maxWidth: '640px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: '#fdf5e6' }} onClick={e => e.stopPropagation()}>
                 
                 <div style={{ padding: '15px', background: 'linear-gradient(180deg, #2D1800, #1A0D00)', textAlign: 'center', borderBottom: '2px solid #3D1F00' }}>
                     <h2 style={{ margin: 0, color: '#D4A017', fontSize: '18px' }}>🤝 トレード交渉: {targetName}</h2>
@@ -84,6 +132,7 @@ export const SkinTradeModal = ({ targetUid, targetName, onClose }) => {
                 ) : (
                     <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', gap: '15px', overflowY: 'auto' }}>
                         <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                            {/* あなたの提示 */}
                             <div style={panelStyle}>
                                 <h3 style={{ margin: '0 0 10px 0', color: '#3498db', fontSize: '15px', borderBottom: '1px solid #3498db', paddingBottom: '5px' }}>📤 あなたが出すもの</h3>
                                 
@@ -96,17 +145,22 @@ export const SkinTradeModal = ({ targetUid, targetName, onClose }) => {
                                 <div style={{ textAlign: 'right', fontWeight: 'bold', marginBottom: '10px' }}>{offer.cans} 缶</div>
 
                                 <div style={labelStyle}>スキン提供</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', maxHeight: '100px', overflowY: 'auto', background: '#111', padding: '5px', borderRadius: '4px' }}>
-                                    {unlockedSkins.length === 0 ? <div style={{ fontSize: '11px', color: '#7f8c8d' }}>所持スキンなし</div> :
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '180px', overflowY: 'auto', background: '#0a0a0a', padding: '8px', borderRadius: '6px', border: '1px inset #333' }}>
+                                    {unlockedSkins.length === 0 ? <div style={{ fontSize: '11px', color: '#7f8c8d', margin: 'auto' }}>所持スキンなし</div> :
                                         unlockedSkins.map(skin => (
-                                            <div key={skin} onClick={() => handleToggleSkin(skin, true)} style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', background: offer.skins.includes(skin) ? '#3498db' : '#333', color: '#fff' }}>
-                                                {skin.replace('_', ' ')}
-                                            </div>
+                                            <SkinItem 
+                                                key={skin} 
+                                                skin={skin} 
+                                                isSelected={offer.skins.includes(skin)} 
+                                                onClick={() => handleToggleSkin(skin, true)} 
+                                                highlightColor="#2980b9" 
+                                            />
                                         ))
                                     }
                                 </div>
                             </div>
 
+                            {/* 相手への要求 */}
                             <div style={panelStyle}>
                                 <h3 style={{ margin: '0 0 10px 0', color: '#e74c3c', fontSize: '15px', borderBottom: '1px solid #e74c3c', paddingBottom: '5px' }}>📥 相手に求めるもの</h3>
                                 
@@ -119,12 +173,16 @@ export const SkinTradeModal = ({ targetUid, targetName, onClose }) => {
                                 <div style={{ textAlign: 'right', fontWeight: 'bold', marginBottom: '10px' }}>{request.cans} 缶</div>
 
                                 <div style={labelStyle}>スキン要求</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', maxHeight: '100px', overflowY: 'auto', background: '#111', padding: '5px', borderRadius: '4px' }}>
-                                    {partnerInventory.skins.length === 0 ? <div style={{ fontSize: '11px', color: '#7f8c8d' }}>所持スキンなし</div> :
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '180px', overflowY: 'auto', background: '#0a0a0a', padding: '8px', borderRadius: '6px', border: '1px inset #333' }}>
+                                    {partnerInventory.skins.length === 0 ? <div style={{ fontSize: '11px', color: '#7f8c8d', margin: 'auto' }}>所持スキンなし</div> :
                                         partnerInventory.skins.map(skin => (
-                                            <div key={skin} onClick={() => handleToggleSkin(skin, false)} style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', background: request.skins.includes(skin) ? '#e74c3c' : '#333', color: '#fff' }}>
-                                                {skin.replace('_', ' ')}
-                                            </div>
+                                            <SkinItem 
+                                                key={skin} 
+                                                skin={skin} 
+                                                isSelected={request.skins.includes(skin)} 
+                                                onClick={() => handleToggleSkin(skin, false)} 
+                                                highlightColor="#c0392b" 
+                                            />
                                         ))
                                     }
                                 </div>
