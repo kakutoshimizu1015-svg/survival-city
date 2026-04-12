@@ -4,7 +4,7 @@ import { ClayButton } from '../common/ClayButton';
 import { useUserStore } from '../../store/useUserStore';
 import { savePlayerName, syncGachaData } from '../../utils/userLogic';
 import { sendGlobalMail } from '../../utils/adminLogic';
-import { linkGoogleAccount, loginWithGoogle } from '../../utils/authLogic'; // ▼ 修正: loginWithGoogle を追加
+import { linkGoogleAccount, loginWithGoogle } from '../../utils/authLogic';
 
 const TEMPLATES = {
     A: { 
@@ -146,7 +146,7 @@ export const SettingsAndRules = () => {
                             <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#27ae60', borderBottom: '2px dashed #e07a5f', paddingBottom: '4px' }}>🎭 キャラクター一覧（全9種）</h3>
                             <p style={{ fontSize: '12px', color: '#555', marginBottom: '8px' }}>各キャラは <b>パッシブ（自動発動）</b> と <b>アクションスキル（AP消費）</b> を1つずつ持ちます。<br/>キャラアイコンをクリックすると詳細を確認できます。</p>
                             <ul style={{ fontSize: '13px', lineHeight: '1.7', paddingLeft: '20px', margin: '5px 0', color: '#333' }}>
-                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🏃</span><b>元アスリート —【健脚】</b>移動常に1AP・雨無効 ／ <b>【疾風ダッシュ】</b>3AP: ピッタリ3マス先へ跳躍（候補マスが白く光ります）</li>
+                                <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🏃</span><b>元アスリート —【健脚】</b>移動常に1AP・雨無効 ／ <b>【疾風ダッシュ】</b>3AP: ピッタリ3マス先へ跳躍</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>💼</span><b>元営業マン —【コミュ力】</b>バイト成功率80%・ショップ<b>2P割引</b> ／ <b>【訪問販売】</b>2AP: 手札を1枚選んで相手に強制購入させ3P徴収</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>🌿</span><b>サバイバー —【危機察知】</b>ゴミ漁り失敗のパトカーペナ無効 ／ <b>【野宿】</b>2AP: その場でHP+15回復</li>
                                 <li><span style={{ fontSize: '16px', marginRight: '4px' }}>👊</span><b>元ヤン —【威圧】</b>同マス/すれ違いで自動1Pカツアゲ（1ターン2P上限）／ <b>【殴る】</b>2AP: 同マス相手に10ダメージ</li>
@@ -305,8 +305,18 @@ export const SettingsAndRules = () => {
             <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723', padding: '15px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', borderBottom: '2px solid #8d6e63', paddingBottom: '10px' }}>
-                    <ClayButton onClick={() => setActiveTab('player')} style={{ flex: 1, padding: '10px', background: activeTab === 'player' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'player' ? 1 : 0.7 }}>👤 プレイヤー</ClayButton>
-                    <ClayButton onClick={() => setActiveTab('settings')} style={{ flex: 1, padding: '10px', background: activeTab === 'settings' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'settings' ? 1 : 0.7 }}>⚙️ 設定</ClayButton>
+                    <ClayButton 
+                        onClick={() => setActiveTab('player')} 
+                        style={{ flex: 1, padding: '10px', background: activeTab === 'player' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'player' ? 1 : 0.7 }}
+                    >
+                        👤 プレイヤー
+                    </ClayButton>
+                    <ClayButton 
+                        onClick={() => setActiveTab('settings')} 
+                        style={{ flex: 1, padding: '10px', background: activeTab === 'settings' ? '#8d6e63' : '#d7ccc8', opacity: activeTab === 'settings' ? 1 : 0.7 }}
+                    >
+                        ⚙️ 設定
+                    </ClayButton>
                 </div>
 
                 {activeTab === 'player' && (
