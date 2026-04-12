@@ -383,6 +383,9 @@ export default function MissionTab({
     const pushV = (v) => { d.buf.push(v); if (d.buf.length > 5) d.buf.shift(); };
     const avgV  = () => d.buf.length ? d.buf.reduce((a,b)=>a+b,0) / d.buf.length : 0;
     const onDown = (e) => {
+      // ▼ 追加: ボタン（矢印や受け取るボタン）の上でクリックされた場合はスワイプ判定をキャンセル
+      if (e.target.closest('button')) return;
+
       d.on = true; d.totalPx = 0; d.buf = [];
       P.current.mode = "drag";
       stopSpring();
