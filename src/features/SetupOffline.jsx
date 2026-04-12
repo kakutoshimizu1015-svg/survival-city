@@ -127,7 +127,8 @@ export const SetupOffline = () => {
         if (rmapScatter) scatterPos = scatterPlayerPositions(mapData, finalPlayers.length);
         else if (rmapStart) startPos = randomizeStartPosition(mapData);
 
-        const creativeHand = Array.from({length: 38}, (_, i) => i);
+        // ▼ 修正: 新規カード10種を含めた全48種類(ID: 0〜47)のカード配列を生成する
+        const creativeHand = Array.from({length: 48}, (_, i) => i);
         
         finalPlayers = finalPlayers.map((p, i) => ({
             ...p, color: colors[i % colors.length], pos: rmapScatter ? scatterPos[i] : startPos, 
@@ -159,7 +160,8 @@ export const SetupOffline = () => {
         setGameState({
             mapData, players: finalPlayers, turn: 0, roundCount: 1, maxRounds, diceRolled: false, gameOver: false, gamePhase: 'playing',
             turnOrderActive, turnOrderData,
-            truckPos: isTestMode ? -1 : Math.floor(maxId * 0.4), 
+            isCreativeMode: isCreative, // ▼ 追加: 設定画面のクリエイティブフラグをゲーム本編に渡す
+            truckPos: isTestMode ? -1 : Math.floor(maxId * 0.4),
             policePos: isTestMode ? -1 : Math.floor(maxId * 0.8), 
             unclePos: isTestMode ? -1 : Math.floor(maxId * 0.2), 
             animalPos: isTestMode ? -1 : (canTrashTiles.length > 0 ? canTrashTiles[Math.floor(Math.random() * canTrashTiles.length)].id : Math.floor(maxId * 0.3)), 
