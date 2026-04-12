@@ -21,6 +21,7 @@ import { MailboxOverlay } from './components/common/MailboxOverlay';
 
 import { SkinTradeModal } from './components/common/SkinTradeModal';
 import { TradeNotificationOverlay } from './components/overlays/TradeNotificationOverlay';
+import { MissionContainer } from './components/common/mission/MissionContainer'; // ▼ 追加
 
 function App() {
   const { gamePhase, layoutMode, weatherState, isNight, horrorMode, rulesActive, tutorialActive, settingsActive, setGameState } = useGameStore();
@@ -32,8 +33,9 @@ function App() {
   const [showMailboxModal, setShowMailboxModal] = useState(false);
   const [selectedProfileUid, setSelectedProfileUid] = useState(null);
   const [showManualLoginBonus, setShowManualLoginBonus] = useState(false);
+  const [showMissionModal, setShowMissionModal] = useState(false); // ▼ 追加
   
-  const [tradeTarget, setTradeTarget] = useState(null); 
+  const [tradeTarget, setTradeTarget] = useState(null);
 
   const safeInbox = Array.isArray(inbox) ? inbox : (inbox ? Object.values(inbox) : []);
   const safeClaimedMails = Array.isArray(claimedMails) ? claimedMails : (claimedMails ? Object.values(claimedMails) : []);
@@ -121,6 +123,9 @@ function App() {
         <MailboxOverlay onClose={() => setShowMailboxModal(false)} />
       )}
 
+      {/* ▼ 追加 */}
+      <MissionContainer isOpen={showMissionModal} onClose={() => setShowMissionModal(false)} />
+
       {(gamePhase === 'title' || gamePhase === 'mode_select' || gamePhase === 'setup_offline') && !rulesActive && !tutorialActive && !settingsActive && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%',
@@ -201,6 +206,13 @@ function App() {
                     background: '#9b59b6', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
                 }}>
                     🗓 ボーナス
+                </button>
+
+                {/* ▼ 追加 */}
+                <button onClick={(e) => { e.stopPropagation(); setShowMissionModal(true); }} style={{
+                    background: '#d35400', color: '#FFF', border: 'none', padding: '10px 14px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer'
+                }}>
+                    🏆 ミッション
                 </button>
             </div>
             <div style={{ fontSize: '11px', color: '#bdc3c7', marginTop: '8px' }}>※名前は入力後、枠外をタップで自動保存</div>

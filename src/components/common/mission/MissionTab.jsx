@@ -540,7 +540,7 @@ function MissionCard({ m, claimed, onClaim }) {
         <div style={S.barBg}><div style={{ height:"100%", borderRadius:3, width:`${p}%`, background: done ? `linear-gradient(90deg,${col}77,${col})` : "linear-gradient(90deg,#2e1a00,#3a2400)", boxShadow: done ? `0 0 7px ${col}55` : "none" }} /></div>
         <div style={{ fontSize:9, textAlign:"right", color:"#7a5a30" }}><span style={{ color:done?col:"#5a3a18", fontWeight:700 }}>{fmt(pr)}</span>{" / "}{fmt(th)}</div>
       </div>
-      <button ref={btnRef} disabled={!done||isClaim} onClick={handleClaim} style={{ ...S.ctaBase, ...(isClaim ? S.ctaClaimed : done ? { ...S.ctaActive, animation:"mt-btnGlow 2s ease-in-out infinite" } : S.ctaDisabled) }}>{isClaim ? "✓ 受け取り済み" : done ? "🎁 受け取る！" : `あと ${fmt(th-pr)}`}</button>
+      <button ref={btnRef} disabled={!done||isClaim} onClick={handleClaim} onPointerDown={(e) => e.stopPropagation()} style={{ ...S.ctaBase, ...(isClaim ? S.ctaClaimed : done ? { ...S.ctaActive, animation:"mt-btnGlow 2s ease-in-out infinite" } : S.ctaDisabled) }}>{isClaim ? "✓ 受け取り済み" : done ? "🎁 受け取る！" : `あと ${fmt(th-pr)}`}</button>
     </div>
   );
 }
