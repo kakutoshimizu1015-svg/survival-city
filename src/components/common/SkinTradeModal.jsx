@@ -4,21 +4,31 @@ import { get, ref } from 'firebase/database';
 import { db } from '../../lib/firebase';
 import { sendTradeOffer } from '../../utils/tradeLogic';
 import { ClayButton } from './ClayButton';
-import { charSkins } from '../../constants/characters'; // ▼ 追加: スキン画像のマスターデータをインポート
+import { charSkins } from '../../constants/characters'; 
 
-// ▼ 修正: マスターデータから正しい画像URLを取得する
+// マスターデータからスキンの日本語名称を取得するヘルパー関数
+const getSkinName = (skinId) => {
+    const baseCharName = skinId.split('_')[0];
+    if (charSkins[baseCharName]) {
+        const skinData = charSkins[baseCharName].find(s => s.id === skinId);
+        if (skinData && skinData.name) return skinData.name;
+    }
+    return skinId; // 見つからない場合はIDを返す
+};
+
 const SkinItem = ({ skin, isSelected, onClick, highlightColor }) => {
     const [imgError, setImgError] = useState(false);
     
-    // スキンID (例: 'athlete_default') からベースキャラ名 ('athlete') を抽出
     const baseCharName = skin.split('_')[0];
     
-    // マスターデータから該当キャラクターの全スキンを取得し、一致するスキンデータを探す
     let imgSrc = null;
+    let displayName = skin.split('_').join('\n');
+    
     if (charSkins[baseCharName]) {
         const skinData = charSkins[baseCharName].find(s => s.id === skin);
-        if (skinData && skinData.front) {
-            imgSrc = skinData.front; // 正しいインポート済みの画像URLを取得
+        if (skinData) {
+            if (skinData.front) imgSrc = skinData.front;
+            if (skinData.name) displayName = skinData.name;
         }
     }
     
@@ -40,6 +50,7 @@ const SkinItem = ({ skin, isSelected, onClick, highlightColor }) => {
                 transition: 'all 0.2s',
                 boxShadow: isSelected ? `0 0 8px ${highlightColor}` : 'none'
             }}
+            title={displayName} // ホバー時にも名前を表示
         >
             {imgSrc && !imgError ? (
                 <img 
@@ -53,14 +64,19 @@ const SkinItem = ({ skin, isSelected, onClick, highlightColor }) => {
             )}
             
             <div style={{ 
-                fontSize: '9px', 
+                fontSize: '8px', 
                 color: isSelected ? '#fff' : '#bdc3c7', 
                 textAlign: 'center', 
                 lineHeight: '1.2', 
                 wordBreak: 'break-word',
-                fontWeight: isSelected ? 'bold' : 'normal'
+                fontWeight: isSelected ? 'bold' : 'normal',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical'
             }}>
-                {skin.split('_').join('\n')}
+                {displayName}
             </div>
         </div>
     );
@@ -76,7 +92,10 @@ export const SkinTradeModal = ({ targetUid, targetName, onClose }) => {
     const [request, setRequest] = useState({ p: 0, cans: 0, skins: [] });
     const [isSending, setIsSending] = useState(false);
 
-    // スキンリストの重複を排除
+    // ▼ 追加: 検索用のステート
+    const [mySkinSearch, setMySkinSearch] = useState('');
+    const [partnerSkinSearch, setPartnerSkinSearch] = useState('');
+
     const uniqueMySkins = Array.from(new Set(unlockedSkins || []));
 
     useEffect(() => {
@@ -135,6 +154,15 @@ export const SkinTradeModal = ({ targetUid, targetName, onClose }) => {
     const panelStyle = { flex: 1, background: '#2c1e16', padding: '15px', borderRadius: '8px', border: '2px solid #5c4a44' };
     const labelStyle = { fontSize: '12px', color: '#bdc3c7', marginBottom: '5px' };
 
+    // ▼ 追加: 検索条件でスキンをフィルタリング
+    const filteredMySkins = uniqueMySkins.filter(skin => 
+        getSkinName(skin).toLowerCase().includes(mySkinSearch.toLowerCase())
+    );
+    
+    const filteredPartnerSkins = partnerInventory.skins.filter(skin => 
+        getSkinName(skin).toLowerCase().includes(partnerSkinSearch.toLowerCase())
+    );
+
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 90000, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px' }} onClick={onClose}>
             <div style={{ background: '#1A0D00', border: '3px solid #D4A017', borderRadius: '16px', width: '100%', maxWidth: '640px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', color: '#fdf5e6' }} onClick={e => e.stopPropagation()}>
@@ -161,9 +189,18 @@ export const SkinTradeModal = ({ targetUid, targetName, onClose }) => {
                                 <div style={{ textAlign: 'right', fontWeight: 'bold', marginBottom: '10px' }}>{offer.cans} 缶</div>
 
                                 <div style={labelStyle}>スキン提供</div>
+                                {/* ▼ 追加: 検索バー */}
+                                <input 
+                                    type="text" 
+                                    placeholder="🔍 スキン名で検索..." 
+                                    value={mySkinSearch} 
+                                    onChange={(e) => setMySkinSearch(e.target.value)}
+                                    style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #3498db', background: '#111', color: '#fff', fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box' }}
+                                />
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '180px', overflowY: 'auto', background: '#0a0a0a', padding: '8px', borderRadius: '6px', border: '1px inset #333' }}>
                                     {uniqueMySkins.length === 0 ? <div style={{ fontSize: '11px', color: '#7f8c8d', margin: 'auto' }}>所持スキンなし</div> :
-                                        uniqueMySkins.map(skin => (
+                                     filteredMySkins.length === 0 ? <div style={{ fontSize: '11px', color: '#7f8c8d', margin: 'auto' }}>見つかりませんでした</div> :
+                                        filteredMySkins.map(skin => (
                                             <SkinItem 
                                                 key={skin} 
                                                 skin={skin} 
@@ -189,9 +226,18 @@ export const SkinTradeModal = ({ targetUid, targetName, onClose }) => {
                                 <div style={{ textAlign: 'right', fontWeight: 'bold', marginBottom: '10px' }}>{request.cans} 缶</div>
 
                                 <div style={labelStyle}>スキン要求</div>
+                                {/* ▼ 追加: 検索バー */}
+                                <input 
+                                    type="text" 
+                                    placeholder="🔍 スキン名で検索..." 
+                                    value={partnerSkinSearch} 
+                                    onChange={(e) => setPartnerSkinSearch(e.target.value)}
+                                    style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #e74c3c', background: '#111', color: '#fff', fontSize: '12px', marginBottom: '8px', boxSizing: 'border-box' }}
+                                />
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '180px', overflowY: 'auto', background: '#0a0a0a', padding: '8px', borderRadius: '6px', border: '1px inset #333' }}>
                                     {partnerInventory.skins.length === 0 ? <div style={{ fontSize: '11px', color: '#7f8c8d', margin: 'auto' }}>所持スキンなし</div> :
-                                        partnerInventory.skins.map(skin => (
+                                     filteredPartnerSkins.length === 0 ? <div style={{ fontSize: '11px', color: '#7f8c8d', margin: 'auto' }}>見つかりませんでした</div> :
+                                        filteredPartnerSkins.map(skin => (
                                             <SkinItem 
                                                 key={skin} 
                                                 skin={skin} 
