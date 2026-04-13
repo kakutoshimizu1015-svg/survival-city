@@ -348,18 +348,19 @@ export const ShopOverlay = () => {
 
   const { selection: sellSelection, toggle: toggleSell, clear: clearSell, total: sellTotal } = useSellSelection(mappedHandCards);
 
-  if (!shopActive || !cp) return null;
-  const canAfford = cartTotal <= cp.p;
-  const maxHand = cp.maxHand || 7;
+  // ▼ cpがnull(非アクティブ時)の場合のエラーを防ぐため「?.」を使用します
+  const canAfford = cartTotal <= (cp?.p || 0);
+  const maxHand = cp?.maxHand || 7;
 
   // --- Handlers ---
-  const handleClose = () => {
+  // ▼ すべてのフックを早期リターンの「前」に定義します
+  const handleClose = useCallback(() => {
     setGameState({ shopActive: false, shopCart: [] });
     clearCart(); clearSell();
-  };
+  }, [setGameState, clearCart, clearSell]);
 
   const handleBuy = useCallback(() => {
-    if (cartCount === 0 || !canAfford) return;
+    if (cartCount === 0 || !canAfford || !cp) return;
     if (cp.hand.length + cartCount > maxHand) {
       showToast(`手札が上限（${maxHand}枚）を超えます！`); return;
     }
@@ -379,7 +380,7 @@ export const ShopOverlay = () => {
   }, [cartCount, canAfford, cp, maxHand, cart, cartTotal, purchasedCards, showToast, clearCart, setGameState]);
 
   const handleShuffle = useCallback(() => {
-    if (hasShuffledThisTurn || shuffling) return;
+    if (hasShuffledThisTurn || shuffling || !cp) return;
     if (cp.p < SHUFFLE_COST) { showToast("Pが足りません！"); return; }
     
     useGameStore.getState().updateCurrentPlayer(p => ({ p: p.p - SHUFFLE_COST }));
@@ -397,7 +398,7 @@ export const ShopOverlay = () => {
   }, [hasShuffledThisTurn, shuffling, cp, turn, clearCart, showToast, purchasedCards]);
 
   const handleSell = useCallback(() => {
-    if (sellSelection.size === 0) return;
+    if (sellSelection.size === 0 || !cp) return;
     const profit = sellSelection.size * SELL_PRICE;
     
     useGameStore.getState().updateCurrentPlayer(p => {
@@ -406,7 +407,10 @@ export const ShopOverlay = () => {
     });
     
     clearSell(); playSfx('coin'); showToast(`🪙 ${sellSelection.size}枚を売却し、${profit}P獲得！`);
-  }, [sellSelection, clearSell, showToast]);
+  }, [sellSelection, cp, clearSell, showToast]);
+
+  // ▼ すべてのフックを読み込んだ後に、表示のオンオフ（早期リターン）を判定します
+  if (!shopActive || !cp) return null;
 
   return (
     <div style={S.overlay}>
