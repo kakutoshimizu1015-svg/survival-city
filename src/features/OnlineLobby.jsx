@@ -7,20 +7,33 @@ import { randomizeTileTypes, randomizeTileLayout, randomizeStartPosition, scatte
 import { useUserStore } from '../store/useUserStore';
 import { CharacterSelect } from './CharacterSelect';
 import { CharImage } from '../components/common/CharImage';
-import { FriendListModal } from '../components/common/FriendListModal'; // ▼ 追加
-import { UserProfileModal } from '../components/common/UserProfileModal'; // ▼ 追加
-import { MissionContainer } from '../components/common/mission/MissionContainer'; // ▼ ミッションモーダルを追加
+import { FriendListModal } from '../components/common/FriendListModal';
+import { UserProfileModal } from '../components/common/UserProfileModal';
+import { MissionContainer } from '../components/common/mission/MissionContainer';
 
-// ▼ 修正: 6色に拡張（紫、橙を追加）
-const TEAM_COLORS = { 
-    none:   { label:'ソロ', color:'transparent', icon:'⚪' }, 
-    red:    { label:'赤', color:'#e74c3c', icon:'🔴' }, 
-    blue:   { label:'青', color:'#3498db', icon:'🔵' }, 
-    green:  { label:'緑', color:'#2ecc71', icon:'🟢' }, 
-    yellow: { label:'黄', color:'#f1c40f', icon:'🟡' },
-    purple: { label:'紫', color:'#9b59b6', icon:'🟣' }, 
-    orange: { label:'橙', color:'#e67e22', icon:'🟠' } 
+/* ── 定数 ── */
+const TEAM_COLORS = {
+    none:   { label: 'ソロ',  color: 'transparent', icon: '⚪' },
+    red:    { label: '赤',    color: '#e74c3c',     icon: '🔴' },
+    blue:   { label: '青',    color: '#3498db',     icon: '🔵' },
+    green:  { label: '緑',    color: '#2ecc71',     icon: '🟢' },
+    yellow: { label: '黄',    color: '#f1c40f',     icon: '🟡' },
+    purple: { label: '紫',    color: '#9b59b6',     icon: '🟣' },
+    orange: { label: '橙',    color: '#e67e22',     icon: '🟠' },
 };
+
+const PLAYER_COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e91e8c'];
+
+const CPU_DIFFICULTY = {
+    easy:   { label: '弱め', color: '#27ae60' },
+    normal: { label: '普通', color: '#e67e22' },
+    hard:   { label: '鬼畜', color: '#c0392b' },
+};
+
+const RmapTile = ({ label, active, onClick }) => (
+    <div className={`dt-rmap-tile ${active ? 'active' : ''}`} onClick={onClick}>{label}</div>
+);
+
 
 export const OnlineLobby = () => {
     const globalPlayerName = useUserStore(state => state.playerName);
@@ -28,8 +41,8 @@ export const OnlineLobby = () => {
 
     const [playerName, setPlayerName] = useState(globalPlayerName || 'Player' + Math.floor(Math.random() * 1000));
     const [roomInput, setRoomInput] = useState('');
-    
-    const [mapSize, setMapSize] = useState('midtown'); // ★デフォルトをmidtownに変更
+
+    const [mapSize, setMapSize] = useState('midtown');
     const [maxRounds, setMaxRounds] = useState(20);
     const [skipTurnDice, setSkipTurnDice] = useState(false);
     const [isCreative, setIsCreative] = useState(false);
@@ -37,33 +50,28 @@ export const OnlineLobby = () => {
     const [rmapLayout, setRmapLayout] = useState(false);
     const [rmapStart, setRmapStart] = useState(false);
     const [rmapScatter, setRmapScatter] = useState(false);
-    const [charAssignMode, setCharAssignMode] = useState('choose'); 
+    const [charAssignMode, setCharAssignMode] = useState('choose');
 
     const [charSelectTarget, setCharSelectTarget] = useState(null);
-    
-    // ▼ 追加: フレンドモーダル制御用のステート
     const [showFriendModal, setShowFriendModal] = useState(false);
     const [selectedProfileUid, setSelectedProfileUid] = useState(null);
-    const [showMissionModal, setShowMissionModal] = useState(false); // ▼ ミッションモーダル制御用のステートを追加
-    
+    const [showMissionModal, setShowMissionModal] = useState(false);
+    const [devOpen, setDevOpen] = useState(false);
+
     const {
-        createRoom, joinRoom, leaveRoom, status, roomId, lobbyPlayers, isHost, broadcast, 
+        createRoom, joinRoom, leaveRoom, status, roomId, lobbyPlayers, isHost, broadcast,
         activeRooms, subscribeToRooms, unsubscribeFromRooms, updateRoomStatus,
         myUserId, updateMyInfo, addCpu, updateCpu, removeCpu, randomizeTeams, clearTeams
     } = useNetworkStore();
-    
+
     const setGameState = useGameStore(state => state.setGameState);
 
-    useEffect(() => {
-        if (globalPlayerName) {
-            setPlayerName(globalPlayerName);
-        }
-    }, [globalPlayerName]);
+    useEffect(() => { if (globalPlayerName) setPlayerName(globalPlayerName); }, [globalPlayerName]);
 
     useEffect(() => {
         if (status === 'connected' && myUserId) {
-             const myChar = lobbyPlayers.find(p => p.userId === myUserId)?.charType || 'athlete';
-             updateMyInfo({ skinId: equippedSkins[myChar] || 'default' });
+            const myChar = lobbyPlayers.find(p => p.userId === myUserId)?.charType || 'athlete';
+            updateMyInfo({ skinId: equippedSkins[myChar] || 'default' });
         }
     }, [status, myUserId, equippedSkins]);
 
@@ -95,29 +103,27 @@ export const OnlineLobby = () => {
 
         let finalPlayers = [...lobbyPlayers];
         const allChars = Object.keys(charInfo);
-        
-        if (charAssignMode === 'random') { 
-            finalPlayers.forEach(p => p.charType = allChars[Math.floor(Math.random() * allChars.length)]); 
-        } else if (charAssignMode === 'cpu_random') { 
-            finalPlayers.forEach(p => { 
-                if (p.isCPU) p.charType = allChars[Math.floor(Math.random() * allChars.length)]; 
-            }); 
+
+        if (charAssignMode === 'random') {
+            finalPlayers.forEach(p => p.charType = allChars[Math.floor(Math.random() * allChars.length)]);
+        } else if (charAssignMode === 'cpu_random') {
+            finalPlayers.forEach(p => { if (p.isCPU) p.charType = allChars[Math.floor(Math.random() * allChars.length)]; });
         }
 
-        // ★修正: ID:0決め打ちをやめ、病院マス(center)のIDを自動取得する
-        let startPos = mapData.find(t => t.type === 'center')?.id || mapData[0].id; 
+        let startPos = mapData.find(t => t.type === 'center')?.id || mapData[0].id;
         let scatterPos = [];
         if (rmapScatter) scatterPos = scatterPlayerPositions(mapData, finalPlayers.length);
         else if (rmapStart) startPos = randomizeStartPosition(mapData);
 
-        const creativeHand = Array.from({length: 38}, (_, i) => i);
+        const creativeHand = Array.from({ length: 38 }, (_, i) => i);
         finalPlayers = finalPlayers.map((p, i) => ({
-            ...p, id: i, color: ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e91e8c'][i % 8],
-            pos: rmapScatter ? scatterPos[i] : startPos, 
-            skinId: p.skinId || 'default', 
+            ...p, id: i, color: PLAYER_COLORS[i % 8],
+            pos: rmapScatter ? scatterPos[i] : startPos,
+            skinId: p.skinId || 'default',
             hp: 100, p: 15, ap: 0,
-            hand: isCreative ? [...creativeHand] : [drawInitialCard(), drawInitialCard(), drawInitialCard()], 
-            maxHand: isCreative ? 99 : (p.charType === 'hacker' ? 9 : 7), cans: 0, trash: 0, kills: 0, deaths: 0, equip: {}
+            hand: isCreative ? [...creativeHand] : [drawInitialCard(), drawInitialCard(), drawInitialCard()],
+            maxHand: isCreative ? 99 : (p.charType === 'hacker' ? 9 : 7),
+            cans: 0, trash: 0, kills: 0, deaths: 0, equip: {},
         }));
 
         let turnOrderData = null;
@@ -131,233 +137,410 @@ export const OnlineLobby = () => {
             turnOrderData = { players: finalPlayers, diceValues, sortedOrder };
             turnOrderActive = true;
         } else {
-            finalPlayers = finalPlayers.sort(() => Math.random() - 0.5).map((p, idx) => ({ ...p, id: idx, color: ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e91e8c'][idx % 8] }));
+            finalPlayers = finalPlayers.sort(() => Math.random() - 0.5).map((p, idx) => ({ ...p, id: idx, color: PLAYER_COLORS[idx % 8] }));
         }
 
         const maxId = mapData.length - 1;
         const canTrashTiles = mapData.filter(t => t.type === 'can' || t.type === 'trash');
-        
+
         const initialGameState = {
             mapData, players: finalPlayers, turn: 0, roundCount: 1, maxRounds, diceRolled: false, gameOver: false,
             turnOrderActive, turnOrderData,
-            truckPos: Math.floor(maxId * 0.4), policePos: Math.floor(maxId * 0.8), unclePos: Math.floor(maxId * 0.2), 
-            animalPos: canTrashTiles.length > 0 ? canTrashTiles[Math.floor(Math.random() * canTrashTiles.length)].id : Math.floor(maxId * 0.3), 
-            yakuzaPos: Math.floor(maxId * 0.5), loansharkPos: Math.floor(maxId * 0.6), friendPos: Math.floor(maxId * 0.15)
+            truckPos: Math.floor(maxId * 0.4), policePos: Math.floor(maxId * 0.8), unclePos: Math.floor(maxId * 0.2),
+            animalPos: canTrashTiles.length > 0 ? canTrashTiles[Math.floor(Math.random() * canTrashTiles.length)].id : Math.floor(maxId * 0.3),
+            yakuzaPos: Math.floor(maxId * 0.5), loansharkPos: Math.floor(maxId * 0.6), friendPos: Math.floor(maxId * 0.15),
         };
 
         broadcast({ type: 'GAME_START', gameState: initialGameState });
         setGameState({ ...initialGameState, gamePhase: 'playing' });
     };
 
+
+    /* ══════════════════════════════════════════
+       接続済み → ロビー画面
+       ══════════════════════════════════════════ */
     if (status === 'connected') {
         const myInfo = lobbyPlayers.find(p => p.userId === myUserId) || { name: playerName, charType: 'athlete', teamColor: 'none' };
 
         return (
-            <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fdf5e6', overflowY: 'auto', height: '100vh', width: '100%' }}>
-                <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', maxWidth: '650px' }}>
-                        <h2>🌐 ロビー: 部屋コード【 {roomId} 】</h2>
-                        <button 
-                            onClick={() => setShowMissionModal(true)} 
-                            className="btn-clay" 
-                            style={{ background: '#e67e22', padding: '8px 16px', fontSize: '14px', fontWeight: 'bold' }}
+            <div className="dt-screen">
+                {/* ── Header ── */}
+                <div className="dt-sticky-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <div style={{ fontSize: 11, color: 'var(--dt-text-dim)', letterSpacing: 1 }}>ONLINE LOBBY</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--dt-text)' }}>
+                            🌐 部屋コード【 {roomId} 】
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setShowMissionModal(true)}
+                        style={{
+                            fontSize: 11, color: 'var(--dt-orange)',
+                            border: '1px solid rgba(230,126,34,0.3)', borderRadius: 6, padding: '4px 10px',
+                            background: 'rgba(230,126,34,0.08)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+                        }}
+                    >
+                        🏆 ミッション
+                    </button>
+                </div>
+
+                <div style={{ padding: '16px 20px', flex: 1 }}>
+
+                    {/* ===== MEMBERS ===== */}
+                    <div className="dt-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>MEMBERS ({lobbyPlayers.length}/8)</span>
+                        <button
+                            onClick={() => setShowFriendModal(true)}
+                            style={{
+                                fontSize: 11, color: 'var(--dt-blue)', background: 'rgba(52,152,219,0.08)',
+                                border: '1px solid rgba(52,152,219,0.2)', borderRadius: 6, padding: '3px 10px',
+                                cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+                            }}
                         >
-                            🏆 ミッション
+                            ✉️ フレンドを招待
                         </button>
                     </div>
-                    
-                    <div className="panel" style={{ width: '100%', maxWidth: '650px', marginBottom: '20px' }}>
-                        {/* ▼ 修正: 参加者リストのヘッダーにフレンド招待ボタンを追加 */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #8d7b68', paddingBottom: '10px', marginBottom: '10px' }}>
-                            <h3 style={{ margin: 0 }}>👥 参加者リスト ({lobbyPlayers.length}/8)</h3>
-                            <button onClick={() => setShowFriendModal(true)} style={{
-                                background: '#2980b9', color: '#FFF', border: 'none', padding: '6px 12px', 
-                                borderRadius: '8px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                            }}>
-                                ✉️ フレンドを招待
-                            </button>
-                        </div>
-                        
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {lobbyPlayers.map(p => (
-                                <div key={p.userId} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(92, 74, 68, 0.4)', padding: '10px', borderRadius: '8px', borderLeft: p.teamColor !== 'none' ? `5px solid ${TEAM_COLORS[p.teamColor]?.color}` : 'none' }}>
-                                    <CharImage charType={p.charType} skinId={p.skinId} size={30} />
-                                    <div style={{ fontWeight: 'bold', color: TEAM_COLORS[p.teamColor]?.color || '#fff' }}>{p.name}</div>
-                                    {p.isHost && <span style={{ background: '#e74c3c', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px' }}>HOST</span>}
-                                    {p.isCPU && <span style={{ background: '#95a5a6', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px' }}>CPU</span>}
-                                    {p.userId === myUserId && <span style={{ color: '#f1c40f', fontSize: '11px' }}>(あなた)</span>}
-                                    
+                    <div className="dt-card">
+                        {lobbyPlayers.map(p => {
+                            const diff = CPU_DIFFICULTY[p.cpuDifficulty || 'normal'];
+                            return (
+                                <div key={p.userId} className="dt-player-row">
+                                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: TEAM_COLORS[p.teamColor]?.color || 'transparent', flexShrink: 0 }} />
+                                    <div style={{
+                                        width: 32, height: 32, borderRadius: 8,
+                                        background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(200,162,78,0.2)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0,
+                                    }}>
+                                        <CharImage charType={p.charType} skinId={p.skinId} size={28} />
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--dt-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            {p.name}
+                                            {p.isHost && <span style={{ fontSize: 9, background: 'rgba(231,76,60,0.15)', color: '#e74c3c', padding: '1px 5px', borderRadius: 4 }}>HOST</span>}
+                                            {p.isCPU && <span style={{ fontSize: 9, background: 'rgba(150,150,150,0.15)', color: '#888', padding: '1px 5px', borderRadius: 4 }}>CPU</span>}
+                                            {p.userId === myUserId && <span style={{ fontSize: 10, color: 'var(--dt-gold)' }}>(あなた)</span>}
+                                        </div>
+                                        <div style={{ fontSize: 10, color: 'var(--dt-text-muted)' }}>{charInfo[p.charType]?.name}</div>
+                                    </div>
+
+                                    {/* ホストだけがCPUを編集可能 */}
                                     {isHost && p.isCPU && (
-                                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center' }}>
-                                            <input type="text" value={p.name} onChange={e => updateCpu(p.userId, { name: e.target.value })} style={{ padding: '4px', borderRadius: '4px', width: '70px', fontSize: '12px' }} />
-                                            <button onClick={() => setCharSelectTarget(p.userId)} className="btn-clay" style={{ padding: '4px 8px', fontSize: '12px', background: '#e67e22' }}>変更</button>
-                                            
-                                            {/* ▼ 追加: CPU難易度セレクタ */}
-                                            <select 
-                                                value={p.cpuDifficulty || 'normal'} 
-                                                onChange={e => updateCpu(p.userId, { cpuDifficulty: e.target.value })} 
-                                                style={{ 
-                                                    padding: '4px', borderRadius: '4px', fontSize: '12px', border: 'none', fontWeight: 'bold', cursor: 'pointer',
-                                                    background: p.cpuDifficulty === 'easy' ? '#27ae60' : p.cpuDifficulty === 'hard' ? '#c0392b' : '#e67e22', 
-                                                    color: 'white' 
-                                                }}
+                                        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+                                            <input
+                                                className="dt-input"
+                                                type="text" value={p.name}
+                                                onChange={e => updateCpu(p.userId, { name: e.target.value })}
+                                                style={{ width: 60, padding: '3px 6px', fontSize: 11 }}
+                                            />
+                                            <button onClick={() => setCharSelectTarget(p.userId)} style={{
+                                                fontSize: 10, color: 'var(--dt-gold)', border: '1px solid rgba(200,162,78,0.2)',
+                                                borderRadius: 5, padding: '2px 6px', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit',
+                                            }}>変更</button>
+                                            <select
+                                                value={p.cpuDifficulty || 'normal'}
+                                                onChange={e => updateCpu(p.userId, { cpuDifficulty: e.target.value })}
+                                                style={{ fontSize: 9, color: '#fff', fontWeight: 700, background: diff.color, border: 'none', borderRadius: 4, padding: '2px 4px', cursor: 'pointer', fontFamily: 'inherit' }}
                                             >
                                                 <option value="easy">弱め</option>
                                                 <option value="normal">普通</option>
                                                 <option value="hard">鬼畜</option>
                                             </select>
-                                            
-                                            <select value={p.teamColor} onChange={e => updateCpu(p.userId, { teamColor: e.target.value })} style={{ padding: '4px', borderRadius: '4px', fontSize: '12px' }}>
+                                            <select value={p.teamColor} onChange={e => updateCpu(p.userId, { teamColor: e.target.value })} style={{
+                                                fontSize: 9, color: 'var(--dt-text-dim)', background: 'transparent', border: '1px solid var(--dt-border)', borderRadius: 4, padding: '2px 3px', cursor: 'pointer', fontFamily: 'inherit',
+                                            }}>
                                                 {Object.entries(TEAM_COLORS).map(([k, t]) => <option key={k} value={k}>{t.icon} {t.label}</option>)}
                                             </select>
-                                            <button onClick={() => removeCpu(p.userId)} style={{ background: '#e74c3c', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>✕</button>
+                                            <button onClick={() => removeCpu(p.userId)} style={{
+                                                fontSize: 10, color: '#e74c3c', border: '1px solid rgba(231,76,60,0.2)',
+                                                borderRadius: 5, padding: '2px 5px', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit',
+                                            }}>✕</button>
                                         </div>
                                     )}
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })}
+
+                        {isHost && (
+                            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                                <button className="dt-add-btn" style={{ color: '#6a8aaa', borderColor: 'rgba(52,152,219,0.3)' }} onClick={addCpu}>+ CPU追加</button>
+                                <button className="dt-add-btn" style={{ color: '#8a6aaa', borderColor: 'rgba(155,89,182,0.3)' }} onClick={randomizeTeams}>🎲 ランダムチーム</button>
+                                {lobbyPlayers.some(p => p.teamColor !== 'none') && (
+                                    <button className="dt-add-btn" style={{ color: '#8a8a8a', borderColor: 'rgba(150,150,150,0.3)' }} onClick={clearTeams}>⚪ リセット</button>
+                                )}
+                            </div>
+                        )}
                     </div>
 
-                    <div className="panel" style={{ width: '100%', maxWidth: '650px', marginBottom: '20px' }}>
-                        <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px', color: '#fdf5e6', marginTop: 0 }}>🎭 自分の設定を変更する</h3>
-                        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <label style={{ fontWeight: 'bold' }}>名前: <input type="text" value={myInfo.name || ''} readOnly style={{ padding: '8px', borderRadius: '4px', width: '100px', background: '#d7ccc8', color: '#5c4a44', cursor: 'not-allowed' }} title="名前の変更はモード選択画面で行ってください" /></label>
-                            
-                            <label style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                キャラ: 
-                                <CharImage charType={myInfo.charType} skinId={myInfo.skinId} size={30} style={{ marginLeft: 5 }} />
-                                <button onClick={() => setCharSelectTarget(myUserId)} className="btn-clay" style={{ padding: '4px 8px', fontSize: '12px', background: '#3498db' }}>キャラ変更</button>
-                            </label>
-                            
-                            <label style={{ fontWeight: 'bold' }}>チーム: 
-                                <select value={myInfo.teamColor || 'none'} onChange={e => updateMyInfo({ teamColor: e.target.value })} style={{ padding: '8px', borderRadius: '4px', marginLeft: '5px' }}>
+                    {/* ===== MY SETTINGS ===== */}
+                    <div className="dt-section-label">MY SETTINGS</div>
+                    <div className="dt-card">
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{
+                                    width: 36, height: 36, borderRadius: 10,
+                                    background: 'rgba(200,162,78,0.1)', border: '1.5px solid rgba(200,162,78,0.2)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                                }}>
+                                    <CharImage charType={myInfo.charType} skinId={myInfo.skinId} size={32} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--dt-text)' }}>{myInfo.name}</div>
+                                    <div style={{ fontSize: 10, color: 'var(--dt-gold)' }}>★ {charInfo[myInfo.charType]?.name}</div>
+                                </div>
+                            </div>
+                            <button onClick={() => setCharSelectTarget(myUserId)} style={{
+                                fontSize: 11, color: 'var(--dt-gold)', border: '1px solid rgba(200,162,78,0.2)',
+                                borderRadius: 6, padding: '4px 10px', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit',
+                            }}>キャラ変更</button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <span style={{ fontSize: 11, color: 'var(--dt-text-dim)' }}>チーム:</span>
+                                <select value={myInfo.teamColor || 'none'} onChange={e => updateMyInfo({ teamColor: e.target.value })} style={{
+                                    fontSize: 11, color: 'var(--dt-text-dim)', background: 'transparent', border: '1px solid var(--dt-border)',
+                                    borderRadius: 4, padding: '3px 5px', cursor: 'pointer', fontFamily: 'inherit',
+                                }}>
                                     {Object.entries(TEAM_COLORS).map(([k, t]) => <option key={k} value={k}>{t.icon} {t.label}</option>)}
                                 </select>
-                            </label>
+                            </div>
                         </div>
-                        <div style={{ fontSize: '12px', color: '#bdc3c7', marginTop: '10px' }}>{charInfo[myInfo.charType]?.desc}</div>
+                        <div style={{ fontSize: 11, color: '#666', marginTop: 8 }}>{charInfo[myInfo.charType]?.desc}</div>
                     </div>
 
+                    {/* ===== HOST CONTROLS ===== */}
                     {isHost ? (
-                        <div className="panel" style={{ width: '100%', maxWidth: '650px', marginBottom: '20px', background: '#8d6e63', borderColor: '#4a3b32' }}>
-                            <h3 style={{ margin: '0 0 15px 0', color: '#fdf5e6' }}>👑 ホスト専用コントロール</h3>
-
-                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap' }}>
-                                <button onClick={addCpu} className="btn-clay btn-blue" style={{ padding: '8px 15px' }}>＋ CPUを追加</button>
-                                <button onClick={randomizeTeams} className="btn-clay" style={{ background: '#8e44ad', color: 'white', padding: '8px 15px' }}>🎲 ランダムチーム分け</button>
-                                <button onClick={clearTeams} className="btn-clay" style={{ background: '#95a5a6', color: 'white', padding: '8px 15px' }}>⚪ チームリセット</button>
+                        <>
+                            {/* CHARACTER */}
+                            <div className="dt-section-label">CHARACTER</div>
+                            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                                {[
+                                    { key: 'choose',     label: '🎭 各自選択', color: 'var(--dt-green)' },
+                                    { key: 'cpu_random', label: '🤖 CPUのみ🎲', color: 'var(--dt-orange)' },
+                                    { key: 'random',     label: '🎲 全員ランダム', color: 'var(--dt-purple)' },
+                                ].map(opt => (
+                                    <button
+                                        key={opt.key}
+                                        className={`dt-pill ${charAssignMode === opt.key ? 'active' : ''}`}
+                                        style={charAssignMode === opt.key ? { background: `${opt.color}18`, borderColor: opt.color, color: opt.color } : {}}
+                                        onClick={() => setCharAssignMode(opt.key)}
+                                    >{opt.label}</button>
+                                ))}
                             </div>
 
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', justifyContent: 'center', marginBottom: '15px' }}>
-                                <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>マップ: <select value={mapSize} onChange={e => setMapSize(e.target.value)} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}><option value="midtown">midtown(46)</option></select></label>
-                                <label style={{ color: '#fdf5e6', fontWeight: 'bold' }}>ラウンド: <select value={maxRounds} onChange={e => setMaxRounds(Number(e.target.value))} style={{ marginLeft: '8px', padding: '6px', borderRadius: '4px' }}>{[1, 5, 10, 15, 20, 30].map(r => <option key={r} value={r}>{r}R</option>)}</select></label>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginBottom: '15px' }}>
-                                <label style={{ color: '#fdf5e6', cursor: 'pointer' }}><input type="checkbox" checked={skipTurnDice} onChange={e => setSkipTurnDice(e.target.checked)} /> 🎲 順番決めダイスをスキップ</label>
-                                <label style={{ color: '#f1c40f', cursor: 'pointer', fontWeight: 'bold' }}><input type="checkbox" checked={isCreative} onChange={e => setIsCreative(e.target.checked)} /> 🎨 クリエイティブモード</label>
-                            </div>
-                            <div style={{ background: 'rgba(0,0,0,0.15)', padding: '10px', borderRadius: '8px', border: '2px solid #5c4a44', marginBottom: '15px' }}>
-                                <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#f1c40f', textAlign: 'center', marginBottom: '8px' }}>🎲 ランダムマップ</div>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
-                                    <label style={{ color: '#fdf5e6' }}><input type="checkbox" checked={rmapTileType} onChange={e => setRmapTileType(e.target.checked)} /> 🔀 マス種類</label>
-                                    <label style={{ color: '#fdf5e6' }}><input type="checkbox" checked={rmapLayout} onChange={e => setRmapLayout(e.target.checked)} /> 📐 マス配置</label>
-                                    <label style={{ color: '#fdf5e6' }}><input type="checkbox" checked={rmapStart} onChange={e => setRmapStart(e.target.checked)} /> 🏁 開始位置</label>
-                                    <label style={{ color: '#fdf5e6' }}><input type="checkbox" checked={rmapScatter} onChange={e => setRmapScatter(e.target.checked)} /> 🧭 バラバラ</label>
+                            {/* RULES */}
+                            <div className="dt-section-label">RULES</div>
+                            <div className="dt-card">
+                                <div style={{ display: 'flex', gap: 10 }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: 10, color: 'var(--dt-text-muted)', marginBottom: 6 }}>マップ</div>
+                                        <div style={{ position: 'relative' }}>
+                                            <select className="dt-select" value={mapSize} onChange={e => setMapSize(e.target.value)}>
+                                                <option value="midtown">midtown (46)</option>
+                                            </select>
+                                            <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--dt-text-muted)', pointerEvents: 'none' }}>▼</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: 10, color: 'var(--dt-text-muted)', marginBottom: 6 }}>ラウンド</div>
+                                        <div style={{ position: 'relative' }}>
+                                            <select className="dt-select" value={maxRounds} onChange={e => setMaxRounds(Number(e.target.value))}>
+                                                {[1, 5, 10, 15, 20, 30].map(r => <option key={r} value={r}>{r}R</option>)}
+                                            </select>
+                                            <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--dt-text-muted)', pointerEvents: 'none' }}>▼</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
-                                <button onClick={() => setCharAssignMode('choose')} className="btn-clay" style={{ background: charAssignMode === 'choose' ? '#2ecc71' : '', opacity: charAssignMode === 'choose' ? 1 : 0.6, padding: '8px 12px' }}>🎭 各自選択</button>
-                                <button onClick={() => setCharAssignMode('cpu_random')} className="btn-clay" style={{ background: charAssignMode === 'cpu_random' ? '#e67e22' : '', opacity: charAssignMode === 'cpu_random' ? 1 : 0.6, padding: '8px 12px' }}>🤖 CPUのみ🎲</button>
-                                <button onClick={() => setCharAssignMode('random')} className="btn-clay" style={{ background: charAssignMode === 'random' ? '#8e44ad' : '', opacity: charAssignMode === 'random' ? 1 : 0.6, color: 'white', padding: '8px 12px' }}>🎲 全員ランダム</button>
+                            {/* RANDOMIZE */}
+                            <div className="dt-section-label">RANDOMIZE</div>
+                            <div className="dt-card">
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                    <RmapTile label="🔀 マス種類" active={rmapTileType} onClick={() => setRmapTileType(!rmapTileType)} />
+                                    <RmapTile label="📐 マス配置" active={rmapLayout} onClick={() => setRmapLayout(!rmapLayout)} />
+                                    <RmapTile label="🏁 開始位置" active={rmapStart} onClick={() => setRmapStart(!rmapStart)} />
+                                    <RmapTile label="🧭 バラバラ" active={rmapScatter} onClick={() => setRmapScatter(!rmapScatter)} />
+                                </div>
                             </div>
 
-                            <button className="btn-large btn-blue" onClick={handleStartGame} style={{ width: '100%', marginTop: '20px', padding: '15px', fontSize: '20px' }}>🎲 全員でゲーム開始！</button>
-                        </div>
-                    ) : (
-                        <p style={{ fontSize: '20px', color: '#f1c40f', fontWeight: 'bold', margin: '30px 0' }}>⏳ ホストがゲームを開始するのを待っています...</p>
-                    )}
-                    <button className="btn-large" style={{ marginTop: '20px', background: '#e74c3c' }} onClick={() => { leaveRoom(); setGameState({ gamePhase: 'mode_select' }); }}>🚪 退室する</button>
+                            {/* DEVELOPER TOOL */}
+                            <div className={`dt-collapsible-header ${devOpen ? 'open' : ''}`} onClick={() => setDevOpen(!devOpen)}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span style={{ fontSize: 12, color: 'var(--dt-text-subtle)' }}>🛠</span>
+                                    <span style={{ fontSize: 11, color: 'var(--dt-text-subtle)', letterSpacing: 2, fontWeight: 500 }}>DEVELOPER TOOL</span>
+                                </div>
+                                <span className={`dt-collapsible-chevron ${devOpen ? 'open' : ''}`}>▼</span>
+                            </div>
+                            <div className={`dt-collapsible-body ${devOpen ? 'open' : ''}`}>
+                                <div className="dt-collapsible-body-inner">
+                                    <label className="dt-checkbox-card">
+                                        <input type="checkbox" checked={skipTurnDice} onChange={e => setSkipTurnDice(e.target.checked)} />
+                                        <span style={{ fontSize: 12, color: '#6a6a6a' }}>🎲 順番決めダイスをスキップ</span>
+                                    </label>
+                                    <label className="dt-checkbox-card" style={{ marginTop: 8 }}>
+                                        <input type="checkbox" checked={isCreative} onChange={e => setIsCreative(e.target.checked)} />
+                                        <span style={{ fontSize: 12, color: '#b8960f', fontWeight: 600 }}>🎨 クリエイティブモード</span>
+                                    </label>
+                                </div>
+                            </div>
 
-                    <CharacterSelect 
-                        isOpen={charSelectTarget !== null}
-                        onClose={() => setCharSelectTarget(null)}
-                        onConfirm={(charKey, skinId) => {
-                            if (charSelectTarget === myUserId) {
-                                updateMyInfo({ charType: charKey, skinId });
-                            } else {
-                                updateCpu(charSelectTarget, { charType: charKey, skinId });
-                            }
-                            setCharSelectTarget(null);
+                            {/* START */}
+                            <div style={{ marginTop: 24, marginBottom: 16 }}>
+                                <button className="dt-cta" onClick={handleStartGame}>🎲 全員でゲーム開始！</button>
+                            </div>
+                        </>
+                    ) : (
+                        <div style={{
+                            textAlign: 'center', padding: '30px 0',
+                            fontSize: 16, fontWeight: 700, color: 'var(--dt-gold)',
+                            animation: 'dt-blink 2s ease-in-out infinite',
+                        }}>
+                            ⏳ ホストがゲームを開始するのを待っています...
+                        </div>
+                    )}
+
+                    {/* EXIT */}
+                    <button
+                        onClick={() => { leaveRoom(); setGameState({ gamePhase: 'mode_select' }); }}
+                        style={{
+                            width: '100%', padding: 14, borderRadius: 12, fontSize: 14, fontWeight: 700,
+                            background: 'rgba(231,76,60,0.1)', border: '1px solid rgba(231,76,60,0.3)',
+                            color: '#e74c3c', cursor: 'pointer', fontFamily: 'inherit', marginBottom: 32,
                         }}
-                        initialCharKey={charSelectTarget === myUserId ? myInfo.charType : lobbyPlayers.find(p => p.userId === charSelectTarget)?.charType || 'athlete'}
-                        targetName={charSelectTarget === myUserId ? "あなた" : lobbyPlayers.find(p => p.userId === charSelectTarget)?.name || "CPU"}
-                    />
+                    >
+                        🚪 退室する
+                    </button>
                 </div>
 
-                {/* ▼ 追加: フレンド関連のモーダル群 */}
+                {/* ── Modals ── */}
+                <CharacterSelect
+                    isOpen={charSelectTarget !== null}
+                    onClose={() => setCharSelectTarget(null)}
+                    onConfirm={(charKey, skinId) => {
+                        if (charSelectTarget === myUserId) updateMyInfo({ charType: charKey, skinId });
+                        else updateCpu(charSelectTarget, { charType: charKey, skinId });
+                        setCharSelectTarget(null);
+                    }}
+                    initialCharKey={charSelectTarget === myUserId ? myInfo.charType : lobbyPlayers.find(p => p.userId === charSelectTarget)?.charType || 'athlete'}
+                    targetName={charSelectTarget === myUserId ? 'あなた' : lobbyPlayers.find(p => p.userId === charSelectTarget)?.name || 'CPU'}
+                />
                 {showFriendModal && (
-                    <FriendListModal 
-                        onClose={() => setShowFriendModal(false)} 
-                        onSelectFriend={(uid) => setSelectedProfileUid(uid)}
-                        currentRoomId={roomId} /* 現在の部屋IDを渡す */
-                    />
+                    <FriendListModal onClose={() => setShowFriendModal(false)} onSelectFriend={(uid) => setSelectedProfileUid(uid)} currentRoomId={roomId} />
                 )}
                 {selectedProfileUid && (
-                    <UserProfileModal 
-                        uid={selectedProfileUid} 
-                        onClose={() => setSelectedProfileUid(null)} 
-                    />
+                    <UserProfileModal uid={selectedProfileUid} onClose={() => setSelectedProfileUid(null)} />
                 )}
                 <MissionContainer isOpen={showMissionModal} onClose={() => setShowMissionModal(false)} />
             </div>
         );
     }
 
+
+    /* ══════════════════════════════════════════
+       未接続 → ロビー選択 / 部屋作成画面
+       ══════════════════════════════════════════ */
     return (
-        <div id="setup-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#fdf5e6', width: '100vw', height: '100vh' }}>
-            <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', margin: '10px 0 20px 0' }}>
-                    <h2 style={{ fontSize: '32px', margin: 0 }}>🌐 オンライン対戦</h2>
-                    <button 
-                        onClick={() => setShowMissionModal(true)} 
-                        className="btn-clay" 
-                        style={{ background: '#e67e22', padding: '8px 16px', fontSize: '16px', fontWeight: 'bold' }}
-                    >
-                        🏆 ミッション
-                    </button>
+        <div className="dt-screen">
+            {/* ── Header ── */}
+            <div className="dt-sticky-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <button className="dt-back-btn" onClick={() => setGameState({ gamePhase: 'mode_select' })}>◀</button>
+                    <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--dt-text)' }}>🌐 オンライン対戦</span>
                 </div>
-                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <div className="panel" style={{ width: '350px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <div>
-                            <label>プレイヤー名:</label>
-                            <input 
-                                type="text" value={playerName} readOnly title="名前の変更はモード選択画面で行ってください"
-                                style={{ width: '100%', padding: '10px', marginTop: '5px', borderRadius: '4px', background: '#d7ccc8', color: '#5c4a44', cursor: 'not-allowed' }} 
-                            />
-                        </div>
-                        <hr style={{ borderColor: '#5c4a44' }} />
-                        <button className="btn-large btn-green" onClick={handleCreate} disabled={status === 'connecting'}>👑 部屋を新しく作る</button>
-                        <div style={{ textAlign: 'center', margin: '5px 0' }}>または手動で入力</div>
-                        <div style={{ display: 'flex', gap: '10px' }}><input type="text" placeholder="コード入力" value={roomInput} onChange={e => setRoomInput(e.target.value)} style={{ flexGrow: 1, padding: '10px', borderRadius: '4px' }} /><button className="btn-clay btn-blue" onClick={() => handleJoin()} disabled={status === 'connecting' || roomInput === ''}>参加</button></div>
-                        {status === 'error' && <div style={{ color: '#e74c3c', fontSize: '14px', marginTop: '5px', fontWeight: 'bold' }}>接続エラーが発生しました。もう一度お試しください。</div>}
+                <button
+                    onClick={() => setShowMissionModal(true)}
+                    style={{
+                        fontSize: 11, color: 'var(--dt-orange)',
+                        border: '1px solid rgba(230,126,34,0.3)', borderRadius: 6, padding: '4px 10px',
+                        background: 'rgba(230,126,34,0.08)', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+                    }}
+                >
+                    🏆 ミッション
+                </button>
+            </div>
+
+            <div style={{ padding: '16px 20px', flex: 1 }}>
+
+                {/* ===== CREATE / JOIN ===== */}
+                <div className="dt-section-label">CREATE OR JOIN</div>
+                <div className="dt-card" style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 11, color: 'var(--dt-text-dim)', marginBottom: 8 }}>プレイヤー名</div>
+                    <input
+                        className="dt-input"
+                        type="text" value={playerName} readOnly
+                        title="名前の変更はモード選択画面で行ってください"
+                        style={{ width: '100%', marginBottom: 16, cursor: 'not-allowed', opacity: 0.6 }}
+                    />
+
+                    <button className="dt-cta" onClick={handleCreate} disabled={status === 'connecting'} style={{ marginBottom: 16 }}>
+                        👑 部屋を新しく作る
+                    </button>
+
+                    <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--dt-text-muted)', margin: '8px 0' }}>
+                        または部屋コードで参加
                     </div>
-                    <div className="panel" style={{ width: '400px', height: '350px', padding: '20px', display: 'flex', flexDirection: 'column' }}>
-                        <h3 style={{ borderBottom: '2px solid #8d7b68', paddingBottom: '10px', marginBottom: '15px' }}>📡 募集中の部屋</h3>
-                        <div style={{ flexGrow: 1, overflowY: 'auto', paddingRight: '10px' }}>
-                            {activeRooms.length === 0 ? <div style={{ color: '#bdc3c7', textAlign: 'center', marginTop: '80px' }}>現在募集中の部屋はありません</div> : activeRooms.map(room => (
-                                <div key={room.roomId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(92, 74, 68, 0.4)', padding: '15px', borderRadius: '8px', marginBottom: '10px' }}>
-                                    <div><div style={{ fontSize: '18px', fontWeight: 'bold', color: '#fdf5e6' }}>👑 {room.hostName} の部屋</div><div style={{ fontSize: '12px', color: '#f1c40f', marginTop: '4px' }}>コード: {room.roomId}</div></div>
-                                    <button className="btn-clay btn-blue" style={{ padding: '10px 20px' }} onClick={() => handleJoin(room.roomId)} disabled={status === 'connecting'}>参加</button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                            className="dt-input"
+                            type="text" placeholder="コード入力"
+                            value={roomInput} onChange={e => setRoomInput(e.target.value)}
+                            style={{ flex: 1 }}
+                        />
+                        <button
+                            onClick={() => handleJoin()}
+                            disabled={status === 'connecting' || roomInput === ''}
+                            style={{
+                                background: 'rgba(52,152,219,0.12)', border: '1px solid rgba(52,152,219,0.3)',
+                                borderRadius: 8, padding: '8px 16px', color: 'var(--dt-blue)',
+                                fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                                opacity: (status === 'connecting' || roomInput === '') ? 0.4 : 1,
+                            }}
+                        >
+                            参加
+                        </button>
+                    </div>
+                    {status === 'error' && (
+                        <div style={{ color: '#e74c3c', fontSize: 12, marginTop: 8, fontWeight: 700 }}>接続エラーが発生しました。もう一度お試しください。</div>
+                    )}
+                </div>
+
+                {/* ===== ACTIVE ROOMS ===== */}
+                <div className="dt-section-label">ACTIVE ROOMS</div>
+                <div className="dt-card" style={{ minHeight: 120 }}>
+                    {activeRooms.length === 0 ? (
+                        <div style={{ color: '#555', textAlign: 'center', padding: '40px 0', fontSize: 13 }}>
+                            現在募集中の部屋はありません
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {activeRooms.map(room => (
+                                <div key={room.roomId} style={{
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 10,
+                                    border: '1px solid var(--dt-border)',
+                                }}>
+                                    <div>
+                                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--dt-text)' }}>👑 {room.hostName} の部屋</div>
+                                        <div style={{ fontSize: 11, color: 'var(--dt-gold)', marginTop: 3 }}>コード: {room.roomId}</div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleJoin(room.roomId)}
+                                        disabled={status === 'connecting'}
+                                        style={{
+                                            background: 'rgba(52,152,219,0.12)', border: '1px solid rgba(52,152,219,0.3)',
+                                            borderRadius: 8, padding: '8px 16px', color: 'var(--dt-blue)',
+                                            fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                                        }}
+                                    >
+                                        参加
+                                    </button>
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    )}
                 </div>
-                <button className="btn-large" style={{ marginTop: '30px', background: '#7f8c8d' }} onClick={() => setGameState({ gamePhase: 'mode_select' })}>◀ 戻る</button>
             </div>
-            <MissionModal isOpen={showMissionModal} onClose={() => setShowMissionModal(false)} />
+
+            {/* ▼ 修正: MissionModal → MissionContainer (これがエラーの原因だった) */}
+            <MissionContainer isOpen={showMissionModal} onClose={() => setShowMissionModal(false)} />
         </div>
     );
 };
