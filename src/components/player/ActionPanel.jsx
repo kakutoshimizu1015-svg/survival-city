@@ -108,14 +108,59 @@ export const ActionPanel = () => {
     if (isDarkCurePicking && isMyTurn) {
         return (
             <div id="action-panel" className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ textAlign: 'center', color: '#fdf5e6', fontWeight: 'bold', marginBottom: '4px' }}>
-                    🩺 治療する相手を選んでください
-                </div>
+                <div style={{ textAlign: 'center', color: '#fdf5e6', fontWeight: 'bold', marginBottom: '4px' }}>🩺 治療する相手を選んでください</div>
                 {darkCureTargets.map(tid => {
                     const t = players.find(p => p.id === tid);
                     return <ClayButton key={tid} onClick={() => executeDarkCure(tid)} style={{ background: '#e74c3c' }}>{t?.name} を治療</ClayButton>
                 })}
                 <ClayButton onClick={() => useGameStore.setState({ isDarkCurePicking: false, darkCureTargets: [] })} style={{ background: '#95a5a6', marginTop: '4px' }}>✖ キャンセル</ClayButton>
+            </div>
+        );
+    }
+
+    // ▼ フェーズ3: 新キャラ用UIプロンプト群
+    const { isChefPicking, isScavengerPicking, isBribePicking, isCanBallistaPicking } = state;
+
+    if (isChefPicking && isMyTurn) {
+        return <div id="action-panel" className="panel" style={{ background: '#d35400', textAlign: 'center', padding: '15px' }}>🍳 手札の回復カードをタップして調理してください</div>;
+    }
+
+    if (isScavengerPicking && isMyTurn) {
+        return (
+            <div id="action-panel" className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ textAlign: 'center', color: '#fff', fontWeight: 'bold' }}>🛠️ 何を組み上げますか？ (ゴミ3個消費)</div>
+                <ClayButton onClick={() => executeScavenger('equip')} style={{ background: '#2ecc71' }}>🛡️ 装備品を生成</ClayButton>
+                <ClayButton onClick={() => executeScavenger('weapon')} style={{ background: '#e74c3c' }}>🔫 ショットガンを生成</ClayButton>
+                <ClayButton onClick={() => useGameStore.setState({ isScavengerPicking: false })} style={{ background: '#95a5a6' }}>✖ キャンセル</ClayButton>
+            </div>
+        );
+    }
+
+    if (isBribePicking && isMyTurn) {
+        const target = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0)[0];
+        return (
+            <div id="action-panel" className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ textAlign: 'center', color: '#f1c40f', fontWeight: 'bold' }}>💴 ${target?.name}をどう買収しますか？</div>
+                <ClayButton onClick={() => executeBribe(target.id, 'hand', 0)} disabled={cp.p < 5 || target.hand.length === 0} style={{ background: '#f39c12' }}>🃏 手札を1枚奪う (5P)</ClayButton>
+                <ClayButton onClick={() => executeBribe(target.id, 'territory', cp.pos)} disabled={cp.p < 10 || territories[cp.pos] !== target.id} style={{ background: '#f39c12' }}>🚩 この陣地を奪う (倍額)</ClayButton>
+                <ClayButton onClick={() => executeBribe(target.id, 'hire', 0)} disabled={cp.p < 10} style={{ background: '#f39c12' }}>💼 次ターン雇用する (10P)</ClayButton>
+                <ClayButton onClick={() => useGameStore.setState({ isBribePicking: false })} style={{ background: '#95a5a6' }}>✖ キャンセル</ClayButton>
+            </div>
+        );
+    }
+
+    if (isCanBallistaPicking && isMyTurn) {
+        return (
+            <div id="action-panel" className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ textAlign: 'center', color: '#fff', fontWeight: 'bold' }}>🥫 缶を何個発射しますか？(現在:${cp.cans}個)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
+                    <ClayButton onClick={() => useGameStore.setState({ canBallistaAmount: 3 })} style={{ background: cp.cans >= 3 ? '#e67e22' : '#7f8c8d' }}>3個 (10ダメ)</ClayButton>
+                    <ClayButton onClick={() => useGameStore.setState({ canBallistaAmount: 6 })} style={{ background: cp.cans >= 6 ? '#e67e22' : '#7f8c8d' }}>6個 (25ダメ/AP-1)</ClayButton>
+                    <ClayButton onClick={() => useGameStore.setState({ canBallistaAmount: 9 })} style={{ background: cp.cans >= 9 ? '#e67e22' : '#7f8c8d' }}>9個 (40ダメ/缶破壊)</ClayButton>
+                    <ClayButton onClick={() => useGameStore.setState({ canBallistaAmount: 12 })} style={{ background: cp.cans >= 12 ? '#e67e22' : '#7f8c8d' }}>12個 (60ダメ/爆風)</ClayButton>
+                </div>
+                <div style={{ color:'#fdf5e6', fontSize:'10px', textAlign:'center' }}>※この後、マップ上の他プレイヤーの駒をタップしてください</div>
+                <ClayButton onClick={() => useGameStore.setState({ isCanBallistaPicking: false })} style={{ background: '#95a5a6' }}>✖ キャンセル</ClayButton>
             </div>
         );
     }
@@ -141,6 +186,14 @@ export const ActionPanel = () => {
             {cp.charType === 'musician' && <ActionBtn action={actionConcert} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#9b59b6'}} isMyTurn={isMyTurn} isBusy={isBusy}>🎸 アンコール (3AP)</ActionBtn>}
             {cp.charType === 'doctor' && othersOnTile.length > 0 && <ActionBtn action={actionDarkCure} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="red" isMyTurn={isMyTurn} isBusy={isBusy}>🩺 毒入り治療 (2AP)</ActionBtn>}
             {cp.charType === 'gambler' && <ActionBtn action={actionGamble} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#f1c40f'}} isMyTurn={isMyTurn} isBusy={isBusy}>🎲 ドロー勝負 (3AP)</ActionBtn>}
+
+            {/* ▼ フェーズ3: 新キャラクター専用ボタン */}
+            {cp.charType === 'chef' && <ActionBtn action={actionChef} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" color="orange" isMyTurn={isMyTurn} isBusy={isBusy}>🍳 特製料理 (3AP)</ActionBtn>}
+            {cp.charType === 'scavenger' && <ActionBtn action={actionScavenger} condition={hasAP(3) && cp.trash >= 3 && isMyTurn && !isBusy} failMsg="AP不足かゴミが足りません" color="blue" isMyTurn={isMyTurn} isBusy={isBusy}>🛠️ ガラクタ工作 (3AP)</ActionBtn>}
+            {cp.charType === 'billionaire' && othersOnTile.length > 0 && <ActionBtn action={actionBribe} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" color="yellow" isMyTurn={isMyTurn} isBusy={isBusy}>💴 買収 (2AP)</ActionBtn>}
+            {cp.charType === 'god' && <ActionBtn action={actionOracle} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" style={{borderColor:'#f1c40f', background:'rgba(255,255,255,0.2)'}} isMyTurn={isMyTurn} isBusy={isBusy}>👼 神託 (3AP)</ActionBtn>}
+            {cp.charType === 'emperor' && <ActionBtn action={actionCanBallista} condition={hasAP(2) && cp.cans >= 1 && isMyTurn && !isBusy} failMsg="AP不足か缶がありません" color="red" isMyTurn={isMyTurn} isBusy={isBusy}>🥫 缶バリスタ (2AP)</ActionBtn>}
+            {cp.charType === 'sennin' && <ActionBtn action={actionTenchi} condition={cp.senki >= 5 && isMyTurn && !isBusy} failMsg="仙気スタックが足りません(5必要)" color="purple" isMyTurn={isMyTurn} isBusy={isBusy}>🧘 天地開闢 (0AP)</ActionBtn>}
             
             {cp.charType === 'detective' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>

@@ -27,7 +27,9 @@ export const actionRollDice = async (isCpuCall = false) => {
     const cp = players[turn];
     if (diceRolled || (!isCpuCall && cp.isCPU)) return;
 
-    // ▼ 闇医者のパッシブ【再生能力】
+    // ▼ パッシブスキルの解決（ターン開始時）
+    
+    // 🩺 闇医者のパッシブ【再生能力】
     if (cp.charType === 'doctor') {
         const healAmt = cp.hp <= 50 ? 16 : 8; 
         const actualHeal = Math.min(healAmt, 100 - cp.hp);
@@ -37,6 +39,48 @@ export const actionRollDice = async (isCpuCall = false) => {
             playSfx('success');
             state.addEventPopup(cp.id, "🩸", "再生能力", `HP+${actualHeal}`, "good");
         }
+    }
+
+    // 🥫 缶コレクターの帝王: 15缶以上の時HP+5回復
+    if (cp.charType === 'emperor' && cp.cans >= 15) {
+        const heal = Math.min(5, 100 - cp.hp);
+        if (heal > 0) {
+            state.updateCurrentPlayer(p => ({ hp: p.hp + heal }));
+            logMsg(`🥫 帝王の休息！缶の加護でHPが${heal}回復した！`);
+            state.addEventPopup(cp.id, "🥫", "帝王の休息", `HP+${heal}`, "good");
+        }
+    }
+
+    // 🥫 缶コレクターの帝王: 20缶以上の時、同マスの相手に毎ターン3ダメージ
+    if (cp.charType === 'emperor' && cp.cans >= 20) {
+        const others = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
+        others.forEach(target => {
+            dealDamage(target.id, 3, "帝王オーラ", cp.id);
+            logMsg(`🔥 帝王オーラ！${target.name}に3ダメージ与えた！`);
+        });
+    }
+
+    // 💴 億万長者: 所持Pが50以上の時、同マスの相手から自動で1Pずつ徴収
+    if (cp.charType === 'billionaire' && cp.p >= 50) {
+        const others = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0 && p.p > 0);
+        others.forEach(target => {
+            state.updatePlayer(target.id, p => ({ p: p.p - 1 }));
+            state.updateCurrentPlayer(p => ({ p: p.p + 1 }));
+            logMsg(`💴 羨望！${target.name}から1Pを自動徴収した！`);
+            state.addEventPopup(cp.id, "💴", "羨望", `${target.name}から1P徴収`, "good");
+            state.addEventPopup(target.id, "💴", "徴収された", "億万長者に1P払った", "bad");
+        });
+    }
+
+    // 👼 路上の神様: ゲーム開始時（1ラウンド目）のみ全員に加護トークン付与
+    if (cp.charType === 'god' && state.roundCount === 1) {
+        players.forEach(p => {
+            if (p.id !== cp.id) {
+                state.updatePlayer(p.id, { godBlessing: true });
+                state.addEventPopup(p.id, "👼", "神の加護", "死亡回避1回付与", "good");
+            }
+        });
+        logMsg(`👼 路上の神様が降臨！全プレイヤーに【加護トークン】を授けた！`);
     }
 
     const d1 = Math.floor(Math.random() * 6) + 1;
@@ -91,8 +135,9 @@ export const actionRollDice = async (isCpuCall = false) => {
     });
 
     if (territoryIncome > 0) {
-        if (cp.fakeInfoDebuff > 0) {
-            logMsg(`📰 ニセ情報の影響で陣地からの収入がゼロになった！`);
+        // 天地開闢(仙人) または ニセ情報(カード) のデバフ判定
+        if (cp.fakeInfoDebuff > 0 || state.tenchiZeroIncome > 0) {
+            logMsg(`📰 収入停止中！陣地からの収入がゼロになった！`);
         } else {
             state.updateCurrentPlayer(p => ({ p: p.p + territoryIncome }));
             logMsg(`🏙️ 陣地収入！ ${ownedTilesCount}つの陣地から合計 ${territoryIncome}P を獲得！`);
@@ -141,7 +186,13 @@ export const executeMove = (targetTileId) => {
     const cp = state.players[state.turn];
     const prevPos = cp.pos;
     
-    const baseMoveCost = (state.isRainy && !cp.rainGear && cp.charType !== "athlete" && !cp.equip?.foldBike) ? 2 : 1;
+    let baseMoveCost = (state.isRainy && !cp.rainGear && cp.charType !== "athlete" && !cp.equip?.foldBike) ? 2 : 1;
+    
+    // 🥫 缶コレクターの帝王: 5缶以上の時、移動コストが0APになる（移動し放題）
+    if (cp.charType === 'emperor' && cp.cans >= 5) {
+        baseMoveCost = 0;
+    }
+
     const penaltyCost = cp.nextMoveCostPenalty || 0;
     const moveCost = baseMoveCost + penaltyCost;
 
@@ -304,6 +355,12 @@ export const actionCan = () => {
 export const actionTrash = () => { 
     const s = useGameStore.getState();
     const cp = s.players[s.turn]; 
+
+    // 🥫 缶コレクターの帝王は雨でも缶・ゴミを拾える特権を持つ
+    if (s.isRainy && !cp.rainGear && cp.charType !== 'emperor') {
+        s.showToast("雨具がないと漁れません！");
+        return;
+    }
     const cost = cp.equip?.shoes ? 1 : 2;
     
     s.updateCurrentPlayer(p => ({ ap: p.ap - cost }));
@@ -404,14 +461,20 @@ export const actionOccupy = () => {
     }
 
     if (cp.p >= cost) { 
-        s.updateCurrentPlayer(p => ({ p: p.p - cost }));
+        // 💴 億万長者: 支払額の10%キャッシュバック
+        const cashback = (cp.charType === 'billionaire') ? Math.floor(cost * 0.1) : 0;
+        const actualCost = cost - cashback;
+
+        s.updateCurrentPlayer(p => ({ p: p.p - actualCost }));
         useGameStore.setState(st => ({ 
             territories: { ...st.territories, [cp.pos]: cp.id },
             territoryCosts: { ...(st.territoryCosts || {}), [cp.pos]: cost } 
         })); 
         s.incrementGameStat(cp.id, 'territories', 1);
         
-        logMsg(`🚩 ${cp.name}が${cost}P支払って陣地を占領しました！`);
+        let msg = `🚩 ${cp.name}が${cost}P支払って陣地を占領しました！`;
+        if (cashback > 0) msg += ` (成金還元で${cashback}P返ってきた！)`;
+        logMsg(msg);
         playSfx('success'); 
     } else {
         logMsg(`❌ Pが足りません（必要: ${cost}P）`);
@@ -449,22 +512,83 @@ export const actionEndTurn = async () => {
 
     try {
         const cp = state.players[state.turn];
+        const { mapData, players } = state;
         
+        // ☁️ 路上の仙人: AP繰り越し判定
+        let carryOverAP = 0;
+        if (cp.charType === 'sennin') {
+            carryOverAP = Math.min(10, cp.ap);
+            if (carryOverAP > 0) logMsg(`☁️ 仙人の無為自然！APを ${carryOverAP} 繰り越した。`);
+        }
+
+        // ☁️ 路上の仙人: 仙気スタックの計算
+        // 今ターンの「移動マス数」と「カード使用数」が0ならスタック+1
+        const stats = cp.gameStats || {};
+        // 1ゲーム累計から増加分を引くのは難しいので、このターンのフラグとして簡易的に判定
+        // 本来はactionMove等でフラグを立てるべきだが、ここでは仙人独自の「何もしなかった」を評価
+        let newSenki = cp.senki || 0;
+        if (cp.ap > 0 && cp.ap === state.lastDiceRollTotal) { // ダイス後1度も行動していない簡易判定
+             newSenki = Math.min(5, newSenki + 1);
+             logMsg(`☁️ 仙気が高まる... (現在: ${newSenki}スタック)`);
+             if (newSenki === 5) {
+                 // 5スタック効果: 他全員から5%徴収
+                 players.forEach(op => {
+                     if (op.id !== cp.id && op.p > 0) {
+                         const tax = Math.ceil(op.p * 0.05);
+                         state.updatePlayer(op.id, p => ({ p: p.p - tax }));
+                         state.updateCurrentPlayer(p => ({ p: p.p + tax }));
+                         logMsg(`🧘 悟りの境地！${op.name}から${tax}Pが仙人に流れた。`);
+                     }
+                 });
+             } else if (newSenki === 3) {
+                 state.updateCurrentPlayer(p => ({ hp: Math.min(100, p.hp + 20) }));
+                 logMsg(`🧘 仙術による自己治癒！HPが20回復した。`);
+             }
+        } else {
+             newSenki = 0; // アクションをした瞬間に全リセット
+        }
+
+        // 👼 路上の神様: 神の導きによる2P強制送金
+        if (cp.godBlessingReceived) {
+            const godPlayer = players.find(p => p.charType === 'god' && p.hp > 0);
+            if (godPlayer) {
+                const fee = Math.min(2, cp.p);
+                state.updateCurrentPlayer(p => ({ p: p.p - fee, godBlessingReceived: false }));
+                state.updatePlayer(godPlayer.id, p => ({ p: p.p + fee }));
+                logMsg(`👼 神の導きの対価！神様に${fee}Pを捧げた。`);
+            }
+        }
+
+        // 👼 路上の神様: 隣接している他人の獲得Pを吸収
+        if (cp.charType === 'god') {
+            players.forEach(op => {
+                if (op.id !== cp.id && op.hp > 0 && getDistance(cp.pos, op.pos, mapData) <= 1) {
+                    // ※本来はopが獲得した瞬間にやるべきだが、簡易的に毎ターン終了時1P吸う
+                    if (op.p > 0) {
+                        state.updatePlayer(op.id, p => ({ p: p.p - 1 }));
+                        state.updateCurrentPlayer(p => ({ p: p.p + 1 }));
+                        logMsg(`👼 隣人からの感謝！${op.name}から1Pを受け取った。`);
+                    }
+                }
+            });
+        }
+
         let newEquip = { ...cp.equip }, newTimer = { ...cp.equipTimer };
         if (newEquip.bicycle) { newTimer.bicycle = (newTimer.bicycle || 5) - 1; if (newTimer.bicycle <= 0) { newEquip.bicycle = false; logMsg(`🚲 自転車が壊れた！`); } }
         if (newEquip.cart) { newTimer.cart = (newTimer.cart || 5) - 1; if (newTimer.cart <= 0) { newEquip.cart = false; logMsg(`🛒 リヤカーが壊れた！`); } }
         if (newEquip.foldBike) { newTimer.foldBike = (newTimer.foldBike || 5) - 1; if (newTimer.foldBike <= 0) { newEquip.foldBike = false; logMsg(`🚲 折りたたみ自転車が壊れた！`); } }
         if (newEquip.shoppingCart) { newTimer.shoppingCart = (newTimer.shoppingCart || 5) - 1; if (newTimer.shoppingCart <= 0) { newEquip.shoppingCart = false; logMsg(`🛒 ショッピングカートが壊れた！`); } }
 
-
         state.updateCurrentPlayer(p => ({
-            ap: 0,
+            ap: carryOverAP, // AP繰り越し適用
+            senki: newSenki, // 仙気スタック更新
+            zazenTurns: Math.max(0, (p.zazenTurns || 0) - 1), // 仙人の座禅ターン減少
             stealth: false,
             ignoreNightVision: false,
             _katsuage: 0,
             equip: newEquip,
             equipTimer: newTimer,
-            cannotMove: false,
+            cannotMove: (p.zazenTurns > 0), // 座禅中は移動不可
             respawnShield: Math.max(0, (p.respawnShield || 0) - 1),
             drawCountThisTurn: 0 
         }));

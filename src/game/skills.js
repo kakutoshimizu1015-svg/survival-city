@@ -1,4 +1,5 @@
 import { useGameStore } from '../store/useGameStore';
+import { deckData } from '../constants/cards'; // ▼ 追加: カード情報を参照するため
 import { logMsg } from './actions';
 import { dealDamage } from './combat';
 import { getDistance } from '../utils/gameLogic';
@@ -29,7 +30,6 @@ export const actionDash = () => {
         state.updateCurrentPlayer(p => ({ pos: targets[0] }));
         logMsg(`💨 疾風ダッシュ！3マス先へ跳躍！`);
     } else {
-        // ▼ 追加：isDashPicking を true にして、UI側で白く光らせる判定に使う
         useGameStore.setState({ isBranchPicking: true, currentBranchOptions: targets, isDashPicking: true });
         logMsg(`💨 疾風ダッシュ！着地点を選んでください`);
     }
@@ -57,19 +57,16 @@ export const actionCamp = () => {
     logMsg(`⛺ ${cp.name}が野宿した！HPが${healed}回復！`);
 };
 
-// ▼ 修正：すぐ押し付けるのではなく、カードを選択するモードへ移行する
 export const actionSalesVisit = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const targets = state.players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
     if (targets.length === 0 || cp.ap < 2 || cp.hand.length === 0) return;
 
-    // 手札選択モードのUIを表示させるためのステートを設定
     useGameStore.setState({ isSalesVisiting: true, salesTargetId: targets[0].id });
     logMsg(`📦 訪問販売の準備... 押し付けるカードを選んでください。`);
 };
 
-// ▼ 追加：UI側（HandCards.jsxなど）でカードを選んだ時に呼ばれる確定処理
 export const executeSalesVisit = (cardIndex) => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
@@ -102,7 +99,7 @@ export const actionHack = () => {
 export const actionConcert = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
-    if (cp.ap < 3) return; // ▼ 軽量化: 4AP → 3AP
+    if (cp.ap < 3) return;
 
     state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
     
@@ -111,7 +108,6 @@ export const actionConcert = () => {
         if (op.id !== cp.id && op.hp > 0) {
             const dist = getDistance(cp.pos, op.pos, state.mapData);
             if (dist <= 2) {
-                // ▼ 引き寄せ＋次回移動時のAPペナルティ付与
                 state.updatePlayer(op.id, p => ({ pos: cp.pos, nextMoveCostPenalty: (p.nextMoveCostPenalty || 0) + 1 }));
                 pulledPlayers.push(op.name);
             }
@@ -119,7 +115,7 @@ export const actionConcert = () => {
     });
 
     if (pulledPlayers.length > 0) {
-        const bonusP = pulledPlayers.length * 2; // 集めた人数×2P
+        const bonusP = pulledPlayers.length * 2; 
         state.updateCurrentPlayer(p => ({ p: p.p + bonusP }));
         logMsg(`🎸 アンコール！ ${pulledPlayers.join(' と ')} を引き寄せ、${bonusP}Pを獲得！`);
         logMsg(`🎵 引き寄せられた相手は足止めされ、次回の移動APが+1される！`);
@@ -164,12 +160,11 @@ export const executeDarkCure = (targetId) => {
     logMsg(`☠️ ${target.name}は「治療済み」となり、今後3ターンの間毒ダメージを受ける...`);
 };
 
-export const actionGamble = () => { // ※旧「イカサマ勝負」。UI連動の互換性のため関数名は据え置き
+export const actionGamble = () => { 
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 3) return;
 
-    // 1ターン3回までの制限
     const drawCount = cp.drawCountThisTurn || 0;
     if (drawCount >= 3) {
         useGameStore.getState().showToast("ドロー勝負は1ターンに3回までです");
@@ -183,7 +178,6 @@ export const actionGamble = () => { // ※旧「イカサマ勝負」。UI連動
 
     state.updateCurrentPlayer(p => ({ ap: p.ap - 3, drawCountThisTurn: drawCount + 1 }));
 
-    // レアとノーマルのプールからランダムドロー
     const rarePool = [12, 13, 35, 36, 37];
     const normalPool = [0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34];
     const drawCard = () => Math.random() < 0.1 ? rarePool[Math.floor(Math.random() * rarePool.length)] : normalPool[Math.floor(Math.random() * normalPool.length)];
@@ -215,7 +209,6 @@ export const setupNpcMove = (npcKey) => {
     logMsg(`🕵️ マップ上のマスをタップしてNPCを移動させてください。`);
 };
 
-// ▼ 新規追加: 罠の設置ロジック
 export const actionSetTrap = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
@@ -251,4 +244,228 @@ export const executeSetTrap = (tileId) => {
     }));
     
     logMsg(`🪤 ${cp.name}が罠を設置した...（他プレイヤーには見えません）`);
+};
+
+// ==========================================
+// ▼ フェーズ3: 新キャラクターのアクションスキル
+// ==========================================
+
+// 🍳 元シェフ: 特製料理
+export const actionChef = () => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    if (cp.ap < 3) return;
+    
+    useGameStore.setState({ isChefPicking: true });
+    logMsg(`🍳 特製料理の準備！調理する回復カードを選んでください。`);
+};
+
+export const executeChef = (handIndex) => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    const cardId = cp.hand[handIndex];
+    const cardData = deckData.find(c => c.id === cardId);
+
+    if (!cardData || cardData.type !== 'heal') {
+        useGameStore.getState().showToast("料理できるのは回復カードのみです");
+        return;
+    }
+
+    const newHand = [...cp.hand];
+    newHand.splice(handIndex, 1);
+
+    const healAmount = (cardData.heal || 0) * 2;
+    const newHp = Math.min(100, cp.hp + healAmount);
+
+    state.updateCurrentPlayer(p => ({ ap: p.ap - 3, hp: newHp, hand: newHand }));
+    useGameStore.setState({ isChefPicking: false });
+    
+    logMsg(`🍳 特製料理完成！「${cardData.name}」が極上の味になり、食中毒なしでHPが${healAmount}回復した！`);
+    state.addEventPopup(cp.id, "🍳", "特製料理", `HP+${healAmount}`, "good");
+};
+
+// 🛠️ スカベンジャー: ガラクタ工作
+export const actionScavenger = () => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    if (cp.ap < 3) return;
+    if (cp.trash < 3) {
+        useGameStore.getState().showToast("ゴミが3つ必要です");
+        return;
+    }
+    useGameStore.setState({ isScavengerPicking: true });
+    logMsg(`🛠️ ガラクタ工作！ゴミを3つ消費して何を作る？`);
+};
+
+export const executeScavenger = (type) => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    if (cp.ap < 3 || cp.trash < 3) return;
+
+    let newHand = [...cp.hand];
+    let msg = "";
+
+    if (type === 'equip') {
+        const equipPool = [8, 24, 25, 26, 27, 28, 29, 45, 46];
+        const generated = equipPool[Math.floor(Math.random() * equipPool.length)];
+        newHand.push(generated);
+        msg = `ランダムな装備品（${deckData.find(c=>c.id===generated).name}）`;
+    } else {
+        newHand.push(20); // 既存のショットガンで代用
+        msg = `ショットガン`;
+    }
+
+    state.updateCurrentPlayer(p => ({ ap: p.ap - 3, trash: p.trash - 3, hand: newHand }));
+    useGameStore.setState({ isScavengerPicking: false });
+    
+    logMsg(`🛠️ ゴミから ${msg} を組み上げた！`);
+    state.addEventPopup(cp.id, "🛠️", "工作完了", msg + "を獲得", "good");
+};
+
+// 💴 億万長者: 買収
+export const actionBribe = () => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    if (cp.ap < 2) return;
+    useGameStore.setState({ isBribePicking: true });
+    logMsg(`💴 買収の準備... ターゲットと買収方法を選んでください。`);
+};
+
+export const executeBribe = (targetId, type, extraData) => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    const target = state.players.find(p => p.id === targetId);
+
+    if (!target || cp.ap < 2) return;
+
+    if (type === 'hand') {
+        if (cp.p < 5 || target.hand.length === 0) return;
+        const stolenCard = target.hand[extraData]; 
+        const tHand = [...target.hand]; tHand.splice(extraData, 1);
+        state.updatePlayer(targetId, p => ({ p: p.p + 5, hand: tHand }));
+        state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p - 5, hand: [...p.hand, stolenCard] }));
+        logMsg(`💴 【手札買収】5Pを支払い、${target.name}の手札を強制的に買い取った！`);
+    } else if (type === 'territory') {
+        const tileId = extraData;
+        const cost = (state.territoryCosts[tileId] || 3) * 2;
+        if (cp.p < cost) return;
+        state.updatePlayer(targetId, p => ({ p: p.p + cost }));
+        state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p - cost }));
+        useGameStore.setState(prev => ({ territories: { ...prev.territories, [tileId]: cp.id } }));
+        logMsg(`💴 【陣地買収】${cost}Pを支払い、${target.name}の陣地を強制買収した！`);
+    } else if (type === 'hire') {
+        if (cp.p < 10) return;
+        state.updatePlayer(targetId, p => ({ p: p.p + 10, penaltyAP: (p.penaltyAP || 0) + 3 })); // 雇用による次ターンの実質行動制限
+        state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p - 10 }));
+        logMsg(`💴 【雇用】10Pを支払い、${target.name}を次のターン雇用した！（APを制限する）`);
+    }
+    useGameStore.setState({ isBribePicking: false });
+};
+
+// 👼 路上の神様: 神託
+export const actionOracle = () => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    if (cp.ap < 3) return;
+
+    state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
+    state.players.forEach(p => {
+        if (p.id !== cp.id && p.hp > 0) {
+            state.updatePlayer(p.id, prev => ({ godBlessing: true, bonusAP: (prev.bonusAP || 0) + 2 }));
+            state.addEventPopup(p.id, "👼", "神の導き", "次ダイス+2", "good");
+        }
+    });
+    logMsg(`👼 【神託】自分以外の全員に「神の導き（次ダイス+2）」を与えた！`);
+    logMsg(`（※導きを受けたプレイヤーは、ターン終了時に神様へ2Pを強制送金します）`);
+};
+
+// 🥫 缶コレクターの帝王: 缶バリスタ
+export const actionCanBallista = () => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    if (cp.ap < 2) return;
+    if (cp.cans < 1) {
+        useGameStore.getState().showToast("空き缶がありません");
+        return;
+    }
+    useGameStore.setState({ isCanBallistaPicking: true });
+    logMsg(`🥫 缶バリスタ！発射する缶の数とターゲットを選んでください。`);
+};
+
+export const executeCanBallista = (targetId, consumeAmount) => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    const target = state.players.find(p => p.id === targetId);
+
+    if (!target || cp.ap < 2 || cp.cans < consumeAmount) return;
+
+    state.updateCurrentPlayer(p => ({ ap: p.ap - 2, cans: p.cans - consumeAmount }));
+
+    let dmg = 0, range = 0;
+    if (consumeAmount >= 10) { dmg = 60; range = 5; }
+    else if (consumeAmount >= 7) { dmg = 40; range = 4; }
+    else if (consumeAmount >= 4) { dmg = 25; range = 3; }
+    else { dmg = 10; range = 2; }
+
+    const dist = getDistance(cp.pos, target.pos, state.mapData);
+    if (dist > range) {
+        logMsg(`❌ 射程外です（射程: ${range}）`);
+        return;
+    }
+
+    logMsg(`🥫 【缶バリスタ】${consumeAmount}個の空き缶を乱射！！`);
+    dealDamage(targetId, dmg, "缶バリスタ", cp.id);
+
+    if (consumeAmount >= 4 && consumeAmount <= 6) {
+        state.updatePlayer(targetId, p => ({ penaltyAP: (p.penaltyAP||0) + 1 }));
+        logMsg(`💥 衝撃で${target.name}は次AP-1！`);
+    } else if (consumeAmount >= 7 && consumeAmount <= 9) {
+        state.updatePlayer(targetId, p => ({ cans: 0 }));
+        logMsg(`💥 破壊的な威力で${target.name}の所持する缶がすべて弾け飛んだ！`);
+    } else if (consumeAmount >= 10) {
+        state.players.forEach(p => {
+            if (p.id !== targetId && p.id !== cp.id && p.hp > 0 && getDistance(target.pos, p.pos, state.mapData) <= 2) {
+                dealDamage(p.id, 20, "缶バリスタ（爆風）", cp.id);
+                logMsg(`💥 爆風が ${p.name} にも20ダメージ！`);
+            }
+        });
+    }
+
+    useGameStore.setState(prev => ({
+        mapData: prev.mapData.map(t => t.id === target.pos ? { ...t, fieldCans: (t.fieldCans||0) + consumeAmount } : t),
+        isCanBallistaPicking: false
+    }));
+};
+
+// ☁️ 路上の仙人: 天地開闢
+export const actionTenchi = () => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+
+    if (cp.senki < 5) {
+        useGameStore.getState().showToast("仙気が5スタック必要です");
+        return;
+    }
+
+    useGameStore.setState({ tenchiZeroIncome: 1 });
+
+    const npcKeys = ['policePos', 'unclePos', 'animalPos', 'yakuzaPos', 'loansharkPos', 'friendPos'];
+    let updates = {};
+    npcKeys.forEach(k => {
+        if (state[k] !== 999) {
+            updates[k] = state.mapData[Math.floor(Math.random() * state.mapData.length)].id;
+        }
+    });
+    useGameStore.setState(updates);
+
+    const addP = Math.min(30, cp.p);
+    state.updateCurrentPlayer(p => ({
+        senki: 0,
+        p: p.p + addP,
+        zazenTurns: 2 // 行動不能フラグ
+    }));
+
+    logMsg(`☁️ 【天地開闢】発動！！ 次ラウンドの全陣地収入がゼロになり、全NPCがワープした！`);
+    logMsg(`🧘 ${cp.name}は所持Pが倍増したが、仙気を失い2ターンの座禅（行動不可）に入った...`);
+    state.addEventPopup(cp.id, "☁️", "天地開闢", "マップ全体に影響！", "good");
 };

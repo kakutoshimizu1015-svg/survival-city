@@ -23,6 +23,18 @@ const mergeCharacterData = () =>
 const CHAR_COLORS = {
   athlete:'#e74c3c', sales:'#3498db', survivor:'#2ecc71', yankee:'#e67e22',
   hacker:'#9b59b6', musician:'#f1c40f', doctor:'#1abc9c', gambler:'#e91e8c', detective:'#6c5ce7',
+  chef:'#e74c3c', scavenger:'#7f8c8d', billionaire:'#f1c40f', god:'#f39c12', emperor:'#e67e22', sennin:'#95a5a6' // ▼ 追加
+};
+
+const DEFAULT_UNLOCKED_CHARS = ['yankee', 'athlete', 'survivor', 'sales', 'hacker', 'musician', 'doctor', 'gambler', 'detective'];
+
+const UNLOCK_CONDITIONS = {
+  chef: "解放条件: ミッション「10勝」達成",
+  scavenger: "解放条件: ミッション「累計5,000P」達成",
+  billionaire: "解放条件: ミッション「累計10万P」達成",
+  god: "解放条件: ミッション「100勝」達成",
+  emperor: "解放条件: ミッション「2万マス移動」達成",
+  sennin: "解放条件: ミッション「NPC合計100回遭遇」達成"
 };
 
 /* ──────────────────────────────────────────────
@@ -30,7 +42,7 @@ const CHAR_COLORS = {
    ────────────────────────────────────────────── */
 export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, targetName }) => {
   const characters = useMemo(() => mergeCharacterData(), []);
-  const { equippedSkins } = useUserStore();
+  const { equippedSkins, unlockedSkins } = useUserStore(); // ▼ 追加: unlockedSkins
   
   // UI状態
   const [hoveredKey, setHoveredKey] = useState(null);
@@ -70,6 +82,8 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
   };
 
   if (!isOpen) return null;
+
+  const isLockedSelected = selectedKey && !DEFAULT_UNLOCKED_CHARS.includes(selectedKey) && !unlockedSkins.includes(selectedKey);
 
   return (
     <div style={{
@@ -147,13 +161,32 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
           characters={characters}
           selectedKey={selectedKey}
           hoveredKey={hoveredKey}
-          onSelect={setSelectedKey}
+          onSelect={(key) => {
+             // ▼ 修正: ロックされているキャラは選択不可にする
+             const isLocked = !DEFAULT_UNLOCKED_CHARS.includes(key) && !unlockedSkins.includes(key);
+             if (!isLocked) setSelectedKey(key);
+             else setHoveredKey(key); // ロックキャラタップ時はホバー扱いにしてプレビューだけ見せる
+          }}
           onHover={setHoveredKey}
           onLeave={() => setHoveredKey(null)}
         />
 
         {/* プレビュー */}
-        <CharacterPreview character={previewChar} show={showPreview} />
+        <div style={{ position: 'relative' }}>
+          <CharacterPreview character={previewChar} show={showPreview} />
+          {previewChar && !DEFAULT_UNLOCKED_CHARS.includes(previewChar.key) && !unlockedSkins.includes(previewChar.key) && (
+            <div style={{
+              position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 10,
+              display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+              borderRadius: 12, backdropFilter: 'blur(3px)'
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+              <div style={{ color: '#fdf5e6', fontWeight: 'bold', fontSize: 16, background: 'rgba(0,0,0,0.8)', padding: '12px 20px', borderRadius: 8, textAlign: 'center' }}>
+                {UNLOCK_CONDITIONS[previewChar.key] || "未解放のキャラクターです"}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ──── 下部ボタンエリア ──── */}
@@ -174,12 +207,13 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
 
         <button
           onClick={handleConfirm}
+          disabled={isLockedSelected}
           style={{
             padding: '12px 40px', borderRadius: 8, border: 'none',
-            background: `linear-gradient(135deg, ${CHAR_COLORS[selectedKey] || '#f1c40f'}, ${CHAR_COLORS[selectedKey] ? CHAR_COLORS[selectedKey] + 'cc' : '#e67e22'})`,
-            color: '#1a1410', fontSize: 18, fontWeight: 900, cursor: 'pointer',
+            background: isLockedSelected ? '#7f8c8d' : `linear-gradient(135deg, ${CHAR_COLORS[selectedKey] || '#f1c40f'}, ${CHAR_COLORS[selectedKey] ? CHAR_COLORS[selectedKey] + 'cc' : '#e67e22'})`,
+            color: isLockedSelected ? '#bdc3c7' : '#1a1410', fontSize: 18, fontWeight: 900, cursor: isLockedSelected ? 'not-allowed' : 'pointer',
             fontFamily: "'M PLUS Rounded 1c', sans-serif", letterSpacing: 3,
-            boxShadow: `0 4px 15px ${CHAR_COLORS[selectedKey] || '#f1c40f'}44`,
+            boxShadow: isLockedSelected ? 'none' : `0 4px 15px ${CHAR_COLORS[selectedKey] || '#f1c40f'}44`,
             transition: 'all 0.2s',
           }}
         >

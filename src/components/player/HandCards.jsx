@@ -2,13 +2,13 @@ import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
-// ▼ 変更: executeRecycle を追加インポート
 import { actionUseCard, actionDiscardCard, executeRecycle } from '../../game/cards';
-import { executeSalesVisit } from '../../game/skills'; 
+// ▼ 修正: executeChef を追加インポート
+import { executeSalesVisit, executeChef } from '../../game/skills'; 
 
 export const HandCards = () => {
-    // ▼ 修正: setGameState は不要になったので削除
-    const { players, turn, diceRolled, mgActive, isBranchPicking, isSalesVisiting, isRecyclePicking, isCreativeMode } = useGameStore();
+    // ▼ 修正: isChefPicking を追加で取得
+    const { players, turn, diceRolled, mgActive, isBranchPicking, isSalesVisiting, isRecyclePicking, isCreativeMode, isChefPicking } = useGameStore();
     const cp = players[turn];
     const { myUserId, status } = useNetworkStore();
 
@@ -35,7 +35,8 @@ export const HandCards = () => {
     }
 
     const isSalesMode = isMyTurn && isSalesVisiting;
-    const isRecycleMode = isMyTurn && isRecyclePicking; // ▼ 追加: 廃品再生モード
+    const isRecycleMode = isMyTurn && isRecyclePicking; // 廃品再生モード
+    const isChefMode = isMyTurn && isChefPicking; // ▼ 追加: 特製料理モード
 
     return (
         <div id="hand-cards-area" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -52,9 +53,13 @@ export const HandCards = () => {
                     let apCost = cardData.type === 'weapon' ? 2 : 0;
                     if ([3, 4, 13].includes(cardId)) apCost = 1;
                     
-                    // ▼ 修正: クリエイティブモード中は、AP不足等の Disabled 条件を完全に無視する
-                    const isDisabled = !isCreativeMode && (!isMyTurn || !diceRolled || cp.ap < (isSalesMode ? 2 : apCost) || mgActive || isBranchPicking || isRecycleMode);
-                    const isDiscardDisabled = !isMyTurn || mgActive || isBranchPicking || isSalesMode; 
+                    // ▼ 追加: カードのタイプとモード別のコスト計算
+                    const isHealCard = cardData.type === 'heal';
+                    const modeCost = isChefMode ? 3 : isSalesMode ? 2 : apCost;
+                    
+                    // ▼ 修正: 特製料理モード中は回復カード以外を選択不可にする
+                    const isDisabled = !isCreativeMode && (!isMyTurn || !diceRolled || cp.ap < modeCost || mgActive || isBranchPicking || isRecycleMode || (isChefMode && !isHealCard));
+                    const isDiscardDisabled = !isMyTurn || mgActive || isBranchPicking || isSalesMode || isChefMode; 
 
                     return (
                         <div key={index} style={{ background: '#fdf5e6', border: `3px solid ${cardData.color || '#8d6e63'}`, borderRadius: '8px', padding: '8px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', minWidth: '110px', display: 'flex', flexDirection: 'column', gap: '3px', color: '#333', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)' }}>
@@ -62,11 +67,13 @@ export const HandCards = () => {
                             <div style={{ flexGrow: 1, marginTop: '3px' }}>{cardData.desc}</div>
                             <div style={{ display: 'flex', gap: '5px', width: '100%', justifyContent: 'center', marginTop: '3px' }}>
                                 <button 
-                                    onClick={() => isSalesMode ? executeSalesVisit(index) : actionUseCard(index, cardId)} 
+                                    // ▼ 修正: isChefMode なら executeChef を呼び出す
+                                    onClick={() => isSalesMode ? executeSalesVisit(index) : isChefMode ? executeChef(index) : actionUseCard(index, cardId)} 
                                     disabled={isDisabled} 
-                                    style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDisabled ? 'not-allowed' : 'pointer', border: `2px solid ${isSalesMode ? '#f39c12' : '#8d6e63'}`, background: isDisabled ? '#eee' : (isSalesMode ? '#fdebd0' : '#fff'), opacity: isDisabled ? 0.5 : 1, color: isSalesMode ? '#d35400' : '#333' }}
+                                    // ▼ 修正: モードに応じてボタンの色を動的に変更
+                                    style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDisabled ? 'not-allowed' : 'pointer', border: `2px solid ${isSalesMode ? '#f39c12' : isChefMode ? '#e74c3c' : '#8d6e63'}`, background: isDisabled ? '#eee' : (isSalesMode ? '#fdebd0' : isChefMode ? '#fadbd8' : '#fff'), opacity: isDisabled ? 0.5 : 1, color: isSalesMode ? '#d35400' : isChefMode ? '#c0392b' : '#333' }}
                                 >
-                                    {isSalesMode ? '売りつける' : (cardId === 12 ? '使用(HP半減)' : (apCost > 0 ? `使用(${apCost}AP)` : '使用'))}
+                                    {isSalesMode ? '売りつける' : isChefMode ? '調理する' : (cardId === 12 ? '使用(HP半減)' : (apCost > 0 ? `使用(${apCost}AP)` : '使用'))}
                                 </button>
                                 <button 
                                     onClick={() => isRecycleMode ? executeRecycle(index) : actionDiscardCard(index)} 

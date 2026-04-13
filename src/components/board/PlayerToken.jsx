@@ -5,15 +5,16 @@ import { getCircularOffset } from '../../utils/gameLogic';
 import { CharImage } from '../common/CharImage';
 import { TOKEN_CONFIG } from '../../constants/characters';
 import { MAP_CONFIG } from '../../constants/maps';
-// ▼ 変更: ニセ情報の実行関数をインポート
 import { executeFakeInfo } from '../../game/cards';
+// ▼ 追加: 缶バリスタの実行関数をインポート
+import { executeCanBallista } from '../../game/skills';
 
 export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
     const showSmoke = useUserStore(state => state.showSmoke);
     const liteMode = useUserStore(state => state.liteMode); 
 
-    // ▼ 変更: ニセ情報モードのステートを取得
-    const { players, isFakeInfoPicking, fakeInfoTargets } = useGameStore();
+    // ▼ 変更: ニセ情報モードと缶バリスタモードのステートを取得
+    const { players, turn, isFakeInfoPicking, fakeInfoTargets, isCanBallistaPicking, canBallistaAmount } = useGameStore();
     
     const policePos = useGameStore(state => state.policePos);
     const truckPos = useGameStore(state => state.truckPos);
@@ -244,11 +245,17 @@ export const PlayerToken = ({ player, mapData, isActiveTurn, maxRow }) => {
             ? `drop-shadow(0 0 15px #ffe066) drop-shadow(0 0 8px ${glowColor})` 
             : (isTeam ? `drop-shadow(0 0 15px ${glowColor})` : `drop-shadow(0 0 8px ${glowColor}) drop-shadow(0 4px 6px rgba(0,0,0,0.6))`)));
 
-    // ▼ 変更: ニセ情報の対象プレイヤーかどうかを判定し、クリックイベントを付与
-    const isTargetable = isFakeInfoPicking && fakeInfoTargets.includes(player.id);
+    // ▼ 修正: ニセ情報、または缶バリスタのターゲットかどうかを判定し、クリックイベントを付与
+    const isFakeInfoTarget = isFakeInfoPicking && fakeInfoTargets.includes(player.id);
+    const isCanBallistaTarget = isCanBallistaPicking && canBallistaAmount > 0 && player.id !== players[turn].id;
+    
+    const isTargetable = isFakeInfoTarget || isCanBallistaTarget;
+    
     const handleClick = () => {
-        if (isTargetable) {
+        if (isFakeInfoTarget) {
             executeFakeInfo(player.id);
+        } else if (isCanBallistaTarget) {
+            executeCanBallista(player.id, canBallistaAmount);
         }
     };
 

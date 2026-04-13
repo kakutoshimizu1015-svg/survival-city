@@ -133,7 +133,34 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
     }
 
     if (newHp <= 0) {
+        // ▼ 路上の神様: 加護トークンによる死亡回避判定
+        if (target.godBlessing) {
+            state.updatePlayer(targetId, p => ({ hp: Math.min(20, target.hp + Math.abs(newHp) + 1), godBlessing: false }));
+            
+            // 神様を探して3P送金
+            const godPlayer = state.players.find(p => p.charType === 'god' && p.hp > 0);
+            if (godPlayer) {
+                const fee = Math.min(3, target.p - dropP);
+                state.updatePlayer(targetId, p => ({ p: p.p - dropP - fee }));
+                state.updatePlayer(godPlayer.id, p => ({ p: p.p + fee }));
+                logMsg(`👼 加護トークン消費！${target.name}は致命傷を耐え、神様に${fee}Pが送金された！`);
+                state.addEventPopup(targetId, "👼", "神の加護", "死亡を回避", "good");
+            } else {
+                state.updatePlayer(targetId, p => ({ p: p.p - dropP }));
+                logMsg(`👼 加護トークン消費！${target.name}は致命傷をギリギリで耐え抜いた！`);
+            }
+            return actualDmg;
+        }
+
+        // ▼ 路上の仙人・神様のペナルティ減免処理
         let lostP = Math.min(15, Math.max(0, Math.floor((target.p - dropP) / 3)));
+        if (target.charType === 'sennin') {
+            lostP = 0; // 仙人はP没収完全免除
+            logMsg(`☁️ 仙人の無為自然！Pを一切没収されずに済んだ。`);
+        } else if (target.charType === 'god') {
+            lostP = Math.floor(lostP / 2); // 神様はペナルティ半減
+        }
+
         let newEquip = { ...target.equip };
         const eqKeys = Object.keys(newEquip).filter(k => newEquip[k]);
         if (eqKeys.length > 0) newEquip[eqKeys[Math.floor(Math.random() * eqKeys.length)]] = false;
@@ -145,7 +172,6 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
         logMsg(`<span style="color:#e74c3c">☠️ ${target.name}が死亡！病院へ搬送...</span>`); playSfx('death');
         state.addEventPopup(targetId, "☠️", "死亡", "病院へ搬送...", "damage");
 
-        // ✅ Fix: 病院タイルのIDをマップデータから動的に取得（pos:0 決め打ちを廃止）
         const hospitalTile = state.mapData.find(t => t.type === 'center');
         const hospitalId = hospitalTile ? hospitalTile.id : (state.mapData[0]?.id ?? 0);
 

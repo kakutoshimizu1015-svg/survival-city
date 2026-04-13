@@ -83,7 +83,9 @@ export const useUserStore = create(
           state.addGachaAssets(amount, 0);
         } else if (reward.g === 'CHAR' || reward.g !== '') {
           // スキンまたはキャラクター解放
-          state.unlockMultipleSkins([reward.nm]);
+          // ▼ 修正: charId が設定されている場合は charId を、なければ nm を保存
+          const unlockId = reward.charId || reward.nm;
+          state.unlockMultipleSkins([unlockId]);
         } else if (reward.nm.includes('P')) {
           const amount = parseInt(reward.nm.replace(/[^0-9]/g, '')) || 0;
           state.addGachaAssets(0, amount);

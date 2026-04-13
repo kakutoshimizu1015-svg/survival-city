@@ -24,6 +24,13 @@ const initialState = {
 
     isCreativeMode: false,   // ▼ 追加: クリエイティブ（デバッグ）モード
 
+    // ▼ 追加: フェーズ3の新キャラUI用ステート
+    isChefPicking: false,
+    isScavengerPicking: false,
+    isBribePicking: false,
+    isCanBallistaPicking: false,
+    tenchiZeroIncome: 0,     // 仙人の天地開闢（陣地収入ゼロラウンド数）
+
     traps: [],               // ▼ 探偵の罠データ { tileId, type, ownerId }
     isTrapScanActive: false, // ▼ 探偵の罠スキャン状態（長押しでtrue）
     isTrapTypePicking: false, // ▼ 罠の「種類」を選ぶモード
