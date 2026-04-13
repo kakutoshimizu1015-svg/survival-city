@@ -80,12 +80,25 @@ function App() {
         if (horrorMode) document.body.classList.add('horror-mode');
     }, [layoutMode, weatherState, isNight, horrorMode]);
 
+    /* body背景をダークテーマに統一（水色を上書き） */
+    useEffect(() => {
+        const darkPhases = ['title', 'mode_select', 'setup_offline', 'online_lobby', 'playing', 'gacha', 'minigames'];
+        if (darkPhases.includes(gamePhase)) {
+            document.body.style.backgroundColor = '#120e08';
+            document.body.style.backgroundImage = 'none';
+        }
+        return () => {
+            document.body.style.backgroundColor = '';
+            document.body.style.backgroundImage = '';
+        };
+    }, [gamePhase]);
+
     /* ── Loading screen ── */
     if (!isAuthResolved) {
         return (
             <div style={{
                 display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                alignItems: 'center', height: '100vh', background: '#0a0a0f', color: '#c8a24e', fontWeight: 'bold',
+                alignItems: 'center', height: '100vh', background: '#120e08', color: '#c8a24e', fontWeight: 'bold',
             }}>
                 <div style={{ fontSize: 40, marginBottom: 20, animation: 'spin 1s linear infinite' }}>🔄</div>
                 <div>サーバーと同期中...</div>

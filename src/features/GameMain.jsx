@@ -66,6 +66,13 @@ export const GameMain = () => {
         return () => window.removeEventListener('resize', updateLayout);
     }, []);
 
+    /* body背景を暖色ダークに上書き（水色除去） */
+    useEffect(() => {
+        const prev = document.body.style.backgroundColor;
+        document.body.style.backgroundColor = '#120e08';
+        return () => { document.body.style.backgroundColor = prev; };
+    }, []);
+
     return (
         <div id="game-screen" className="game-screen dt-game">
             <GameEffectsOverlay />

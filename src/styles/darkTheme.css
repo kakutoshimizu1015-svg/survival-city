@@ -4,11 +4,12 @@
    ============================================= */
 
 :root {
-    --dt-bg: #0a0a0f;
-    --dt-surface: rgba(255,255,255,0.02);
-    --dt-surface-hover: rgba(255,255,255,0.04);
-    --dt-border: rgba(255,255,255,0.06);
-    --dt-border-hover: rgba(255,255,255,0.12);
+    --dt-bg: #120e08;
+    --dt-bg-warm: radial-gradient(ellipse at 50% 30%, #1e1510 0%, #120e08 60%, #0a0804 100%);
+    --dt-surface: rgba(200,170,120,0.04);
+    --dt-surface-hover: rgba(200,170,120,0.07);
+    --dt-border: rgba(200,162,78,0.10);
+    --dt-border-hover: rgba(200,162,78,0.20);
 
     --dt-gold: #c8a24e;
     --dt-gold-dim: #6a5a3a;
@@ -20,6 +21,9 @@
     --dt-text-dim: #8a7a5a;
     --dt-text-muted: #6a5a3a;
     --dt-text-subtle: #4a4a4a;
+
+    --dt-panel-bg: rgba(28,22,14,0.95);
+    --dt-panel-border: rgba(200,162,78,0.18);
 
     --dt-orange: #e67e22;
     --dt-orange-dark: #d35400;
@@ -39,13 +43,19 @@
     width: 100vw;
     min-height: 100vh;
     min-height: 100dvh;
-    background: var(--dt-bg);
+    background: var(--dt-bg-warm);
     color: var(--dt-text);
     font-family: 'Hiragino Maru Gothic ProN','Meiryo', sans-serif;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
     overflow-x: hidden;
+}
+
+/* ── Body override: dt-screen / dt-game がある時は水色を消す ── */
+body:has(.dt-screen), body:has(.dt-game) {
+    background-color: var(--dt-bg) !important;
+    background-image: none !important;
 }
 
 /* ── Section label (PLAYERS, RULES, etc.) ── */
@@ -175,7 +185,7 @@
     transition: all var(--dt-transition);
 }
 .dt-add-btn:hover {
-    background: rgba(255,255,255,0.03);
+    background: rgba(200,170,120,0.05);
 }
 
 /* ── CTA button ── */
@@ -234,7 +244,7 @@
     align-items: center;
     gap: 10px;
     padding: 10px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(200,170,120,0.06);
 }
 .dt-player-row:last-of-type {
     border-bottom: none;
@@ -264,7 +274,7 @@
     justify-content: space-between;
     padding: 12px 14px;
     background: var(--dt-surface);
-    border: 1px solid rgba(255,255,255,0.04);
+    border: 1px solid rgba(200,170,120,0.06);
     border-radius: var(--dt-radius-sm);
     cursor: pointer;
     user-select: none;
@@ -297,7 +307,7 @@
 }
 .dt-collapsible-body-inner {
     background: var(--dt-surface);
-    border: 1px solid rgba(255,255,255,0.04);
+    border: 1px solid rgba(200,170,120,0.06);
     border-top: none;
     border-radius: 0 0 var(--dt-radius-sm) var(--dt-radius-sm);
     padding: 14px;
@@ -308,7 +318,7 @@
     position: sticky;
     top: 0;
     z-index: 20;
-    background: rgba(10,10,15,0.95);
+    background: rgba(18,14,8,0.95);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border-bottom: 1px solid rgba(200,162,78,0.15);
@@ -318,7 +328,7 @@
 
 /* ── Title screen specifics ── */
 .dt-title-bg {
-    background: radial-gradient(ellipse at 50% 80%, #1a1008 0%, var(--dt-bg) 70%);
+    background: radial-gradient(ellipse at 50% 80%, #1e1510 0%, #120e08 70%);
 }
 .dt-title-glow {
     position: absolute;
@@ -360,8 +370,8 @@
 
 /* ── Social grid icon ── */
 .dt-social-icon {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(200,170,120,0.05);
+    border: 1px solid rgba(200,162,78,0.08);
     border-radius: 12px;
     padding: 14px 8px;
     text-align: center;
@@ -370,7 +380,7 @@
     transition: background var(--dt-transition);
 }
 .dt-social-icon:hover {
-    background: rgba(255,255,255,0.06);
+    background: rgba(200,162,78,0.08);
 }
 
 
@@ -380,14 +390,14 @@
    ============================================= */
 
 .dt-game {
-    background: var(--dt-bg) !important;
+    background: var(--dt-bg-warm) !important;
     color: var(--dt-text);
 }
 
 /* ── Game panel override ── */
 .dt-game .panel {
-    background: rgba(20,18,15,0.95) !important;
-    border: 1px solid rgba(200,162,78,0.15) !important;
+    background: var(--dt-panel-bg) !important;
+    border: 1px solid var(--dt-panel-border) !important;
     border-radius: 12px !important;
     box-shadow: none !important;
     color: var(--dt-text) !important;
@@ -395,10 +405,10 @@
 
 /* ── Top bar ── */
 .dt-game .top-bar {
-    background: rgba(10,10,15,0.9);
+    background: rgba(18,14,8,0.92);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border-bottom: 1px solid rgba(200,162,78,0.1);
+    border-bottom: 1px solid rgba(200,162,78,0.12);
     padding: 8px 15px !important;
     margin-bottom: 8px !important;
     border-radius: 0 0 12px 12px;
@@ -406,8 +416,8 @@
 
 /* ── Status panel ── */
 .dt-game .dt-status-panel {
-    background: rgba(20,18,15,0.95);
-    border: 1px solid rgba(200,162,78,0.15);
+    background: var(--dt-panel-bg);
+    border: 1px solid var(--dt-panel-border);
     border-radius: 12px;
     padding: 10px;
     color: var(--dt-text);
@@ -420,8 +430,8 @@
 }
 
 .dt-game .dt-stat-box {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(200,170,120,0.06);
+    border: 1px solid rgba(200,162,78,0.10);
     border-radius: 6px;
     padding: 4px 6px;
     font-size: 11px;
@@ -433,7 +443,7 @@
 .dt-game .dt-hp-bar-outer {
     width: 100%;
     height: 4px;
-    background: rgba(255,255,255,0.08);
+    background: rgba(200,162,78,0.10);
     border-radius: 2px;
     margin-top: 3px;
     overflow: hidden;
@@ -462,7 +472,7 @@
 }
 .dt-game .dt-equip-icon.inactive {
     filter: grayscale(100%) opacity(0.2);
-    background: rgba(255,255,255,0.02);
+    background: rgba(200,170,120,0.03);
 }
 .dt-game .dt-equip-icon.active {
     background: rgba(200,162,78,0.15);
@@ -476,14 +486,14 @@
     flex-direction: column;
     gap: 4px;
     padding: 10px;
-    background: rgba(20,18,15,0.95);
-    border: 1px solid rgba(200,162,78,0.15);
+    background: var(--dt-panel-bg);
+    border: 1px solid var(--dt-panel-border);
     border-radius: 12px;
 }
 
 .dt-game .dt-action-btn {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(200,170,120,0.06);
+    border: 1px solid rgba(200,162,78,0.10);
     border-radius: 8px;
     padding: 7px 8px;
     font-size: 12px;
@@ -527,8 +537,8 @@
 
 /* ── Player list ── */
 .dt-game .dt-player-list {
-    background: rgba(20,18,15,0.95);
-    border: 1px solid rgba(200,162,78,0.15);
+    background: var(--dt-panel-bg);
+    border: 1px solid var(--dt-panel-border);
     border-radius: 12px;
     padding: 10px;
     display: flex;
@@ -546,7 +556,7 @@
     cursor: pointer;
 }
 .dt-game .dt-player-item:hover {
-    background: rgba(255,255,255,0.03);
+    background: rgba(200,170,120,0.05);
 }
 .dt-game .dt-player-item.active-turn {
     border-color: rgba(241,196,15,0.4);
@@ -559,12 +569,12 @@
     padding: 3px 2px;
     font-size: 10px;
     font-weight: 700;
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid rgba(200,162,78,0.10);
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.15s;
     background: transparent;
-    color: #6a6a6a;
+    color: #6a5a3a;
     font-family: inherit;
 }
 .dt-game .dt-sort-btn.active {
@@ -586,13 +596,13 @@
     overflow-x: auto;
     align-items: stretch;
     padding: 8px;
-    background: rgba(20,18,15,0.95);
-    border: 1px solid rgba(200,162,78,0.15);
+    background: var(--dt-panel-bg);
+    border: 1px solid var(--dt-panel-border);
     border-radius: 12px;
     min-height: 110px;
 }
 .dt-game .dt-card {
-    background: rgba(30,25,18,0.95);
+    background: rgba(35,28,18,0.95);
     border: 1.5px solid rgba(200,162,78,0.2);
     border-radius: 10px;
     padding: 8px;
@@ -625,7 +635,7 @@
 }
 .dt-game .dt-card-title {
     font-size: 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(200,162,78,0.08);
     padding-bottom: 3px;
     color: var(--dt-gold);
 }
@@ -667,13 +677,13 @@
 
 /* ── Log panel ── */
 .dt-game #log-panel-clay {
-    background: rgba(20,18,15,0.95) !important;
-    border: 1px solid rgba(200,162,78,0.15) !important;
+    background: var(--dt-panel-bg) !important;
+    border: 1px solid var(--dt-panel-border) !important;
     border-radius: 12px !important;
     box-shadow: none !important;
 }
 .dt-game #log {
-    color: #aaa !important;
+    color: #b0a080 !important;
 }
 .dt-game #log span.highlight { color: var(--dt-orange) !important; }
 .dt-game #log span.danger { color: var(--dt-red) !important; }
@@ -687,8 +697,8 @@
 
 /* ── Zoom controls ── */
 .dt-game .zoom-btn {
-    background: rgba(20,18,15,0.9) !important;
-    border: 1px solid rgba(200,162,78,0.2) !important;
+    background: rgba(28,22,14,0.92) !important;
+    border: 1px solid var(--dt-panel-border) !important;
     color: var(--dt-gold) !important;
 }
 .dt-game .zoom-btn:hover {
@@ -698,9 +708,21 @@
 /* ── Settings button override ── */
 .dt-game ~ #settings-btn,
 #settings-btn {
-    background: rgba(20,18,15,0.9);
-    border: 1px solid rgba(200,162,78,0.2);
+    background: rgba(28,22,14,0.92);
+    border: 1px solid var(--dt-panel-border);
     color: var(--dt-gold);
+}
+
+/* ── Board area warm tint ── */
+.dt-game .board-area,
+.dt-game #board-area {
+    background: rgba(200,170,120,0.02);
+    border-radius: 12px;
+}
+
+/* ── HP bar background warm ── */
+.dt-game .dt-hp-bar-outer {
+    background: rgba(200,170,120,0.10);
 }
 
 /* ── Mobile overrides ── */
