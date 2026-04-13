@@ -163,11 +163,13 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
           characters={characters}
           selectedKey={selectedKey}
           hoveredKey={hoveredKey}
+          isCreative={isCreative}             // ▼ 追加: クリエイティブモードフラグを渡す
+          unlockedSkins={unlockedSkins}       // ▼ 追加: 解放済み配列を渡す
+          defaultUnlocked={DEFAULT_UNLOCKED_CHARS} // ▼ 追加: デフォルトキャラ配列を渡す
           onSelect={(key) => {
-             // ▼ 修正: クリエイティブモード時は isLocked を強制的に false にして選択可能にする
              const isLocked = !isCreative && !DEFAULT_UNLOCKED_CHARS.includes(key) && !unlockedSkins.includes(key);
              if (!isLocked) setSelectedKey(key);
-             else setHoveredKey(key); // ロックキャラタップ時はホバー扱いにしてプレビューだけ見せる
+             else setHoveredKey(key); 
           }}
           onHover={setHoveredKey}
           onLeave={() => setHoveredKey(null)}

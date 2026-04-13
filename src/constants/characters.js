@@ -553,8 +553,8 @@ export const CHARACTERS = [
         tagline: '腐った生ゴミすら三ツ星の味に変える、路地の料理人',
         passive: { name:'【食通】', desc:'回復系カードを使用する際、食中毒リスク（ダメージ）を完全無効化する。さらに回復量が1.5倍になる。' },
         action: { name:'【特製料理】 (3AP)', desc:'手札の食料系（回復）カード1枚を「効果2倍・食中毒なし」にアップグレードして即座に使用する。' },
-        baseImages: { front: doctor_N_default, back: doctor_N_default },
-        skins: [{ id: "chef_default", charKey: "chef", name: "元シェフ", rarity: "N", front: doctor_N_default, pieceColor: "#e74c3c", ring: "#c0392b", desc: "血まみれのエプロンかと思いきやトマトソース。" }]
+        baseImages: { front: createEmojiImg('🍳'), back: createEmojiImg('🍳') },
+        skins: [{ id: "chef_default", charKey: "chef", name: "元シェフ", rarity: "N", front: createEmojiImg('🍳'), pieceColor: "#e74c3c", ring: "#c0392b", desc: "血まみれのエプロンかと思いきやトマトソース。" }]
     },
     {
         id: 'scavenger',
@@ -564,8 +564,8 @@ export const CHARACTERS = [
         tagline: '都市のゴミ山を宝の山に変える、錬金術師',
         passive: { name:'【リサイクル】', desc:'ゴミ漁りに失敗した場合でも、ペナルティの代わりに「空き缶」を1つ獲得できる。' },
         action: { name:'【ガラクタ工作】 (3AP)', desc:'所持しているゴミを3つ消費し、ランダムな装備品カードか、使い切りの「ショットガン」を生成する。' },
-        baseImages: { front: survivor_N_default, back: survivor_N_default },
-        skins: [{ id: "scavenger_default", charKey: "scavenger", name: "スカベンジャー", rarity: "N", front: survivor_N_default, pieceColor: "#7f8c8d", ring: "#95a5a6", desc: "ガラクタを身に纏ったジャンク戦士。" }]
+        baseImages: { front: createEmojiImg('🛠️'), back: createEmojiImg('🛠️') },
+        skins: [{ id: "scavenger_default", charKey: "scavenger", name: "スカベンジャー", rarity: "N", front: createEmojiImg('🛠️'), pieceColor: "#7f8c8d", ring: "#95a5a6", desc: "ガラクタを身に纏ったジャンク戦士。" }]
     },
     {
         id: 'billionaire',
@@ -575,8 +575,8 @@ export const CHARACTERS = [
         tagline: '金で解決できないことは、もっと金で解決する',
         passive: { name:'【成金】', desc:'①初期所持P+15P。②Pを支払う行動で10%還元。③所持Pが50以上の時、ターン開始時に同マス全員から1P自動徴収。' },
         action: { name:'【買収】 (2AP)', desc:'A:【手札買収】5P払い相手の手札奪取。B:【陣地買収】2倍P払い陣地強奪。C:【雇用】10P払い次ターンの相手のAPを奪う。' },
-        baseImages: { front: sales_SSR_TopeliteCEO, back: sales_SSR_TopeliteCEO },
-        skins: [{ id: "billionaire_default", charKey: "billionaire", name: "億万長者", rarity: "SSR", front: sales_SSR_TopeliteCEO, pieceColor: "#f1c40f", ring: "#f39c12", desc: "札束で全てを叩き潰す元富裕層。" }]
+        baseImages: { front: createEmojiImg('💴'), back: createEmojiImg('💴') },
+        skins: [{ id: "billionaire_default", charKey: "billionaire", name: "億万長者", rarity: "SSR", front: createEmojiImg('💴'), pieceColor: "#f1c40f", ring: "#f39c12", desc: "札束で全てを叩き潰す元富裕層。" }]
     },
     {
         id: 'god',
@@ -586,8 +586,8 @@ export const CHARACTERS = [
         tagline: '困ったやつがいれば助けてやる。ただしタダじゃねえ',
         passive: { name:'【神の加護】', desc:'開始時全員に1度だけ死亡回避できる「加護トークン」付与(使用時3P自動送金)。隣接者の獲得P5%を吸収。自身は死亡ペナ半減。' },
         action: { name:'【神託】 (3AP)', desc:'自分以外の全員に「次ダイス+2」を付与。ただし、その恩恵を受けた者がターンを終えるたび2Pが神様に自動送金される。' },
-        baseImages: { front: musician_SSR_platinumsinger, back: musician_SSR_platinumsinger },
-        skins: [{ id: "god_default", charKey: "god", name: "路上の神様", rarity: "SSR", front: musician_SSR_platinumsinger, pieceColor: "#f39c12", ring: "#e67e22", desc: "神々しい後光（ただのネオン管）を背負う。" }]
+        baseImages: { front: createEmojiImg('👼'), back: createEmojiImg('👼') },
+        skins: [{ id: "god_default", charKey: "god", name: "路上の神様", rarity: "SSR", front: createEmojiImg('👼'), pieceColor: "#f39c12", ring: "#e67e22", desc: "神々しい後光（ただのネオン管）を背負う。" }]
     },
     {
         id: 'emperor',
@@ -597,8 +597,8 @@ export const CHARACTERS = [
         tagline: '缶を舐めるなよ。これが最強の通貨だ',
         passive: { name:'【缶の哲学】', desc:'雨天でも回収可能、1ターン上限5回。缶の数で強化(5:移動0AP, 10:耐性+30%, 15:開始時HP+5, 20:同マス毎ターン3ダメ)。' },
         action: { name:'【缶バリスタ】 (2AP)', desc:'缶を消費して攻撃。1-3缶:射程2/10ダメ、4-6缶:射程3/25ダメ＆次AP-1、7-9缶:射程4/40ダメ＆全缶破壊、10缶以上:射程5/60ダメ＆周囲2マス20ダメ。' },
-        baseImages: { front: yankee_SR_can_pompadour, back: yankee_SR_can_pompadour },
-        skins: [{ id: "emperor_default", charKey: "emperor", name: "缶コレクターの帝王", rarity: "SR", front: yankee_SR_can_pompadour, pieceColor: "#e67e22", ring: "#d35400", desc: "全身をアルミ缶で覆った究極のエコ戦士。" }]
+        baseImages: { front: createEmojiImg('🥫'), back: createEmojiImg('🥫') },
+        skins: [{ id: "emperor_default", charKey: "emperor", name: "缶コレクターの帝王", rarity: "SR", front: createEmojiImg('🥫'), pieceColor: "#e67e22", ring: "#d35400", desc: "全身をアルミ缶で覆った究極のエコ戦士。" }]
     },
     {
         id: 'sennin',
@@ -608,8 +608,8 @@ export const CHARACTERS = [
         tagline: '急ぐな。全ては巡る',
         passive: { name:'【無為自然】', desc:'余ったAPを次ターンに繰り越し(上限10)。行動せずターン終了で「仙気」獲得(1:次カードAP-1, 3:HP+20, 5:全P5%徴収)。行動でリセット。死亡時P没収免除。' },
         action: { name:'【天地開闢】 (0AP)', desc:'仙気5消費。全陣地収入1Rゼロ化、全NPCランダム移動、自P倍増(上限+30)、次2ターン座禅(行動不可)。' },
-        baseImages: { front: detective_N_default, back: detective_N_default },
-        skins: [{ id: "sennin_default", charKey: "sennin", name: "路上の仙人", rarity: "SR", front: detective_N_default, pieceColor: "#95a5a6", ring: "#7f8c8d", desc: "悟りを開き、路上と同化した老翁。" }]
+        baseImages: { front: createEmojiImg('☁️'), back: createEmojiImg('☁️') },
+        skins: [{ id: "sennin_default", charKey: "sennin", name: "路上の仙人", rarity: "SR", front: createEmojiImg('☁️'), pieceColor: "#95a5a6", ring: "#7f8c8d", desc: "悟りを開き、路上と同化した老翁。" }]
     }
 ];
 
