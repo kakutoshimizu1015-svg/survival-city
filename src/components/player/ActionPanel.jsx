@@ -4,7 +4,8 @@ import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
 import { ClayButton } from '../common/ClayButton';
 import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, actionManhole, getOccupyCost } from '../../game/actions';
-import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, executeDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap, setupSetTrap } from '../../game/skills';
+// ▼ 修正: フェーズ3の新キャラスキル用関数を追加でインポート
+import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, executeDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap, setupSetTrap, actionChef, actionScavenger, executeScavenger, actionBribe, executeBribe, actionOracle, actionCanBallista, actionTenchi } from '../../game/skills';
 
 const ActionBtn = ({ action, condition, failMsg, highlight, color, style, children, isMyTurn, isBusy }) => (
     <ClayButton 
