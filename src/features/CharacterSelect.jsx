@@ -40,7 +40,8 @@ const UNLOCK_CONDITIONS = {
 /* ──────────────────────────────────────────────
    メインコンポーネント（独立したポップアップモーダル）
    ────────────────────────────────────────────── */
-export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, targetName }) => {
+// ▼ 修正: isCreative を引数に追加
+export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, targetName, isCreative }) => {
   const characters = useMemo(() => mergeCharacterData(), []);
   const { equippedSkins, unlockedSkins } = useUserStore(); // ▼ 追加: unlockedSkins
   
@@ -83,7 +84,8 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
 
   if (!isOpen) return null;
 
-  const isLockedSelected = selectedKey && !DEFAULT_UNLOCKED_CHARS.includes(selectedKey) && !unlockedSkins.includes(selectedKey);
+  // ▼ 修正: isCreative が true の場合はロック判定を無効化（常に false になる）
+  const isLockedSelected = selectedKey && !isCreative && !DEFAULT_UNLOCKED_CHARS.includes(selectedKey) && !unlockedSkins.includes(selectedKey);
 
   return (
     <div style={{
@@ -162,8 +164,8 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
           selectedKey={selectedKey}
           hoveredKey={hoveredKey}
           onSelect={(key) => {
-             // ▼ 修正: ロックされているキャラは選択不可にする
-             const isLocked = !DEFAULT_UNLOCKED_CHARS.includes(key) && !unlockedSkins.includes(key);
+             // ▼ 修正: クリエイティブモード時は isLocked を強制的に false にして選択可能にする
+             const isLocked = !isCreative && !DEFAULT_UNLOCKED_CHARS.includes(key) && !unlockedSkins.includes(key);
              if (!isLocked) setSelectedKey(key);
              else setHoveredKey(key); // ロックキャラタップ時はホバー扱いにしてプレビューだけ見せる
           }}
@@ -174,7 +176,8 @@ export const CharacterSelect = ({ isOpen, onClose, onConfirm, initialCharKey, ta
         {/* プレビュー */}
         <div style={{ position: 'relative' }}>
           <CharacterPreview character={previewChar} show={showPreview} />
-          {previewChar && !DEFAULT_UNLOCKED_CHARS.includes(previewChar.key) && !unlockedSkins.includes(previewChar.key) && (
+          {/* ▼ 修正: !isCreative 条件を追加し、クリエイティブ時はロック画面(黒い幕)を出さない */}
+          {previewChar && !isCreative && !DEFAULT_UNLOCKED_CHARS.includes(previewChar.key) && !unlockedSkins.includes(previewChar.key) && (
             <div style={{
               position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 10,
               display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',

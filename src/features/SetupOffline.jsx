@@ -301,6 +301,7 @@ export const SetupOffline = () => {
                     }}
                     initialCharKey={players.find(p => p.id === charSelectTarget)?.charType || 'athlete'}
                     targetName={players.find(p => p.id === charSelectTarget)?.name || ""}
+                    isCreative={isCreative} // ▼ 追加: クリエイティブモードのフラグを渡す
                 />
             </div>
             <MissionContainer isOpen={showMissionModal} onClose={() => setShowMissionModal(false)} />
