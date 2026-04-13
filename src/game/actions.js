@@ -114,7 +114,12 @@ export const actionRollDice = async (isCpuCall = false) => {
         canPickedThisTurn: 0
     });
 
-    state.updateCurrentPlayer(p => ({ ap: p.ap + totalAP }));
+    // ▼ 修正: 仙人の「何も行動しなかった」判定のために、ダイス直後のAPを保存する
+    state.updateCurrentPlayer(p => {
+        const finalAP = p.ap + totalAP;
+        useGameStore.setState({ lastDiceRollTotal: finalAP });
+        return { ap: finalAP };
+    });
     
     let territoryIncome = 0;
     let ownedTilesCount = 0;

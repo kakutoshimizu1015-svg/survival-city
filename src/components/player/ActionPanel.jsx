@@ -139,14 +139,32 @@ export const ActionPanel = () => {
     }
 
     if (isBribePicking && isMyTurn) {
-        const target = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0)[0];
+        const targets = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
+        
+        // ▼ 追加: ターゲットが複数いる場合は、まず対象を選ばせるUIを挟む
+        if (targets.length > 1 && !state.bribeTargetId) {
+            return (
+                <div id="action-panel" className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ textAlign: 'center', color: '#f1c40f', fontWeight: 'bold' }}>💴 買収する相手を選んでください</div>
+                    {targets.map(t => (
+                        <ClayButton key={t.id} onClick={() => useGameStore.setState({ bribeTargetId: t.id })} style={{ background: '#f39c12' }}>
+                            {t.name}
+                        </ClayButton>
+                    ))}
+                    <ClayButton onClick={() => useGameStore.setState({ isBribePicking: false })} style={{ background: '#95a5a6' }}>✖ キャンセル</ClayButton>
+                </div>
+            );
+        }
+
+        const target = state.bribeTargetId ? players.find(p => p.id === state.bribeTargetId) : targets[0];
+
         return (
             <div id="action-panel" className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ textAlign: 'center', color: '#f1c40f', fontWeight: 'bold' }}>💴 ${target?.name}をどう買収しますか？</div>
-                <ClayButton onClick={() => executeBribe(target.id, 'hand', 0)} disabled={cp.p < 5 || target.hand.length === 0} style={{ background: '#f39c12' }}>🃏 手札を1枚奪う (5P)</ClayButton>
-                <ClayButton onClick={() => executeBribe(target.id, 'territory', cp.pos)} disabled={cp.p < 10 || territories[cp.pos] !== target.id} style={{ background: '#f39c12' }}>🚩 この陣地を奪う (倍額)</ClayButton>
-                <ClayButton onClick={() => executeBribe(target.id, 'hire', 0)} disabled={cp.p < 10} style={{ background: '#f39c12' }}>💼 次ターン雇用する (10P)</ClayButton>
-                <ClayButton onClick={() => useGameStore.setState({ isBribePicking: false })} style={{ background: '#95a5a6' }}>✖ キャンセル</ClayButton>
+                <div style={{ textAlign: 'center', color: '#f1c40f', fontWeight: 'bold' }}>💴 {target?.name} をどう買収しますか？</div>
+                <ClayButton onClick={() => { executeBribe(target.id, 'hand', 0); useGameStore.setState({ bribeTargetId: null }); }} disabled={cp.p < 5 || target.hand.length === 0} style={{ background: '#f39c12' }}>🃏 手札を1枚奪う (5P)</ClayButton>
+                <ClayButton onClick={() => { executeBribe(target.id, 'territory', cp.pos); useGameStore.setState({ bribeTargetId: null }); }} disabled={cp.p < 10 || territories[cp.pos] !== target.id} style={{ background: '#f39c12' }}>🚩 この陣地を奪う (倍額)</ClayButton>
+                <ClayButton onClick={() => { executeBribe(target.id, 'hire', 0); useGameStore.setState({ bribeTargetId: null }); }} disabled={cp.p < 10} style={{ background: '#f39c12' }}>💼 次ターン雇用する (10P)</ClayButton>
+                <ClayButton onClick={() => useGameStore.setState({ isBribePicking: false, bribeTargetId: null })} style={{ background: '#95a5a6' }}>✖ キャンセル</ClayButton>
             </div>
         );
     }
@@ -169,6 +187,15 @@ export const ActionPanel = () => {
 
     return (
         <div id="action-panel" className="panel">
+            
+            {/* ▼ 追加: 仙気スタックのリアルタイムUI表示メーター */}
+            {cp.charType === 'sennin' && (
+                <div style={{ background: 'rgba(155, 89, 182, 0.2)', border: '1px solid #9b59b6', borderRadius: '8px', padding: '5px', textAlign: 'center', color: '#e0b0ff', fontWeight: 'bold', marginBottom: '8px', fontSize: '12px' }}>
+                    ☁️ 現在の仙気: {cp.senki || 0} / 5
+                    <div style={{ fontSize: '10px', color: '#bdc3c7', fontWeight: 'normal', marginTop: '2px' }}>行動せずターン終了でスタック増加</div>
+                </div>
+            )}
+
             <div id="btn-roll"><ActionBtn action={actionRollDice} condition={canRoll} failMsg={diceRolled ? "すでにサイコロを振っています" : "今は振れません"} highlight={canRoll} isMyTurn={isMyTurn} isBusy={isBusy}>🎲 サイコロを振る</ActionBtn></div>
             <div id="btn-move"><ActionBtn action={actionMove} condition={canMove} failMsg={cp.cannotMove ? "足止めされています！" : !diceRolled ? "サイコロを振ってください" : "APが不足しています"} highlight={canMove} isMyTurn={isMyTurn} isBusy={isBusy}>🚶 移動 ({currentMoveCost}AP)</ActionBtn></div>
             <div id="btn-can"><ActionBtn action={actionCan} condition={canDoCan} failMsg={isBlockedByAnimal ? "野良犬がいて拾えません！" : canPickedThisTurn >= 3 ? "1ターンの拾う上限です" : "AP不足か場所が違います"} isMyTurn={isMyTurn} isBusy={isBusy}>🥫 缶拾い (1AP)</ActionBtn></div>
