@@ -45,7 +45,7 @@
     min-height: 100dvh;
     background: var(--dt-bg-warm);
     color: var(--dt-text);
-    font-family: 'Hiragino Maru Gothic ProN','Meiryo', sans-serif;
+    font-family: 'Kaisei Decol', serif;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -105,7 +105,7 @@ body:has(.dt-screen), body:has(.dt-game) {
     font-size: 13px;
     color: var(--dt-text);
     font-weight: 600;
-    font-family: 'Kaisei Decol', serif;
+    font-family: inherit;
     width: 100%;
     appearance: none;
     cursor: pointer;
@@ -120,7 +120,7 @@ body:has(.dt-screen), body:has(.dt-game) {
     font-size: 13px;
     color: var(--dt-text);
     font-weight: 600;
-    font-family: 'Kaisei Decol', serif;
+    font-family: inherit;
     outline: none;
     transition: border-color var(--dt-transition);
 }
@@ -166,7 +166,7 @@ body:has(.dt-screen), body:has(.dt-game) {
     font-weight: 700;
     cursor: pointer;
     transition: all var(--dt-transition);
-    font-family: 'Kaisei Decol', serif;
+    font-family: inherit;
 }
 .dt-pill.active {
     border-width: 1.5px;
@@ -180,7 +180,7 @@ body:has(.dt-screen), body:has(.dt-game) {
     padding: 8px 14px;
     cursor: pointer;
     background: transparent;
-    font-family: 'Kaisei Decol', serif;
+    font-family: inherit;
     font-weight: 500;
     transition: all var(--dt-transition);
 }
@@ -202,7 +202,7 @@ body:has(.dt-screen), body:has(.dt-game) {
     box-shadow: 0 4px 24px rgba(230,126,34,0.3);
     cursor: pointer;
     width: 100%;
-    font-family: 'Kaisei Decol', serif;
+    font-family: inherit;
     transition: transform 0.1s, box-shadow var(--dt-transition);
 }
 .dt-cta:hover {
@@ -221,7 +221,7 @@ body:has(.dt-screen), body:has(.dt-game) {
     cursor: pointer;
     padding: 4px;
     transition: color var(--dt-transition);
-    font-family: 'Kaisei Decol', serif;
+    font-family: inherit;
 }
 .dt-back-btn:hover {
     color: var(--dt-gold);
@@ -502,7 +502,7 @@ body:has(.dt-screen), body:has(.dt-game) {
     cursor: pointer;
     text-align: left;
     transition: all 0.15s;
-    font-family: 'Kaisei Decol', serif;
+    font-family: inherit;
 }
 .dt-game .dt-action-btn:hover:not(:disabled) {
     background: rgba(200,162,78,0.08);
@@ -575,7 +575,7 @@ body:has(.dt-screen), body:has(.dt-game) {
     transition: all 0.15s;
     background: transparent;
     color: #6a5a3a;
-    font-family: 'Kaisei Decol', serif;
+    font-family: inherit;
 }
 .dt-game .dt-sort-btn.active {
     background: rgba(200,162,78,0.1);
@@ -656,7 +656,7 @@ body:has(.dt-screen), body:has(.dt-game) {
     border: 1px solid rgba(200,162,78,0.2);
     background: rgba(200,162,78,0.08);
     color: var(--dt-gold);
-    font-family: 'Kaisei Decol', serif;
+    font-family: inherit;
     transition: all 0.15s;
 }
 .dt-game .dt-card-btn:hover:not(:disabled) {
