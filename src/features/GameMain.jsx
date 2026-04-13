@@ -18,15 +18,13 @@ import { TurnOrderOverlay } from '../components/overlays/TurnOrderOverlay';
 import { GameEffectsOverlay } from '../components/overlays/GameEffectsOverlay';
 import { TeamActionOverlay } from '../components/overlays/TeamActionOverlay'; 
 import { AwardsOverlay } from '../components/overlays/AwardsOverlay';
-import { ChatOverlay } from '../components/overlays/ChatOverlay'; // ▼ 追加
-import { ChatInput } from '../components/common/ChatInput'; // ▼ 追加
+import { ChatOverlay } from '../components/overlays/ChatOverlay';
+import { ChatInput } from '../components/common/ChatInput';
 
 export const GameMain = () => {
     const { turn, players, gameOver, gamePhase, turnBannerActive } = useGameStore();
     const { status, isHost } = useNetworkStore();
     const prevTurn = useRef(-1);
-    
-    // ▼ 追加: スマホレイアウト判定用のステート
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
     useEffect(() => {
@@ -63,19 +61,13 @@ export const GameMain = () => {
                 document.body.classList.remove('layout-mobile');
             }
         };
-
-        // 初回と再マウント時に実行
         updateLayout(); 
-        
-        // 画面幅が変わった際にも実行
         window.addEventListener('resize', updateLayout);
-        return () => {
-            window.removeEventListener('resize', updateLayout);
-        };
+        return () => window.removeEventListener('resize', updateLayout);
     }, []);
 
     return (
-        <div id="game-screen" className="game-screen">
+        <div id="game-screen" className="game-screen dt-game">
             <GameEffectsOverlay />
             <DiceOverlay />
             <GameEventOverlays />
@@ -84,15 +76,12 @@ export const GameMain = () => {
             <TurnOrderOverlay />
             <TeamActionOverlay />
             <AwardsOverlay />
-            
-            {/* ▼ 追加: 画面を流れるチャット */}
             <ChatOverlay />
 
             <div id="top-bar" className="top-bar">
                 <div id="left-status-area" className="left-status-area">
                     <StatusPanel />
                 </div>
-                {/* PCレイアウト時は上に配置 */}
                 {!isMobile && <HandCards />}
             </div>
 
@@ -104,12 +93,8 @@ export const GameMain = () => {
                 </div>
             </div>
             
-            {/* スマホレイアウト時はここに手札一覧を配置 */}
             {isMobile && <HandCards />}
-
-            {/* ▼ 追加: チャット入力欄をログパネルの真上に配置 */}
             <ChatInput />
-            
             <LogPanel />
         </div>
     );

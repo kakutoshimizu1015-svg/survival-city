@@ -3,77 +3,127 @@ import { useGameStore } from '../../store/useGameStore';
 import { charInfo } from '../../constants/characters';
 import { CharImage } from '../common/CharImage';
 
+const EQUIP_ITEMS = [
+    { key: 'stealth',  field: 'stealth',         emoji: '💨', title: 'ステルス' },
+    { key: 'hasID',    field: 'hasID',            emoji: '🪪', title: '身分証' },
+    { key: 'bicycle',  field: 'equip.bicycle',    emoji: '🚲', title: '自転車' },
+    { key: 'shoes',    field: 'equip.shoes',      emoji: '👢', title: '安全靴' },
+    { key: 'cart',     field: 'equip.cart',        emoji: '🛒', title: 'リヤカー' },
+    { key: 'shield',   field: 'equip.shield',     emoji: '🛡️', title: '盾' },
+    { key: 'helmet',   field: 'equip.helmet',     emoji: '🪖', title: 'ヘルメット' },
+    { key: 'doll',     field: 'equip.doll',       emoji: '🎎', title: '身代わり' },
+    { key: 'rainGear', field: 'rainGear',         emoji: '☂️', title: '雨具' },
+];
+
+const getField = (player, fieldPath) => {
+    const parts = fieldPath.split('.');
+    let val = player;
+    for (const p of parts) { val = val?.[p]; }
+    return !!val;
+};
+
 export const StatusPanel = () => {
     const turn = useGameStore(state => state.turn);
     const players = useGameStore(state => state.players);
-    const currentPlayer = players[turn];
+    const territories = useGameStore(state => state.territories);
+    const cp = players[turn];
 
-    if (!currentPlayer) return null;
+    if (!cp) return null;
 
-    const cInfo = charInfo[currentPlayer.charType];
-    const hpPercent = Math.max(0, Math.min(100, currentPlayer.hp));
+    const cInfo = charInfo[cp.charType];
+    const hpPercent = Math.max(0, Math.min(100, cp.hp));
+    const terrCount = Object.values(territories).filter(id => id === cp.id).length;
 
-    const hpColor = hpPercent > 50 ? 'linear-gradient(90deg,#2ecc71,#27ae60)' 
-                  : hpPercent > 20 ? 'linear-gradient(90deg,#f39c12,#e67e22)' 
+    const hpColor = hpPercent > 50 ? 'linear-gradient(90deg,#2ecc71,#27ae60)'
+                  : hpPercent > 20 ? 'linear-gradient(90deg,#f39c12,#e67e22)'
                   : 'linear-gradient(90deg,#e74c3c,#c0392b)';
 
     return (
-        <div id="portrait-active" className="panel" title="クリックでキャラ詳細を表示" onClick={() => useGameStore.setState({ charInfoModal: currentPlayer.id })} style={{ cursor: 'pointer' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <div className="active-id-clay" style={{ backgroundColor: currentPlayer.color }}>
-                    P{currentPlayer.id + 1}
+        <div
+            className="dt-status-panel"
+            onClick={() => useGameStore.setState({ charInfoModal: cp.id })}
+            title="クリックでキャラ詳細を表示"
+        >
+            {/* ── Header row ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <div style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: cp.color, flexShrink: 0,
+                }} />
+                <div style={{
+                    flex: 1, fontSize: 12, fontWeight: 800,
+                    background: 'rgba(255,255,255,0.04)',
+                    borderRadius: 6, padding: '3px 8px',
+                    color: 'var(--dt-text)',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                    {cp.name}のターン
                 </div>
-                <div className="turn-text-clay" style={{ flexGrow: 1, marginLeft: '10px' }}>
-                    {currentPlayer.name}のターン
+            </div>
+
+            {/* ── Avatar + char name ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <div style={{
+                    width: 52, height: 52, borderRadius: 10,
+                    border: `2px solid ${cp.color}`,
+                    background: 'rgba(255,255,255,0.04)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    overflow: 'hidden', flexShrink: 0,
+                }}>
+                    <CharImage charType={cp.charType} skinId={cp.skinId} size={48} />
                 </div>
-            </div>
-
-            {/* アバター部分をCharImageに差し替え */}
-            <div className="avatar-large" style={{ borderColor: currentPlayer.color, overflow: 'hidden', padding: 0 }}>
-                <CharImage charType={currentPlayer.charType} skinId={currentPlayer.skinId} size={68} />
-            </div>
-
-            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#f1c40f', marginBottom: '5px', textAlign: 'center' }}>
-                ★ {cInfo?.name}
-            </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', width: '100%', justifyContent: 'space-between' }}>
-                <div className="status-box" style={{ width: '48%' }}>
-                    ❤️ HP: {currentPlayer.hp}
-                    <div className="hp-bar-outer">
-                        <div className="hp-bar-inner" style={{ width: `${hpPercent}%`, background: hpColor }}></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--dt-gold)', marginBottom: 4 }}>
+                        ★ {cInfo?.name}
+                    </div>
+                    {/* HP bar */}
+                    <div className="dt-stat-box" style={{ padding: '4px 6px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+                            <span>❤️ HP</span><span>{cp.hp}</span>
+                        </div>
+                        <div className="dt-hp-bar-outer">
+                            <div className="dt-hp-bar-inner" style={{ width: `${hpPercent}%`, background: hpColor }} />
+                        </div>
                     </div>
                 </div>
-                <div className="status-box" style={{ width: '48%', background: 'var(--clay-ap)' }}>
-                    ⚡ AP: {currentPlayer.ap}
-                </div>
-                <div className="status-box" style={{ width: '48%' }}>
-                    💰 P: <span className={currentPlayer.p < 0 ? 'bankrupt' : ''}>{currentPlayer.p}</span>
-                </div>
-                <div className="status-box" style={{ width: '48%' }}>
-                    🚩 領土: {Object.values(useGameStore(state => state.territories)).filter(id => id === currentPlayer.id).length}
-                </div>
-                <div className="status-box" style={{ width: '48%', background: '#4a3b32' }}>
-                    ⚔️ {currentPlayer.kills}K / 💀{currentPlayer.deaths}D
-                </div>
-                <div className="status-box" style={{ width: '100%', background: '#6d5c4e' }}>
-                    🥫{currentPlayer.cans} 🗑️{currentPlayer.trash} 🎴{currentPlayer.hand.length}/{currentPlayer.maxHand}
-                </div>
             </div>
 
-            <div style={{ width: '100%', marginTop: '5px' }}>
-                <div style={{ fontSize: '10px', borderBottom: '1px solid #8d6e63', color: '#bdc3c7' }}>装備アイテム</div>
-                <div id="items-indicator" style={{ display: 'flex', gap: '5px', justifyContent: 'center', marginTop: '5px', background: '#3e2f2a', padding: '5px', borderRadius: '8px', width: '100%', flexWrap: 'wrap' }}>
-                    <div title="ステルス" style={{ filter: currentPlayer.stealth ? 'none' : 'grayscale(100%) opacity(0.3)', width: '24px', height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: currentPlayer.stealth ? '#e8dcc4' : '#5c4a44', borderRadius: '5px', border: currentPlayer.stealth ? '1px solid #f1c40f' : '1px solid #2e1e18', transform: currentPlayer.stealth ? 'scale(1.1)' : 'none' }}>💨</div>
-                    <div title="身分証" style={{ filter: currentPlayer.hasID ? 'none' : 'grayscale(100%) opacity(0.3)', width: '24px', height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: currentPlayer.hasID ? '#e8dcc4' : '#5c4a44', borderRadius: '5px', border: currentPlayer.hasID ? '1px solid #f1c40f' : '1px solid #2e1e18', transform: currentPlayer.hasID ? 'scale(1.1)' : 'none' }}>🪪</div>
-                    <div title="自転車" style={{ filter: currentPlayer.equip?.bicycle ? 'none' : 'grayscale(100%) opacity(0.3)', width: '24px', height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: currentPlayer.equip?.bicycle ? '#e8dcc4' : '#5c4a44', borderRadius: '5px', border: currentPlayer.equip?.bicycle ? '1px solid #f1c40f' : '1px solid #2e1e18', transform: currentPlayer.equip?.bicycle ? 'scale(1.1)' : 'none' }}>🚲</div>
-                    <div title="安全靴" style={{ filter: currentPlayer.equip?.shoes ? 'none' : 'grayscale(100%) opacity(0.3)', width: '24px', height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: currentPlayer.equip?.shoes ? '#e8dcc4' : '#5c4a44', borderRadius: '5px', border: currentPlayer.equip?.shoes ? '1px solid #f1c40f' : '1px solid #2e1e18', transform: currentPlayer.equip?.shoes ? 'scale(1.1)' : 'none' }}>👢</div>
-                    <div title="リヤカー" style={{ filter: currentPlayer.equip?.cart ? 'none' : 'grayscale(100%) opacity(0.3)', width: '24px', height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: currentPlayer.equip?.cart ? '#e8dcc4' : '#5c4a44', borderRadius: '5px', border: currentPlayer.equip?.cart ? '1px solid #f1c40f' : '1px solid #2e1e18', transform: currentPlayer.equip?.cart ? 'scale(1.1)' : 'none' }}>🛒</div>
-                    <div title="盾" style={{ filter: currentPlayer.equip?.shield ? 'none' : 'grayscale(100%) opacity(0.3)', width: '24px', height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: currentPlayer.equip?.shield ? '#e8dcc4' : '#5c4a44', borderRadius: '5px', border: currentPlayer.equip?.shield ? '1px solid #f1c40f' : '1px solid #2e1e18', transform: currentPlayer.equip?.shield ? 'scale(1.1)' : 'none' }}>🛡️</div>
-                    <div title="ヘルメット" style={{ filter: currentPlayer.equip?.helmet ? 'none' : 'grayscale(100%) opacity(0.3)', width: '24px', height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: currentPlayer.equip?.helmet ? '#e8dcc4' : '#5c4a44', borderRadius: '5px', border: currentPlayer.equip?.helmet ? '1px solid #f1c40f' : '1px solid #2e1e18', transform: currentPlayer.equip?.helmet ? 'scale(1.1)' : 'none' }}>🪖</div>
-                    <div title="身代わり" style={{ filter: currentPlayer.equip?.doll ? 'none' : 'grayscale(100%) opacity(0.3)', width: '24px', height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: currentPlayer.equip?.doll ? '#e8dcc4' : '#5c4a44', borderRadius: '5px', border: currentPlayer.equip?.doll ? '1px solid #f1c40f' : '1px solid #2e1e18', transform: currentPlayer.equip?.doll ? 'scale(1.1)' : 'none' }}>🎎</div>
-                    <div title="雨具" style={{ filter: currentPlayer.rainGear ? 'none' : 'grayscale(100%) opacity(0.3)', width: '24px', height: '24px', display: 'flex', justifyContent: 'center', alignItems: 'center', background: currentPlayer.rainGear ? '#e8dcc4' : '#5c4a44', borderRadius: '5px', border: currentPlayer.rainGear ? '1px solid #f1c40f' : '1px solid #2e1e18', transform: currentPlayer.rainGear ? 'scale(1.1)' : 'none' }}>☂️</div>
+            {/* ── Stats grid ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 6 }}>
+                <div className="dt-stat-box" style={{ background: 'rgba(46,204,113,0.08)', borderColor: 'rgba(46,204,113,0.15)' }}>
+                    ⚡ AP: {cp.ap}
                 </div>
+                <div className="dt-stat-box">
+                    💰 <span className={cp.p < 0 ? 'bankrupt' : ''}>{cp.p}</span>P
+                </div>
+                <div className="dt-stat-box">
+                    🚩 {terrCount}
+                </div>
+                <div className="dt-stat-box">
+                    ⚔️ {cp.kills}K / 💀{cp.deaths}D
+                </div>
+            </div>
+            <div className="dt-stat-box" style={{ marginBottom: 6 }}>
+                🥫{cp.cans} 🗑️{cp.trash} 🎴{cp.hand.length}/{cp.maxHand}
+            </div>
+
+            {/* ── Equip bar ── */}
+            <div style={{ fontSize: 10, color: '#666', borderBottom: '1px solid rgba(255,255,255,0.04)', paddingBottom: 3, marginBottom: 4 }}>
+                装備アイテム
+            </div>
+            <div className="dt-equip-bar">
+                {EQUIP_ITEMS.map(item => {
+                    const isActive = getField(cp, item.field);
+                    return (
+                        <div
+                            key={item.key}
+                            className={`dt-equip-icon ${isActive ? 'active' : 'inactive'}`}
+                            title={item.title}
+                        >
+                            {item.emoji}
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

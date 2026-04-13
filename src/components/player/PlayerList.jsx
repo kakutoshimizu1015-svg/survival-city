@@ -14,12 +14,10 @@ export const PlayerList = () => {
     const players = useGameStore(state => state.players);
     const turn = useGameStore(state => state.turn);
     const territories = useGameStore(state => state.territories);
-
     const [sortMode, setSortMode] = useState('order');
 
     const sortedPlayers = useMemo(() => {
         const list = players.map((p, index) => ({ ...p, _originalIndex: index }));
-
         if (sortMode === 'rank') {
             list.sort((a, b) => b.p - a.p);
         } else if (sortMode === 'team') {
@@ -32,32 +30,23 @@ export const PlayerList = () => {
         return list;
     }, [players, sortMode]);
 
-    const sortBtnStyle = (isActive) => ({
-        flex: 1,
-        padding: '3px 2px',
-        fontSize: '10px',
-        fontWeight: 'bold',
-        border: '1.5px solid #8d7b68',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        transition: 'all 0.15s',
-        background: isActive ? '#5c4a44' : 'rgba(62,47,42,0.3)',
-        color: isActive ? '#f1c40f' : '#bdc3c7',
-        boxShadow: isActive ? '0 0 6px rgba(241,196,15,0.3)' : 'none',
-        whiteSpace: 'nowrap',
-    });
-
     return (
-        <div id="player-list-panel" className="panel" style={{ display: 'flex', flexDirection: 'column' }}>
-            <h3 className="player-list-header" style={{ margin: '0 0 4px 0', fontSize: '13px', borderBottom: '2px dashed #8d7b68', paddingBottom: '5px', textAlign: 'center', flexShrink: 0 }}>
+        <div id="player-list-panel" className="dt-player-list">
+            <div style={{
+                fontSize: 12, fontWeight: 700, textAlign: 'center',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                paddingBottom: 6, marginBottom: 6,
+                color: 'var(--dt-text)',
+            }}>
                 👥 プレイヤー
-            </h3>
+            </div>
 
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '6px', flexShrink: 0 }}>
+            {/* Sort buttons */}
+            <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexShrink: 0 }}>
                 {SORT_MODES.map(mode => (
                     <button
                         key={mode.key}
-                        style={sortBtnStyle(sortMode === mode.key)}
+                        className={`dt-sort-btn ${sortMode === mode.key ? 'active' : ''}`}
                         onClick={() => setSortMode(mode.key)}
                         title={`${mode.label}で並べ替え`}
                     >
@@ -66,14 +55,13 @@ export const PlayerList = () => {
                 ))}
             </div>
 
-            {/* ▼ 修正: max-heightとoverflow-yを追加し、溢れたら内部でスクロールするように修正 */}
-            <div id="all-players-list" style={{ display: 'flex', flexDirection: 'column', gap: '5px', overflowY: 'auto', maxHeight: '280px', paddingRight: '4px' }}>
+            {/* Player list */}
+            <div style={{
+                display: 'flex', flexDirection: 'column', gap: 3,
+                overflowY: 'auto', maxHeight: 280, paddingRight: 4,
+            }}>
                 {sortedPlayers.map((p) => {
                     const isActive = p.id === turn;
-                    const activeStyle = isActive 
-                        ? { boxShadow: '0 0 12px #f1c40f', borderColor: '#f1c40f', background: '#5c4a44' } 
-                        : { borderColor: p.color, opacity: 0.9 };
-
                     const terrCount = Object.values(territories).filter(id => id === p.id).length;
 
                     const eq = p.equip || {};
@@ -86,15 +74,12 @@ export const PlayerList = () => {
                     if (eq.doll) equipIcons += '🎎';
                     if (eq.backpack) equipIcons += '🎒';
                     if (p.rainGear) equipIcons += '☂️';
-                    if (!equipIcons) equipIcons = '-';
 
                     let rankBadge = null;
                     if (sortMode === 'rank') {
                         const rankIndex = sortedPlayers.indexOf(p);
                         const rankEmoji = rankIndex === 0 ? '🥇' : rankIndex === 1 ? '🥈' : rankIndex === 2 ? '🥉' : `${rankIndex + 1}.`;
-                        rankBadge = (
-                            <span style={{ fontSize: '11px', marginRight: '3px' }}>{rankEmoji}</span>
-                        );
+                        rankBadge = <span style={{ fontSize: 11, marginRight: 3 }}>{rankEmoji}</span>;
                     }
 
                     let teamBadge = null;
@@ -102,42 +87,49 @@ export const PlayerList = () => {
                         const teamColorMap = { red: '#e74c3c', blue: '#3498db', green: '#2ecc71', yellow: '#f1c40f' };
                         teamBadge = (
                             <span style={{
-                                display: 'inline-block',
-                                width: '8px', height: '8px',
-                                borderRadius: '50%',
+                                display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
                                 background: teamColorMap[p.teamColor] || '#999',
-                                marginRight: '4px',
-                                border: '1px solid rgba(255,255,255,0.4)',
+                                marginRight: 4, border: '1px solid rgba(255,255,255,0.2)',
                                 verticalAlign: 'middle',
                             }} />
                         );
                     }
 
                     return (
-                        <div 
-                            key={p.id} 
-                            className="mini-player-clay" 
-                            style={{ ...activeStyle, cursor: 'pointer' }}
+                        <div
+                            key={p.id}
+                            className={`dt-player-item ${isActive ? 'active-turn' : ''}`}
                             onClick={() => useGameStore.setState({ charInfoModal: p.id })}
                             title={`${p.name}のキャラ詳細を表示`}
                         >
-                            <div className="avatar-small-clay" style={{ borderColor: p.color, overflow: 'hidden', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <CharImage charType={p.charType} skinId={p.skinId} size={32} />
+                            {/* Avatar */}
+                            <div style={{
+                                width: 28, height: 28, borderRadius: 6,
+                                border: `2px solid ${p.color}`,
+                                background: 'rgba(255,255,255,0.04)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                overflow: 'hidden', flexShrink: 0,
+                            }}>
+                                <CharImage charType={p.charType} skinId={p.skinId} size={26} />
                             </div>
-                            
-                            <div style={{ fontSize: '10px', fontWeight: 'bold', lineHeight: '1.3', overflow: 'hidden', flex: 1 }}>
-                                <div style={{ color: p.color, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+
+                            {/* Info */}
+                            <div style={{ fontSize: 10, fontWeight: 700, lineHeight: 1.3, overflow: 'hidden', flex: 1, minWidth: 0 }}>
+                                <div style={{
+                                    color: p.color, whiteSpace: 'nowrap',
+                                    textOverflow: 'ellipsis', overflow: 'hidden',
+                                }}>
                                     {rankBadge}
                                     {teamBadge}
-                                    {p.name} {p.isCPU && <span style={{ color: '#bdc3c7' }}>(CPU)</span>}
-                                    {p.respawnShield > 0 && <span style={{ color: '#f1c40f' }}> 🛡️{p.respawnShield}</span>}
+                                    {p.name} {p.isCPU && <span style={{ color: '#666' }}>(CPU)</span>}
+                                    {p.respawnShield > 0 && <span style={{ color: 'var(--dt-gold)' }}> 🛡️{p.respawnShield}</span>}
                                 </div>
-                                <div style={{ color: '#fdf5e6' }}>
+                                <div style={{ color: '#aaa' }}>
                                     ❤️{p.hp} 💰{p.p}P 🎴{p.hand?.length || 0} 🚩{terrCount}
                                 </div>
-                                <div style={{ color: '#bdc3c7', fontSize: '9px' }}>
-                                    {equipIcons}
-                                </div>
+                                {equipIcons && (
+                                    <div style={{ color: '#666', fontSize: 9 }}>{equipIcons}</div>
+                                )}
                             </div>
                         </div>
                     );
