@@ -4,6 +4,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { dealDamage } from '../../game/combat';
 import { logMsg } from '../../game/actions';
 import { actionCancelWeapon } from '../../game/cards';
+import { executeCanBallista } from '../../game/skills'; // ▼ 追加: 缶バリスタの実行関数
 
 export const WeaponArcOverlay = () => {
     const weaponArcData = useGameStore(state => state.weaponArcData);
@@ -126,11 +127,17 @@ export const WeaponArcOverlay = () => {
             return;
         }
 
+        // ▼ 追加: 缶バリスタスキルの専用処理ルート
+        if (cardData.isSkill === 'canBallista') {
+            const targetsToHit = cardData.aoe ? hitTargets : hitTargets.filter(t => t.id === activeTargetId);
+            executeCanBallista(targetsToHit, cardData.consumeAmount);
+            return;
+        }
+
         if (cardData.aoe) {
             hitTargets.forEach(t => dealDamage(t.id, cardData.dmg, cardData.name, attacker.id));
             logMsg(`💥 広範囲攻撃！ ${hitTargets.length}人に命中！`);
         } else {
-            // ▼ 修正: activeTargetId を利用して特定の相手にのみダメージを与える
             if (activeTargetId !== null) {
                 dealDamage(activeTargetId, cardData.dmg, cardData.name, attacker.id);
             }
@@ -195,7 +202,15 @@ export const WeaponArcOverlay = () => {
                 <button 
                     className="btn-large" 
                     style={{ background: '#7f8c8d', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} 
-                    onClick={() => actionCancelWeapon(cardData.id)}
+                    onClick={() => {
+                        // ▼ 修正: スキル使用キャンセルの場合はAPを返却しない（まだ消費していないため）
+                        if (cardData.isSkill) {
+                            useGameStore.setState({ weaponArcData: null });
+                            logMsg(`🔙 ${cardData.name}の構えを解除した`);
+                        } else {
+                            actionCancelWeapon(cardData.id);
+                        }
+                    }}
                 >
                     ✕ ｷｬンｾﾙ
                 </button>

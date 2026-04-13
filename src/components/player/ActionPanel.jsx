@@ -5,7 +5,8 @@ import { deckData } from '../../constants/cards';
 import { ClayButton } from '../common/ClayButton';
 import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, actionManhole, getOccupyCost } from '../../game/actions';
 // ▼ 修正: フェーズ3の新キャラスキル用関数を追加でインポート
-import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, executeDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap, setupSetTrap, actionChef, actionScavenger, executeScavenger, actionBribe, executeBribe, actionOracle, actionCanBallista, actionTenchi } from '../../game/skills';
+// ▼ 修正: setupCanBallistaAim を追加でインポート
+import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, executeDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap, setupSetTrap, actionChef, actionScavenger, executeScavenger, actionBribe, executeBribe, actionOracle, actionCanBallista, setupCanBallistaAim, actionTenchi } from '../../game/skills';
 
 const ActionBtn = ({ action, condition, failMsg, highlight, color, style, children, isMyTurn, isBusy }) => (
     <ClayButton 
@@ -153,14 +154,14 @@ export const ActionPanel = () => {
     if (isCanBallistaPicking && isMyTurn) {
         return (
             <div id="action-panel" className="panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ textAlign: 'center', color: '#fff', fontWeight: 'bold' }}>🥫 缶を何個発射しますか？(現在:${cp.cans}個)</div>
+                <div style={{ textAlign: 'center', color: '#fff', fontWeight: 'bold' }}>🥫 缶を何個発射しますか？(現在:{cp.cans}個)</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
-                    <ClayButton onClick={() => useGameStore.setState({ canBallistaAmount: 3 })} style={{ background: cp.cans >= 3 ? '#e67e22' : '#7f8c8d' }}>3個 (10ダメ)</ClayButton>
-                    <ClayButton onClick={() => useGameStore.setState({ canBallistaAmount: 6 })} style={{ background: cp.cans >= 6 ? '#e67e22' : '#7f8c8d' }}>6個 (25ダメ/AP-1)</ClayButton>
-                    <ClayButton onClick={() => useGameStore.setState({ canBallistaAmount: 9 })} style={{ background: cp.cans >= 9 ? '#e67e22' : '#7f8c8d' }}>9個 (40ダメ/缶破壊)</ClayButton>
-                    <ClayButton onClick={() => useGameStore.setState({ canBallistaAmount: 12 })} style={{ background: cp.cans >= 12 ? '#e67e22' : '#7f8c8d' }}>12個 (60ダメ/爆風)</ClayButton>
+                    {/* ▼ 修正: クリック時に setupCanBallistaAim を呼び出して照準UIへ移行する */}
+                    <ClayButton onClick={() => setupCanBallistaAim(3)} style={{ background: cp.cans >= 3 ? '#e67e22' : '#7f8c8d' }}>3個 (射程2/10ダメ)</ClayButton>
+                    <ClayButton onClick={() => setupCanBallistaAim(6)} style={{ background: cp.cans >= 6 ? '#e67e22' : '#7f8c8d' }}>6個 (射程3/25ダメ/AP-1)</ClayButton>
+                    <ClayButton onClick={() => setupCanBallistaAim(9)} style={{ background: cp.cans >= 9 ? '#e67e22' : '#7f8c8d' }}>9個 (射程4/40ダメ/破壊)</ClayButton>
+                    <ClayButton onClick={() => setupCanBallistaAim(12)} style={{ background: cp.cans >= 12 ? '#e67e22' : '#7f8c8d' }}>12個 (射程5/広範囲爆撃)</ClayButton>
                 </div>
-                <div style={{ color:'#fdf5e6', fontSize:'10px', textAlign:'center' }}>※この後、マップ上の他プレイヤーの駒をタップしてください</div>
                 <ClayButton onClick={() => useGameStore.setState({ isCanBallistaPicking: false })} style={{ background: '#95a5a6' }}>✖ キャンセル</ClayButton>
             </div>
         );

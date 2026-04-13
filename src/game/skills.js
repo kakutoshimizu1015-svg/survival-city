@@ -389,52 +389,79 @@ export const actionCanBallista = () => {
         return;
     }
     useGameStore.setState({ isCanBallistaPicking: true });
-    logMsg(`🥫 缶バリスタ！発射する缶の数とターゲットを選んでください。`);
+    logMsg(`🥫 缶バリスタ！発射する缶の数を選んでください。`);
 };
 
-export const executeCanBallista = (targetId, consumeAmount) => {
+// ▼ 追加: 武器の照準UI(WeaponArcOverlay)を呼び出す関数
+export const setupCanBallistaAim = (consumeAmount) => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
-    const target = state.players.find(p => p.id === targetId);
 
-    if (!target || cp.ap < 2 || cp.cans < consumeAmount) return;
+    if (cp.ap < 2 || cp.cans < consumeAmount) return;
 
-    state.updateCurrentPlayer(p => ({ ap: p.ap - 2, cans: p.cans - consumeAmount }));
-
-    let dmg = 0, range = 0;
-    if (consumeAmount >= 10) { dmg = 60; range = 5; }
-    else if (consumeAmount >= 7) { dmg = 40; range = 4; }
-    else if (consumeAmount >= 4) { dmg = 25; range = 3; }
+    let dmg = 0, range = 0, aoe = false;
+    if (consumeAmount >= 12) { dmg = 60; range = 5; aoe = true; } // 12個消費は扇状範囲攻撃に！
+    else if (consumeAmount >= 9) { dmg = 40; range = 4; }
+    else if (consumeAmount >= 6) { dmg = 25; range = 3; }
     else { dmg = 10; range = 2; }
 
-    const dist = getDistance(cp.pos, target.pos, state.mapData);
-    if (dist > range) {
-        logMsg(`❌ 射程外です（射程: ${range}）`);
-        return;
-    }
+    const playerTargets = state.players.filter(op => op.id !== cp.id && op.hp > 0);
+    const npcs = [
+        { id: 'npc_police', name: 'パトカー', pos: state.policePos, hp: state.policeHp, type: 'npc' },
+        { id: 'npc_uncle', name: '厄介なおじさん', pos: state.unclePos, hp: state.uncleHp, type: 'npc' },
+        { id: 'npc_yakuza', name: 'ヤクザ', pos: state.yakuzaPos, hp: state.yakuzaHp, type: 'npc' },
+        { id: 'npc_loanshark', name: '闇金', pos: state.loansharkPos, hp: state.loansharkHp, type: 'npc' },
+        { id: 'npc_friend', name: '仲間のホームレス', pos: state.friendPos, hp: state.friendHp, type: 'npc' }
+    ].filter(n => n.hp > 0 && n.pos !== 999);
+
+    // 武器と同じエイムUIを呼び出す
+    useGameStore.setState({
+        isCanBallistaPicking: false,
+        weaponArcData: {
+            cardData: { id: 'can_ballista', name: '缶バリスタ', range, dmg, aoe, isSkill: 'canBallista', consumeAmount },
+            targets: [...playerTargets, ...npcs],
+            attacker: cp
+        }
+    });
+};
+
+// ▼ 修正: 照準UIからターゲットを受け取り、ここで初めてAPと缶を消費する
+export const executeCanBallista = (hitTargets, consumeAmount) => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+
+    if (hitTargets.length === 0 || cp.ap < 2 || cp.cans < consumeAmount) return;
+
+    // コスト消費（ここで初めて消費する）
+    state.updateCurrentPlayer(p => ({ ap: p.ap - 2, cans: p.cans - consumeAmount }));
+
+    let dmg = 0;
+    if (consumeAmount >= 12) dmg = 60;
+    else if (consumeAmount >= 9) dmg = 40;
+    else if (consumeAmount >= 6) dmg = 25;
+    else dmg = 10;
 
     logMsg(`🥫 【缶バリスタ】${consumeAmount}個の空き缶を乱射！！`);
-    dealDamage(targetId, dmg, "缶バリスタ", cp.id);
 
-    if (consumeAmount >= 4 && consumeAmount <= 6) {
-        state.updatePlayer(targetId, p => ({ penaltyAP: (p.penaltyAP||0) + 1 }));
-        logMsg(`💥 衝撃で${target.name}は次AP-1！`);
-    } else if (consumeAmount >= 7 && consumeAmount <= 9) {
-        state.updatePlayer(targetId, p => ({ cans: 0 }));
-        logMsg(`💥 破壊的な威力で${target.name}の所持する缶がすべて弾け飛んだ！`);
-    } else if (consumeAmount >= 10) {
-        state.players.forEach(p => {
-            if (p.id !== targetId && p.id !== cp.id && p.hp > 0 && getDistance(target.pos, p.pos, state.mapData) <= 2) {
-                dealDamage(p.id, 20, "缶バリスタ（爆風）", cp.id);
-                logMsg(`💥 爆風が ${p.name} にも20ダメージ！`);
+    hitTargets.forEach(target => {
+        dealDamage(target.id, dmg, "缶バリスタ", cp.id);
+
+        if (consumeAmount >= 6 && consumeAmount < 9) {
+            if (!String(target.id).startsWith('npc_')) {
+                state.updatePlayer(target.id, p => ({ penaltyAP: (p.penaltyAP||0) + 1 }));
+                logMsg(`💥 衝撃で${target.name}は次AP-1！`);
             }
-        });
-    }
+        } else if (consumeAmount >= 9 && consumeAmount < 12) {
+            if (!String(target.id).startsWith('npc_')) {
+                state.updatePlayer(target.id, p => ({ cans: 0 }));
+                logMsg(`💥 破壊的な威力で${target.name}の所持する缶がすべて弾け飛んだ！`);
+            }
+        }
+    });
 
-    useGameStore.setState(prev => ({
-        mapData: prev.mapData.map(t => t.id === target.pos ? { ...t, fieldCans: (t.fieldCans||0) + consumeAmount } : t),
-        isCanBallistaPicking: false
-    }));
+    if (consumeAmount >= 12) {
+        logMsg(`💥 圧倒的な缶の弾幕が範囲内のすべてを吹き飛ばした！`);
+    }
 };
 
 // ☁️ 路上の仙人: 天地開闢
