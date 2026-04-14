@@ -94,6 +94,13 @@ export const actionRollDice = async (isCpuCall = false) => {
     if (isZorome) totalAP *= 2; 
     if (cp.equip?.bicycle) totalAP += 2;
 
+    // ▼ 追加: 神託などによって付与されたボーナスAPを確実に足し合わせる
+    if (cp.bonusAP > 0) {
+        totalAP += cp.bonusAP;
+        state.updateCurrentPlayer(p => ({ bonusAP: 0 }));
+        logMsg(`👼 神の導き！APに +${cp.bonusAP} のボーナス！`);
+    }
+
     if (cp.penaltyAP > 0) {
         const penalty = cp.penaltyAP;
         totalAP = Math.max(0, totalAP - penalty);
@@ -566,14 +573,17 @@ export const actionEndTurn = async () => {
              newSenki = 0; // アクションをした瞬間に全リセット
         }
 
-        // 👼 路上の神様: 神の導きによる2P強制送金
-        if (cp.godBlessingReceived) {
+        // ▼ 修正: 路上の神様: 神の導きによる4P強制送金 (oracleBuffフラグに変更)
+        if (cp.oracleBuff) {
             const godPlayer = players.find(p => p.charType === 'god' && p.hp > 0);
             if (godPlayer) {
-                const fee = Math.min(2, cp.p);
-                state.updateCurrentPlayer(p => ({ p: p.p - fee, godBlessingReceived: false }));
+                const fee = Math.min(4, cp.p);
+                state.updateCurrentPlayer(p => ({ p: p.p - fee, oracleBuff: false }));
                 state.updatePlayer(godPlayer.id, p => ({ p: p.p + fee }));
                 logMsg(`👼 神の導きの対価！神様に${fee}Pを捧げた。`);
+            } else {
+                // 神様が死んでいる等でいない場合はフラグだけ消す
+                state.updateCurrentPlayer(p => ({ oracleBuff: false }));
             }
         }
 
