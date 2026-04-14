@@ -284,7 +284,7 @@ export const executeChef = (handIndex) => {
     state.addEventPopup(cp.id, "🍳", "特製料理", `HP+${healAmount}`, "good");
 };
 
-// ▼ 追加: 🍳 元シェフ: 腐敗料理（攻撃）
+// ▼ 修正: 🍳 元シェフ: 腐敗料理（攻撃）のフロー変更と追加効果
 export const actionChefAttack = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
@@ -293,25 +293,57 @@ export const actionChefAttack = () => {
     if (targets.length === 0 || cp.ap < 2) return;
 
     if (targets.length === 1) {
-        executeChefAttack(targets[0].id);
+        // 相手が1人の場合はすぐにカード選択モードへ移行
+        useGameStore.setState({ 
+            isChefAttackPicking: false, 
+            chefAttackTargets: [], 
+            chefAttackTargetId: targets[0].id, 
+            isChefAttackCardPicking: true 
+        });
+        logMsg(`🤢 ${targets[0].name} に食べさせる食料を手札から選んでください。`);
     } else {
+        // 複数いる場合はターゲット選択モードへ
         useGameStore.setState({ isChefAttackPicking: true, chefAttackTargets: targets.map(t => t.id) });
     }
 };
 
-export const executeChefAttack = (targetId) => {
+// ▼ 引数を targetId から handIndex に変更し、手札を消費させる
+export const executeChefAttack = (handIndex) => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
+    const targetId = state.chefAttackTargetId;
     const target = state.players.find(p => p.id === targetId);
 
     if (!target || cp.ap < 2) return;
 
-    state.updateCurrentPlayer(p => ({ ap: p.ap - 2 }));
-    useGameStore.setState({ isChefAttackPicking: false, chefAttackTargets: [] });
+    const cardId = cp.hand[handIndex];
+    const cardData = deckData.find(c => c.id === cardId);
 
-    logMsg(`🤢 【腐敗料理】${cp.name}は${target.name}の口に腐った食品をねじ込んだ！`);
-    dealDamage(targetId, 25, "腐った食品", cp.id);
-    state.addEventPopup(targetId, "🤢", "食中毒", "25ダメージ", "damage");
+    if (!cardData || cardData.type !== 'heal') {
+        useGameStore.getState().showToast("食べさせられるのは回復カードのみです");
+        return;
+    }
+
+    // 手札を消費
+    const newHand = [...cp.hand];
+    newHand.splice(handIndex, 1);
+
+    state.updateCurrentPlayer(p => ({ ap: p.ap - 2, hand: newHand }));
+    useGameStore.setState({ isChefAttackCardPicking: false, chefAttackTargetId: null });
+
+    // 腐敗判定（名前による判定、または毒効果持ち）
+    const isRotten = cardData.name.includes("腐った") || cardData.name.includes("拾った") || cardData.poison;
+    const damage = isRotten ? 40 : 25;
+
+    logMsg(`🤢 【腐敗料理】${cp.name}は${target.name}の口に「${cardData.name}」を無理やりねじ込んだ！`);
+    dealDamage(targetId, damage, "腐敗料理", cp.id);
+    state.addEventPopup(targetId, "🤢", "食中毒", `${damage}ダメージ`, "damage");
+
+    // 腐った食品の場合は腹痛（2ターンAP-1）を付与
+    if (isRotten && target.hp > 0) {
+        state.updatePlayer(targetId, p => ({ stomachache: (p.stomachache || 0) + 2 }));
+        logMsg(`🤢 さらに猛烈な腹痛が ${target.name} を襲う！（2ターンAP-1）`);
+    }
 };
 
 // 🛠️ スカベンジャー: ガラクタ工作

@@ -103,6 +103,15 @@ export const actionRollDice = async (isCpuCall = false) => {
         playSfx('fail');
     }
 
+    // ▼ 追加: 腹痛（腐敗食の影響）によるAP減少処理
+    if (cp.stomachache > 0) {
+        totalAP = Math.max(0, totalAP - 1);
+        state.updateCurrentPlayer(p => ({ stomachache: p.stomachache - 1 }));
+        logMsg(`<span style="color:#9b59b6">🤢 腹痛で力が出ない… AP-1 (残り${cp.stomachache - 1}ターン)</span>`);
+        state.addEventPopup(cp.id, "🤢", "腹痛", "AP-1", "bad");
+        playSfx('fail');
+    }
+
     if (isZorome && cp.charType === 'gambler') {
         const heal = Math.min(10, 100 - cp.hp);
         if (heal > 0) { state.updateCurrentPlayer(p => ({ hp: p.hp + heal })); logMsg(`🎲 ギャンブラー興奮！HP+${heal}`); }

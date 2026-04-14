@@ -26,8 +26,10 @@ const initialState = {
 
     // ▼ 追加: フェーズ3の新キャラUI用ステート
     isChefPicking: false,
-    isChefAttackPicking: false, // ▼ 追加: 腐敗料理のターゲット選択モード
-    chefAttackTargets: [],      // ▼ 追加: 腐敗料理のターゲット候補
+    isChefAttackPicking: false, 
+    chefAttackTargets: [],      
+    chefAttackTargetId: null,       // ▼ 追加: 選ばれたターゲットIDを保持
+    isChefAttackCardPicking: false, // ▼ 追加: ターゲット選択後に手札を選ぶモード
     isScavengerPicking: false,
     isBribePicking: false,
     isCanBallistaPicking: false,

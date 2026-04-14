@@ -3,29 +3,30 @@ import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
 import { actionUseCard, actionDiscardCard, executeRecycle } from '../../game/cards';
-import { executeSalesVisit, executeChef } from '../../game/skills'; 
+// ▼ 修正: executeChef, executeChefAttack をインポート
+import { executeSalesVisit, executeChef, executeChefAttack } from '../../game/skills'; 
 
 export const HandCards = () => {
-    const { players, turn, diceRolled, mgActive, isBranchPicking, isSalesVisiting, isRecyclePicking, isCreativeMode, isChefPicking } = useGameStore();
+    // ▼ 修正: isChefPicking, isChefAttackCardPicking を取得
+    const { players, turn, diceRolled, mgActive, isBranchPicking, isSalesVisiting, isRecyclePicking, isCreativeMode, isChefPicking, isChefAttackCardPicking } = useGameStore();
     const cp = players[turn];
     const { myUserId, status } = useNetworkStore();
 
     if (!cp) return null;
 
     let isMyTurn = !cp.isCPU;
-    if (status === 'connected') isMyTurn = (cp.userId === myUserId);
+    
+    if (status === 'connected') {
+        isMyTurn = (cp.userId === myUserId);
+    }
 
-    /* ── 他プレイヤーのターン → カード裏面表示 ── */
     if (!isMyTurn) {
         return (
-            <div className="dt-hand-area">
-                <div className="dt-card-scroll">
-                    {cp.hand.length === 0 && (
-                        <div style={{ color: '#666', width: '100%', textAlign: 'center', alignSelf: 'center' }}>手札なし</div>
-                    )}
+            <div id="hand-cards-area" style={{ flexGrow: 1, display: 'flex', overflowX: 'auto', minWidth: 0 }}>
+                <div id="card-panel-clay" className="panel" style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center', width: '100%', padding: '10px', margin: 0, minHeight: '120px' }}>
                     {cp.hand.map((_, idx) => (
-                        <div key={idx} className="dt-card dt-card-back" style={{ height: 80, minHeight: 80 }}>
-                            <div style={{ fontSize: 24, color: 'rgba(200,162,78,0.4)' }}>🎴</div>
+                        <div key={idx} style={{ background: 'repeating-linear-gradient(45deg,#e07a5f,#e07a5f 10px,#c0392b 10px,#c0392b 20px)', border: '3px solid #fff', borderRadius: '8px', padding: '8px', textAlign: 'center', minWidth: '110px', height: '80px', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)' }}>
+                            <div style={{ fontSize: '30px' }}>🎴</div>
                         </div>
                     ))}
                 </div>
@@ -34,16 +35,18 @@ export const HandCards = () => {
     }
 
     const isSalesMode = isMyTurn && isSalesVisiting;
-    const isRecycleMode = isMyTurn && isRecyclePicking;
-    const isChefMode = isMyTurn && isChefPicking;
+    const isRecycleMode = isMyTurn && isRecyclePicking; // 廃品再生モード
+    const isChefMode = isMyTurn && isChefPicking; // 特製料理モード
+    const isChefAttackMode = isMyTurn && isChefAttackCardPicking; // ▼ 追加: 腐敗食モード
 
     return (
-        <div className="dt-hand-area">
-            <div className="dt-card-scroll">
-                {cp.hand.length === 0 && (
-                    <div style={{ color: '#666', width: '100%', textAlign: 'center', alignSelf: 'center' }}>手札なし</div>
-                )}
+        <div id="hand-cards-area" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            
+            {/* 修正: ここにあったクリエイティブ用のボタンパネルを削除しました */}
 
+            <div id="card-panel-clay" className="panel" style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center', width: '100%', padding: '10px', margin: 0, minHeight: '120px' }}>
+                {cp.hand.length === 0 && <div style={{ color: '#fdf5e6', width: '100%', textAlign: 'center' }}>手札なし</div>}
+                
                 {cp.hand.map((cardId, index) => {
                     const cardData = deckData.find(c => c.id === cardId);
                     if (!cardData) return null;
@@ -51,49 +54,31 @@ export const HandCards = () => {
                     let apCost = cardData.type === 'weapon' ? 2 : 0;
                     if ([3, 4, 13].includes(cardId)) apCost = 1;
                     
+                    // ▼ 追加: カードのタイプとモード別のコスト計算
                     const isHealCard = cardData.type === 'heal';
-                    const modeCost = isChefMode ? 3 : isSalesMode ? 2 : apCost;
+                    const modeCost = isChefMode ? 3 : isChefAttackMode ? 2 : isSalesMode ? 2 : apCost;
                     
-                    const isDisabled = !isCreativeMode && (
-                        !isMyTurn || !diceRolled || cp.ap < modeCost || mgActive || isBranchPicking || isRecycleMode || (isChefMode && !isHealCard)
-                    );
-                    const isDiscardDisabled = !isMyTurn || mgActive || isBranchPicking || isSalesMode || isChefMode;
-
-                    /* カードの左ボーダー色 */
-                    const accentColor = cardData.color || 'rgba(200,162,78,0.3)';
+                    // ▼ 修正: 特製/腐敗料理モード中は回復カード以外を選択不可にする
+                    const isDisabled = !isCreativeMode && (!isMyTurn || !diceRolled || cp.ap < modeCost || mgActive || isBranchPicking || isRecycleMode || ((isChefMode || isChefAttackMode) && !isHealCard));
+                    const isDiscardDisabled = !isMyTurn || mgActive || isBranchPicking || isSalesMode || isChefMode || isChefAttackMode; 
 
                     return (
-                        <div
-                            key={index}
-                            className="dt-card"
-                            style={{ borderLeftColor: accentColor, borderLeftWidth: 3 }}
-                        >
-                            <div className="dt-card-title">
-                                {cardData.icon} {cardData.name}
-                            </div>
-                            <div className="dt-card-desc">{cardData.desc}</div>
-                            <div style={{ display: 'flex', gap: 4, marginTop: 3 }}>
-                                <button
-                                    className="dt-card-btn"
-                                    onClick={() => isSalesMode ? executeSalesVisit(index) : isChefMode ? executeChef(index) : actionUseCard(index, cardId)}
-                                    disabled={isDisabled}
-                                    style={
-                                        isSalesMode ? { borderColor: 'rgba(243,156,18,0.3)', color: '#f39c12' }
-                                      : isChefMode ? { borderColor: 'rgba(231,76,60,0.3)', color: '#e74c3c' }
-                                      : {}
-                                    }
+                        <div key={index} style={{ background: '#fdf5e6', border: `3px solid ${cardData.color || '#8d6e63'}`, borderRadius: '8px', padding: '8px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', minWidth: '110px', display: 'flex', flexDirection: 'column', gap: '3px', color: '#333', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)' }}>
+                            <div style={{ fontSize: '12px', borderBottom: '1px solid #ccc', paddingBottom: '2px' }}>{cardData.icon} {cardData.name}</div>
+                            <div style={{ flexGrow: 1, marginTop: '3px' }}>{cardData.desc}</div>
+                            <div style={{ display: 'flex', gap: '5px', width: '100%', justifyContent: 'center', marginTop: '3px' }}>
+                                <button 
+                                    // ▼ 修正: 腐敗料理の場合は executeChefAttack を呼び出す
+                                    onClick={() => isSalesMode ? executeSalesVisit(index) : isChefMode ? executeChef(index) : isChefAttackMode ? executeChefAttack(index) : actionUseCard(index, cardId)} 
+                                    disabled={isDisabled} 
+                                    style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDisabled ? 'not-allowed' : 'pointer', border: `2px solid ${isSalesMode ? '#f39c12' : isChefMode ? '#e74c3c' : isChefAttackMode ? '#8e44ad' : '#8d6e63'}`, background: isDisabled ? '#eee' : (isSalesMode ? '#fdebd0' : isChefMode ? '#fadbd8' : isChefAttackMode ? '#ebdef0' : '#fff'), opacity: isDisabled ? 0.5 : 1, color: isSalesMode ? '#d35400' : isChefMode ? '#c0392b' : isChefAttackMode ? '#8e44ad' : '#333' }}
                                 >
-                                    {isSalesMode ? '売りつける'
-                                    : isChefMode ? '調理する'
-                                    : cardId === 12 ? '使用(HP半減)'
-                                    : apCost > 0 ? `使用(${apCost}AP)`
-                                    : '使用'}
+                                    {isSalesMode ? '売りつける' : isChefMode ? '調理する' : isChefAttackMode ? '食べさせる' : (cardId === 12 ? '使用(HP半減)' : (apCost > 0 ? `使用(${apCost}AP)` : '使用'))}
                                 </button>
-                                <button
-                                    className={`dt-card-btn ${isRecycleMode ? '' : 'discard'}`}
-                                    onClick={() => isRecycleMode ? executeRecycle(index) : actionDiscardCard(index)}
-                                    disabled={isDiscardDisabled}
-                                    style={isRecycleMode ? { borderColor: 'rgba(46,204,113,0.3)', color: '#2ecc71' } : {}}
+                                <button 
+                                    onClick={() => isRecycleMode ? executeRecycle(index) : actionDiscardCard(index)} 
+                                    disabled={isDiscardDisabled} 
+                                    style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDiscardDisabled ? 'not-allowed' : 'pointer', border: `2px solid ${isRecycleMode ? '#27ae60' : '#c0392b'}`, background: isDiscardDisabled ? '#eee' : (isRecycleMode ? '#d5f5e3' : '#fff'), opacity: isDiscardDisabled ? 0.5 : 1, color: isRecycleMode ? '#27ae60' : '#333' }}
                                 >
                                     {isRecycleMode ? '売却する' : '捨てる'}
                                 </button>
