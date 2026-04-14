@@ -19,7 +19,6 @@ export const getDistance = (posA, posB, mapData) => {
 export const dealDamage = (targetId, dmg, source, attackerId = null) => {
     const state = useGameStore.getState();
 
-    // ▼ NPCがターゲットの場合の処理
     if (String(targetId).startsWith('npc_')) {
         const npcType = targetId.split('_')[1];
         const currentHp = state[`${npcType}Hp`];
@@ -40,7 +39,6 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
                 [`${npcType}Respawn`]: 1 
             });
             
-            // ▼ 新規追加: 討伐時の報酬処理 (30P or 2枚カード)
             if (attackerId !== null) {
                 state.updatePlayer(attackerId, p => {
                     let newP = p.p;
@@ -74,7 +72,6 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
         return dmg;
     }
 
-    // 以下、プレイヤーがターゲットの場合の処理
     const target = state.players.find(p => p.id === targetId);
     const attacker = attackerId !== null ? state.players.find(p => p.id === attackerId) : null;
     
@@ -92,9 +89,22 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
         dealDamage(attackerId, dmg, "反撃"); return 0;
     }
     
+    // ▼ 追加: ☁️ 路上の仙人: 30%の確率であらゆる攻撃を反射
+    if (target.charType === 'sennin' && attackerId && targetId !== attackerId) {
+        if (Math.random() < 0.30) {
+            state.addEventPopup(targetId, "☁️", "仙術・反射", "攻撃を跳ね返した！", "good");
+            logMsg(`☁️ 無為自然！${target.name}はダメージを無効化し、${source || '攻撃'}の威力をそのまま跳ね返した！`);
+            
+            // 攻撃者にそのままダメージを返す（再帰的な無限ループを防ぐため理由は"反射"にする）
+            if (source !== "反射") {
+                dealDamage(attackerId, dmg, "反射", targetId);
+            }
+            return 0; // 仙人自身はダメージを受けない
+        }
+    }
+
     let actualDmg = dmg;
 
-    // ▼ 追加: 缶コレクターの帝王: 10缶以上の時、ダメージを30%カット
     if (target.charType === 'emperor' && target.cans >= 10) {
         actualDmg = Math.floor(actualDmg * 0.7);
     }
@@ -105,7 +115,6 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
         if (Math.random() < 0.5) { 
             actualDmg = Math.floor(actualDmg / 2); 
             playSfx('hit');
-            // 段ボールの盾の反射追加
             if (attackerId) {
                 logMsg(`🛡️ 段ボールの盾で防御！さらに${attacker?.name || '相手'}に10ダメージ反射！`);
                 dealDamage(attackerId, 10, "段ボールの盾");
@@ -115,7 +124,6 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
         }
     }
 
-    // 釘バットの出血デバフ追加
     if (source && source.includes("釘バット")) {
         state.updatePlayer(targetId, p => ({ penaltyAP: (p.penaltyAP || 0) + 1 }));
         logMsg(`🩸 釘バットの出血効果！${target.name}は次ターンAP-1！`);
@@ -139,11 +147,9 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
     }
 
     if (newHp <= 0) {
-        // ▼ 路上の神様: 加護トークンによる死亡回避判定
         if (target.godBlessing) {
             state.updatePlayer(targetId, p => ({ hp: Math.min(20, target.hp + Math.abs(newHp) + 1), godBlessing: false }));
             
-            // 神様を探して3P送金
             const godPlayer = state.players.find(p => p.charType === 'god' && p.hp > 0);
             if (godPlayer) {
                 const fee = Math.min(3, target.p - dropP);
@@ -158,13 +164,12 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
             return actualDmg;
         }
 
-        // ▼ 路上の仙人・神様のペナルティ減免処理
         let lostP = Math.min(15, Math.max(0, Math.floor((target.p - dropP) / 3)));
         if (target.charType === 'sennin') {
-            lostP = 0; // 仙人はP没収完全免除
+            lostP = 0; 
             logMsg(`☁️ 仙人の無為自然！Pを一切没収されずに済んだ。`);
         } else if (target.charType === 'god') {
-            lostP = Math.floor(lostP / 2); // 神様はペナルティ半減
+            lostP = Math.floor(lostP / 2); 
         }
 
         let newEquip = { ...target.equip };

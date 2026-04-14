@@ -2,10 +2,8 @@ import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
 import { getDistance, getPathPreviewTiles, getManholeLinkedTiles, buildMapIndex } from '../../utils/gameLogic';
-// ▼ 修正: executeManhole は actions.js からインポートする
 import { executeMove, executeManhole } from '../../game/actions';
 import { executeSetTrap } from '../../game/skills';
-// ▼ 修正: executeSubway のみを cards.js からインポートする
 import { executeSubway } from '../../game/cards';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { useNetworkStore } from '../../store/useNetworkStore';
@@ -21,7 +19,6 @@ export const GameBoard = () => {
         isNight, npcMovePick, isBranchPicking, currentBranchOptions,
         roundCount, maxRounds, weatherState, isRainy, canPrice, trashPrice, gameOver,
         horrorMode, isDashPicking, isTrapTilePicking,
-        // ▼ 変更: 新規カードのUIモードステートを取得
         isSubwayPicking, isManholePicking, manholeOptions 
     } = useGameStore();
 
@@ -260,7 +257,6 @@ export const GameBoard = () => {
         };
     }, [zoomAt, applyTransform]);
 
-    // ▼ 変更: 各モードに対するクリック処理を追加
     const handleTileClick = (tileId) => {
         if (isClickPrevented.current) return;
 
@@ -281,7 +277,6 @@ export const GameBoard = () => {
         } else if (isBranchPicking && currentBranchOptions.includes(tileId)) {
             executeMove(tileId);
         } else if (isSubwayPicking) {
-            // 地下鉄の切符のワープ判定
             const tile = mapData.find(t => t.id === tileId);
             const isMyTerritory = territories[tileId] === cp?.id;
             const isAreaTarget = tile && ['slum', 'commercial', 'luxury'].includes(tile.area);
@@ -289,7 +284,6 @@ export const GameBoard = () => {
                 executeSubway(tileId);
             }
         } else if (isManholePicking && manholeOptions.includes(tileId)) {
-            // マンホールのワープ判定
             executeManhole(tileId);
         }
     };
@@ -301,7 +295,6 @@ export const GameBoard = () => {
 
         viewers.forEach(v => {
             if (v.hp <= 0) return;
-            // ▼ 変更: 夜行性フラグがあれば全マス可視化
             if (v.ignoreNightVision) {
                 mapData.forEach(t => visible.add(t.id));
                 return;
@@ -349,8 +342,8 @@ export const GameBoard = () => {
         return { maxCol: col, maxRow: row };
     }, [mapData]);
 
-    const mapSize = mapData?.length || 0;
-    const bgData = mapBackgrounds[mapSize] || Object.values(mapBackgrounds)[0];
+    const mapSizeVal = mapData?.length || 0;
+    const bgData = mapBackgrounds[mapSizeVal] || Object.values(mapBackgrounds)[0];
     const currentBgImage = bgData ? (isNight ? bgData.night : bgData.day) : null;
 
     const zoomBtnStyle = { width: '28px', height: '28px', borderRadius: '6px', border: '2px solid #8d6e63', background: 'rgba(62,47,42,0.88)', color: '#fdf5e6', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '2px 2px 4px rgba(0,0,0,0.5)', transition: 'background 0.15s, transform 0.1s', padding: 0 };
@@ -359,7 +352,6 @@ export const GameBoard = () => {
         <div id="board-area" style={{ flexGrow: 1, overflowX: 'hidden', minWidth: 0, position: 'relative' }}>
             <TileTooltip />
             
-            {/* ▼ 変更: 新規追加カード用のUIプロンプトを追加 */}
             {npcMovePick && (
                 <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ npcMovePick: null }); useGameStore.getState().showToast("情報操作をキャンセルしました"); }}>
                     🕵️ 移動先マスをタップしてください（タップでキャンセル）
@@ -400,9 +392,15 @@ export const GameBoard = () => {
                 </div>
             </div>
 
+            {/* ▼ 修正: 右上のAP表記に、仙人なら仙気スタックを追加表示 */}
             {cp && (
-                <div id="map-ap-hud" style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 50, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', border: `2px solid ${cp.ap > 0 ? 'rgba(255,220,50,0.5)' : 'rgba(200,80,80,0.5)'}`, borderRadius: '10px', padding: '6px 12px', color: cp.ap > 0 ? '#f1c40f' : '#e74c3c', fontWeight: 'bold', fontSize: '18px', textShadow: '0 0 8px currentColor', pointerEvents: 'none', transition: 'all 0.3s' }}>
-                    ⚡ <span id="map-ap-display">{cp.ap}</span>
+                <div id="map-ap-hud" style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 50, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', border: `2px solid ${cp.ap > 0 ? 'rgba(255,220,50,0.5)' : 'rgba(200,80,80,0.5)'}`, borderRadius: '10px', padding: '6px 12px', color: cp.ap > 0 ? '#f1c40f' : '#e74c3c', fontWeight: 'bold', fontSize: '18px', textShadow: '0 0 8px currentColor', pointerEvents: 'none', transition: 'all 0.3s', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <div>⚡ <span id="map-ap-display">{cp.ap}</span></div>
+                    {cp.charType === 'sennin' && (
+                        <div style={{ fontSize: '12px', color: '#e0b0ff', fontWeight: 'bold', marginTop: '2px', textShadow: 'none' }}>
+                            ☁️ 仙気: {cp.senki || 0}/5
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -447,7 +445,6 @@ export const GameBoard = () => {
                                 const isFog = visibleTiles && !visibleTiles.has(tile.id);
                                 const isBranchTarget = isBranchPicking && currentBranchOptions.includes(tile.id);
                                 
-                                // ▼ 変更: 地下鉄とマンホールのクリッカブル判定を追加
                                 let isClickable = npcMovePick !== null || isTrapTilePicking || isBranchTarget;
                                 if (isSubwayPicking) {
                                     isClickable = territories[tile.id] === cp?.id || ['slum', 'commercial', 'luxury'].includes(tile.area);

@@ -604,10 +604,10 @@ export const CHARACTERS = [
         id: 'sennin',
         name: '路上の仙人',
         emoji: '☁️',
-        infoDesc: '【無為自然】AP繰越(上限10)・待機で仙気獲得 / 【天地開闢】0AP(仙気5):陣地収入0化＆自P倍増',
+        infoDesc: '【無為自然】待機で仙気(累積効果)・30%反射 / 【天地開闢】0AP(仙気5):他者CPU暴走＆自P倍増',
         tagline: '急ぐな。全ては巡る',
-        passive: { name:'【無為自然】', desc:'余ったAPを次ターンに繰り越し(上限10)。行動せずターン終了で「仙気」獲得(1:次カードAP-1, 3:HP+20, 5:全P5%徴収)。行動でリセット。死亡時P没収免除。' },
-        action: { name:'【天地開闢】 (0AP)', desc:'仙気5消費。全陣地収入1Rゼロ化、全NPCランダム移動、自P倍増(上限+30)、次2ターン座禅(行動不可)。' },
+        passive: { name:'【無為自然】', desc:'①AP繰越(上限10)。②行動せず終了で「仙気」獲得。スタック数以上の効果が累積発動(1以上:次カードAP-1, 3以上:HP+20, 5:全P5%徴収)。行動で0にリセット。③30%の確率で被ダメージを無効化し反射。④死亡時P没収免除。' },
+        action: { name:'【天地開闢】 (0AP)', desc:'仙気5消費。全陣地収入1Rゼロ化、全NPCランダム移動、自P倍増(上限+30)。さらに他プレイヤーの操作権を奪い、1ターンの間「鬼畜CPU」化して暴走させる。自身は次2ターン座禅(行動不可)。' },
         baseImages: { front: createEmojiImg('☁️'), back: createEmojiImg('☁️') },
         skins: [{ id: "sennin_default", charKey: "sennin", name: "路上の仙人", rarity: "SR", front: createEmojiImg('☁️'), pieceColor: "#95a5a6", ring: "#7f8c8d", desc: "悟りを開き、路上と同化した老翁。" }]
     }

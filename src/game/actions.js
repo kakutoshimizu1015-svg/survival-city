@@ -64,7 +64,6 @@ export const actionRollDice = async (isCpuCall = false) => {
     if (cp.charType === 'billionaire' && cp.p >= 50) {
         const others = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0 && p.p > 0);
         others.forEach(target => {
-            // ▼ 修正: 相手の所持Pの10%を計算 (最低でも1Pは徴収する)
             const tax = Math.max(1, Math.ceil(target.p * 0.1));
             state.updatePlayer(target.id, p => ({ p: p.p - tax }));
             state.updateCurrentPlayer(p => ({ p: p.p + tax }));
@@ -96,7 +95,6 @@ export const actionRollDice = async (isCpuCall = false) => {
     if (isZorome) totalAP *= 2; 
     if (cp.equip?.bicycle) totalAP += 2;
 
-    // ▼ 追加: 👼 路上の神様「神託」で付与されたボーナスAPを計算に含める
     if (cp.bonusAP > 0) {
         totalAP += cp.bonusAP;
         logMsg(`👼 神の導き！APに +${cp.bonusAP} のボーナス！`);
@@ -112,7 +110,6 @@ export const actionRollDice = async (isCpuCall = false) => {
         playSfx('fail');
     }
 
-    // ▼ 腹痛（腐敗食の影響）によるAP減少処理
     if (cp.stomachache > 0) {
         totalAP = Math.max(0, totalAP - 1);
         state.updateCurrentPlayer(p => ({ stomachache: p.stomachache - 1 }));
@@ -132,7 +129,6 @@ export const actionRollDice = async (isCpuCall = false) => {
         canPickedThisTurn: 0
     });
 
-    // ▼ 仙人の「何も行動しなかった」判定のために、ダイス直後のAPを保存する
     state.updateCurrentPlayer(p => {
         const finalAP = p.ap + totalAP;
         useGameStore.setState({ lastDiceRollTotal: finalAP });
@@ -158,7 +154,6 @@ export const actionRollDice = async (isCpuCall = false) => {
     });
 
     if (territoryIncome > 0) {
-        // 天地開闢(仙人) または ニセ情報(カード) のデバフ判定
         if (cp.fakeInfoDebuff > 0 || state.tenchiZeroIncome > 0) {
             logMsg(`📰 収入停止中！陣地からの収入がゼロになった！`);
         } else {
@@ -211,7 +206,6 @@ export const executeMove = (targetTileId) => {
     
     let baseMoveCost = (state.isRainy && !cp.rainGear && cp.charType !== "athlete" && !cp.equip?.foldBike) ? 2 : 1;
     
-    // 🥫 缶コレクターの帝王: 5缶以上の時、1ターンに6マスまで移動AP0になる
     const freeMoves = cp.freeMovesThisTurn || 0;
     let isFreeMove = false;
     if (cp.charType === 'emperor' && cp.cans >= 5 && freeMoves < 6) {
@@ -227,7 +221,7 @@ export const executeMove = (targetTileId) => {
         pos: targetTileId, 
         rainGear: state.isRainy ? false : p.rainGear,
         nextMoveCostPenalty: 0,
-        freeMovesThisTurn: isFreeMove ? freeMoves + 1 : freeMoves // 無料移動した回数をカウント
+        freeMovesThisTurn: isFreeMove ? freeMoves + 1 : freeMoves 
     }));
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [], isDashPicking: false });
     
@@ -383,7 +377,6 @@ export const actionTrash = () => {
     const s = useGameStore.getState();
     const cp = s.players[s.turn]; 
 
-    // 🥫 缶コレクターの帝王は雨でも缶・ゴミを拾える特権を持つ
     if (s.isRainy && !cp.rainGear && cp.charType !== 'emperor') {
         s.showToast("雨具がないと漁れません！");
         return;
@@ -403,7 +396,6 @@ export const actionTrash = () => {
         } else if (cp.charType === 'survivor') {
             logMsg(`🌿 サバイバーの勘で回避！`);
         } else if (cp.charType === 'scavenger') {
-            // ▼ 追加: スカベンジャーのリサイクル（ペナルティの代わりに缶獲得）
             s.updateCurrentPlayer(p => ({ cans: p.cans + 1 }));
             logMsg(`🛠️ リサイクル！警察に怒られたが、隙を見て空き缶を1つ拾った！`);
             s.addEventPopup(cp.id, "🛠️", "リサイクル", "空き缶+1", "good");
@@ -495,7 +487,6 @@ export const actionOccupy = () => {
     }
 
     if (cp.p >= cost) { 
-        // 💴 億万長者: 支払額の10%キャッシュバック
         const cashback = (cp.charType === 'billionaire') ? Math.floor(cost * 0.1) : 0;
         const actualCost = cost - cashback;
 
@@ -548,49 +539,64 @@ export const actionEndTurn = async () => {
         const cp = state.players[state.turn];
         const { mapData, players } = state;
 
-        // ▼ 修正: 👼 路上の神様への送金（所持Pの10%）計算
         let godFee = 0;
         if (cp.oracleBuff) {
             const godPlayer = players.find(p => p.charType === 'god' && p.hp > 0);
             if (godPlayer) {
-                // 10%を計算（端数切り捨て）
                 godFee = Math.floor(cp.p * 0.1);
-                // 神様にお金を渡す
                 state.updatePlayer(godPlayer.id, p => ({ p: p.p + godFee }));
                 logMsg(`👼 神の導きの対価！神様に ${godFee}P (所持Pの10%) を捧げた。`);
             }
         }
 
-        // ☁️ 路上の仙人: AP繰り越し判定
         let carryOverAP = 0;
         if (cp.charType === 'sennin') {
             carryOverAP = Math.min(10, cp.ap);
             if (carryOverAP > 0) logMsg(`☁️ 仙人の無為自然！APを ${carryOverAP} 繰り越した。`);
         }
 
-        // ☁️ 路上の仙人: 仙気スタックの計算
+        // ▼ 修正: ☁️ 路上の仙人専用: 仙気スタックの累積発動ロジック
         let newSenki = cp.senki || 0;
-        if (cp.ap > 0 && cp.ap === state.lastDiceRollTotal) { 
-             newSenki = Math.min(5, newSenki + 1);
-             logMsg(`☁️ 仙気が高まる... (現在: ${newSenki}スタック)`);
-             if (newSenki === 5) {
-                 players.forEach(op => {
-                     if (op.id !== cp.id && op.p > 0) {
-                         const tax = Math.ceil(op.p * 0.05);
-                         state.updatePlayer(op.id, p => ({ p: p.p - tax }));
-                         state.updateCurrentPlayer(p => ({ p: p.p + tax }));
-                         logMsg(`🧘 悟りの境地！${op.name}から${tax}Pが仙人に流れた。`);
-                     }
-                 });
-             } else if (newSenki === 3) {
-                 state.updateCurrentPlayer(p => ({ hp: Math.min(100, p.hp + 20) }));
-                 logMsg(`🧘 仙術による自己治癒！HPが20回復した。`);
-             }
+        if (cp.charType === 'sennin') {
+            if (cp.ap > 0 && cp.ap === state.lastDiceRollTotal) { 
+                 newSenki = Math.min(5, newSenki + 1);
+                 logMsg(`☁️ 仙気が高まる... (現在: ${newSenki}スタック)`);
+                 
+                 // ▼ スタック数以上の効果がすべて累積で発動する
+                 if (newSenki >= 1) {
+                     state.updateCurrentPlayer(p => ({ senkiCardDiscount: true }));
+                     logMsg(`🧘 仙気[1以上]: 次に使用するカードのAPコストが-1される状態になった。`);
+                 }
+                 if (newSenki >= 3) {
+                     state.updateCurrentPlayer(p => ({ hp: Math.min(100, p.hp + 20) }));
+                     logMsg(`🧘 仙気[3以上]: 仙術による自己治癒！HPが20回復した。`);
+                 }
+                 if (newSenki >= 5) {
+                     players.forEach(op => {
+                         if (op.id !== cp.id && op.p > 0) {
+                             const tax = Math.ceil(op.p * 0.05);
+                             state.updatePlayer(op.id, p => ({ p: p.p - tax }));
+                             state.updateCurrentPlayer(p => ({ p: p.p + tax }));
+                             logMsg(`🧘 仙気[5最大]: 悟りの境地！${op.name}から${tax}Pが仙人に流れた。`);
+                         }
+                     });
+                 }
+            } else {
+                 newSenki = 0; 
+            }
         } else {
-             newSenki = 0; 
+             newSenki = 0; // 仙人以外は溜まらない
         }
 
-        // 👼 路上の神様: 隣接している他人の獲得Pを吸収
+        // ▼ 追加: 天地開闢による強制CPU化（暴走状態）の解除処理
+        if (cp.forcedCpuTurns > 0) {
+            state.updateCurrentPlayer(p => ({
+                isCPU: false,
+                forcedCpuTurns: 0
+            }));
+            logMsg(`👤 ${cp.name} は意識の暴走から解放され、正気を取り戻した。`);
+        }
+
         if (cp.charType === 'god') {
             players.forEach(op => {
                 if (op.id !== cp.id && op.hp > 0 && getDistance(cp.pos, op.pos, mapData) <= 1) {
@@ -609,22 +615,21 @@ export const actionEndTurn = async () => {
         if (newEquip.foldBike) { newTimer.foldBike = (newTimer.foldBike || 5) - 1; if (newTimer.foldBike <= 0) { newEquip.foldBike = false; logMsg(`🚲 折りたたみ自転車が壊れた！`); } }
         if (newEquip.shoppingCart) { newTimer.shoppingCart = (newTimer.shoppingCart || 5) - 1; if (newTimer.shoppingCart <= 0) { newEquip.shoppingCart = false; logMsg(`🛒 ショッピングカートが壊れた！`); } }
 
-        // ▼ 全ての変更を1回の更新に統合して適用
         state.updateCurrentPlayer(p => ({
-            p: p.p - godFee,      // 神様への送金（ここで引く）
-            oracleBuff: false,    // 神託フラグをリセット
-            ap: carryOverAP, // AP繰り越し適用
-            senki: newSenki, // 仙気スタック更新
-            zazenTurns: Math.max(0, (p.zazenTurns || 0) - 1), // 仙人の座禅ターン減少
+            p: p.p - godFee,      
+            oracleBuff: false,    
+            ap: carryOverAP, 
+            senki: newSenki, 
+            zazenTurns: Math.max(0, (p.zazenTurns || 0) - 1), 
             stealth: false,
             ignoreNightVision: false,
             _katsuage: 0,
             equip: newEquip,
             equipTimer: newTimer,
-            cannotMove: (p.zazenTurns > 0), // 座禅中は移動不可
+            cannotMove: (p.zazenTurns > 0), 
             respawnShield: Math.max(0, (p.respawnShield || 0) - 1),
             drawCountThisTurn: 0,
-            freeMovesThisTurn: 0 // 帝王の無料移動回数をターン終了時にリセット
+            freeMovesThisTurn: 0 
         }));
 
         if (cp.statusEffects?.poison > 0) {

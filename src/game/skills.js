@@ -641,6 +641,16 @@ export const actionTenchi = () => {
     useGameStore.setState(updates);
 
     const addP = Math.min(30, cp.p);
+    
+    // ▼ 修正: 他の人間プレイヤーを強制的に「鬼畜CPU」化し、次ターン操作不能(暴走)にする
+    state.players.forEach(p => {
+        if (p.id !== cp.id && !p.isCPU && p.hp > 0) {
+            state.updatePlayer(p.id, { isCPU: true, cpuDifficulty: 'hard', forcedCpuTurns: 1 });
+            logMsg(`🤯 天地の異変！${p.name} の意識が暴走(鬼畜CPU化)し、次のターン勝手に動いてしまう！`);
+            state.addEventPopup(p.id, "🤯", "意識暴走", "1ターン操作不能", "bad");
+        }
+    });
+
     state.updateCurrentPlayer(p => ({
         senki: 0,
         p: p.p + addP,
