@@ -23,7 +23,7 @@ export const generateShopStock = () => {
 
         // 12:大暴落, 13:下剋上, 35:弁護士の盾, 36:裏取引, 37:反撃の一撃
         const purchased = state.purchasedCards || {};
-        // ▼ 修正: 既に4枚買われているカードは抽選プールから除外する
+        // 既に4枚買われているカードは抽選プールから除外する
         const rarePool = [12, 13, 35, 36, 37].filter(id => (purchased[id] || 0) < 4);
         const normalPool = [0,1,2,3,4,5,6,7,8,9,10,11,14,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34].filter(id => (purchased[id] || 0) < 4);
 
@@ -76,32 +76,33 @@ export const shopCartBuy = () => {
     const newHand = [...cp.hand];
     const names = [];
     const stateForStock = useGameStore.getState();
-    let newStock = [...stateForStock.shopStock]; // ▼ 追加: 現在の在庫をコピー
-    const newPurchased = { ...(stateForStock.purchasedCards || {}) }; // ▼ 追加: これまでの購入履歴をコピー
+    let newStock = [...stateForStock.shopStock]; 
+    const newPurchased = { ...(stateForStock.purchasedCards || {}) }; 
 
     shopCart.forEach(item => {
         newHand.push(item.cardId);
         names.push(deckData.find(c => c.id === item.cardId).name);
         
-        // ▼ 追加: 在庫から購入したカードを削除
         const stockIdx = newStock.indexOf(item.cardId);
         if (stockIdx !== -1) newStock.splice(stockIdx, 1);
         
-        // ▼ 追加: 買った枚数をゲーム全体で記録しカウントアップ
         newPurchased[item.cardId] = (newPurchased[item.cardId] || 0) + 1;
     });
 
+    // ▼ 修正: 億万長者の10%還元ロジック
+    const cashback = cp.charType === 'billionaire' ? Math.floor(totalCost * 0.1) : 0;
+    const actualCost = totalCost - cashback;
+
     useGameStore.setState(prev => ({
-        shopStock: newStock, // ▼ 追加: 減った在庫をStoreに反映
-        purchasedCards: newPurchased, // ▼ 追加: 購入履歴をStoreに保存
+        shopStock: newStock, 
+        purchasedCards: newPurchased, 
         players: prev.players.map(p => {
             if (p.id === cp.id) {
-                // ▼ 修正: 既存のスタッツと初期値テンプレートを完全にマージして欠落を防ぐ
                 const baseStats = { tiles: 0, cards: 0, cans: 0, trash: 0, shopP: 0, jobs: 0, territories: 0, minigames: 0 };
                 const currentStats = { ...baseStats, ...(p.gameStats || {}) };
                 return {
                     ...p,
-                    p: p.p - totalCost,
+                    p: p.p - actualCost, // ▼ 還元を適用したコストを引く
                     hand: newHand,
                     gameStats: { ...currentStats, shopP: currentStats.shopP + totalCost }
                 };
@@ -111,7 +112,7 @@ export const shopCartBuy = () => {
         shopCart: [] 
     }));
 
-    logMsg(`🛒 一括購入！${names.join('・')} (合計 -${totalCost}P)`);
+    logMsg(`🛒 一括購入！${names.join('・')} (合計 -${totalCost}P)` + (cashback > 0 ? ` [成金10%還元: +${cashback}P]` : ""));
     
     if (!cp.isCPU) {
         useUserStore.getState().incrementStat('totalPSpentAtShop', totalCost);

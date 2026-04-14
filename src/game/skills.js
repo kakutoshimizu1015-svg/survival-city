@@ -466,35 +466,53 @@ export const actionBribe = () => {
     logMsg(`💴 買収の準備... ターゲットと買収方法を選んでください。`);
 };
 
-export const executeBribe = (targetId, type, extraData) => {
+export const executeBribe = (targetId, type, pos) => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const target = state.players.find(p => p.id === targetId);
 
     if (!target || cp.ap < 2) return;
 
+    let cost = 0;
+    let cashback = 0;
+
     if (type === 'hand') {
-        if (cp.p < 5 || target.hand.length === 0) return;
-        const stolenCard = target.hand[extraData]; 
-        const tHand = [...target.hand]; tHand.splice(extraData, 1);
-        state.updatePlayer(targetId, p => ({ p: p.p + 5, hand: tHand }));
-        state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p - 5, hand: [...p.hand, stolenCard] }));
-        logMsg(`💴 【手札買収】5Pを支払い、${target.name}の手札を強制的に買い取った！`);
+        cost = 5;
+        if (cp.p < cost || target.hand.length === 0) return;
+        // ▼ 10%還元 (5Pの10%で最低1P戻るように計算)
+        cashback = Math.ceil(cost * 0.1); 
+        
+        const stolenCardIndex = Math.floor(Math.random() * target.hand.length);
+        const stolenCard = target.hand[stolenCardIndex];
+        
+        state.updatePlayer(targetId, p => {
+            const newHand = [...p.hand];
+            newHand.splice(stolenCardIndex, 1);
+            return { hand: newHand };
+        });
+        state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p - cost + cashback, hand: [...p.hand, stolenCard] }));
+        logMsg(`💴 【買収】5Pを支払い、${target.name}の手札を1枚奪った！（成金10%還元: +${cashback}P）`);
+        state.addEventPopup(targetId, "🃏", "買収された", "手札を奪われた", "bad");
+        
     } else if (type === 'territory') {
-        const tileId = extraData;
-        const cost = (state.territoryCosts[tileId] || 3) * 2;
-        if (cp.p < cost) return;
-        state.updatePlayer(targetId, p => ({ p: p.p + cost }));
-        state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p - cost }));
-        useGameStore.setState(prev => ({ territories: { ...prev.territories, [tileId]: cp.id } }));
-        logMsg(`💴 【陣地買収】${cost}Pを支払い、${target.name}の陣地を強制買収した！`);
+        // ▼ 修正: 陣地は「無料」で譲り受ける（コスト0、還元なし）
+        state.updateCurrentPlayer(p => ({ ap: p.ap - 2 }));
+        useGameStore.setState(st => ({ territories: { ...st.territories, [pos]: cp.id } }));
+        logMsg(`💴 【陣地買収】圧倒的な圧力により、${target.name}の陣地を無料で譲り受けた！`);
+        state.addEventPopup(targetId, "🚩", "買収された", "陣地を奪われた", "bad");
+        
     } else if (type === 'hire') {
-        if (cp.p < 10) return;
-        state.updatePlayer(targetId, p => ({ p: p.p + 10, penaltyAP: (p.penaltyAP || 0) + 3 })); // 雇用による次ターンの実質行動制限
-        state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p - 10 }));
-        logMsg(`💴 【雇用】10Pを支払い、${target.name}を次のターン雇用した！（APを制限する）`);
+        cost = 10;
+        if (cp.p < cost) return;
+        // ▼ 10%還元 (10Pの10%で1P戻る)
+        cashback = Math.ceil(cost * 0.1); 
+        
+        state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p - cost + cashback }));
+        // ▼ 修正: 相手のAPを奪うのではなく、強制的に「次回AP-5」の疲労を与える
+        state.updatePlayer(targetId, p => ({ penaltyAP: (p.penaltyAP || 0) + 5 })); 
+        logMsg(`💴 【雇用】10Pを支払い、${target.name}を過労させた！（次ターンAP-5）（成金10%還元: +${cashback}P）`);
+        state.addEventPopup(targetId, "💼", "買収された", "次回AP-5", "bad");
     }
-    useGameStore.setState({ isBribePicking: false });
 };
 
 // 👼 路上の神様: 神託

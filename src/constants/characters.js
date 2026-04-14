@@ -571,10 +571,10 @@ export const CHARACTERS = [
         id: 'billionaire',
         name: '億万長者',
         emoji: '💴',
-        infoDesc: '【成金】初期+15P・支払10%還元・50P以上で集金 / 【買収】2AP:手札買収/陣地買収/雇用',
+        infoDesc: '【成金】初期+15P・支払10%還元・50P以上で10%集金 / 【買収】2AP:手札奪取/陣地無料譲受/AP-5雇用',
         tagline: '金で解決できないことは、もっと金で解決する',
-        passive: { name:'【成金】', desc:'①初期所持P+15P。②Pを支払う行動で10%還元。③所持Pが50以上の時、ターン開始時に同マス全員から1P自動徴収。' },
-        action: { name:'【買収】 (2AP)', desc:'A:【手札買収】5P払い相手の手札奪取。B:【陣地買収】2倍P払い陣地強奪。C:【雇用】10P払い次ターンの相手のAPを奪う。' },
+        passive: { name:'【成金】', desc:'①初期所持P+15P(合計30P)。②Pを支払う行動で10%還元。③所持Pが50以上の時、ターン開始時に同マス全員から所持Pの10%を自動徴収。' },
+        action: { name:'【買収】 (2AP)', desc:'A:【手札買収】5P払い相手の手札奪取。B:【陣地買収】無料で相手の陣地を譲り受ける。C:【雇用】10P払い次ターンの相手を疲労させAP-5する。' },
         baseImages: { front: createEmojiImg('💴'), back: createEmojiImg('💴') },
         skins: [{ id: "billionaire_default", charKey: "billionaire", name: "億万長者", rarity: "SSR", front: createEmojiImg('💴'), pieceColor: "#f1c40f", ring: "#f39c12", desc: "札束で全てを叩き潰す元富裕層。" }]
     },

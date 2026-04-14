@@ -141,8 +141,9 @@ export const SetupOffline = () => {
             color: PLAYER_COLORS[i % PLAYER_COLORS.length],
             pos: rmapScatter ? scatterPos[i] : startPos,
             skinId: p.selectedSkin || equippedSkins[p.charType] || 'default',
+            // ▼ 修正: 億万長者の場合は初期Pが +15 されて 30P でスタートする
             hp: isTestMode ? 9999 : 100,
-            p: 15,
+            p: p.charType === 'billionaire' ? 30 : 15,
             ap: isTestMode ? 9999 : 0,
             hand: isCreative ? [...creativeHand] : [drawInitialCard(), drawInitialCard(), drawInitialCard()],
             maxHand: isCreative ? 99 : (p.charType === 'hacker' ? 9 : 7),

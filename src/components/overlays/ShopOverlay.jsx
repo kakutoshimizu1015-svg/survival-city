@@ -29,7 +29,6 @@ const TABS = [
   { key: "sell", label: "🪙 売却" },
 ];
 
-// ▼ 2%の確率で出現させるレアカードのID群
 const RARE_IDS = [12, 13, 35, 36, 37]; // 大暴落、下剋上、弁護士の盾、裏取引、反撃の一撃
 
 const getRarity = (id) => {
@@ -117,7 +116,6 @@ function useCart(shopCards) {
   return { cart, add, decrement, clear, total, count };
 }
 
-// ※ 手札に同じカードが複数ある場合を考慮し uniqueId で管理
 function useSellSelection(handCards) {
   const [selection, setSelection] = useState(new Set());
   const toggle = useCallback((uid) => {
@@ -318,7 +316,6 @@ export const ShopOverlay = () => {
   const [shuffling, setShuffling] = useState(false);
   const [shuffleAngle, setShuffleAngle] = useState(0);
   
-  // 1ターンにつき1回までのシャッフル制限管理
   const [lastShuffledTurn, setLastShuffledTurn] = useState(-1);
   const hasShuffledThisTurn = lastShuffledTurn === turn;
   const [currentShopTurn, setCurrentShopTurn] = useState(-1);
@@ -326,7 +323,6 @@ export const ShopOverlay = () => {
   const { toast, show: showToast } = useToast();
   const { cart, add: addToCart, decrement: decrementCart, clear: clearCart, total: cartTotal, count: cartCount } = useCart(localShopStock);
 
-  // 初回展開時の在庫生成
   useEffect(() => {
     if (shopActive && currentShopTurn !== turn) {
       setCurrentShopTurn(turn);
@@ -337,7 +333,6 @@ export const ShopOverlay = () => {
     }
   }, [shopActive, turn, currentShopTurn, cp, purchasedCards, clearCart]);
 
-  // 手札データの成型 (uniqueIdを付与)
   const mappedHandCards = useMemo(() => {
     if (!cp) return [];
     return cp.hand.map((cardId, index) => {
@@ -348,12 +343,10 @@ export const ShopOverlay = () => {
 
   const { selection: sellSelection, toggle: toggleSell, clear: clearSell, total: sellTotal } = useSellSelection(mappedHandCards);
 
-  // ▼ cpがnull(非アクティブ時)の場合のエラーを防ぐため「?.」を使用します
   const canAfford = cartTotal <= (cp?.p || 0);
   const maxHand = cp?.maxHand || 7;
 
   // --- Handlers ---
-  // ▼ すべてのフックを早期リターンの「前」に定義します
   const handleClose = useCallback(() => {
     setGameState({ shopActive: false, shopCart: [] });
     clearCart(); clearSell();
@@ -372,18 +365,27 @@ export const ShopOverlay = () => {
       newPurchased[cId] = (newPurchased[cId] || 0) + qty;
     });
 
-    useGameStore.getState().updateCurrentPlayer(p => ({ p: p.p - cartTotal, hand: [...p.hand, ...addedCards] }));
+    // ▼ 修正: 億万長者の10%還元を適用
+    const cashback = cp.charType === 'billionaire' ? Math.floor(cartTotal * 0.1) : 0;
+    const actualCost = cartTotal - cashback;
+
+    useGameStore.getState().updateCurrentPlayer(p => ({ p: p.p - actualCost, hand: [...p.hand, ...addedCards] }));
     setGameState({ purchasedCards: newPurchased });
     setLocalShopStock(prev => prev.map(c => cart[c.id] ? { ...c, stock: c.stock - cart[c.id] } : c));
     
-    clearCart(); playSfx('coin'); showToast("💰 購入完了！");
+    clearCart(); playSfx('coin'); 
+    showToast(cashback > 0 ? `💰 購入完了！(還元+${cashback}P)` : "💰 購入完了！");
   }, [cartCount, canAfford, cp, maxHand, cart, cartTotal, purchasedCards, showToast, clearCart, setGameState]);
 
   const handleShuffle = useCallback(() => {
     if (hasShuffledThisTurn || shuffling || !cp) return;
     if (cp.p < SHUFFLE_COST) { showToast("Pが足りません！"); return; }
     
-    useGameStore.getState().updateCurrentPlayer(p => ({ p: p.p - SHUFFLE_COST }));
+    // ▼ 修正: 億万長者の10%還元をシャッフル時にも適用 (3Pの10%は切り捨てで0Pだが処理上統一)
+    const cashback = cp.charType === 'billionaire' ? Math.floor(SHUFFLE_COST * 0.1) : 0;
+    const actualCost = SHUFFLE_COST - cashback;
+
+    useGameStore.getState().updateCurrentPlayer(p => ({ p: p.p - actualCost }));
     setLastShuffledTurn(turn);
     setShuffling(true);
     setShuffleAngle(a => a + 720);
@@ -409,7 +411,6 @@ export const ShopOverlay = () => {
     clearSell(); playSfx('coin'); showToast(`🪙 ${sellSelection.size}枚を売却し、${profit}P獲得！`);
   }, [sellSelection, cp, clearSell, showToast]);
 
-  // ▼ すべてのフックを読み込んだ後に、表示のオンオフ（早期リターン）を判定します
   if (!shopActive || !cp) return null;
 
   return (

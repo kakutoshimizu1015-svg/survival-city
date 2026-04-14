@@ -120,7 +120,8 @@ export const OnlineLobby = () => {
             ...p, id: i, color: PLAYER_COLORS[i % 8],
             pos: rmapScatter ? scatterPos[i] : startPos,
             skinId: p.skinId || 'default',
-            hp: 100, p: 15, ap: 0,
+            // ▼ 修正: 億万長者の場合は初期Pが +15 されて 30P でスタートする
+            hp: 100, p: p.charType === 'billionaire' ? 30 : 15, ap: 0,
             hand: isCreative ? [...creativeHand] : [drawInitialCard(), drawInitialCard(), drawInitialCard()],
             maxHand: isCreative ? 99 : (p.charType === 'hacker' ? 9 : 7),
             cans: 0, trash: 0, kills: 0, deaths: 0, equip: {},

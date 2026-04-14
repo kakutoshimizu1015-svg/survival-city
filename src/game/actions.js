@@ -60,15 +60,17 @@ export const actionRollDice = async (isCpuCall = false) => {
         });
     }
 
-    // 💴 億万長者: 所持Pが50以上の時、同マスの相手から自動で1Pずつ徴収
+    // 💴 億万長者: 所持Pが50以上の時、同マスの相手から自動で所持Pの10%を徴収
     if (cp.charType === 'billionaire' && cp.p >= 50) {
         const others = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0 && p.p > 0);
         others.forEach(target => {
-            state.updatePlayer(target.id, p => ({ p: p.p - 1 }));
-            state.updateCurrentPlayer(p => ({ p: p.p + 1 }));
-            logMsg(`💴 羨望！${target.name}から1Pを自動徴収した！`);
-            state.addEventPopup(cp.id, "💴", "羨望", `${target.name}から1P徴収`, "good");
-            state.addEventPopup(target.id, "💴", "徴収された", "億万長者に1P払った", "bad");
+            // ▼ 修正: 相手の所持Pの10%を計算 (最低でも1Pは徴収する)
+            const tax = Math.max(1, Math.ceil(target.p * 0.1));
+            state.updatePlayer(target.id, p => ({ p: p.p - tax }));
+            state.updateCurrentPlayer(p => ({ p: p.p + tax }));
+            logMsg(`💴 圧倒的財力！${target.name}から ${tax}P (所持Pの10%) を自動徴収した！`);
+            state.addEventPopup(cp.id, "💴", "徴収", `${target.name}から${tax}P徴収`, "good");
+            state.addEventPopup(target.id, "💴", "徴収された", `億万長者に${tax}P払った`, "bad");
         });
     }
 

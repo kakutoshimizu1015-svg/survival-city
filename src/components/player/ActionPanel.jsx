@@ -194,9 +194,11 @@ export const ActionPanel = () => {
         return (
             <div id="action-panel" className="dt-action-panel">
                 <div style={{ textAlign: 'center', color: 'var(--dt-gold)', fontWeight: 700 }}>💴 {target?.name} をどう買収しますか？</div>
-                <button className="dt-action-btn" onClick={() => { executeBribe(target.id, 'hand', 0); useGameStore.setState({ bribeTargetId: null }); }} disabled={cp.p < 5 || target.hand.length === 0} style={{ borderColor: 'rgba(243,156,18,0.3)' }}>🃏 手札を1枚奪う (5P)</button>
-                <button className="dt-action-btn" onClick={() => { executeBribe(target.id, 'territory', cp.pos); useGameStore.setState({ bribeTargetId: null }); }} disabled={cp.p < 10 || territories[cp.pos] !== target.id} style={{ borderColor: 'rgba(243,156,18,0.3)' }}>🚩 この陣地を奪う (倍額)</button>
-                <button className="dt-action-btn" onClick={() => { executeBribe(target.id, 'hire', 0); useGameStore.setState({ bribeTargetId: null }); }} disabled={cp.p < 10} style={{ borderColor: 'rgba(243,156,18,0.3)' }}>💼 次ターン雇用する (10P)</button>
+                <button className="dt-action-btn" onClick={() => { executeBribe(target.id, 'hand', 0); useGameStore.setState({ bribeTargetId: null }); }} disabled={cp.p < 5 || target.hand.length === 0} style={{ borderColor: 'rgba(243,156,18,0.3)' }}>🃏 手札を1枚奪う (5P / 還元有)</button>
+                {/* ▼ 修正: 陣地は無料で譲り受けるため、必要Pなどの制限を削除 */}
+                <button className="dt-action-btn" onClick={() => { executeBribe(target.id, 'territory', cp.pos); useGameStore.setState({ bribeTargetId: null }); }} disabled={territories[cp.pos] !== target.id} style={{ borderColor: 'rgba(243,156,18,0.3)' }}>🚩 この陣地を譲り受ける (無料)</button>
+                {/* ▼ 修正: 雇用のテキストを AP-5 に変更 */}
+                <button className="dt-action-btn" onClick={() => { executeBribe(target.id, 'hire', 0); useGameStore.setState({ bribeTargetId: null }); }} disabled={cp.p < 10} style={{ borderColor: 'rgba(243,156,18,0.3)' }}>💼 雇用して疲労させる (10P / 相手次AP-5)</button>
                 <button className="dt-action-btn" onClick={() => useGameStore.setState({ isBribePicking: false, bribeTargetId: null })} style={{ color: '#888' }}>✖ キャンセル</button>
             </div>
         );
