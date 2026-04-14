@@ -284,6 +284,36 @@ export const executeChef = (handIndex) => {
     state.addEventPopup(cp.id, "🍳", "特製料理", `HP+${healAmount}`, "good");
 };
 
+// ▼ 追加: 🍳 元シェフ: 腐敗料理（攻撃）
+export const actionChefAttack = () => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    const targets = state.players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
+
+    if (targets.length === 0 || cp.ap < 2) return;
+
+    if (targets.length === 1) {
+        executeChefAttack(targets[0].id);
+    } else {
+        useGameStore.setState({ isChefAttackPicking: true, chefAttackTargets: targets.map(t => t.id) });
+    }
+};
+
+export const executeChefAttack = (targetId) => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    const target = state.players.find(p => p.id === targetId);
+
+    if (!target || cp.ap < 2) return;
+
+    state.updateCurrentPlayer(p => ({ ap: p.ap - 2 }));
+    useGameStore.setState({ isChefAttackPicking: false, chefAttackTargets: [] });
+
+    logMsg(`🤢 【腐敗料理】${cp.name}は${target.name}の口に腐った食品をねじ込んだ！`);
+    dealDamage(targetId, 25, "腐った食品", cp.id);
+    state.addEventPopup(targetId, "🤢", "食中毒", "25ダメージ", "damage");
+};
+
 // 🛠️ スカベンジャー: ガラクタ工作
 export const actionScavenger = () => {
     const state = useGameStore.getState();

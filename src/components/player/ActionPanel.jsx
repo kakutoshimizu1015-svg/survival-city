@@ -3,7 +3,8 @@ import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
 import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, actionManhole, getOccupyCost } from '../../game/actions';
-import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, executeDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap, setupSetTrap, actionChef, actionScavenger, executeScavenger, actionBribe, executeBribe, actionOracle, actionCanBallista, setupCanBallistaAim, actionTenchi } from '../../game/skills';
+// ▼ 修正: actionChefAttack, executeChefAttack を追加インポート
+import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, executeDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap, setupSetTrap, actionChef, actionChefAttack, executeChefAttack, actionScavenger, executeScavenger, actionBribe, executeBribe, actionOracle, actionCanBallista, setupCanBallistaAim, actionTenchi } from '../../game/skills';
 
 /* ── Dark themed action button ── */
 const ActionBtn = ({ action, condition, failMsg, highlight, style, children, isMyTurn, isBusy, className = '' }) => (
@@ -113,6 +114,20 @@ export const ActionPanel = () => {
                     return <button key={tid} className="dt-action-btn" onClick={() => executeDarkCure(tid)} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>{t?.name} を治療</button>;
                 })}
                 <button className="dt-action-btn" onClick={() => useGameStore.setState({ isDarkCurePicking: false, darkCureTargets: [] })} style={{ color: '#888', marginTop: 4 }}>✖ キャンセル</button>
+            </div>
+        );
+    }
+
+    // ▼ 追加: 腐敗料理のターゲット選択UI
+    if (state.isChefAttackPicking && isMyTurn) {
+        return (
+            <div id="action-panel" className="dt-action-panel">
+                <div style={{ textAlign: 'center', color: 'var(--dt-gold)', fontWeight: 700, marginBottom: 4 }}>🤢 食べさせる相手を選んでください</div>
+                {state.chefAttackTargets.map(tid => {
+                    const t = players.find(p => p.id === tid);
+                    return <button key={tid} className="dt-action-btn" onClick={() => executeChefAttack(tid)} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>{t?.name} に食べさせる</button>;
+                })}
+                <button className="dt-action-btn" onClick={() => useGameStore.setState({ isChefAttackPicking: false, chefAttackTargets: [] })} style={{ color: '#888', marginTop: 4 }}>✖ キャンセル</button>
             </div>
         );
     }
@@ -228,7 +243,15 @@ export const ActionPanel = () => {
             {cp.charType === 'gambler' && <ActionBtn action={actionGamble} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(241,196,15,0.3)' }}>🎲 ドロー勝負 (3AP)</ActionBtn>}
 
             {/* Phase 3 characters */}
-            {cp.charType === 'chef' && <ActionBtn action={actionChef} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(230,126,34,0.3)' }}>🍳 特製料理 (3AP)</ActionBtn>}
+            {/* ▼ 修正: 元シェフのスキルを横並びのグループ構造に変更 */}
+            {cp.charType === 'chef' && (
+                <div style={{ display: 'flex', gap: 4 }}>
+                    <ActionBtn action={actionChef} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ flex: 1, borderColor: 'rgba(230,126,34,0.3)' }}>🍳 特製料理(3AP)</ActionBtn>
+                    {othersOnTile.length > 0 && (
+                        <ActionBtn action={actionChefAttack} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ flex: 1, borderColor: 'rgba(231,76,60,0.3)' }}>🤢 腐敗食(2AP)</ActionBtn>
+                    )}
+                </div>
+            )}
             {cp.charType === 'scavenger' && <ActionBtn action={actionScavenger} condition={hasAP(3) && cp.trash >= 3 && isMyTurn && !isBusy} failMsg="AP不足かゴミが足りません" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(52,152,219,0.3)' }}>🛠️ ガラクタ工作 (3AP)</ActionBtn>}
             {cp.charType === 'billionaire' && othersOnTile.length > 0 && <ActionBtn action={actionBribe} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(241,196,15,0.3)' }}>💴 買収 (2AP)</ActionBtn>}
             {cp.charType === 'god' && <ActionBtn action={actionOracle} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(241,196,15,0.3)', background: 'rgba(241,196,15,0.06)' }}>👼 神託 (3AP)</ActionBtn>}

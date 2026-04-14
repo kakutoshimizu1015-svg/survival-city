@@ -549,10 +549,10 @@ export const CHARACTERS = [
         id: 'chef',
         name: '元シェフ',
         emoji: '🍳',
-        infoDesc: '【食通】食中毒無効＆回復量1.5倍 / 【特製料理】3AP:手札の食料を効果2倍・食中毒なしで使用',
+        infoDesc: '【食通】食中毒無効＆回復量1.5倍 / 【特製/腐敗料理】3AP:手札食料強化 / 2AP:同マス相手に25ダメ',
         tagline: '腐った生ゴミすら三ツ星の味に変える、路地の料理人',
         passive: { name:'【食通】', desc:'回復系カードを使用する際、食中毒リスク（ダメージ）を完全無効化する。さらに回復量が1.5倍になる。' },
-        action: { name:'【特製料理】 (3AP)', desc:'手札の食料系（回復）カード1枚を「効果2倍・食中毒なし」にアップグレードして即座に使用する。' },
+        action: { name:'【特製料理 / 腐敗料理】', desc:'特製料理(3AP): 手札の回復カードを「効果2倍・食中毒なし」で使用する。腐敗料理(2AP): 同マスの相手に腐った食品を無理やり食べさせ、25ダメージを与える。' },
         baseImages: { front: createEmojiImg('🍳'), back: createEmojiImg('🍳') },
         skins: [{ id: "chef_default", charKey: "chef", name: "元シェフ", rarity: "N", front: createEmojiImg('🍳'), pieceColor: "#e74c3c", ring: "#c0392b", desc: "血まみれのエプロンかと思いきやトマトソース。" }]
     },
@@ -595,7 +595,7 @@ export const CHARACTERS = [
         emoji: '🥫',
         infoDesc: '【缶の哲学】缶所持数でステータス強化・上限5回 / 【缶バリスタ】2AP:缶消費で広範囲ダメージ',
         tagline: '缶を舐めるなよ。これが最強の通貨だ',
-        passive: { name:'【缶の哲学】', desc:'雨天でも回収可能、1ターン上限5回。缶の数で強化(5:移動0AP, 10:耐性+30%, 15:開始時HP+5, 20:同マス毎ターン3ダメ)。' },
+        passive: { name:'【缶の哲学】', desc:'雨天でも回収可能、1ターン上限5回。缶の数で強化(5:移動0AP(6ターン限定), 10:耐性+30%, 15:開始時HP+5, 20:同マス毎ターン3ダメ)。' },
         action: { name:'【缶バリスタ】 (2AP)', desc:'缶を消費して攻撃。1-3缶:射程2/10ダメ、4-6缶:射程3/25ダメ＆次AP-1、7-9缶:射程4/40ダメ＆全缶破壊、10缶以上:射程5/60ダメ＆周囲2マス20ダメ。' },
         baseImages: { front: createEmojiImg('🥫'), back: createEmojiImg('🥫') },
         skins: [{ id: "emperor_default", charKey: "emperor", name: "缶コレクターの帝王", rarity: "SR", front: createEmojiImg('🥫'), pieceColor: "#e67e22", ring: "#d35400", desc: "全身をアルミ缶で覆った究極のエコ戦士。" }]
