@@ -28,9 +28,11 @@ const initialState = {
     isChefPicking: false,
     isChefAttackPicking: false, 
     chefAttackTargets: [],      
-    chefAttackTargetId: null,       // ▼ 追加: 選ばれたターゲットIDを保持
-    isChefAttackCardPicking: false, // ▼ 追加: ターゲット選択後に手札を選ぶモード
+    chefAttackTargetId: null,       
+    isChefAttackCardPicking: false, 
     isScavengerPicking: false,
+    isJunkGunPicking: false, // ▼ 追加: ジャンクガンの消費ゴミ選択モード
+    junkGunData: null,       // ▼ 追加: ジャンクガンのカードデータ保持
     isBribePicking: false,
     isCanBallistaPicking: false,
     tenchiZeroIncome: 0,     // 仙人の天地開闢（陣地収入ゼロラウンド数）

@@ -3,12 +3,12 @@ import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
 import { actionUseCard, actionDiscardCard, executeRecycle } from '../../game/cards';
-// ▼ 修正: executeChef, executeChefAttack をインポート
-import { executeSalesVisit, executeChef, executeChefAttack } from '../../game/skills'; 
+// ▼ 修正: setupJunkGun を追加インポート
+import { executeSalesVisit, executeChef, executeChefAttack, setupJunkGun } from '../../game/skills'; 
 
 export const HandCards = () => {
-    // ▼ 修正: isChefPicking, isChefAttackCardPicking を取得
-    const { players, turn, diceRolled, mgActive, isBranchPicking, isSalesVisiting, isRecyclePicking, isCreativeMode, isChefPicking, isChefAttackCardPicking } = useGameStore();
+    // ▼ 修正: isJunkGunPicking を追加で取得
+    const { players, turn, diceRolled, mgActive, isBranchPicking, isSalesVisiting, isRecyclePicking, isCreativeMode, isChefPicking, isChefAttackCardPicking, isJunkGunPicking } = useGameStore();
     const cp = players[turn];
     const { myUserId, status } = useNetworkStore();
 
@@ -37,13 +37,12 @@ export const HandCards = () => {
     const isSalesMode = isMyTurn && isSalesVisiting;
     const isRecycleMode = isMyTurn && isRecyclePicking; // 廃品再生モード
     const isChefMode = isMyTurn && isChefPicking; // 特製料理モード
-    const isChefAttackMode = isMyTurn && isChefAttackCardPicking; // ▼ 追加: 腐敗食モード
+    const isChefAttackMode = isMyTurn && isChefAttackCardPicking; // 腐敗食モード
+    const isJunkGunMode = isMyTurn && isJunkGunPicking; // ▼ 追加: ジャンクガンモード
 
     return (
         <div id="hand-cards-area" style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             
-            {/* 修正: ここにあったクリエイティブ用のボタンパネルを削除しました */}
-
             <div id="card-panel-clay" className="panel" style={{ display: 'flex', gap: '10px', overflowX: 'auto', alignItems: 'center', width: '100%', padding: '10px', margin: 0, minHeight: '120px' }}>
                 {cp.hand.length === 0 && <div style={{ color: '#fdf5e6', width: '100%', textAlign: 'center' }}>手札なし</div>}
                 
@@ -54,13 +53,17 @@ export const HandCards = () => {
                     let apCost = cardData.type === 'weapon' ? 2 : 0;
                     if ([3, 4, 13].includes(cardId)) apCost = 1;
                     
-                    // ▼ 追加: カードのタイプとモード別のコスト計算
                     const isHealCard = cardData.type === 'heal';
-                    const modeCost = isChefMode ? 3 : isChefAttackMode ? 2 : isSalesMode ? 2 : apCost;
+                    const isJunkGunCard = cardData.isJunkGun; // ▼ 追加: ジャンクガンかどうか判定
                     
-                    // ▼ 修正: 特製/腐敗料理モード中は回復カード以外を選択不可にする
-                    const isDisabled = !isCreativeMode && (!isMyTurn || !diceRolled || cp.ap < modeCost || mgActive || isBranchPicking || isRecycleMode || ((isChefMode || isChefAttackMode) && !isHealCard));
-                    const isDiscardDisabled = !isMyTurn || mgActive || isBranchPicking || isSalesMode || isChefMode || isChefAttackMode; 
+                    // ▼ 修正: モード別のコスト計算にジャンクガンを追加
+                    const modeCost = isChefMode ? 3 : isChefAttackMode ? 2 : isSalesMode ? 2 : isJunkGunCard ? 2 : apCost;
+                    
+                    // ▼ 修正: ジャンクガンモード中はジャンクガン以外を選択不可にする
+                    const isDisabled = !isCreativeMode && (!isMyTurn || !diceRolled || cp.ap < modeCost || mgActive || isBranchPicking || isRecycleMode || ((isChefMode || isChefAttackMode) && !isHealCard) || (isJunkGunMode && !isJunkGunCard));
+                    
+                    // ▼ 修正: 捨てるボタンの無効判定にジャンクガンモードを追加
+                    const isDiscardDisabled = !isMyTurn || mgActive || isBranchPicking || isSalesMode || isChefMode || isChefAttackMode || isJunkGunMode; 
 
                     return (
                         <div key={index} style={{ background: '#fdf5e6', border: `3px solid ${cardData.color || '#8d6e63'}`, borderRadius: '8px', padding: '8px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', minWidth: '110px', display: 'flex', flexDirection: 'column', gap: '3px', color: '#333', boxShadow: '4px 4px 0px rgba(0,0,0,0.4)' }}>
@@ -68,12 +71,12 @@ export const HandCards = () => {
                             <div style={{ flexGrow: 1, marginTop: '3px' }}>{cardData.desc}</div>
                             <div style={{ display: 'flex', gap: '5px', width: '100%', justifyContent: 'center', marginTop: '3px' }}>
                                 <button 
-                                    // ▼ 修正: 腐敗料理の場合は executeChefAttack を呼び出す
-                                    onClick={() => isSalesMode ? executeSalesVisit(index) : isChefMode ? executeChef(index) : isChefAttackMode ? executeChefAttack(index) : actionUseCard(index, cardId)} 
+                                    // ▼ 修正: ジャンクガンの場合は setupJunkGun を呼び出す
+                                    onClick={() => isSalesMode ? executeSalesVisit(index) : isChefMode ? executeChef(index) : isChefAttackMode ? executeChefAttack(index) : isJunkGunCard ? setupJunkGun(index, cardId) : actionUseCard(index, cardId)} 
                                     disabled={isDisabled} 
-                                    style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDisabled ? 'not-allowed' : 'pointer', border: `2px solid ${isSalesMode ? '#f39c12' : isChefMode ? '#e74c3c' : isChefAttackMode ? '#8e44ad' : '#8d6e63'}`, background: isDisabled ? '#eee' : (isSalesMode ? '#fdebd0' : isChefMode ? '#fadbd8' : isChefAttackMode ? '#ebdef0' : '#fff'), opacity: isDisabled ? 0.5 : 1, color: isSalesMode ? '#d35400' : isChefMode ? '#c0392b' : isChefAttackMode ? '#8e44ad' : '#333' }}
+                                    style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 'bold', borderRadius: '5px', cursor: isDisabled ? 'not-allowed' : 'pointer', border: `2px solid ${isSalesMode ? '#f39c12' : isChefMode ? '#e74c3c' : isChefAttackMode ? '#8e44ad' : isJunkGunCard ? '#7f8c8d' : '#8d6e63'}`, background: isDisabled ? '#eee' : (isSalesMode ? '#fdebd0' : isChefMode ? '#fadbd8' : isChefAttackMode ? '#ebdef0' : isJunkGunCard ? '#d5dbdb' : '#fff'), opacity: isDisabled ? 0.5 : 1, color: isSalesMode ? '#d35400' : isChefMode ? '#c0392b' : isChefAttackMode ? '#8e44ad' : isJunkGunCard ? '#2c3e50' : '#333' }}
                                 >
-                                    {isSalesMode ? '売りつける' : isChefMode ? '調理する' : isChefAttackMode ? '食べさせる' : (cardId === 12 ? '使用(HP半減)' : (apCost > 0 ? `使用(${apCost}AP)` : '使用'))}
+                                    {isSalesMode ? '売りつける' : isChefMode ? '調理する' : isChefAttackMode ? '食べさせる' : isJunkGunCard ? '銃を構える' : (cardId === 12 ? '使用(HP半減)' : (apCost > 0 ? `使用(${apCost}AP)` : '使用'))}
                                 </button>
                                 <button 
                                     onClick={() => isRecycleMode ? executeRecycle(index) : actionDiscardCard(index)} 

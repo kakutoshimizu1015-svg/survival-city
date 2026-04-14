@@ -46,5 +46,8 @@ export const deckData = [
     {id:44, name:"地下鉄の切符", icon:"🚇", desc:"自陣地か各エリアの好きなマスへワープ", color:"#2c3e50", type:"action"},
     {id:45, name:"折りたたみ自転車", icon:"🚲", desc:"5ターン移動1AP＆マンホールワープ選択", color:"#2ecc71", type:"equip"},
     {id:46, name:"ショッピングカート", icon:"🛒", desc:"5ターン移動通過時に20%でアイテム獲得", color:"#e67e22", type:"equip"},
-    {id:47, name:"割れたビール瓶", icon:"🍾", desc:"見えない罠。15ダメ＆確率で空き缶ドロップ", color:"#c0392b", type:"action"}
+    {id:47, name:"割れたビール瓶", icon:"🍾", desc:"見えない罠。15ダメ＆確率で空き缶ドロップ", color:"#c0392b", type:"action"},
+    { id: 48, name: "ジャンクガン[残3]", type: "weapon", range: 2, dmg: 0, desc: "ゴミを消費して撃つ自作銃。3回で壊れる", color: "#7f8c8d", icon: "🔫", isJunkGun: true, durability: 3 },
+    { id: 49, name: "ジャンクガン[残2]", type: "weapon", range: 2, dmg: 0, desc: "ゴミを消費して撃つ自作銃。あと2回", color: "#7f8c8d", icon: "🔫", isJunkGun: true, durability: 2 },
+    { id: 50, name: "ジャンクガン[残1]", type: "weapon", range: 2, dmg: 0, desc: "ゴミを消費して撃つ自作銃。次で壊れる", color: "#7f8c8d", icon: "🔫", isJunkGun: true, durability: 1 }
 ];

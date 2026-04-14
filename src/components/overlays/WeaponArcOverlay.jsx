@@ -134,6 +134,16 @@ export const WeaponArcOverlay = () => {
             return;
         }
 
+        // ▼ 追加: ジャンクガンの専用処理ルート
+        if (cardData.isSkill === 'junkGun') {
+            const targetsToHit = hitTargets.filter(t => t.id === activeTargetId);
+            if (targetsToHit.length > 0) {
+                // ダメージ処理、ゴミ・AP消費、耐久度減少を skills.js の関数へ投げる
+                import('../../game/skills').then(m => m.executeJunkGunFire(targetsToHit[0].id, cardData));
+            }
+            return;
+        }
+
         if (cardData.aoe) {
             hitTargets.forEach(t => dealDamage(t.id, cardData.dmg, cardData.name, attacker.id));
             logMsg(`💥 広範囲攻撃！ ${hitTargets.length}人に命中！`);

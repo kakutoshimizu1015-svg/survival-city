@@ -400,6 +400,13 @@ export const actionTrash = () => {
             logMsg(`🔵 身分証でパトカーを回避！`);
         } else if (cp.charType === 'survivor') {
             logMsg(`🌿 サバイバーの勘で回避！`);
+        } else if (cp.charType === 'scavenger') {
+            // ▼ 追加: スカベンジャーのリサイクル（ペナルティの代わりに缶獲得）
+            s.updateCurrentPlayer(p => ({ cans: p.cans + 1 }));
+            logMsg(`🛠️ リサイクル！警察に怒られたが、隙を見て空き缶を1つ拾った！`);
+            s.addEventPopup(cp.id, "🛠️", "リサイクル", "空き缶+1", "good");
+            playSfx('coin');
+            return;
         } else {
             s.updateCurrentPlayer(p => ({ penaltyAP: (p.penaltyAP||0) + 2 }));
             logMsg(`<span style="color:#e74c3c">🚓 ゴミ漁り失敗！パトカーに見つかり次回AP-2！</span>`);

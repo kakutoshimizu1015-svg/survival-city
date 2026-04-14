@@ -4,7 +4,8 @@ import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
 import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, actionManhole, getOccupyCost } from '../../game/actions';
 // ▼ 修正: actionChefAttack, executeChefAttack を追加インポート
-import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, executeDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap, setupSetTrap, actionChef, actionChefAttack, executeChefAttack, actionScavenger, executeScavenger, actionBribe, executeBribe, actionOracle, actionCanBallista, setupCanBallistaAim, actionTenchi } from '../../game/skills';
+// ▼ 修正: executeJunkGunAim を追加インポート
+import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, executeDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap, setupSetTrap, actionChef, actionChefAttack, executeChefAttack, actionScavenger, executeScavenger, actionBribe, executeBribe, actionOracle, actionCanBallista, setupCanBallistaAim, actionTenchi, executeJunkGunAim } from '../../game/skills';
 
 /* ── Dark themed action button ── */
 const ActionBtn = ({ action, condition, failMsg, highlight, style, children, isMyTurn, isBusy, className = '' }) => (
@@ -150,10 +151,26 @@ export const ActionPanel = () => {
     if (isScavengerPicking && isMyTurn) {
         return (
             <div id="action-panel" className="dt-action-panel">
-                <div style={{ textAlign: 'center', color: 'var(--dt-text)', fontWeight: 700 }}>🛠️ 何を組み上げますか？ (ゴミ3個消費)</div>
-                <button className="dt-action-btn" onClick={() => executeScavenger('equip')} style={{ borderColor: 'rgba(46,204,113,0.3)' }}>🛡️ 装備品を生成</button>
-                <button className="dt-action-btn" onClick={() => executeScavenger('weapon')} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>🔫 ショットガンを生成</button>
+                <div style={{ textAlign: 'center', color: 'var(--dt-text)', fontWeight: 700 }}>🛠️ 何を組み上げますか？</div>
+                <button className="dt-action-btn" onClick={() => executeScavenger('equip')} disabled={cp.trash < 3} style={{ borderColor: 'rgba(46,204,113,0.3)' }}>🛡️ ランダム装備 (ゴミ3消費)</button>
+                <button className="dt-action-btn" onClick={() => executeScavenger('junkgun')} disabled={cp.cans < 10} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>🔫 ジャンクガン (缶10消費)</button>
                 <button className="dt-action-btn" onClick={() => useGameStore.setState({ isScavengerPicking: false })} style={{ color: '#888' }}>✖ キャンセル</button>
+            </div>
+        );
+    }
+
+    // ▼ 追加: ジャンクガンの消費ゴミ数を選ぶUI
+    if (state.isJunkGunPicking && isMyTurn) {
+        return (
+            <div id="action-panel" className="dt-action-panel">
+                <div style={{ textAlign: 'center', color: 'var(--dt-text)', fontWeight: 700 }}>🔫 ゴミを何個消費して撃ちますか？(現在:{cp.trash}個)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+                    <button className="dt-action-btn" onClick={() => executeJunkGunAim(1, 5)} disabled={cp.trash < 1}>1個 (5ダメ)</button>
+                    <button className="dt-action-btn" onClick={() => executeJunkGunAim(3, 10)} disabled={cp.trash < 3}>3個 (10ダメ)</button>
+                    <button className="dt-action-btn" onClick={() => executeJunkGunAim(5, 35)} disabled={cp.trash < 5}>5個 (35ダメ)</button>
+                    <button className="dt-action-btn" onClick={() => executeJunkGunAim(10, 50)} disabled={cp.trash < 10}>10個 (50ダメ)</button>
+                </div>
+                <button className="dt-action-btn" onClick={() => useGameStore.setState({ isJunkGunPicking: false, junkGunData: null })} style={{ color: '#888', marginTop: 5 }}>✖ キャンセル</button>
             </div>
         );
     }
@@ -263,7 +280,8 @@ export const ActionPanel = () => {
                     </div>
                 );
             })()}
-            {cp.charType === 'scavenger' && <ActionBtn action={actionScavenger} condition={hasAP(3) && cp.trash >= 3 && isMyTurn && !isBusy} failMsg="AP不足かゴミが足りません" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(52,152,219,0.3)' }}>🛠️ ガラクタ工作 (3AP)</ActionBtn>}
+            {/* ▼ 修正: 工作の条件を「ゴミ3以上 または 缶10以上」に変更 */}
+            {cp.charType === 'scavenger' && <ActionBtn action={actionScavenger} condition={hasAP(3) && (cp.trash >= 3 || cp.cans >= 10) && isMyTurn && !isBusy} failMsg="AP不足か素材(ゴミ3/缶10)が足りません" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(52,152,219,0.3)' }}>🛠️ ガラクタ工作 (3AP)</ActionBtn>}
             {cp.charType === 'billionaire' && othersOnTile.length > 0 && <ActionBtn action={actionBribe} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(241,196,15,0.3)' }}>💴 買収 (2AP)</ActionBtn>}
             {cp.charType === 'god' && <ActionBtn action={actionOracle} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(241,196,15,0.3)', background: 'rgba(241,196,15,0.06)' }}>👼 神託 (3AP)</ActionBtn>}
             {cp.charType === 'emperor' && <ActionBtn action={actionCanBallista} condition={hasAP(2) && cp.cans >= 1 && isMyTurn && !isBusy} failMsg="AP不足か缶がありません" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>🥫 缶バリスタ (2AP)</ActionBtn>}

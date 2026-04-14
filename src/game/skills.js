@@ -351,37 +351,110 @@ export const actionScavenger = () => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 3) return;
-    if (cp.trash < 3) {
-        useGameStore.getState().showToast("ゴミが3つ必要です");
+    if (cp.trash < 3 && cp.cans < 10) {
+        useGameStore.getState().showToast("素材が足りません");
         return;
     }
     useGameStore.setState({ isScavengerPicking: true });
-    logMsg(`🛠️ ガラクタ工作！ゴミを3つ消費して何を作る？`);
+    logMsg(`🛠️ ガラクタ工作！何を作る？`);
 };
 
 export const executeScavenger = (type) => {
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
-    if (cp.ap < 3 || cp.trash < 3) return;
 
     let newHand = [...cp.hand];
     let msg = "";
 
     if (type === 'equip') {
+        if (cp.ap < 3 || cp.trash < 3) return;
         const equipPool = [8, 24, 25, 26, 27, 28, 29, 45, 46];
         const generated = equipPool[Math.floor(Math.random() * equipPool.length)];
         newHand.push(generated);
-        msg = `ランダムな装備品（${deckData.find(c=>c.id===generated).name}）`;
-    } else {
-        newHand.push(20); // 既存のショットガンで代用
-        msg = `ショットガン`;
+        // ランダム装備はゴミ3つ消費
+        state.updateCurrentPlayer(p => ({ ap: p.ap - 3, trash: p.trash - 3, hand: newHand }));
+        msg = `ランダムな装備品`;
+    } else if (type === 'junkgun') {
+        if (cp.ap < 3 || cp.cans < 10) return;
+        newHand.push(48); // 48: ジャンクガン(残3)
+        // ジャンクガンは缶10個消費
+        state.updateCurrentPlayer(p => ({ ap: p.ap - 3, cans: p.cans - 10, hand: newHand }));
+        msg = `ジャンクガン[残3]`;
     }
 
-    state.updateCurrentPlayer(p => ({ ap: p.ap - 3, trash: p.trash - 3, hand: newHand }));
     useGameStore.setState({ isScavengerPicking: false });
-    
-    logMsg(`🛠️ ゴミから ${msg} を組み上げた！`);
+    logMsg(`🛠️ 素材を消費して ${msg} を組み上げた！`);
     state.addEventPopup(cp.id, "🛠️", "工作完了", msg + "を獲得", "good");
+};
+
+// ▼ 追加: ジャンクガンの使用フロー
+export const setupJunkGun = (handIndex, cardId) => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    if (cp.ap < 2) {
+        useGameStore.getState().showToast("APが足りません");
+        return;
+    }
+    if (cp.trash < 1) {
+        useGameStore.getState().showToast("ゴミがありません");
+        return;
+    }
+    useGameStore.setState({ isJunkGunPicking: true, junkGunData: { handIndex, cardId } });
+    logMsg(`🔫 ジャンクガンを構えた！ゴミをいくつ消費して撃つ？`);
+};
+
+export const executeJunkGunAim = (consumeTrash, dmg) => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    const { handIndex, cardId } = state.junkGunData;
+
+    // 武器のエイムUIを呼び出す
+    const playerTargets = state.players.filter(op => op.id !== cp.id && op.hp > 0);
+    const npcs = [
+        { id: 'npc_police', name: 'パトカー', pos: state.policePos, hp: state.policeHp, type: 'npc' },
+        { id: 'npc_uncle', name: '厄介なおじさん', pos: state.unclePos, hp: state.uncleHp, type: 'npc' },
+        { id: 'npc_yakuza', name: 'ヤクザ', pos: state.yakuzaPos, hp: state.yakuzaHp, type: 'npc' },
+        { id: 'npc_loanshark', name: '闇金', pos: state.loansharkPos, hp: state.loansharkHp, type: 'npc' },
+        { id: 'npc_friend', name: '仲間のホームレス', pos: state.friendPos, hp: state.friendHp, type: 'npc' }
+    ].filter(n => n.hp > 0 && n.pos !== 999);
+
+    useGameStore.setState({
+        isJunkGunPicking: false,
+        weaponArcData: {
+            cardData: { id: cardId, name: 'ジャンクガン', range: 2, dmg: dmg, isSkill: 'junkGun', consumeTrash, handIndex },
+            targets: [...playerTargets, ...npcs],
+            attacker: cp
+        }
+    });
+};
+
+export const executeJunkGunFire = (targetId, cardData) => {
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+
+    if (cp.ap < 2 || cp.trash < cardData.consumeTrash) return;
+
+    // 耐久度（カードID）を減らす処理
+    let newHand = [...cp.hand];
+    let nextCardId = null;
+    let broken = false;
+    
+    if (cardData.id === 48) nextCardId = 49;
+    else if (cardData.id === 49) nextCardId = 50;
+    else broken = true;
+
+    if (broken) {
+        newHand.splice(cardData.handIndex, 1);
+        logMsg(`💥 ジャンクガンは火を噴いて完全に壊れた！`);
+    } else {
+        newHand[cardData.handIndex] = nextCardId;
+    }
+
+    // ゴミとAPを消費
+    state.updateCurrentPlayer(p => ({ ap: p.ap - 2, trash: p.trash - cardData.consumeTrash, hand: newHand }));
+    
+    dealDamage(targetId, cardData.dmg, "ジャンクガン", cp.id);
+    logMsg(`🔫 【ジャンクガン】ゴミ${cardData.consumeTrash}個を弾丸にして発射！ ${cardData.dmg}ダメージ！`);
 };
 
 // 💴 億万長者: 買収

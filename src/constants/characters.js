@@ -560,10 +560,10 @@ export const CHARACTERS = [
         id: 'scavenger',
         name: 'スカベンジャー',
         emoji: '🛠️',
-        infoDesc: '【リサイクル】ゴミ漁り失敗時、空き缶1個獲得 / 【ガラクタ工作】3AP:ゴミ3つ消費で装備or武器生成',
+        infoDesc: '【リサイクル】ゴミ漁り失敗時、空き缶1個獲得 / 【ガラクタ工作】3AP:ゴミ3で装備 / 缶10でジャンクガン生成',
         tagline: '都市のゴミ山を宝の山に変える、錬金術師',
-        passive: { name:'【リサイクル】', desc:'ゴミ漁りに失敗した場合でも、ペナルティの代わりに「空き缶」を1つ獲得できる。' },
-        action: { name:'【ガラクタ工作】 (3AP)', desc:'所持しているゴミを3つ消費し、ランダムな装備品カードか、使い切りの「ショットガン」を生成する。' },
+        passive: { name:'【リサイクル】', desc:'ゴミ漁りに失敗し警察に見つかった場合でも、ペナルティの代わりに「空き缶」を1つ獲得してやり過ごす。' },
+        action: { name:'【ガラクタ工作】 (3AP)', desc:'ゴミ3つで「ランダムな装備」か、缶10個でゴミを消費して撃つ「ジャンクガン(3回用)」を生成する。' },
         baseImages: { front: createEmojiImg('🛠️'), back: createEmojiImg('🛠️') },
         skins: [{ id: "scavenger_default", charKey: "scavenger", name: "スカベンジャー", rarity: "N", front: createEmojiImg('🛠️'), pieceColor: "#7f8c8d", ring: "#95a5a6", desc: "ガラクタを身に纏ったジャンク戦士。" }]
     },
