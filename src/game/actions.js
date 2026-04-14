@@ -193,9 +193,12 @@ export const executeMove = (targetTileId) => {
     
     let baseMoveCost = (state.isRainy && !cp.rainGear && cp.charType !== "athlete" && !cp.equip?.foldBike) ? 2 : 1;
     
-    // 🥫 缶コレクターの帝王: 5缶以上の時、移動コストが0APになる（移動し放題）
-    if (cp.charType === 'emperor' && cp.cans >= 5) {
+    // 🥫 缶コレクターの帝王: 5缶以上の時、1ターンに6マスまで移動AP0になる
+    const freeMoves = cp.freeMovesThisTurn || 0;
+    let isFreeMove = false;
+    if (cp.charType === 'emperor' && cp.cans >= 5 && freeMoves < 6) {
         baseMoveCost = 0;
+        isFreeMove = true;
     }
 
     const penaltyCost = cp.nextMoveCostPenalty || 0;
@@ -205,7 +208,8 @@ export const executeMove = (targetTileId) => {
         ap: Math.max(0, p.ap - moveCost), 
         pos: targetTileId, 
         rainGear: state.isRainy ? false : p.rainGear,
-        nextMoveCostPenalty: 0 
+        nextMoveCostPenalty: 0,
+        freeMovesThisTurn: isFreeMove ? freeMoves + 1 : freeMoves // ▼ 追加: 無料移動した回数をカウント
     }));
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [], isDashPicking: false });
     
@@ -595,7 +599,8 @@ export const actionEndTurn = async () => {
             equipTimer: newTimer,
             cannotMove: (p.zazenTurns > 0), // 座禅中は移動不可
             respawnShield: Math.max(0, (p.respawnShield || 0) - 1),
-            drawCountThisTurn: 0 
+            drawCountThisTurn: 0,
+            freeMovesThisTurn: 0 // ▼ 追加: 帝王の無料移動回数をターン終了時にリセット
         }));
 
         if (cp.statusEffects?.poison > 0) {

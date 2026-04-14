@@ -36,7 +36,12 @@ export const ActionPanel = () => {
     const currentTile = mapData.find(t => t.id === cp.pos) || {};
     const tileType = currentTile.type;
 
-    const baseMoveCost = (state.isRainy && !cp.rainGear && cp.charType !== 'athlete') ? 2 : 1;
+    // ▼ 修正: 移動コストの計算を actions.js と完全に同期（帝王の0AP制限、折りたたみ自転車など）
+    let baseMoveCost = (state.isRainy && !cp.rainGear && cp.charType !== 'athlete' && !cp.equip?.foldBike) ? 2 : 1;
+    const freeMoves = cp.freeMovesThisTurn || 0;
+    if (cp.charType === 'emperor' && cp.cans >= 5 && freeMoves < 6) {
+        baseMoveCost = 0;
+    }
     const currentMoveCost = baseMoveCost + (cp.nextMoveCostPenalty || 0);
 
     let isMyTurn = !cp.isCPU;
@@ -181,6 +186,14 @@ export const ActionPanel = () => {
        ══════════════════ */
     return (
         <div id="action-panel" className="dt-action-panel">
+            {/* ▼ 追加: 仙気スタックのリアルタイムUI表示メーター */}
+            {cp.charType === 'sennin' && (
+                <div style={{ background: 'rgba(155, 89, 182, 0.2)', border: '1px solid #9b59b6', borderRadius: '8px', padding: '5px', textAlign: 'center', color: '#e0b0ff', fontWeight: 'bold', marginBottom: '8px', fontSize: '12px' }}>
+                    ☁️ 現在の仙気: {cp.senki || 0} / 5
+                    <div style={{ fontSize: '10px', color: '#bdc3c7', fontWeight: 'normal', marginTop: '2px' }}>行動せずターン終了でスタック増加</div>
+                </div>
+            )}
+
             {/* Core actions */}
             <div id="btn-roll"><ActionBtn action={actionRollDice} condition={canRoll} failMsg={diceRolled ? 'すでにサイコロを振っています' : '今は振れません'} highlight={canRoll} isMyTurn={isMyTurn} isBusy={isBusy}>🎲 サイコロを振る</ActionBtn></div>
             <div id="btn-move"><ActionBtn action={actionMove} condition={canMove} failMsg={cp.cannotMove ? '足止めされています！' : !diceRolled ? 'サイコロを振ってください' : 'APが不足しています'} highlight={canMove} isMyTurn={isMyTurn} isBusy={isBusy}>🚶 移動 ({currentMoveCost}AP)</ActionBtn></div>
@@ -210,7 +223,8 @@ export const ActionPanel = () => {
             {cp.charType === 'billionaire' && othersOnTile.length > 0 && <ActionBtn action={actionBribe} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(241,196,15,0.3)' }}>💴 買収 (2AP)</ActionBtn>}
             {cp.charType === 'god' && <ActionBtn action={actionOracle} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(241,196,15,0.3)', background: 'rgba(241,196,15,0.06)' }}>👼 神託 (3AP)</ActionBtn>}
             {cp.charType === 'emperor' && <ActionBtn action={actionCanBallista} condition={hasAP(2) && cp.cans >= 1 && isMyTurn && !isBusy} failMsg="AP不足か缶がありません" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>🥫 缶バリスタ (2AP)</ActionBtn>}
-            {cp.charType === 'sennin' && <ActionBtn action={actionTenchi} condition={cp.senki >= 5 && isMyTurn && !isBusy} failMsg="仙気スタックが足りません(5必要)" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(155,89,182,0.3)' }}>🧘 天地開闢 (0AP)</ActionBtn>}
+            {/* ▼ 修正: 天地開闢ボタンに現在の仙気スタック数を表示 */}
+            {cp.charType === 'sennin' && <ActionBtn action={actionTenchi} condition={(cp.senki || 0) >= 5 && isMyTurn && !isBusy} failMsg="仙気スタックが足りません(5必要)" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(155,89,182,0.3)' }}>🧘 天地開闢 (0AP) [仙気: {cp.senki || 0}/5]</ActionBtn>}
 
             {/* Detective compound buttons */}
             {cp.charType === 'detective' && (

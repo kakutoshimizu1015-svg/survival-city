@@ -93,12 +93,18 @@ export const dealDamage = (targetId, dmg, source, attackerId = null) => {
     }
     
     let actualDmg = dmg;
+
+    // ▼ 追加: 缶コレクターの帝王: 10缶以上の時、ダメージを30%カット
+    if (target.charType === 'emperor' && target.cans >= 10) {
+        actualDmg = Math.floor(actualDmg * 0.7);
+    }
+
     if (target.equip?.helmet) { state.updatePlayer(targetId, p => ({ equip: { ...p.equip, helmet: false } })); actualDmg = Math.floor(actualDmg / 2); playSfx('success'); }
     if (target.equip?.shield) {
         state.updatePlayer(targetId, p => ({ equip: { ...p.equip, shield: false } }));
         if (Math.random() < 0.5) { 
             actualDmg = Math.floor(actualDmg / 2); 
-            playSfx('hit'); 
+            playSfx('hit');
             // 段ボールの盾の反射追加
             if (attackerId) {
                 logMsg(`🛡️ 段ボールの盾で防御！さらに${attacker?.name || '相手'}に10ダメージ反射！`);
