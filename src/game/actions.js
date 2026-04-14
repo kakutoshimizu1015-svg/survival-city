@@ -539,15 +539,16 @@ export const actionEndTurn = async () => {
         const cp = state.players[state.turn];
         const { mapData, players } = state;
 
-        // ▼ 追加: 👼 路上の神様への送金（4P）計算
+        // ▼ 修正: 👼 路上の神様への送金（所持Pの10%）計算
         let godFee = 0;
         if (cp.oracleBuff) {
             const godPlayer = players.find(p => p.charType === 'god' && p.hp > 0);
             if (godPlayer) {
-                godFee = Math.min(4, cp.p);
+                // 10%を計算（端数切り捨て）
+                godFee = Math.floor(cp.p * 0.1);
                 // 神様にお金を渡す
                 state.updatePlayer(godPlayer.id, p => ({ p: p.p + godFee }));
-                logMsg(`👼 神の導きの対価！神様に ${godFee}P を捧げた。`);
+                logMsg(`👼 神の導きの対価！神様に ${godFee}P (所持Pの10%) を捧げた。`);
             }
         }
 

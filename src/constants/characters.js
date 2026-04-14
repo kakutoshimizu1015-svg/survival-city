@@ -585,7 +585,7 @@ export const CHARACTERS = [
         infoDesc: '【神の加護】全員に死亡回避(使用時3P還元)・隣接集金 / 【神託】3AP:全員次ダイス+2＆終了時2P集金',
         tagline: '困ったやつがいれば助けてやる。ただしタダじゃねえ',
         passive: { name:'【神の加護】', desc:'開始時全員に1度だけ死亡回避できる「加護トークン」付与(使用時3P自動送金)。隣接者の獲得P5%を吸収。自身は死亡ペナ半減。' },
-        action: { name:'【神託】 (3AP)', desc:'自分以外の全員に「次ダイス+2」を付与。ただし、その恩恵を受けた者がターンを終えるたび4Pが神様に自動送金される。' },
+        action: { name:'【神託】 (3AP)', desc:'自分以外の全員に「次ダイス+2」を付与。ただし、その恩恵を受けた者がターンを終えるたび自身の所持Pの10%が神様に自動送金される' },
         baseImages: { front: createEmojiImg('👼'), back: createEmojiImg('👼') },
         skins: [{ id: "god_default", charKey: "god", name: "路上の神様", rarity: "SSR", front: createEmojiImg('👼'), pieceColor: "#f39c12", ring: "#e67e22", desc: "神々しい後光（ただのネオン管）を背負う。" }]
     },
