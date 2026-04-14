@@ -94,11 +94,11 @@ export const actionRollDice = async (isCpuCall = false) => {
     if (isZorome) totalAP *= 2; 
     if (cp.equip?.bicycle) totalAP += 2;
 
-    // ▼ 追加: 神託などによって付与されたボーナスAPを確実に足し合わせる
+    // ▼ 追加: 👼 路上の神様「神託」で付与されたボーナスAPを計算に含める
     if (cp.bonusAP > 0) {
         totalAP += cp.bonusAP;
-        state.updateCurrentPlayer(p => ({ bonusAP: 0 }));
         logMsg(`👼 神の導き！APに +${cp.bonusAP} のボーナス！`);
+        state.updateCurrentPlayer(p => ({ bonusAP: 0 }));
     }
 
     if (cp.penaltyAP > 0) {
@@ -110,7 +110,7 @@ export const actionRollDice = async (isCpuCall = false) => {
         playSfx('fail');
     }
 
-    // ▼ 追加: 腹痛（腐敗食の影響）によるAP減少処理
+    // ▼ 腹痛（腐敗食の影響）によるAP減少処理
     if (cp.stomachache > 0) {
         totalAP = Math.max(0, totalAP - 1);
         state.updateCurrentPlayer(p => ({ stomachache: p.stomachache - 1 }));
@@ -130,7 +130,7 @@ export const actionRollDice = async (isCpuCall = false) => {
         canPickedThisTurn: 0
     });
 
-    // ▼ 修正: 仙人の「何も行動しなかった」判定のために、ダイス直後のAPを保存する
+    // ▼ 仙人の「何も行動しなかった」判定のために、ダイス直後のAPを保存する
     state.updateCurrentPlayer(p => {
         const finalAP = p.ap + totalAP;
         useGameStore.setState({ lastDiceRollTotal: finalAP });
@@ -225,7 +225,7 @@ export const executeMove = (targetTileId) => {
         pos: targetTileId, 
         rainGear: state.isRainy ? false : p.rainGear,
         nextMoveCostPenalty: 0,
-        freeMovesThisTurn: isFreeMove ? freeMoves + 1 : freeMoves // ▼ 追加: 無料移動した回数をカウント
+        freeMovesThisTurn: isFreeMove ? freeMoves + 1 : freeMoves // 無料移動した回数をカウント
     }));
     useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [], isDashPicking: false });
     
@@ -538,7 +538,19 @@ export const actionEndTurn = async () => {
     try {
         const cp = state.players[state.turn];
         const { mapData, players } = state;
-        
+
+        // ▼ 追加: 👼 路上の神様への送金（4P）計算
+        let godFee = 0;
+        if (cp.oracleBuff) {
+            const godPlayer = players.find(p => p.charType === 'god' && p.hp > 0);
+            if (godPlayer) {
+                godFee = Math.min(4, cp.p);
+                // 神様にお金を渡す
+                state.updatePlayer(godPlayer.id, p => ({ p: p.p + godFee }));
+                logMsg(`👼 神の導きの対価！神様に ${godFee}P を捧げた。`);
+            }
+        }
+
         // ☁️ 路上の仙人: AP繰り越し判定
         let carryOverAP = 0;
         if (cp.charType === 'sennin') {
@@ -547,16 +559,11 @@ export const actionEndTurn = async () => {
         }
 
         // ☁️ 路上の仙人: 仙気スタックの計算
-        // 今ターンの「移動マス数」と「カード使用数」が0ならスタック+1
-        const stats = cp.gameStats || {};
-        // 1ゲーム累計から増加分を引くのは難しいので、このターンのフラグとして簡易的に判定
-        // 本来はactionMove等でフラグを立てるべきだが、ここでは仙人独自の「何もしなかった」を評価
         let newSenki = cp.senki || 0;
-        if (cp.ap > 0 && cp.ap === state.lastDiceRollTotal) { // ダイス後1度も行動していない簡易判定
+        if (cp.ap > 0 && cp.ap === state.lastDiceRollTotal) { 
              newSenki = Math.min(5, newSenki + 1);
              logMsg(`☁️ 仙気が高まる... (現在: ${newSenki}スタック)`);
              if (newSenki === 5) {
-                 // 5スタック効果: 他全員から5%徴収
                  players.forEach(op => {
                      if (op.id !== cp.id && op.p > 0) {
                          const tax = Math.ceil(op.p * 0.05);
@@ -570,28 +577,13 @@ export const actionEndTurn = async () => {
                  logMsg(`🧘 仙術による自己治癒！HPが20回復した。`);
              }
         } else {
-             newSenki = 0; // アクションをした瞬間に全リセット
-        }
-
-        // ▼ 修正: 路上の神様: 神の導きによる4P強制送金 (oracleBuffフラグに変更)
-        if (cp.oracleBuff) {
-            const godPlayer = players.find(p => p.charType === 'god' && p.hp > 0);
-            if (godPlayer) {
-                const fee = Math.min(4, cp.p);
-                state.updateCurrentPlayer(p => ({ p: p.p - fee, oracleBuff: false }));
-                state.updatePlayer(godPlayer.id, p => ({ p: p.p + fee }));
-                logMsg(`👼 神の導きの対価！神様に${fee}Pを捧げた。`);
-            } else {
-                // 神様が死んでいる等でいない場合はフラグだけ消す
-                state.updateCurrentPlayer(p => ({ oracleBuff: false }));
-            }
+             newSenki = 0; 
         }
 
         // 👼 路上の神様: 隣接している他人の獲得Pを吸収
         if (cp.charType === 'god') {
             players.forEach(op => {
                 if (op.id !== cp.id && op.hp > 0 && getDistance(cp.pos, op.pos, mapData) <= 1) {
-                    // ※本来はopが獲得した瞬間にやるべきだが、簡易的に毎ターン終了時1P吸う
                     if (op.p > 0) {
                         state.updatePlayer(op.id, p => ({ p: p.p - 1 }));
                         state.updateCurrentPlayer(p => ({ p: p.p + 1 }));
@@ -607,7 +599,10 @@ export const actionEndTurn = async () => {
         if (newEquip.foldBike) { newTimer.foldBike = (newTimer.foldBike || 5) - 1; if (newTimer.foldBike <= 0) { newEquip.foldBike = false; logMsg(`🚲 折りたたみ自転車が壊れた！`); } }
         if (newEquip.shoppingCart) { newTimer.shoppingCart = (newTimer.shoppingCart || 5) - 1; if (newTimer.shoppingCart <= 0) { newEquip.shoppingCart = false; logMsg(`🛒 ショッピングカートが壊れた！`); } }
 
+        // ▼ 全ての変更を1回の更新に統合して適用
         state.updateCurrentPlayer(p => ({
+            p: p.p - godFee,      // 神様への送金（ここで引く）
+            oracleBuff: false,    // 神託フラグをリセット
             ap: carryOverAP, // AP繰り越し適用
             senki: newSenki, // 仙気スタック更新
             zazenTurns: Math.max(0, (p.zazenTurns || 0) - 1), // 仙人の座禅ターン減少
@@ -619,7 +614,7 @@ export const actionEndTurn = async () => {
             cannotMove: (p.zazenTurns > 0), // 座禅中は移動不可
             respawnShield: Math.max(0, (p.respawnShield || 0) - 1),
             drawCountThisTurn: 0,
-            freeMovesThisTurn: 0 // ▼ 追加: 帝王の無料移動回数をターン終了時にリセット
+            freeMovesThisTurn: 0 // 帝王の無料移動回数をターン終了時にリセット
         }));
 
         if (cp.statusEffects?.poison > 0) {

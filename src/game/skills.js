@@ -433,12 +433,14 @@ export const actionOracle = () => {
     state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
     state.players.forEach(p => {
         if (p.id !== cp.id && p.hp > 0) {
-            state.updatePlayer(p.id, prev => ({ godBlessing: true, bonusAP: (prev.bonusAP || 0) + 2 }));
+            // ▼ 修正: フラグ名を oracleBuff に統一し、ボーナスAPを付与
+            state.updatePlayer(p.id, prev => ({ oracleBuff: true, bonusAP: (prev.bonusAP || 0) + 2 }));
             state.addEventPopup(p.id, "👼", "神の導き", "次ダイス+2", "good");
         }
     });
     logMsg(`👼 【神託】自分以外の全員に「神の導き（次ダイス+2）」を与えた！`);
-    logMsg(`（※導きを受けたプレイヤーは、ターン終了時に神様へ2Pを強制送金します）`);
+    // ▼ 修正: ログの送金額表示を 4P に変更
+    logMsg(`（※導きを受けたプレイヤーは、ターン終了時に神様へ4Pを強制送金します）`);
 };
 
 // 🥫 缶コレクターの帝王: 缶バリスタ
