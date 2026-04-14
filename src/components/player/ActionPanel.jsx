@@ -196,7 +196,17 @@ export const ActionPanel = () => {
 
             {/* Core actions */}
             <div id="btn-roll"><ActionBtn action={actionRollDice} condition={canRoll} failMsg={diceRolled ? 'すでにサイコロを振っています' : '今は振れません'} highlight={canRoll} isMyTurn={isMyTurn} isBusy={isBusy}>🎲 サイコロを振る</ActionBtn></div>
-            <div id="btn-move"><ActionBtn action={actionMove} condition={canMove} failMsg={cp.cannotMove ? '足止めされています！' : !diceRolled ? 'サイコロを振ってください' : 'APが不足しています'} highlight={canMove} isMyTurn={isMyTurn} isBusy={isBusy}>🚶 移動 ({currentMoveCost}AP)</ActionBtn></div>
+            
+            {/* ▼ 修正: 帝王で缶が5個以上あり、無料移動が残っている場合、ボタン内に残り回数を表示 */}
+            <div id="btn-move">
+                <ActionBtn action={actionMove} condition={canMove} failMsg={cp.cannotMove ? '足止めされています！' : !diceRolled ? 'サイコロを振ってください' : 'APが不足しています'} highlight={canMove} isMyTurn={isMyTurn} isBusy={isBusy}>
+                    🚶 移動 ({currentMoveCost}AP)
+                    {cp.charType === 'emperor' && cp.cans >= 5 && freeMoves < 6 && (
+                        <span style={{ fontSize: '11px', color: '#f1c40f', marginLeft: '6px' }}>[無料:残{6 - freeMoves}マス]</span>
+                    )}
+                </ActionBtn>
+            </div>
+            
             <div id="btn-can"><ActionBtn action={actionCan} condition={canDoCan} failMsg={isBlockedByAnimal ? '野良犬がいて拾えません！' : canPickedThisTurn >= canPickLimit ? '1ターンの拾う上限です' : 'AP不足か場所が違います'} isMyTurn={isMyTurn} isBusy={isBusy}>🥫 缶拾い (1AP)</ActionBtn></div>
             <div id="btn-trash"><ActionBtn action={actionTrash} condition={canDoTrash} failMsg={isBlockedByAnimal ? '野良犬がいて漁れません！' : 'AP不足か場所が違います'} isMyTurn={isMyTurn} isBusy={isBusy}>🗑️ ゴミ漁り ({cp.equip?.shoes ? 1 : 2}AP)</ActionBtn></div>
             <div id="btn-occupy"><ActionBtn action={actionOccupy} condition={canDoOccupy} failMsg={cp.p < occupyCost ? 'Pが不足しています' : 'このマスは陣地にできません'} isMyTurn={isMyTurn} isBusy={isBusy}>🚩 陣地占領 ({occupyCost}P)</ActionBtn></div>
