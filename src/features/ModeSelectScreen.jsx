@@ -91,10 +91,10 @@ export const ModeSelectScreen = ({
 
                 {/* ===== PLAY ===== */}
                 <div className="dt-section-label">PLAY</div>
-                <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+                <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexDirection: 'column' }}>
                     <PlayCard
                         emoji="🎮"
-                        title="オフライン"
+                        title="ゲームをプレイ"
                         subtitle="CPUと対戦"
                         borderColor="var(--dt-gold)"
                         bgGrad="linear-gradient(145deg, #1e1a14, #141210)"
@@ -104,7 +104,7 @@ export const ModeSelectScreen = ({
                     />
                     <PlayCard
                         emoji="🌐"
-                        title="オンライン"
+                        title="みんなでゲームをプレイ"
                         subtitle="友達と対戦"
                         borderColor="var(--dt-blue)"
                         bgGrad="linear-gradient(145deg, #0f1520, #0a0f18)"
@@ -189,9 +189,13 @@ const PlayCard = ({ emoji, title, subtitle, borderColor, bgGrad, accentColor, su
             background: `radial-gradient(circle at 100% 0%, ${accentColor}, transparent)`,
             pointerEvents: 'none',
         }} />
-        <div style={{ fontSize: 28, marginBottom: 8 }}>{emoji}</div>
-        <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--dt-text)', marginBottom: 4 }}>{title}</div>
-        <div style={{ fontSize: 11, color: subtitleColor }}>{subtitle}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ fontSize: 32 }}>{emoji}</div>
+            <div style={{ flex: 1, textAlign: 'left' }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--dt-text)', marginBottom: 2 }}>{title}</div>
+                <div style={{ fontSize: 12, color: subtitleColor }}>{subtitle}</div>
+            </div>
+        </div>
     </div>
 );
 
