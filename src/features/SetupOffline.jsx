@@ -221,8 +221,11 @@ export const SetupOffline = () => {
             <div style={{ padding: '16px 20px', flex: 1 }}>
 
                 {/* ===== 1. PLAYERS ===== */}
-                <div className="dt-section-label">PLAYERS ({players.length}/8)</div>
-                <div className="dt-card">
+                <div className="dt-section-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>PLAYERS ({players.length}/8)</span>
+                    <span style={{ fontSize: 10, color: 'var(--dt-text-dim)' }}>人数の追加やCPUを設定</span>
+                </div>
+                <div className="dt-card" style={{ border: '1px solid rgba(230,126,34,0.3)', background: 'linear-gradient(180deg, rgba(230,126,34,0.03), transparent)' }}>
                     {players.map((p, idx) => (
                         <PlayerRow
                             key={p.id}
@@ -237,44 +240,38 @@ export const SetupOffline = () => {
                     ))}
 
                     {/* Add / Team buttons */}
-                    <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button className="dt-add-btn" style={{ color: '#6a8a6a', borderColor: 'rgba(46,204,113,0.3)' }} onClick={() => addPlayer(false)}>+ 人間</button>
-                        <button className="dt-add-btn" style={{ color: '#6a8aaa', borderColor: 'rgba(52,152,219,0.3)' }} onClick={() => addPlayer(true)}>+ CPU</button>
-                        <button className="dt-add-btn" style={{ color: '#8a6aaa', borderColor: 'rgba(155,89,182,0.3)' }} onClick={handleRandomizeTeams}>🎲 ランダムチーム</button>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 16 }}>
+                        <button
+                            className="dt-card-interactive"
+                            style={{ padding: '12px', background: 'linear-gradient(145deg, rgba(46,204,113,0.1), rgba(46,204,113,0.2))', borderColor: 'rgba(46,204,113,0.4)', color: '#2ecc71', fontWeight: 900, fontSize: 13, textAlign: 'center', boxShadow: 'none' }}
+                            onClick={() => addPlayer(false)}
+                        >
+                            + 👤 人間を追加
+                        </button>
+                        <button
+                            className="dt-card-interactive"
+                            style={{ padding: '12px', background: 'linear-gradient(145deg, rgba(52,152,219,0.1), rgba(52,152,219,0.2))', borderColor: 'rgba(52,152,219,0.4)', color: '#3498db', fontWeight: 900, fontSize: 13, textAlign: 'center', boxShadow: 'none' }}
+                            onClick={() => addPlayer(true)}
+                        >
+                            + 🤖 CPUを追加
+                        </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                        <button className="dt-add-btn" style={{ flex: 1, color: '#8a6aaa', borderColor: 'rgba(155,89,182,0.3)' }} onClick={handleRandomizeTeams}>🎲 ランダムチーム構成</button>
                         {players.some(p => p.teamColor !== 'none') && (
-                            <button className="dt-add-btn" style={{ color: '#8a8a8a', borderColor: 'rgba(150,150,150,0.3)' }} onClick={handleClearTeams}>⚪ リセット</button>
+                            <button className="dt-add-btn" style={{ flex: 1, color: '#8a8a8a', borderColor: 'rgba(150,150,150,0.3)' }} onClick={handleClearTeams}>⚪ チームリセット</button>
                         )}
                     </div>
                 </div>
 
-                {/* ===== 2. CHARACTER ===== */}
-                <div className="dt-section-label">CHARACTER</div>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-                    {[
-                        { key: 'choose',     label: '🎭 各自選択', color: 'var(--dt-green)' },
-                        { key: 'cpu_random', label: '🤖 CPUのみ🎲', color: 'var(--dt-orange)' },
-                        { key: 'random',     label: '🎲 全員ランダム', color: 'var(--dt-purple)' },
-                    ].map(opt => (
-                        <button
-                            key={opt.key}
-                            className={`dt-pill ${charAssignMode === opt.key ? 'active' : ''}`}
-                            style={charAssignMode === opt.key
-                                ? { background: `${opt.color}18`, borderColor: opt.color, color: opt.color }
-                                : {}
-                            }
-                            onClick={() => setCharAssignMode(opt.key)}
-                        >
-                            {opt.label}
-                        </button>
-                    ))}
-                </div>
-
-                {/* ===== 3. RULES ===== */}
-                <div className="dt-section-label">RULES</div>
+                {/* ===== 2. GAME SETTINGS ===== */}
+                <div className="dt-section-label">GAME SETTINGS</div>
                 <div className="dt-card">
-                    <div style={{ display: 'flex', gap: 10 }}>
+                    {/* RULES */}
+                    <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🗺️ マップとラウンド数</div>
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 10, color: 'var(--dt-text-muted)', marginBottom: 6 }}>マップ</div>
                             <div style={{ position: 'relative' }}>
                                 <select className="dt-select" value={mapSize} onChange={e => setMapSize(e.target.value)}>
                                     <option value="midtown">midtown (46)</option>
@@ -283,7 +280,6 @@ export const SetupOffline = () => {
                             </div>
                         </div>
                         <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 10, color: 'var(--dt-text-muted)', marginBottom: 6 }}>ラウンド</div>
                             <div style={{ position: 'relative' }}>
                                 <select className="dt-select" value={maxRounds} onChange={e => setMaxRounds(Number(e.target.value))}>
                                     {[1, 5, 10, 15, 20, 30].map(r => <option key={r} value={r}>{r}R</option>)}
@@ -292,20 +288,40 @@ export const SetupOffline = () => {
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* ===== 4. RANDOMIZE ===== */}
-                <div className="dt-section-label">RANDOMIZE</div>
-                <div className="dt-card">
+                    {/* CHARACTER */}
+                    <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🎭 キャラクターの決め方</div>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                        {[
+                            { key: 'choose',     label: '各自選択', color: 'var(--dt-green)' },
+                            { key: 'cpu_random', label: 'CPUのみ🎲', color: 'var(--dt-orange)' },
+                            { key: 'random',     label: '全員ランダム', color: 'var(--dt-purple)' },
+                        ].map(opt => (
+                            <button
+                                key={opt.key}
+                                className={`dt-pill ${charAssignMode === opt.key ? 'active' : ''}`}
+                                style={charAssignMode === opt.key
+                                    ? { background: `${opt.color}18`, borderColor: opt.color, color: opt.color }
+                                    : {}
+                                }
+                                onClick={() => setCharAssignMode(opt.key)}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* RANDOMIZE */}
+                    <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🔀 ランダム化（上級者向け）</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        <RmapTile label="🔀 マス種類" active={rmapTileType} onClick={() => setRmapTileType(!rmapTileType)} />
-                        <RmapTile label="📐 マス配置" active={rmapLayout} onClick={() => setRmapLayout(!rmapLayout)} />
-                        <RmapTile label="🏁 開始位置" active={rmapStart} onClick={() => setRmapStart(!rmapStart)} />
-                        <RmapTile label="🧭 バラバラ" active={rmapScatter} onClick={() => setRmapScatter(!rmapScatter)} />
+                        <RmapTile label="マスの種類をシャッフル" active={rmapTileType} onClick={() => setRmapTileType(!rmapTileType)} />
+                        <RmapTile label="マスの配置をシャッフル" active={rmapLayout} onClick={() => setRmapLayout(!rmapLayout)} />
+                        <RmapTile label="開始位置をランダム" active={rmapStart} onClick={() => setRmapStart(!rmapStart)} />
+                        <RmapTile label="スタート位置をバラバラ" active={rmapScatter} onClick={() => setRmapScatter(!rmapScatter)} />
                     </div>
                 </div>
 
-                {/* ===== 5. DEVELOPER TOOL (collapsible) ===== */}
+                {/* ===== 3. DEVELOPER TOOL (collapsible) ===== */}
                 <div
                     className={`dt-collapsible-header ${devOpen ? 'open' : ''}`}
                     onClick={() => setDevOpen(!devOpen)}
@@ -333,11 +349,14 @@ export const SetupOffline = () => {
                     </div>
                 </div>
 
-                {/* ===== START BUTTON ===== */}
+                {/* ===== 4. START BUTTON ===== */}
                 <div style={{ marginTop: 24, marginBottom: 32 }}>
-                    <button className="dt-cta" onClick={handleStart}>
+                    <button className="dt-cta" onClick={handleStart} style={{ padding: '22px', fontSize: '18px', boxShadow: '0 8px 32px rgba(230,126,34,0.4)', borderRadius: '16px' }}>
                         🎲 ゲームを開始する
                     </button>
+                    <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--dt-text-muted)', marginTop: 12 }}>
+                        全員の準備はOKですか？
+                    </div>
                 </div>
             </div>
 

@@ -262,12 +262,20 @@ export const OnlineLobby = () => {
                         })}
 
                         {isHost && (
-                            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-                                <button className="dt-add-btn" style={{ color: '#6a8aaa', borderColor: 'rgba(52,152,219,0.3)' }} onClick={addCpu}>+ CPU追加</button>
-                                <button className="dt-add-btn" style={{ color: '#8a6aaa', borderColor: 'rgba(155,89,182,0.3)' }} onClick={randomizeTeams}>🎲 ランダムチーム</button>
-                                {lobbyPlayers.some(p => p.teamColor !== 'none') && (
-                                    <button className="dt-add-btn" style={{ color: '#8a8a8a', borderColor: 'rgba(150,150,150,0.3)' }} onClick={clearTeams}>⚪ リセット</button>
-                                )}
+                            <div style={{ marginTop: 16 }}>
+                                <button
+                                    className="dt-card-interactive"
+                                    style={{ width: '100%', padding: '12px', background: 'linear-gradient(145deg, rgba(52,152,219,0.1), rgba(52,152,219,0.2))', borderColor: 'rgba(52,152,219,0.4)', color: '#3498db', fontWeight: 900, fontSize: 13, textAlign: 'center', boxShadow: 'none' }}
+                                    onClick={addCpu}
+                                >
+                                    + 🤖 CPUを追加
+                                </button>
+                                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                                    <button className="dt-add-btn" style={{ flex: 1, color: '#8a6aaa', borderColor: 'rgba(155,89,182,0.3)' }} onClick={randomizeTeams}>🎲 ランダムチーム構成</button>
+                                    {lobbyPlayers.some(p => p.teamColor !== 'none') && (
+                                        <button className="dt-add-btn" style={{ flex: 1, color: '#8a8a8a', borderColor: 'rgba(150,150,150,0.3)' }} onClick={clearTeams}>⚪ チームリセット</button>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
@@ -309,29 +317,13 @@ export const OnlineLobby = () => {
                     {/* ===== HOST CONTROLS ===== */}
                     {isHost ? (
                         <>
-                            {/* CHARACTER */}
-                            <div className="dt-section-label">CHARACTER</div>
-                            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-                                {[
-                                    { key: 'choose',     label: '🎭 各自選択', color: 'var(--dt-green)' },
-                                    { key: 'cpu_random', label: '🤖 CPUのみ🎲', color: 'var(--dt-orange)' },
-                                    { key: 'random',     label: '🎲 全員ランダム', color: 'var(--dt-purple)' },
-                                ].map(opt => (
-                                    <button
-                                        key={opt.key}
-                                        className={`dt-pill ${charAssignMode === opt.key ? 'active' : ''}`}
-                                        style={charAssignMode === opt.key ? { background: `${opt.color}18`, borderColor: opt.color, color: opt.color } : {}}
-                                        onClick={() => setCharAssignMode(opt.key)}
-                                    >{opt.label}</button>
-                                ))}
-                            </div>
-
-                            {/* RULES */}
-                            <div className="dt-section-label">RULES</div>
+                            {/* GAME SETTINGS */}
+                            <div className="dt-section-label">GAME SETTINGS</div>
                             <div className="dt-card">
-                                <div style={{ display: 'flex', gap: 10 }}>
+                                {/* RULES */}
+                                <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🗺️ マップとラウンド数</div>
+                                <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: 10, color: 'var(--dt-text-muted)', marginBottom: 6 }}>マップ</div>
                                         <div style={{ position: 'relative' }}>
                                             <select className="dt-select" value={mapSize} onChange={e => setMapSize(e.target.value)}>
                                                 <option value="midtown">midtown (46)</option>
@@ -340,7 +332,6 @@ export const OnlineLobby = () => {
                                         </div>
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: 10, color: 'var(--dt-text-muted)', marginBottom: 6 }}>ラウンド</div>
                                         <div style={{ position: 'relative' }}>
                                             <select className="dt-select" value={maxRounds} onChange={e => setMaxRounds(Number(e.target.value))}>
                                                 {[1, 5, 10, 15, 20, 30].map(r => <option key={r} value={r}>{r}R</option>)}
@@ -349,16 +340,31 @@ export const OnlineLobby = () => {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* RANDOMIZE */}
-                            <div className="dt-section-label">RANDOMIZE</div>
-                            <div className="dt-card">
+                                {/* CHARACTER */}
+                                <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🎭 キャラクターの決め方</div>
+                                <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                                    {[
+                                        { key: 'choose',     label: '各自選択', color: 'var(--dt-green)' },
+                                        { key: 'cpu_random', label: 'CPUのみ', color: 'var(--dt-orange)' },
+                                        { key: 'random',     label: '全員ランダム', color: 'var(--dt-purple)' },
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.key}
+                                            className={`dt-pill ${charAssignMode === opt.key ? 'active' : ''}`}
+                                            style={charAssignMode === opt.key ? { background: `${opt.color}18`, borderColor: opt.color, color: opt.color } : {}}
+                                            onClick={() => setCharAssignMode(opt.key)}
+                                        >{opt.label}</button>
+                                    ))}
+                                </div>
+
+                                {/* RANDOMIZE */}
+                                <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🔀 ランダム化（上級者向け）</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                    <RmapTile label="🔀 マス種類" active={rmapTileType} onClick={() => setRmapTileType(!rmapTileType)} />
-                                    <RmapTile label="📐 マス配置" active={rmapLayout} onClick={() => setRmapLayout(!rmapLayout)} />
-                                    <RmapTile label="🏁 開始位置" active={rmapStart} onClick={() => setRmapStart(!rmapStart)} />
-                                    <RmapTile label="🧭 バラバラ" active={rmapScatter} onClick={() => setRmapScatter(!rmapScatter)} />
+                                    <RmapTile label="マスの種類をシャッフル" active={rmapTileType} onClick={() => setRmapTileType(!rmapTileType)} />
+                                    <RmapTile label="マスの配置をシャッフル" active={rmapLayout} onClick={() => setRmapLayout(!rmapLayout)} />
+                                    <RmapTile label="開始位置をランダム" active={rmapStart} onClick={() => setRmapStart(!rmapStart)} />
+                                    <RmapTile label="スタート位置をバラバラ" active={rmapScatter} onClick={() => setRmapScatter(!rmapScatter)} />
                                 </div>
                             </div>
 
@@ -385,7 +391,9 @@ export const OnlineLobby = () => {
 
                             {/* START */}
                             <div style={{ marginTop: 24, marginBottom: 16 }}>
-                                <button className="dt-cta" onClick={handleStartGame}>🎲 全員でゲーム開始！</button>
+                                <button className="dt-cta" onClick={handleStartGame} style={{ padding: '22px', fontSize: '18px', boxShadow: '0 8px 32px rgba(230,126,34,0.4)', borderRadius: '16px' }}>
+                                    🎲 全員でゲーム開始！
+                                </button>
                             </div>
                         </>
                     ) : (
@@ -460,38 +468,43 @@ export const OnlineLobby = () => {
 
             <div style={{ padding: '16px 20px', flex: 1 }}>
 
-                {/* ===== CREATE / JOIN ===== */}
-                <div className="dt-section-label">CREATE OR JOIN</div>
-                <div className="dt-card" style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 11, color: 'var(--dt-text-dim)', marginBottom: 8 }}>プレイヤー名</div>
-                    <input
-                        className="dt-input"
-                        type="text" value={playerName} readOnly
-                        title="名前の変更はモード選択画面で行ってください"
-                        style={{ width: '100%', marginBottom: 16, cursor: 'not-allowed', opacity: 0.6 }}
-                    />
-
-                    <button className="dt-cta" onClick={handleCreate} disabled={status === 'connecting'} style={{ marginBottom: 16 }}>
-                        👑 部屋を新しく作る
-                    </button>
-
-                    <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--dt-text-muted)', margin: '8px 0' }}>
-                        または部屋コードで参加
+                {/* ===== PLAYER INFO ===== */}
+                <div className="dt-section-label">PLAYER INFO</div>
+                <div className="dt-card" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(200,162,78,0.1)', border: '1px solid rgba(200,162,78,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                        👤
                     </div>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: 'var(--dt-text-dim)', marginBottom: 4 }}>プレイヤー表示名</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--dt-text)' }}>{playerName}</div>
+                        <div style={{ fontSize: 10, color: 'var(--dt-text-muted)' }}>名前の変更はモード選択画面で可能です</div>
+                    </div>
+                </div>
+
+                {/* ===== CREATE ROOM ===== */}
+                <div className="dt-section-label">CREATE ROOM</div>
+                <button className="dt-cta" onClick={handleCreate} disabled={status === 'connecting'} style={{ marginBottom: 24, padding: '20px', borderRadius: '16px', fontSize: '16px', boxShadow: '0 8px 32px rgba(230,126,34,0.4)' }}>
+                    👑 部屋を新しく作る
+                </button>
+
+                {/* ===== JOIN ROOM ===== */}
+                <div className="dt-section-label">JOIN ROOM</div>
+                <div className="dt-card" style={{ marginBottom: 20, background: 'rgba(52,152,219,0.04)', borderColor: 'rgba(52,152,219,0.2)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>コードを入力して参加</div>
                     <div style={{ display: 'flex', gap: 8 }}>
                         <input
                             className="dt-input"
-                            type="text" placeholder="コード入力"
+                            type="text" placeholder="部屋コードを入力"
                             value={roomInput} onChange={e => setRoomInput(e.target.value)}
-                            style={{ flex: 1 }}
+                            style={{ flex: 1, borderColor: 'rgba(52,152,219,0.3)', background: 'rgba(28,22,14,0.95)' }}
                         />
                         <button
                             onClick={() => handleJoin()}
                             disabled={status === 'connecting' || roomInput === ''}
                             style={{
-                                background: 'rgba(52,152,219,0.12)', border: '1px solid rgba(52,152,219,0.3)',
-                                borderRadius: 8, padding: '8px 16px', color: 'var(--dt-blue)',
-                                fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                                background: 'rgba(52,152,219,0.12)', border: '1px solid rgba(52,152,219,0.4)',
+                                borderRadius: 8, padding: '8px 20px', color: '#3498db',
+                                fontWeight: 900, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
                                 opacity: (status === 'connecting' || roomInput === '') ? 0.4 : 1,
                             }}
                         >
@@ -499,7 +512,7 @@ export const OnlineLobby = () => {
                         </button>
                     </div>
                     {status === 'error' && (
-                        <div style={{ color: '#e74c3c', fontSize: 12, marginTop: 8, fontWeight: 700 }}>接続エラーが発生しました。もう一度お試しください。</div>
+                        <div style={{ color: '#e74c3c', fontSize: 12, marginTop: 10, fontWeight: 700 }}>⚠️ 接続エラーが発生しました。</div>
                     )}
                 </div>
 
