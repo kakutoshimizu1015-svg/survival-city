@@ -96,22 +96,22 @@ export const ModeSelectScreen = ({
                         emoji="🎮"
                         title="ゲームをプレイ"
                         subtitle="CPUと対戦"
-                        borderColor="#e67e22"
-                        bgGrad="linear-gradient(145deg, #d35400, #e67e22)"
-                        accentColor="rgba(255,255,255,0.2)"
+                        borderColor="rgba(230, 126, 34, 0.6)"
+                        bgGrad="linear-gradient(145deg, rgba(80, 45, 15, 0.8), rgba(140, 80, 25, 0.9))"
+                        accentColor="rgba(255, 255, 255, 0.15)"
                         titleColor="#ffffff"
-                        subtitleColor="rgba(255,255,255,0.8)"
+                        subtitleColor="rgba(255, 255, 255, 0.7)"
                         onClick={() => setGameState({ gamePhase: 'setup_offline' })}
                     />
                     <PlayCard
                         emoji="🌐"
                         title="みんなでゲームをプレイ"
                         subtitle="友達と対戦"
-                        borderColor="#3498db"
-                        bgGrad="linear-gradient(145deg, #2980b9, #3498db)"
-                        accentColor="rgba(255,255,255,0.2)"
+                        borderColor="rgba(52, 152, 219, 0.6)"
+                        bgGrad="linear-gradient(145deg, rgba(20, 50, 75, 0.8), rgba(40, 90, 140, 0.9))"
+                        accentColor="rgba(255, 255, 255, 0.15)"
                         titleColor="#ffffff"
-                        subtitleColor="rgba(255,255,255,0.8)"
+                        subtitleColor="rgba(255, 255, 255, 0.7)"
                         onClick={() => setGameState({ gamePhase: 'online_lobby' })}
                     />
                 </div>
@@ -123,20 +123,20 @@ export const ModeSelectScreen = ({
                         emoji="🎲"
                         title="ミニゲーム"
                         subtitle="Pを稼ぐ"
-                        borderColor="rgba(46,204,113,0.3)"
-                        bgGrad="linear-gradient(145deg, #0d140e, #080c08)"
+                        borderColor="rgba(46,204,113,0.5)"
+                        bgGrad="linear-gradient(145deg, #1c2b20, #223826)"
                         titleColor="var(--dt-green)"
-                        subtitleColor="#5a8a5a"
+                        subtitleColor="#8ab396"
                         onClick={() => setGameState({ gamePhase: 'minigames' })}
                     />
                     <EarnCard
                         emoji="🔥"
                         title="ガチャ屋台"
                         subtitle="スキンを引く"
-                        borderColor="rgba(230,126,34,0.3)"
-                        bgGrad="linear-gradient(145deg, #140d06, #0a0804)"
+                        borderColor="rgba(230,126,34,0.5)"
+                        bgGrad="linear-gradient(145deg, #2b1c11, #382416)"
                         titleColor="var(--dt-orange)"
-                        subtitleColor="#8a6a3a"
+                        subtitleColor="#b08a6b"
                         onClick={() => setGameState({ gamePhase: 'gacha' })}
                     />
                 </div>
@@ -205,18 +205,18 @@ const EarnCard = ({ emoji, title, subtitle, borderColor, bgGrad, titleColor, sub
     <div
         className="dt-card-interactive"
         onClick={onClick}
-        style={{ flex: 1, background: bgGrad, borderColor, textAlign: 'center', padding: '12px 8px', transform: 'scale(0.95)' }}
+        style={{ flex: 1, background: bgGrad, borderColor, textAlign: 'center', padding: '16px 8px', transform: 'scale(0.95)', boxShadow: '0 4px 10px rgba(0,0,0,0.5)' }}
     >
-        <div style={{ fontSize: 20, marginBottom: 4 }}>{emoji}</div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: titleColor }}>{title}</div>
-        <div style={{ fontSize: 9, color: subtitleColor, marginTop: 2 }}>{subtitle}</div>
+        <div style={{ fontSize: 22, marginBottom: 6 }}>{emoji}</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: titleColor }}>{title}</div>
+        <div style={{ fontSize: 10, color: subtitleColor, marginTop: 2 }}>{subtitle}</div>
     </div>
 );
 
 const SocialIcon = ({ emoji, label, badge = 0, onClick }) => (
-    <div className="dt-social-icon" onClick={onClick} style={{ padding: '8px 4px', transform: 'scale(0.85)', transformOrigin: 'top center' }}>
+    <div className="dt-social-icon" onClick={onClick} style={{ padding: '12px 6px', transform: 'scale(0.90)', transformOrigin: 'top center', background: 'rgba(255,255,255,0.06)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
         {badge > 0 && <div className="dt-notif-dot">{badge}</div>}
-        <div style={{ fontSize: 18, marginBottom: 4 }}>{emoji}</div>
-        <div style={{ fontSize: 9, color: '#8a8a8a', fontWeight: 600 }}>{label}</div>
+        <div style={{ fontSize: 20, marginBottom: 6 }}>{emoji}</div>
+        <div style={{ fontSize: 10, color: '#a0a0a0', fontWeight: 600 }}>{label}</div>
     </div>
 );
