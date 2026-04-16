@@ -52,6 +52,9 @@ export const OnlineLobby = () => {
     const [rmapScatter, setRmapScatter] = useState(false);
     const [charAssignMode, setCharAssignMode] = useState('choose');
 
+    const [gameDetailsOpen, setGameDetailsOpen] = useState(false);
+    const [teamModeEnabled, setTeamModeEnabled] = useState(false);
+
     const [charSelectTarget, setCharSelectTarget] = useState(null);
     const [showFriendModal, setShowFriendModal] = useState(false);
     const [selectedProfileUid, setSelectedProfileUid] = useState(null);
@@ -65,6 +68,16 @@ export const OnlineLobby = () => {
     } = useNetworkStore();
 
     const setGameState = useGameStore(state => state.setGameState);
+
+    const handleRandomizeTeamsWrap = () => {
+        setTeamModeEnabled(true);
+        randomizeTeams();
+    };
+
+    const handleClearTeamsWrap = () => {
+        setTeamModeEnabled(false);
+        clearTeams();
+    };
 
     useEffect(() => { if (globalPlayerName) setPlayerName(globalPlayerName); }, [globalPlayerName]);
 
@@ -202,6 +215,18 @@ export const OnlineLobby = () => {
                         </button>
                     </div>
                     <div className="dt-card">
+                        {isHost && (
+                            <div style={{ marginBottom: 16 }}>
+                                <button
+                                    className="dt-card-interactive"
+                                    style={{ width: '100%', padding: '12px', background: 'linear-gradient(145deg, rgba(52,152,219,0.1), rgba(52,152,219,0.2))', borderColor: 'rgba(52,152,219,0.4)', color: '#3498db', fontWeight: 900, fontSize: 13, textAlign: 'center', boxShadow: 'none' }}
+                                    onClick={addCpu}
+                                >
+                                    + 🤖 CPUを追加
+                                </button>
+                            </div>
+                        )}
+
                         {lobbyPlayers.map(p => {
                             const diff = CPU_DIFFICULTY[p.cpuDifficulty || 'normal'];
                             return (
@@ -215,69 +240,67 @@ export const OnlineLobby = () => {
                                         <CharImage charType={p.charType} skinId={p.skinId} size={28} />
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--dt-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            {p.name}
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--dt-text)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                            {isHost && p.isCPU ? (
+                                                <input
+                                                    className="dt-input"
+                                                    type="text" value={p.name}
+                                                    onChange={e => updateCpu(p.userId, { name: e.target.value })}
+                                                    style={{ width: 80, padding: '3px 6px', fontSize: 13, fontWeight: 700, background: 'transparent', border: '1px solid transparent' }}
+                                                    onFocus={e => { e.target.style.borderColor = 'rgba(200,162,78,0.3)'; }}
+                                                    onBlur={e => { e.target.style.borderColor = 'transparent'; }}
+                                                />
+                                            ) : (
+                                                <span>{p.name}</span>
+                                            )}
+                                            
+                                            {isHost && p.isCPU && (
+                                                <select
+                                                    value={p.cpuDifficulty || 'normal'}
+                                                    onChange={e => updateCpu(p.userId, { cpuDifficulty: e.target.value })}
+                                                    style={{ fontSize: 10, color: '#fff', fontWeight: 700, background: diff.color, border: 'none', borderRadius: 4, padding: '2px 6px', cursor: 'pointer', fontFamily: 'inherit' }}
+                                                >
+                                                    <option value="easy">弱め</option>
+                                                    <option value="normal">普通</option>
+                                                    <option value="hard">鬼畜</option>
+                                                </select>
+                                            )}
+
                                             {p.isHost && <span style={{ fontSize: 9, background: 'rgba(231,76,60,0.15)', color: '#e74c3c', padding: '1px 5px', borderRadius: 4 }}>HOST</span>}
                                             {p.isCPU && <span style={{ fontSize: 9, background: 'rgba(150,150,150,0.15)', color: '#888', padding: '1px 5px', borderRadius: 4 }}>CPU</span>}
                                             {p.userId === myUserId && <span style={{ fontSize: 10, color: 'var(--dt-gold)' }}>(あなた)</span>}
+                                            
+                                            {teamModeEnabled && p.teamColor !== 'none' && (
+                                                <span style={{ fontSize: 10 }}>{TEAM_COLORS[p.teamColor]?.icon}</span>
+                                            )}
                                         </div>
-                                        <div style={{ fontSize: 10, color: 'var(--dt-text-muted)' }}>{charInfo[p.charType]?.name}</div>
+                                        <div style={{ fontSize: 10, color: 'var(--dt-text-muted)', marginTop: 2 }}>{charInfo[p.charType]?.name}</div>
                                     </div>
 
-                                    {/* ホストだけがCPUを編集可能 */}
                                     {isHost && p.isCPU && (
-                                        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
-                                            <input
-                                                className="dt-input"
-                                                type="text" value={p.name}
-                                                onChange={e => updateCpu(p.userId, { name: e.target.value })}
-                                                style={{ width: 60, padding: '3px 6px', fontSize: 11 }}
-                                            />
+                                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                                            {teamModeEnabled && (
+                                                <select value={p.teamColor} onChange={e => updateCpu(p.userId, { teamColor: e.target.value })} style={{
+                                                    fontSize: 10, color: 'var(--dt-text-dim)', background: 'transparent', border: '1px solid var(--dt-border)', borderRadius: 4, padding: '4px', cursor: 'pointer', fontFamily: 'inherit',
+                                                }}>
+                                                    {Object.entries(TEAM_COLORS).map(([k, t]) => <option key={k} value={k} style={{ background: '#2a221a', color: '#fff' }}>{t.icon} {t.label}</option>)}
+                                                </select>
+                                            )}
+                                            
                                             <button onClick={() => setCharSelectTarget(p.userId)} style={{
-                                                fontSize: 10, color: 'var(--dt-gold)', border: '1px solid rgba(200,162,78,0.2)',
-                                                borderRadius: 5, padding: '2px 6px', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit',
-                                            }}>変更</button>
-                                            <select
-                                                value={p.cpuDifficulty || 'normal'}
-                                                onChange={e => updateCpu(p.userId, { cpuDifficulty: e.target.value })}
-                                                style={{ fontSize: 9, color: '#fff', fontWeight: 700, background: diff.color, border: 'none', borderRadius: 4, padding: '2px 4px', cursor: 'pointer', fontFamily: 'inherit' }}
-                                            >
-                                                <option value="easy">弱め</option>
-                                                <option value="normal">普通</option>
-                                                <option value="hard">鬼畜</option>
-                                            </select>
-                                            <select value={p.teamColor} onChange={e => updateCpu(p.userId, { teamColor: e.target.value })} style={{
-                                                fontSize: 9, color: 'var(--dt-text-dim)', background: 'transparent', border: '1px solid var(--dt-border)', borderRadius: 4, padding: '2px 3px', cursor: 'pointer', fontFamily: 'inherit',
-                                            }}>
-                                                {Object.entries(TEAM_COLORS).map(([k, t]) => <option key={k} value={k}>{t.icon} {t.label}</option>)}
-                                            </select>
+                                                fontSize: 12, color: 'var(--dt-gold)', fontWeight: 'bold', border: '1px solid rgba(200,162,78,0.5)',
+                                                borderRadius: 6, padding: '5px 12px', background: 'rgba(200,162,78,0.15)', cursor: 'pointer', fontFamily: 'inherit',
+                                            }}>キャラクター変更</button>
+
                                             <button onClick={() => removeCpu(p.userId)} style={{
-                                                fontSize: 10, color: '#e74c3c', border: '1px solid rgba(231,76,60,0.2)',
-                                                borderRadius: 5, padding: '2px 5px', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit',
+                                                fontSize: 11, color: '#e74c3c', border: '1px solid rgba(231,76,60,0.2)',
+                                                borderRadius: 6, padding: '5px 8px', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit',
                                             }}>✕</button>
                                         </div>
                                     )}
                                 </div>
                             );
                         })}
-
-                        {isHost && (
-                            <div style={{ marginTop: 16 }}>
-                                <button
-                                    className="dt-card-interactive"
-                                    style={{ width: '100%', padding: '12px', background: 'linear-gradient(145deg, rgba(52,152,219,0.1), rgba(52,152,219,0.2))', borderColor: 'rgba(52,152,219,0.4)', color: '#3498db', fontWeight: 900, fontSize: 13, textAlign: 'center', boxShadow: 'none' }}
-                                    onClick={addCpu}
-                                >
-                                    + 🤖 CPUを追加
-                                </button>
-                                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                                    <button className="dt-add-btn" style={{ flex: 1, color: '#8a6aaa', borderColor: 'rgba(155,89,182,0.3)' }} onClick={randomizeTeams}>🎲 ランダムチーム構成</button>
-                                    {lobbyPlayers.some(p => p.teamColor !== 'none') && (
-                                        <button className="dt-add-btn" style={{ flex: 1, color: '#8a8a8a', borderColor: 'rgba(150,150,150,0.3)' }} onClick={clearTeams}>⚪ チームリセット</button>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     {/* ===== MY SETTINGS ===== */}
@@ -293,23 +316,31 @@ export const OnlineLobby = () => {
                                     <CharImage charType={myInfo.charType} skinId={myInfo.skinId} size={32} />
                                 </div>
                                 <div>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--dt-text)' }}>{myInfo.name}</div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--dt-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        {myInfo.name}
+                                        {teamModeEnabled && myInfo.teamColor !== 'none' && (
+                                            <span style={{ fontSize: 10 }}>{TEAM_COLORS[myInfo.teamColor]?.icon}</span>
+                                        )}
+                                    </div>
                                     <div style={{ fontSize: 10, color: 'var(--dt-gold)' }}>★ {charInfo[myInfo.charType]?.name}</div>
                                 </div>
                             </div>
                             <button onClick={() => setCharSelectTarget(myUserId)} style={{
-                                fontSize: 11, color: 'var(--dt-gold)', border: '1px solid rgba(200,162,78,0.2)',
-                                borderRadius: 6, padding: '4px 10px', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit',
-                            }}>キャラ変更</button>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <span style={{ fontSize: 11, color: 'var(--dt-text-dim)' }}>チーム:</span>
-                                <select value={myInfo.teamColor || 'none'} onChange={e => updateMyInfo({ teamColor: e.target.value })} style={{
-                                    fontSize: 11, color: 'var(--dt-text-dim)', background: 'transparent', border: '1px solid var(--dt-border)',
-                                    borderRadius: 4, padding: '3px 5px', cursor: 'pointer', fontFamily: 'inherit',
-                                }}>
-                                    {Object.entries(TEAM_COLORS).map(([k, t]) => <option key={k} value={k}>{t.icon} {t.label}</option>)}
-                                </select>
-                            </div>
+                                fontSize: 12, color: 'var(--dt-gold)', fontWeight: 'bold', border: '1px solid rgba(200,162,78,0.5)',
+                                borderRadius: 6, padding: '5px 12px', background: 'rgba(200,162,78,0.15)', cursor: 'pointer', fontFamily: 'inherit',
+                            }}>キャラクター変更</button>
+                            
+                            {teamModeEnabled && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span style={{ fontSize: 11, color: 'var(--dt-text-dim)' }}>チーム:</span>
+                                    <select value={myInfo.teamColor || 'none'} onChange={e => updateMyInfo({ teamColor: e.target.value })} style={{
+                                        fontSize: 10, color: 'var(--dt-text-dim)', background: 'transparent', border: '1px solid var(--dt-border)',
+                                        borderRadius: 4, padding: '4px', cursor: 'pointer', fontFamily: 'inherit',
+                                    }}>
+                                        {Object.entries(TEAM_COLORS).map(([k, t]) => <option key={k} value={k} style={{ background: '#2a221a', color: '#fff' }}>{t.icon} {t.label}</option>)}
+                                    </select>
+                                </div>
+                            )}
                         </div>
                         <div style={{ fontSize: 11, color: '#666', marginTop: 8 }}>{charInfo[myInfo.charType]?.desc}</div>
                     </div>
@@ -322,49 +353,80 @@ export const OnlineLobby = () => {
                             <div className="dt-card">
                                 {/* RULES */}
                                 <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🗺️ マップとラウンド数</div>
-                                <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+                                <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ position: 'relative' }}>
-                                            <select className="dt-select" value={mapSize} onChange={e => setMapSize(e.target.value)}>
-                                                <option value="midtown">midtown (46)</option>
+                                            <select className="dt-select" value={mapSize} onChange={e => setMapSize(e.target.value)} style={{ backgroundColor: '#2a221a', color: '#fdf5e6' }}>
+                                                <option value="midtown" style={{ backgroundColor: '#2a221a', color: '#fdf5e6' }}>midtown (46)</option>
                                             </select>
                                             <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--dt-text-muted)', pointerEvents: 'none' }}>▼</span>
                                         </div>
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ position: 'relative' }}>
-                                            <select className="dt-select" value={maxRounds} onChange={e => setMaxRounds(Number(e.target.value))}>
-                                                {[1, 5, 10, 15, 20, 30].map(r => <option key={r} value={r}>{r}R</option>)}
+                                            <select className="dt-select" value={maxRounds} onChange={e => setMaxRounds(Number(e.target.value))} style={{ backgroundColor: '#2a221a', color: '#fdf5e6' }}>
+                                                {[1, 5, 10, 15, 20, 30].map(r => <option key={r} value={r} style={{ backgroundColor: '#2a221a', color: '#fdf5e6' }}>{r}R</option>)}
                                             </select>
                                             <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--dt-text-muted)', pointerEvents: 'none' }}>▼</span>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* CHARACTER */}
-                                <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🎭 キャラクターの決め方</div>
-                                <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-                                    {[
-                                        { key: 'choose',     label: '各自選択', color: 'var(--dt-green)' },
-                                        { key: 'cpu_random', label: 'CPUのみ', color: 'var(--dt-orange)' },
-                                        { key: 'random',     label: '全員ランダム', color: 'var(--dt-purple)' },
-                                    ].map(opt => (
-                                        <button
-                                            key={opt.key}
-                                            className={`dt-pill ${charAssignMode === opt.key ? 'active' : ''}`}
-                                            style={charAssignMode === opt.key ? { background: `${opt.color}18`, borderColor: opt.color, color: opt.color } : {}}
-                                            onClick={() => setCharAssignMode(opt.key)}
-                                        >{opt.label}</button>
-                                    ))}
+                                {/* ゲーム詳細 Accordion */}
+                                <div
+                                    className={`dt-collapsible-header ${gameDetailsOpen ? 'open' : ''}`}
+                                    onClick={() => setGameDetailsOpen(!gameDetailsOpen)}
+                                    style={{ marginTop: 16, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span style={{ fontSize: 12, color: 'var(--dt-text)' }}>⚙️</span>
+                                        <span style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600 }}>ゲーム詳細</span>
+                                    </div>
+                                    <span className={`dt-collapsible-chevron ${gameDetailsOpen ? 'open' : ''}`}>▼</span>
                                 </div>
 
-                                {/* RANDOMIZE */}
-                                <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🔀 ランダム化（上級者向け）</div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                    <RmapTile label="マスの種類をシャッフル" active={rmapTileType} onClick={() => setRmapTileType(!rmapTileType)} />
-                                    <RmapTile label="マスの配置をシャッフル" active={rmapLayout} onClick={() => setRmapLayout(!rmapLayout)} />
-                                    <RmapTile label="開始位置をランダム" active={rmapStart} onClick={() => setRmapStart(!rmapStart)} />
-                                    <RmapTile label="スタート位置をバラバラ" active={rmapScatter} onClick={() => setRmapScatter(!rmapScatter)} />
+                                <div className={`dt-collapsible-body ${gameDetailsOpen ? 'open' : ''}`}>
+                                    <div className="dt-collapsible-body-inner" style={{ paddingTop: 16 }}>
+
+                                        {/* チーム設定 */}
+                                        <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🤝 チーム設定</div>
+                                        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                                            <button className="dt-add-btn" style={{ flex: 1, color: '#8a6aaa', borderColor: 'rgba(155,89,182,0.3)', padding: '8px' }} onClick={handleRandomizeTeamsWrap}>🎲 ランダムチーム構成</button>
+                                            {teamModeEnabled && (
+                                                <button className="dt-add-btn" style={{ flex: 1, color: '#8a8a8a', borderColor: 'rgba(150,150,150,0.3)', padding: '8px' }} onClick={handleClearTeamsWrap}>⚪ チームリセット</button>
+                                            )}
+                                        </div>
+
+                                        {/* CHARACTER */}
+                                        <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🎭 キャラクターの決め方</div>
+                                        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                                            {[
+                                                { key: 'cpu_random', label: 'CPUのみ🎲', color: 'var(--dt-orange)' },
+                                                { key: 'random',     label: '全員ランダム', color: 'var(--dt-purple)' },
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.key}
+                                                    className={`dt-pill ${charAssignMode === opt.key ? 'active' : ''}`}
+                                                    style={charAssignMode === opt.key
+                                                        ? { background: `${opt.color}18`, borderColor: opt.color, color: opt.color }
+                                                        : { opacity: 0.6 }
+                                                    }
+                                                    onClick={() => setCharAssignMode(prev => prev === opt.key ? 'choose' : opt.key)}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* RANDOMIZE */}
+                                        <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🔀 ランダム化（上級者向け）</div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                            <RmapTile label="マスの種類をシャッフル" active={rmapTileType} onClick={() => setRmapTileType(!rmapTileType)} />
+                                            <RmapTile label="マスの配置をシャッフル" active={rmapLayout} onClick={() => setRmapLayout(!rmapLayout)} />
+                                            <RmapTile label="開始位置をランダム" active={rmapStart} onClick={() => setRmapStart(!rmapStart)} />
+                                            <RmapTile label="スタート位置をバラバラ" active={rmapScatter} onClick={() => setRmapScatter(!rmapScatter)} />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
