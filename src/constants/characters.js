@@ -96,7 +96,7 @@ import sales_SR_TheFlyerMagician from '../assets/images/skins/sales/SR_The Flyer
 import sales_SR_darkdebtcollector from '../assets/images/skins/sales/SR_darkdebtcollector.png';
 import sales_SR_ducttapetraitjacket from '../assets/images/skins/sales/SR_ducttapetraitjacket.png';
 import sales_SR_giantbusinesscard from '../assets/images/skins/sales/SR_giantbusinesscard.png';
-import sales_SR_dogezamachine from '../assets/images/sales/SR_dogezamachine.png';
+
 import sales_SSR_TopeliteCEO from '../assets/images/skins/sales/SSR_Top elite CEO.png';
 import sales_SSR_legendarytopsales from '../assets/images/skins/sales/SSR_legendary top sales.png';
 import sales_SSR_corruptbankpresident from '../assets/images/skins/sales/SSR_corruptbankpresident.png';
