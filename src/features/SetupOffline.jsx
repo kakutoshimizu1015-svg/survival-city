@@ -48,6 +48,7 @@ export const SetupOffline = () => {
     const [rmapLayout, setRmapLayout] = useState(false);
     const [rmapStart, setRmapStart] = useState(false);
     const [rmapScatter, setRmapScatter] = useState(false);
+    const [randMapOpen, setRandMapOpen] = useState(false);
 
     // Developer tools (collapsed by default)
     const [devOpen, setDevOpen] = useState(false);
@@ -293,7 +294,6 @@ export const SetupOffline = () => {
                     <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🎭 キャラクターの決め方</div>
                     <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
                         {[
-                            { key: 'choose',     label: '各自選択', color: 'var(--dt-green)' },
                             { key: 'cpu_random', label: 'CPUのみ🎲', color: 'var(--dt-orange)' },
                             { key: 'random',     label: '全員ランダム', color: 'var(--dt-purple)' },
                         ].map(opt => (
@@ -302,22 +302,36 @@ export const SetupOffline = () => {
                                 className={`dt-pill ${charAssignMode === opt.key ? 'active' : ''}`}
                                 style={charAssignMode === opt.key
                                     ? { background: `${opt.color}18`, borderColor: opt.color, color: opt.color }
-                                    : {}
+                                    : { opacity: 0.6 }
                                 }
-                                onClick={() => setCharAssignMode(opt.key)}
+                                onClick={() => setCharAssignMode(prev => prev === opt.key ? 'choose' : opt.key)}
                             >
                                 {opt.label}
                             </button>
                         ))}
                     </div>
 
-                    {/* RANDOMIZE */}
-                    <div style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600, marginBottom: 8 }}>🔀 ランダム化（上級者向け）</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        <RmapTile label="マスの種類をシャッフル" active={rmapTileType} onClick={() => setRmapTileType(!rmapTileType)} />
-                        <RmapTile label="マスの配置をシャッフル" active={rmapLayout} onClick={() => setRmapLayout(!rmapLayout)} />
-                        <RmapTile label="開始位置をランダム" active={rmapStart} onClick={() => setRmapStart(!rmapStart)} />
-                        <RmapTile label="スタート位置をバラバラ" active={rmapScatter} onClick={() => setRmapScatter(!rmapScatter)} />
+                    {/* RANDOMIZE (collapsible) */}
+                    <div
+                        className={`dt-collapsible-header ${randMapOpen ? 'open' : ''}`}
+                        onClick={() => setRandMapOpen(!randMapOpen)}
+                        style={{ marginBottom: randMapOpen ? 0 : 20 }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 12, color: 'var(--dt-text)' }}>🔀</span>
+                            <span style={{ fontSize: 12, color: 'var(--dt-text)', fontWeight: 600 }}>ランダム化（上級者向け）</span>
+                        </div>
+                        <span className={`dt-collapsible-chevron ${randMapOpen ? 'open' : ''}`}>▼</span>
+                    </div>
+                    <div className={`dt-collapsible-body ${randMapOpen ? 'open' : ''}`} style={{ marginBottom: randMapOpen ? 20 : 0 }}>
+                        <div className="dt-collapsible-body-inner" style={{ paddingTop: 8 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                <RmapTile label="マスの種類をシャッフル" active={rmapTileType} onClick={() => setRmapTileType(!rmapTileType)} />
+                                <RmapTile label="マスの配置をシャッフル" active={rmapLayout} onClick={() => setRmapLayout(!rmapLayout)} />
+                                <RmapTile label="開始位置をランダム" active={rmapStart} onClick={() => setRmapStart(!rmapStart)} />
+                                <RmapTile label="スタート位置をバラバラ" active={rmapScatter} onClick={() => setRmapScatter(!rmapScatter)} />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
