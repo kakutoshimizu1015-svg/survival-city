@@ -419,7 +419,7 @@ export const CHARACTERS = [
             { id: "sales_darkdebtcollector", charKey: "sales", name: "闇金の取り立て屋風", rarity: "SR", front: sales_SR_darkdebtcollector, pieceColor: "#2c3e50", ring: "#000000", desc: "落ちぶれた末に裏社会の底辺に就職した、ドス黒いオーラのスーツ。" },
             { id: "sales_ducttapetraitjacket", charKey: "sales", name: "狂気のガムテープ拘束服", rarity: "SR", front: sales_SR_ducttapetraitjacket, pieceColor: "#7f8c8d", ring: "#34495e", desc: "ストレスで精神が崩壊し、自らをガムテープでぐるぐる巻きにした姿。" },
             { id: "sales_giantbusinesscard", charKey: "sales", name: "巨大名刺の着ぐるみ", rarity: "SR", front: sales_SR_giantbusinesscard, pieceColor: "#ecf0f1", ring: "#bdc3c7", desc: "「私、こういう者です」と書かれた巨大な名刺型のダンボールを着ている。" },
-            { id: "sales_dogezamachine", charKey: "sales", name: "歩く土下座マシン", rarity: "SR", front: sales_SR_dogezamachine, pieceColor: "#34495e", ring: "#2c3e50", desc: "膝と額に分厚いサポーターを付け、いつでも最速で土下座できる装備。" },
+            
             { id: "sales_ceo", charKey: "sales", name: "トップエリートCEO", rarity: "SSR", front: sales_SSR_TopeliteCEO, pieceColor: "#2c3e50", ring: "#f1c40f", desc: "高級オーダーメイドスーツに身を包んだ若き社長。" },
             { id: "sales_topsales", charKey: "sales", name: "伝説のトップセールス", rarity: "SSR", front: sales_SSR_legendarytopsales, pieceColor: "#2980b9", ring: "#3498db", desc: "ビシッとしたスリーピーススーツと高級時計を装備。" },
             { id: "sales_corruptbankpresident", charKey: "sales", name: "悪徳メガバンク頭取", rarity: "SSR", front: sales_SSR_corruptbankpresident, pieceColor: "#1a252f", ring: "#000000", desc: "詐欺まがいの商法で成り上がり、血も涙もない冷酷な銀行トップに君臨。" },
