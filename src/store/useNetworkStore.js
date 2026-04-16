@@ -89,25 +89,18 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         getStore().broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
                     }
                     if (data.type === 'GAME_SYNC') {
-                        if (data.lastUpdater !== getStore().myUserId) {
-                            isReceivingNetworkData = true;
-                            if (networkReceiveTimer) clearTimeout(networkReceiveTimer);
-                            
-                            const logger = document.getElementById("log");
-                            if (logger && data.gameState.logs) {
-                                logger.innerHTML = data.gameState.logs.map(msg => `<div>> ${msg}</div>`).join('');
-                                logger.scrollTop = logger.scrollHeight;
-                            }
-
-                            useGameStore.setState(data.gameState);
-                            networkReceiveTimer = setTimeout(() => { isReceivingNetworkData = false; }, 200);
-                        }
+                        // ホストはゲームの唯一の権威者。
+                        // ゲストから受け取ったstateでホスト自身のstoreを上書きしてはいけない。
+                        // ホストはGAME_SYNCを「中継する」だけでよい。
                         getStore().connections.forEach(c => {
                             if (c.peer !== conn.peer && c.open) c.send(data);
                         });
                     }
 
                     if (data.type === 'REQUEST_ROUND_END') {
+                        // ホストのみが処理する（isHostチェックで万一の安全弁）
+                        if (!getStore().isHost) return;
+                        
                         const gameState = useGameStore.getState();
                         if (gameState.gamePhase === 'playing' && !gameState.gameOver && !gameState._roundEndInProgress) {
                             (async () => {
@@ -362,3 +355,11 @@ useGameStore.subscribe((state) => {
         }
     }
 });
+// useNetworkStore.js の末尾付近に追加
+export const suppressNextSync = (ms = 500) => {
+    isReceivingNetworkData = true;
+    if (networkReceiveTimer) clearTimeout(networkReceiveTimer);
+    networkReceiveTimer = setTimeout(() => {
+        isReceivingNetworkData = false;
+    }, ms);
+};

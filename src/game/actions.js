@@ -1,5 +1,5 @@
 import { useGameStore, isSameTeam } from '../store/useGameStore';
-import { useNetworkStore } from '../store/useNetworkStore';
+import { useNetworkStore, suppressNextSync } from '../store/useNetworkStore';
 import { useUserStore } from '../store/useUserStore';
 import { checkNpcCollision } from './npc';
 import { processRoundEnd } from './round';
@@ -666,6 +666,7 @@ export const actionEndTurn = async () => {
             const netState = useNetworkStore.getState();
             if (netState.status === 'connected' && !netState.isHost) {
                 if (netState.hostConnection && netState.hostConnection.open) {
+                    suppressNextSync(500);
                     netState.hostConnection.send({ type: 'REQUEST_ROUND_END' });
                 }
                 return; 
