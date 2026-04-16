@@ -96,7 +96,7 @@ import sales_SR_TheFlyerMagician from '../assets/images/skins/sales/SR_The Flyer
 import sales_SR_darkdebtcollector from '../assets/images/skins/sales/SR_darkdebtcollector.png';
 import sales_SR_ducttapetraitjacket from '../assets/images/skins/sales/SR_ducttapetraitjacket.png';
 import sales_SR_giantbusinesscard from '../assets/images/skins/sales/SR_giantbusinesscard.png';
-import sales_SR_dogezamachine from '../assets/images/skins/sales/SR_dogezamachine.png';
+import sales_SR_dogezamachine from '../assets/images/sales/SR_dogezamachine.png';
 import sales_SSR_TopeliteCEO from '../assets/images/skins/sales/SSR_Top elite CEO.png';
 import sales_SSR_legendarytopsales from '../assets/images/skins/sales/SSR_legendary top sales.png';
 import sales_SSR_corruptbankpresident from '../assets/images/skins/sales/SSR_corruptbankpresident.png';
@@ -149,7 +149,6 @@ import musician_R_cymbalmonkey from '../assets/images/skins/musician/R_cymbalmon
 import musician_SR_EmptyCanDrummer from '../assets/images/skins/musician/SR_Empty Can Drummer.png';
 import musician_SR_Aonemanbandofjunk from '../assets/images/skins/musician/SR_A one-man band of junk.png';
 import musician_SR_karaokescoresuit from '../assets/images/skins/musician/SR_karaokescoresuit.png';
-
 import musician_SSR_dometourstar from '../assets/images/skins/musician/SSR_dome tour star.png';
 import musician_SSR_platinumsinger from '../assets/images/skins/musician/SSR_platinum singer.png';
 import musician_UR_electronicdiva from '../assets/images/skins/musician/UR_electronicdiva.png';
@@ -220,6 +219,45 @@ import detective_UR_kurosawasann from '../assets/images/skins/detective/UR_kuros
 import detective_UR_kurosawa from '../assets/images/skins/detective/UR_kurosawa.png';
 import detective_UR_sweettoothgenius from '../assets/images/skins/detective/UR_sweettoothgenius.png';
 
+// =========================================================
+// ▼ 元シェフ スキン画像群
+// =========================================================
+import chef_N_default from '../assets/images/skins/chef/N_default.png';
+import chef_R_passion from '../assets/images/skins/chef/SR_Headband and long knife.png';
+import chef_SR_golden from '../assets/images/skins/chef/SSR_Golden frying pan.png';
+
+// =========================================================
+// ▼ スカベンジャー スキン画像群
+// =========================================================
+import scavenger_N_default from '../assets/images/skins/scavenger/N_default.png';
+import scavenger_R_diver from '../assets/images/skins/scavenger/R_Junk Diver.png';
+import scavenger_SR_destroyer from '../assets/images/skins/scavenger/SR_Recycle Destroyer.png';
+import scavenger_SSR_golden from '../assets/images/skins/scavenger/SSR_Golden Zero Waste.png';
+
+// =========================================================
+// ▼ 億万長者 スキン画像群
+// =========================================================
+import billionaire_N_default from '../assets/images/skins/billionaire/N_default.png';
+import billionaire_SR_executive from '../assets/images/skins/billionaire/SR_Indomitable Executive.png';
+
+// =========================================================
+// ▼ 路上の神様 スキン画像群
+// =========================================================
+import god_N_default from '../assets/images/skins/god/N_default.png';
+import god_SR_smiling from '../assets/images/skins/god/SR_The smiling exploitative god.png';
+
+// =========================================================
+// ▼ 缶コレクターの帝王 スキン画像群
+// =========================================================
+import emperor_N_default from '../assets/images/skins/emperor/N_default.png';
+import emperor_SR_shooter from '../assets/images/skins/emperor/SR_Rusty Junk Shooter.png';
+import emperor_SSR_golden from '../assets/images/skins/emperor/SSR_Golden Aluminum Emperor.png';
+
+// =========================================================
+// ▼ 路上の仙人 スキン画像群
+// =========================================================
+import sennin_N_default from '../assets/images/skins/sennin/N_default.png';
+import sennin_SSR_aura from '../assets/images/skins/sennin/SSR_Aura of liberation on the streets.png';
 
 // =========================================================
 // ▼ NPC画像のインポート
@@ -246,7 +284,7 @@ export const npcImages = {
 // ▼ キャラクター＆スキン統合マスターデータ (データ駆動構造)
 // =========================================================
 
-// ▼ 追加: 絵文字を画像(SVG)として扱うためのヘルパー関数
+// ▼ 絵文字を画像(SVG)として扱うためのヘルパー関数 (念のため残置)
 const createEmojiImg = (emoji) => {
     return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text x="50" y="50" dominant-baseline="central" text-anchor="middle" font-size="80">${emoji}</text></svg>`;
 };
@@ -529,7 +567,7 @@ export const CHARACTERS = [
             { id: "detective_default", charKey: "detective", name: "元探偵（デフォルト）", rarity: "N", front: detective_N_default, pieceColor: "#6c5ce7", ring: "#4834d4", desc: "かつて数々の難事件を解き明かした探偵のコート。" },
             { id: "detective_browncoat", charKey: "detective", name: "ヨレヨレの茶コート", rarity: "N", front: detective_N_Awornoutbrowncoat, pieceColor: "#8d6e63", ring: "#5d4037", desc: "シワだらけで襟が曲がったトレンチコート。" },
             { id: "detective_flatcaps", charKey: "detective", name: "色違いのハンチング帽", rarity: "N", front: detective_N_Flatcapsindifferentcolors, pieceColor: "#7f8c8d", ring: "#95a5a6", desc: "泥で汚れて色がくすんだ帽子。" },
-            { id: "detective_dogcostume", charKey: "detective", name: "犬の着ぐるみ（潜入用）", rarity: "N", front: detective_N_dogcostume, pieceColor: "#d35400", ring: "#8d6e63", desc: "「野良犬になりすませば怪しまれない」と主張する、ボロボロの犬の着ぐるみ。" },
+            { id: "detective_dogcostume", charKey: "detective", name: "犬の着ぐるみ（潜入用）", rarity: "N", front: detective_N_dogcostume, pieceColor: "#d35400", ring: "#8d6e63", desc: "「野野良犬になりすませば怪しまれない」と主張する、ボロボロの犬の着ぐるみ。" },
             { id: "detective_invernesscoat", charKey: "detective", name: "ツギハギのインバネスコート", rarity: "R", front: detective_R_PatchworkInvernesscoat, pieceColor: "#34495e", ring: "#2c3e50", desc: "破れた箇所を別の布で縫い合わせたコート。" },
             { id: "detective_crackedlens", charKey: "detective", name: "レンズ割れルーペ持ち", rarity: "R", front: detective_R_Hasamagnifyingglasswithacrackedlens, pieceColor: "#bdc3c7", ring: "#95a5a6", desc: "虫眼鏡のレンズが割れてしまっているポンコツ探偵スタイル。" },
             { id: "detective_newspaperdisguise", charKey: "detective", name: "新聞紙の変装名人", rarity: "SR", front: detective_SR_Amasterofnewspaperdisguise, pieceColor: "#ecf0f1", ring: "#bdc3c7", desc: "新聞紙を全身に巻いて街角に溶け込む究極のステルス姿。" },
@@ -553,8 +591,12 @@ export const CHARACTERS = [
         tagline: '腐った生ゴミすら三ツ星の味に変える、路地の料理人',
         passive: { name:'【食通】', desc:'回復系カードを使用する際、食中毒リスク（ダメージ）を完全無効化する。さらに回復量が1.5倍になる。' },
         action: { name:'【特製料理 / 腐敗料理】', desc:'特製料理(3AP): 手札の回復カードを「効果2倍・食中毒なし」で使用する。腐敗料理(2AP): 同マスの相手に腐った食品を無理やり食べさせ、25ダメージを与える。' },
-        baseImages: { front: createEmojiImg('🍳'), back: createEmojiImg('🍳') },
-        skins: [{ id: "chef_default", charKey: "chef", name: "元シェフ", rarity: "N", front: createEmojiImg('🍳'), pieceColor: "#e74c3c", ring: "#c0392b", desc: "血まみれのエプロンかと思いきやトマトソース。" }]
+        baseImages: { front: chef_N_default, back: chef_N_default },
+        skins: [
+            { id: "chef_default", charKey: "chef", name: "元シェフ", rarity: "N", front: chef_N_default, pieceColor: "#e74c3c", ring: "#c0392b", desc: "血まみれのエプロンかと思いきやトマトソース。" },
+            { id: "chef_r_passion", charKey: "chef", name: "路上板前の「情熱」", rarity: "R", front: chef_R_passion, pieceColor: "#e74c3c", ring: "#c0392b", desc: "過酷な路上生活の中で「和の心」に目覚め、日本刀のように長い刺身包丁を構える和風スタイル。「『ゴミ漁り』などと下品な言葉を使うな。私は今、究極の出汁をとるための極上の『アラ』を見極めているのだ。邪魔をするなら……お前を三枚におろすぞ」" },
+            { id: "chef_sr_golden", charKey: "chef", name: "黄金のフライパン無双", rarity: "SR", front: chef_SR_golden, pieceColor: "#f1c40f", ring: "#f39c12", desc: "料理への極限の執着が生み出した、完全武装シェフ形態。「味わうがいい！ 私のフルスイングから生まれる至高の半熟卵と、星が飛び散るほどの圧倒的な物理ダメージをな！」" }
+        ]
     },
     {
         id: 'scavenger',
@@ -564,8 +606,13 @@ export const CHARACTERS = [
         tagline: '都市のゴミ山を宝の山に変える、錬金術師',
         passive: { name:'【リサイクル】', desc:'ゴミ漁りに失敗し警察に見つかった場合でも、ペナルティの代わりに「空き缶」を1つ獲得してやり過ごす。' },
         action: { name:'【ガラクタ工作】 (3AP)', desc:'ゴミ3つで「ランダムな装備」か、缶10個でゴミを消費して撃つ「ジャンクガン(3回用)」を生成する。' },
-        baseImages: { front: createEmojiImg('🛠️'), back: createEmojiImg('🛠️') },
-        skins: [{ id: "scavenger_default", charKey: "scavenger", name: "スカベンジャー", rarity: "N", front: createEmojiImg('🛠️'), pieceColor: "#7f8c8d", ring: "#95a5a6", desc: "ガラクタを身に纏ったジャンク戦士。" }]
+        baseImages: { front: scavenger_N_default, back: scavenger_N_default },
+        skins: [
+            { id: "scavenger_default", charKey: "scavenger", name: "スカベンジャー", rarity: "N", front: scavenger_N_default, pieceColor: "#7f8c8d", ring: "#95a5a6", desc: "ガラクタを身に纏ったジャンク戦士。" },
+            { id: "scavenger_r_diver", charKey: "scavenger", name: "深淵のジャンク・ダイバー", rarity: "R", front: scavenger_R_diver, pieceColor: "#2c3e50", ring: "#e74c3c", desc: "廃タイヤやスクラップで全身を覆い、赤く光るガスマスクを装着した重装形態。「夜は前後3マスしか見えないって？  だからこそ、暗闇に潜む『ゴミ山』の匂いがよくわかるのさ。さあ、漁る時間だ」" },
+            { id: "scavenger_sr_destroyer", charKey: "scavenger", name: "リサイクル・デストロイヤー", rarity: "SR", front: scavenger_SR_destroyer, pieceColor: "#e67e22", ring: "#d35400", desc: "拾い集めたトマト缶や配線をテープでぐるぐる巻きにし、自作の「レーザー銃（あるいはショットガン）」を組み上げた戦闘狂スタイル。「ショップで高い武器を買うやつの気が知れんね。拾ったスープ缶の空き容器で、お前らを蜂の巣にしてやるよ」" },
+            { id: "scavenger_ssr_golden", charKey: "scavenger", name: "黄金のゼロ・ウェイスト", rarity: "SSR", front: scavenger_SSR_golden, pieceColor: "#f1c40f", ring: "#f39c12", desc: "徹底した「無駄の排除」が極まり、所持している缶とゴミの「資源価値」がカンストした究極の姿。「『全部拾う、全部使う』……その哲学を極めた結果がこれだ。さあ、お前たちの命も、俺のスコアの肥やしとしてリサイクルしてやろう」" }
+        ]
     },
     {
         id: 'billionaire',
@@ -575,8 +622,11 @@ export const CHARACTERS = [
         tagline: '金で解決できないことは、もっと金で解決する',
         passive: { name:'【成金】', desc:'①初期所持P+15P(合計30P)。②Pを支払う行動で10%還元。③所持Pが50以上の時、ターン開始時に同マス全員から所持Pの10%を自動徴収。' },
         action: { name:'【買収】 (2AP)', desc:'A:【手札買収】5P払い相手の手札奪取。B:【陣地買収】無料で相手の陣地を譲り受ける。C:【雇用】10P払い次ターンの相手を疲労させAP-5する。' },
-        baseImages: { front: createEmojiImg('💴'), back: createEmojiImg('💴') },
-        skins: [{ id: "billionaire_default", charKey: "billionaire", name: "億万長者", rarity: "SSR", front: createEmojiImg('💴'), pieceColor: "#f1c40f", ring: "#f39c12", desc: "札束で全てを叩き潰す元富裕層。" }]
+        baseImages: { front: billionaire_N_default, back: billionaire_N_default },
+        skins: [
+            { id: "billionaire_default", charKey: "billionaire", name: "億万長者", rarity: "SSR", front: billionaire_N_default, pieceColor: "#f1c40f", ring: "#f39c12", desc: "札束で全てを叩き潰す元富裕層。" },
+            { id: "billionaire_sr_executive", charKey: "billionaire", name: "不屈のエグゼクティブ", rarity: "SR", front: billionaire_SR_executive, pieceColor: "#2c3e50", ring: "#34495e", desc: "ストリートに転落してもなお、威厳ある立ち振る舞いと身だしなみを決して崩さないスタイル。「私の辞書に『破産』はない。あるのは『一時的な資金の再配置』だけだ。さあ、そこをどきたまえ」" }
+        ]
     },
     {
         id: 'god',
@@ -586,8 +636,11 @@ export const CHARACTERS = [
         tagline: '困ったやつがいれば助けてやる。ただしタダじゃねえ',
         passive: { name:'【神の加護】', desc:'開始時全員に1度だけ死亡回避できる「加護トークン」付与(使用時3P自動送金)。隣接者の獲得P5%を吸収。自身は死亡ペナ半減。' },
         action: { name:'【神託】 (3AP)', desc:'自分以外の全員に「次ダイス+2」を付与。ただし、その恩恵を受けた者がターンを終えるたび自身の所持Pの10%が神様に自動送金される' },
-        baseImages: { front: createEmojiImg('👼'), back: createEmojiImg('👼') },
-        skins: [{ id: "god_default", charKey: "god", name: "路上の神様", rarity: "SSR", front: createEmojiImg('👼'), pieceColor: "#f39c12", ring: "#e67e22", desc: "神々しい後光（ただのネオン管）を背負う。" }]
+        baseImages: { front: god_N_default, back: god_N_default },
+        skins: [
+            { id: "god_default", charKey: "god", name: "路上の神様", rarity: "SSR", front: god_N_default, pieceColor: "#f39c12", ring: "#e67e22", desc: "神々しい後光（ただのネオン管）を背負う。" },
+            { id: "god_sr_smiling", charKey: "god", name: "微笑みの搾取神", rarity: "SR", front: god_SR_smiling, pieceColor: "#8e44ad", ring: "#9b59b6", desc: "穏やかな微笑みを浮かべ、斜めに座る。「『炊き出し』で満腹になったか？ さあ、私の『維持費』を払ってもらおうか。」" }
+        ]
     },
     {
         id: 'emperor',
@@ -597,8 +650,12 @@ export const CHARACTERS = [
         tagline: '缶を舐めるなよ。これが最強の通貨だ',
         passive: { name:'【缶の哲学】', desc:'雨天でも回収可能、1ターン上限5回。缶の数で強化(5:移動0AP(6ターン限定), 10:耐性+30%, 15:開始時HP+5, 20:同マス毎ターン3ダメ)。' },
         action: { name:'【缶バリスタ】 (2AP)', desc:'缶を消費して攻撃。1-3缶:射程2/10ダメ、4-6缶:射程3/25ダメ＆次AP-1、7-9缶:射程4/40ダメ＆全缶破壊、10缶以上:射程5/60ダメ＆周囲2マス20ダメ。' },
-        baseImages: { front: createEmojiImg('🥫'), back: createEmojiImg('🥫') },
-        skins: [{ id: "emperor_default", charKey: "emperor", name: "缶コレクターの帝王", rarity: "SR", front: createEmojiImg('🥫'), pieceColor: "#e67e22", ring: "#d35400", desc: "全身をアルミ缶で覆った究極のエコ戦士。" }]
+        baseImages: { front: emperor_N_default, back: emperor_N_default },
+        skins: [
+            { id: "emperor_default", charKey: "emperor", name: "缶コレクターの帝王", rarity: "SR", front: emperor_N_default, pieceColor: "#e67e22", ring: "#d35400", desc: "全身をアルミ缶で覆った究極のエコ戦士。" },
+            { id: "emperor_sr_shooter", charKey: "emperor", name: "赤錆のジャンク・シューター", rarity: "SR", front: emperor_SR_shooter, pieceColor: "#c0392b", ring: "#e74c3c", desc: "拾い集めた空き缶を魔改造し、恐るべき武器へと造り変えた戦闘特化スタイル。「俺の弾丸は100%リサイクル素材だ！ エコだろう？ お前が死んだら持っていた『空き缶』を全部置いていきな！」" },
+            { id: "emperor_ssr_golden", charKey: "emperor", name: "黄金のアルミ・エンペラー", rarity: "SSR", front: emperor_SSR_golden, pieceColor: "#f1c40f", ring: "#f39c12", desc: "缶の相場が暴騰し「資源価値」が頂点に達した瞬間にのみ姿を現す、成金仕様の究極形態。「『下剋上』で所持Pを入れ替えられたくらいで俺が沈むと思うか？ 私の真の資産は、この黄金に輝くコレクションそのものだ！」" }
+        ]
     },
     {
         id: 'sennin',
@@ -608,8 +665,11 @@ export const CHARACTERS = [
         tagline: '急ぐな。全ては巡る',
         passive: { name:'【無為自然】', desc:'①AP繰越(上限10)。②行動せず終了で「仙気」獲得。スタック数以上の効果が累積発動(1以上:次カードAP-1, 3以上:HP+20, 5:全P5%徴収)。行動で0にリセット。③30%の確率で被ダメージを無効化し反射。④死亡時P没収免除。' },
         action: { name:'【天地開闢】 (0AP)', desc:'仙気5消費。全陣地収入1Rゼロ化、全NPCランダム移動、自P倍増(上限+30)。さらに他プレイヤーの操作権を奪い、1ターンの間「鬼畜CPU」化して暴走させる。自身は次2ターン座禅(行動不可)。' },
-        baseImages: { front: createEmojiImg('☁️'), back: createEmojiImg('☁️') },
-        skins: [{ id: "sennin_default", charKey: "sennin", name: "路上の仙人", rarity: "SR", front: createEmojiImg('☁️'), pieceColor: "#95a5a6", ring: "#7f8c8d", desc: "悟りを開き、路上と同化した老翁。" }]
+        baseImages: { front: sennin_N_default, back: sennin_N_default },
+        skins: [
+            { id: "sennin_default", charKey: "sennin", name: "路上の仙人", rarity: "SR", front: sennin_N_default, pieceColor: "#95a5a6", ring: "#7f8c8d", desc: "悟りを開き、路上と同化した老翁。" },
+            { id: "sennin_ssr_aura", charKey: "sennin", name: "路上解脱のオーラ", rarity: "SSR", front: sennin_SSR_aura, pieceColor: "#1abc9c", ring: "#16a085", desc: "「一切のAPを消費しない」という苦行の果てに、何らかの真理へと到達してしまった覚醒状態。「何もしないことこそが究極の行動。すべては巡り、満ち足りた……。ところで、悟りを開いたお祝いに『水道水』でも奢ってくれんか？」" }
+        ]
     }
 ];
 
