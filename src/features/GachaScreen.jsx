@@ -7,12 +7,8 @@ import { syncGachaData } from '../utils/userLogic';
 // ==========================================
 // ▼ 開発者設定true fale
 // ==========================================
-// 開発者モードボタン（資産+500）を表示するかどうか
 const SHOW_DEV_CONTROLS = false; 
 
-// ガチャの排出確率とUI設定
-// 開発者はここの `rate` の数値を変更するだけで、自動的に実際の抽選確率に反映されます。
-// （※合計が100になるように設定してください）
 const RARITY_CFG = {
   UR:  { label:"UR",  gold:"#FFFFFF", bg:"#1A0033", border:"#D500F9", rate:3,  glow:"#FF00FF" },
   SSR: { label:"SSR", gold:"#FFD700", bg:"#3D1500", border:"#FFD700", rate:5,  glow:"#FF8C00" },
@@ -20,12 +16,20 @@ const RARITY_CFG = {
   R:   { label:"R",   gold:"#64B5F6", bg:"#001A4A", border:"#4FC3F7", rate:30, glow:"#2196F3" },
   N:   { label:"N",   gold:"#B0BEC5", bg:"#1A1A1A", border:"#78909C", rate:52, glow:"#607D8B" },
 };
+
+// ▼ 重複時のP変換レート
+const DUPLICATE_P_RATE = {
+  UR: 500,
+  SSR: 150,
+  SR: 50,
+  R: 10,
+  N: 5,
+};
 // ==========================================
 
 const PULL_PHRASES = ["ジャラジャラ…","ガコン！","ガラガラ…","ゴトゴト…","ジャキン！"];
 const PARTICLE_EMOJIS = ["🥫","🗑️","📰","📦","🧤","🪣","🔩","🪝","🧣"];
 
-// ▼ 設定値(RARITY_CFG)から動的に確率を計算・判定するロジック
 function rollRarity() {
   const r = Math.random() * 100;
   let cumulative = 0;
@@ -34,7 +38,7 @@ function rollRarity() {
     cumulative += RARITY_CFG[rarity].rate;
     if (r < cumulative) return rarity;
   }
-  return "N"; // 万が一のフォールバック
+  return "N";
 }
 
 function pullSkins(count) {
@@ -83,45 +87,28 @@ function BarrelMachine({ phase }) {
   const isShaking = phase === "shaking";
   return (
     <div style={{ position:"relative", width:240, margin:"0 auto" }}>
-      <div style={{
-        position:"absolute", inset:-20, borderRadius:20,
-        background: isShaking ? "radial-gradient(ellipse at 50% 60%, rgba(255,80,0,0.18) 0%, transparent 70%)" : "radial-gradient(ellipse at 50% 60%, rgba(255,80,0,0.08) 0%, transparent 70%)",
-        transition:"background 0.4s", pointerEvents:"none",
-      }}/>
-      <div style={{
-        background:"#3E1F00", border:"3px solid #8B5E1A", borderRadius:"6px 6px 0 0", padding:"6px 0", textAlign:"center", position:"relative", overflow:"hidden",
-      }}>
+      <div style={{ position:"absolute", inset:-20, borderRadius:20, background: isShaking ? "radial-gradient(ellipse at 50% 60%, rgba(255,80,0,0.18) 0%, transparent 70%)" : "radial-gradient(ellipse at 50% 60%, rgba(255,80,0,0.08) 0%, transparent 70%)", transition:"background 0.4s", pointerEvents:"none" }}/>
+      <div style={{ background:"#3E1F00", border:"3px solid #8B5E1A", borderRadius:"6px 6px 0 0", padding:"6px 0", textAlign:"center", position:"relative", overflow:"hidden" }}>
         {[8,20,32,44,56,68,80,92].map((l, i) => (
-          <div key={i} style={{
-            position:"absolute", bottom:3, left:`${l}%`, width:5, height:5, borderRadius:"50%",
-            background: i % 2 === 0 ? "#FFD700" : "#FF6B00", animation:`bulbFlicker ${0.8+i*0.15}s ease-in-out infinite alternate`,
-          }}/>
+          <div key={i} style={{ position:"absolute", bottom:3, left:`${l}%`, width:5, height:5, borderRadius:"50%", background: i % 2 === 0 ? "#FFD700" : "#FF6B00", animation:`bulbFlicker ${0.8+i*0.15}s ease-in-out infinite alternate` }}/>
         ))}
         <div style={{ fontSize:11, color:"#DEB887", letterSpacing:4, fontWeight:"bold", position:"relative", zIndex:1 }}>★ 路上ガチャ屋台 ★</div>
       </div>
-      <div style={{
-        display:"flex", gap:8, alignItems:"flex-end", justifyContent:"center",
-        background:"#1A0900", border:"3px solid #5C3015", borderTop:"none", padding:"12px 12px 0",
-      }}>
+      <div style={{ display:"flex", gap:8, alignItems:"flex-end", justifyContent:"center", background:"#1A0900", border:"3px solid #5C3015", borderTop:"none", padding:"12px 12px 0" }}>
         <div style={{ display:"flex", flexDirection:"column", gap:2, paddingBottom:20 }}>
           <div style={{ display:"flex", gap:2 }}>{["🥫","🥫"].map((e,i) => <div key={i} style={{ fontSize:16, animation: isShaking ? `canWiggle ${0.12+i*0.04}s ease-in-out infinite alternate` : "none" }}>{e}</div>)}</div>
           <div style={{ display:"flex", gap:2 }}>{["🥫","🥫","🥫"].map((e,i) => <div key={i} style={{ fontSize:16, animation: isShaking ? `canWiggle ${0.15+i*0.03}s ease-in-out infinite alternate` : "none" }}>{e}</div>)}</div>
           <div style={{ fontSize:12, color:"#5C3015", textAlign:"center" }}>缶の山</div>
         </div>
         <div style={{ animation: isShaking ? "barrelShake 0.1s ease infinite" : "none", position:"relative" }}>
-          <div style={{
-            width:96, height:108, background:"#2D1800", border:"4px solid #5C3015", borderRadius:"6px 6px 14px 14px", position:"relative", overflow:"hidden",
-          }}>
+          <div style={{ width:96, height:108, background:"#2D1800", border:"4px solid #5C3015", borderRadius:"6px 6px 14px 14px", position:"relative", overflow:"hidden" }}>
             {[18,52,86].map(y => <div key={y} style={{ position:"absolute", top:y, left:0, right:0, height:5, background:"#5C3015", borderTop:"1px solid #7A4020", borderBottom:"1px solid #3D1800" }}/>)}
             <div style={{ position:"absolute", inset:0, background: isShaking ? "radial-gradient(ellipse at 50% 20%, rgba(255,120,0,0.5) 0%, transparent 70%)" : "radial-gradient(ellipse at 50% 20%, rgba(255,80,0,0.22) 0%, transparent 70%)", transition:"background 0.25s" }}/>
             <div style={{ position:"absolute", bottom:10, left:0, right:0, display:"flex", justifyContent:"center", gap:4, flexWrap:"wrap", padding:"0 10px" }}>
               {(isShaking ? ["🥫","🥫","🥫","🥫","🥫","🥫"] : ["🥫","📰","🗑️","🧤"]).map((e,i) => <div key={i} style={{ fontSize:11, animation: isShaking ? `canSpin ${0.25+i*0.06}s linear infinite` : "none" }}>{e}</div>)}
             </div>
           </div>
-          <div style={{
-            position:"absolute", top:-24, left:"50%", transform:"translateX(-50%)", fontSize: isShaking ? 38 : 28,
-            filter:`drop-shadow(0 0 ${isShaking ? 12 : 6}px #FF4500)`, animation:"fireFlicker 0.2s ease-in-out infinite alternate", transition:"font-size 0.3s",
-          }}>🔥</div>
+          <div style={{ position:"absolute", top:-24, left:"50%", transform:"translateX(-50%)", fontSize: isShaking ? 38 : 28, filter:`drop-shadow(0 0 ${isShaking ? 12 : 6}px #FF4500)`, animation:"fireFlicker 0.2s ease-in-out infinite alternate", transition:"font-size 0.3s" }}>🔥</div>
           <div style={{ width:100, height:10, background:"#1A0D00", border:"3px solid #4A2800", borderRadius:"0 0 10px 10px", borderTop:"none", margin:"0 auto" }}/>
           <div style={{ width:58, margin:"6px auto 0", background:"#0D0500", border:"3px solid #4A2800", borderRadius:"0 0 8px 8px", borderTop:"none", height:22, display:"flex", alignItems:"center", justifyContent:"center" }}>
             {isShaking && <span style={{ fontSize:15, animation:"canBounce 0.3s ease infinite" }}>✨</span>}
@@ -193,24 +180,31 @@ function CinematicReveal({ skins, onDone }) {
   const [best,    setBest]    = useState(null);
 
   useEffect(() => {
+    let mounted = true; // ゴーストタイマー対策
     const rankOf = r => ({UR:4,SSR:3,SR:2,R:1,N:0})[r];
     const topSkin = skins.reduce((b,s) => rankOf(s.rarity) > rankOf(b.rarity) ? s : b, skins[0]);
     setBest(topSkin);
 
     const run = async () => {
       await sleep(300);
+      if (!mounted) return;
       setStep(1);
       for (let i = 0; i < skins.length; i++) {
         await sleep(260);
+        if (!mounted) return;
         setCurrent(i);
         setShown(prev => [...prev, i]);
       }
       await sleep(700);
+      if (!mounted) return;
       setStep(2);
       await sleep(2200);
+      if (!mounted) return;
       onDone();
     };
     run();
+    
+    return () => { mounted = false; };
   }, [skins, onDone]);
 
   const cfg = best ? RARITY_CFG[best.rarity] : null;
@@ -266,8 +260,11 @@ export default function GachaScreen() {
   const [showCinema,  setShowCinema]  = useState(false);
   const [pendingRes,  setPendingRes]  = useState([]);
   
+  // 重複変換の内訳を保持するステート
+  const [pullConversion, setPullConversion] = useState({ duplicates: [], totalP: 0 });
+  
   const [selectedSkinDetail, setSelectedSkinDetail] = useState(null);
-  const [viewTransform, setViewTransform] = useState({ scale: 1 }); // ズーム専用ステート
+  const [viewTransform, setViewTransform] = useState({ scale: 1 });
 
   const collection = {};
   GACHA_POOL.forEach(s => {
@@ -293,13 +290,37 @@ export default function GachaScreen() {
     if (currency === "can") addGachaAssets(-canCost, 0);
     else addGachaAssets(0, -pCost);
     
+    // UIリセット
+    setPullConversion({ duplicates: [], totalP: 0 });
+    
     await sleep(350);
     setCanTick(p => p + 1);
     await sleep(1300);
     
     const pulled = pullSkins(count);
-    const pulledIds = pulled.map(s => s.id);
-    unlockMultipleSkins(pulledIds);
+    
+    // ▼ 重複判定とP変換の計算
+    const currentUnlocked = useUserStore.getState().unlockedSkins || [];
+    let earnedP = 0;
+    const duplicateDetails = [];
+    const newSkinsToUnlock = [];
+    
+    pulled.forEach(skin => {
+        // すでに所持しているか、今回の10連の中で被った場合
+        if (currentUnlocked.includes(skin.id) || newSkinsToUnlock.includes(skin.id)) {
+            const pValue = DUPLICATE_P_RATE[skin.rarity] || 5;
+            earnedP += pValue;
+            duplicateDetails.push({ skin, pValue });
+        } else {
+            newSkinsToUnlock.push(skin.id);
+        }
+    });
+
+    setPullConversion({ duplicates: duplicateDetails, totalP: earnedP });
+
+    // Storeへ一括保存
+    if (newSkinsToUnlock.length > 0) unlockMultipleSkins(newSkinsToUnlock);
+    if (earnedP > 0) addGachaAssets(0, earnedP);
 
     await syncGachaData();
 
@@ -327,6 +348,7 @@ export default function GachaScreen() {
 
   const revealOne = useCallback((i) =>
     setRevealed(prev => new Set([...prev, i])), []);
+  
   const revealAll = useCallback(() => {
     setRevealed(new Set(results.map((_, i) => i)));
     if (results.some(s => s.rarity==="UR"||s.rarity==="SSR"||s.rarity==="SR")) setCanTick(p=>p+1);
@@ -352,9 +374,7 @@ export default function GachaScreen() {
   });
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100000, background:BG, overflowY: 'auto', color:LIGHT, display:"flex", flexDirection:"column", userSelect:"none",
-    }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100000, background:BG, overflowY: 'auto', color:LIGHT, display:"flex", flexDirection:"column", userSelect:"none" }}>
       <style>{`
         @keyframes canFly     { 0%{transform:translateY(0) translateX(0) rotate(0);opacity:1} 100%{transform:translateY(-105vh) translateX(var(--drift,0px)) rotate(360deg);opacity:0} }
         @keyframes fireFlicker{ 0%{transform:translateX(-50%) scaleX(0.88)scaleY(0.92)} 100%{transform:translateX(-50%) scaleX(1.12)scaleY(1.06)} }
@@ -381,61 +401,30 @@ export default function GachaScreen() {
       <CanParticle trigger={canTick} count={22}/>
       {showCinema && <CinematicReveal skins={pendingRes} onDone={onCinemaDone}/>}
       {notif && (
-        <div style={{
-          position:"fixed", top:14, left:"50%", transform:"translateX(-50%)", background: notif.type==="err" ? "#6B0000" : "#1E3A14", border:`2px solid ${notif.type==="err" ? "#EF5350" : "#66BB6A"}`, borderRadius:10, padding:"9px 22px", color:"#fff", fontWeight:"bold", fontSize:13, zIndex:400, animation:"fadeIn 0.3s ease", whiteSpace:"nowrap",
-        }}>{notif.msg}</div>
+        <div style={{ position:"fixed", top:14, left:"50%", transform:"translateX(-50%)", background: notif.type==="err" ? "#6B0000" : "#1E3A14", border:`2px solid ${notif.type==="err" ? "#EF5350" : "#66BB6A"}`, borderRadius:10, padding:"9px 22px", color:"#fff", fontWeight:"bold", fontSize:13, zIndex:400, animation:"fadeIn 0.3s ease", whiteSpace:"nowrap" }}>{notif.msg}</div>
       )}
 
       {selectedSkinDetail && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.92)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20
-        }} 
+        <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 20 }} 
         onClick={() => { setSelectedSkinDetail(null); setViewTransform({scale: 1}); }}
         onWheel={(e) => {
             const zoomAmount = e.deltaY < 0 ? 0.05 : -0.05;
             setViewTransform(p => ({ scale: Math.max(0.5, Math.min(4, p.scale + zoomAmount)) }));
         }}>
-            
-          <div style={{
-               background: RARITY_CFG[selectedSkinDetail.rarity].gold, color: '#000',
-               padding: '4px 16px', borderRadius: 20, fontWeight: 'bold', fontSize: 14, 
-               position: 'absolute', top: 30, zIndex: 510
-          }} onClick={e => e.stopPropagation()}>{selectedSkinDetail.rarity}</div>
-          
-          <div style={{
-               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%'
-          }}>
-              <img src={selectedSkinDetail.front} alt={selectedSkinDetail.name} 
-                   style={{ 
-                       width: '250px', height: '250px', objectFit: 'contain', 
-                       transform: `scale(${viewTransform.scale})`,
-                       transition: 'transform 0.15s ease-out',
-                       filter: `drop-shadow(0 0 20px ${RARITY_CFG[selectedSkinDetail.rarity].glow}88)`
-                   }} 
-                   draggable={false} />
+          <div style={{ background: RARITY_CFG[selectedSkinDetail.rarity].gold, color: '#000', padding: '4px 16px', borderRadius: 20, fontWeight: 'bold', fontSize: 14, position: 'absolute', top: 30, zIndex: 510 }} onClick={e => e.stopPropagation()}>{selectedSkinDetail.rarity}</div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+              <img src={selectedSkinDetail.front} alt={selectedSkinDetail.name} style={{ width: '250px', height: '250px', objectFit: 'contain', transform: `scale(${viewTransform.scale})`, transition: 'transform 0.15s ease-out', filter: `drop-shadow(0 0 20px ${RARITY_CFG[selectedSkinDetail.rarity].glow}88)` }} draggable={false} />
           </div>
-
-          <div style={{
-            background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', 
-            position: 'absolute', bottom: 0, left: 0, right: 0, padding: '40px 20px 20px',
-            textAlign: 'center'
-          }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.9), transparent)', position: 'absolute', bottom: 0, left: 0, right: 0, padding: '40px 20px 20px', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
             <h2 style={{ margin: '0 0 10px 0', color: RARITY_CFG[selectedSkinDetail.rarity].gold, fontSize: 24 }}>{selectedSkinDetail.name}</h2>
             <p style={{ color: LIGHT, fontSize: 14, lineHeight: 1.5, opacity: 0.9 }}>{selectedSkinDetail.desc}</p>
             <p style={{ color: MUTED, fontSize: 11, marginTop: 10 }}>※マウスホイールでズームイン・アウト</p>
-            
-            <button onClick={() => { setSelectedSkinDetail(null); setViewTransform({scale: 1}); }} style={{
-                marginTop: 20, padding: '12px 40px', borderRadius: 8, border: `1px solid ${BORD}`,
-                background: '#150800', color: LIGHT, cursor: 'pointer', fontWeight: 'bold', fontSize: 16
-            }}>閉じる</button>
+            <button onClick={() => { setSelectedSkinDetail(null); setViewTransform({scale: 1}); }} style={{ marginTop: 20, padding: '12px 40px', borderRadius: 8, border: `1px solid ${BORD}`, background: '#150800', color: LIGHT, cursor: 'pointer', fontWeight: 'bold', fontSize: 16 }}>閉じる</button>
           </div>
         </div>
       )}
 
-      <div style={{
-        background:"#150800", borderBottom:`3px solid ${BORD}`, padding:"11px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"relative", overflow:"hidden",
-      }}>
+      <div style={{ background:"#150800", borderBottom:`3px solid ${BORD}`, padding:"11px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"relative", overflow:"hidden" }}>
         {[8,18,32,48,62,75,88,94].map((l,i) => <div key={i} style={{ position:"absolute", top:`${15+i%3*22}%`, left:`${l}%`, width:2, height:2, borderRadius:"50%", background:"#fff", animation:`starTwinkle ${1.4+i*0.2}s ease-in-out ${i*0.18}s infinite` }}/>)}
         <button onClick={() => useGameStore.setState({ gamePhase: 'mode_select' })} style={{ background: 'transparent', border: `1px solid ${BORD}`, borderRadius: 6, padding: '4px 10px', color: LIGHT, fontSize: 12, cursor: 'pointer', position: "relative" }}>◀ 戻る</button>
         <div style={{ fontSize:16, fontWeight:"bold", color:GOLD, position:"relative", marginLeft: 'auto', marginRight: '10px' }}>🔥 路上ガチャ屋台</div>
@@ -508,11 +497,7 @@ export default function GachaScreen() {
           {SHOW_DEV_CONTROLS && (
             <div style={{ width: "100%", maxWidth: 330, marginTop: 10, display: "flex", justifyContent: "center" }}>
               <button
-                onClick={async () => { 
-                    addGachaAssets(500, 500); 
-                    await syncGachaData();
-                    notify("🔧 開発者モード: 空き缶・P +500！", "ok"); 
-                }}
+                onClick={async () => { addGachaAssets(500, 500); await syncGachaData(); notify("🔧 開発者モード: 空き缶・P +500！", "ok"); }}
                 style={{ background: "transparent", border: `1px dashed ${BORD}`, borderRadius: 8, padding: "7px 14px", color: MUTED, fontSize: 11, cursor: "pointer" }}
               >
                 🔧 開発者モード: 資産+500
@@ -534,11 +519,38 @@ export default function GachaScreen() {
           ) : (
             <>
               {results.some(s=>s.rarity==="UR"||s.rarity==="SSR"||s.rarity==="SR") && <div style={{ background:"linear-gradient(135deg,#3D1500,#7A3800)", border:"2px solid #FFD700", borderRadius:12, padding:"10px 16px", textAlign:"center", marginBottom:14, animation:"shimmer 2s ease-in-out infinite" }}><div style={{ fontSize:16, fontWeight:"bold", color:"#FFD700" }}>🔥 レアスキン排出！ 🔥</div></div>}
+              
               <div style={{ display:"flex", flexWrap:"wrap", gap:9, justifyContent:"center", marginBottom:14 }}>
                 {results.map((skin, i) => <CardboardReveal key={i} skin={skin} index={i} revealed={revealed.has(i)} onReveal={() => revealOne(i)} />)}
               </div>
-              <div style={{ display:"flex", gap:10 }}>
-                {!allRev && <button onClick={revealAll} style={{ flex:1, background:"#3D1F00", border:`2px solid ${GOLD}`, borderRadius:10, padding:"12px", color:GOLD, fontWeight:"bold", fontSize:13, cursor:"pointer" }}>📦 全て開封</button>}
+              
+              {/* ▼ 被り変換UIの表示 (全て開封済みの時のみ) */}
+              {allRev && pullConversion.totalP > 0 && (
+                <div style={{ marginBottom: 16, padding: 12, background: "#150A00", border: `2px solid ${GOLD}`, borderRadius: 10, animation: "fadeIn 0.5s ease" }}>
+                  <div style={{ fontSize: 13, color: GOLD, fontWeight: "bold", marginBottom: 8, textAlign: "center", textShadow: "0 1px 4px #000" }}>
+                    🔄 重複したスキンを {pullConversion.totalP} Pに変換しました！
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+                    {pullConversion.duplicates.map((dup, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, background: "#080400", padding: "4px 8px", borderRadius: 6, fontSize: 11, border: `1px solid ${BORD}` }}>
+                        <div style={{ color: RARITY_CFG[dup.skin.rarity].gold, fontWeight: "bold" }}>{dup.skin.rarity}</div>
+                        <div style={{ color: LIGHT, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{dup.skin.name}</div>
+                        <div style={{ color: "#66BB6A", fontWeight: "bold" }}>+{dup.pValue}P</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display:"flex", gap:10, width: "100%" }}>
+                {!allRev ? (
+                  <button onClick={revealAll} style={{ flex:1, background:"#3D1F00", border:`2px solid ${GOLD}`, borderRadius:10, padding:"12px", color:GOLD, fontWeight:"bold", fontSize:13, cursor:"pointer" }}>📦 全て開封</button>
+                ) : (
+                  <>
+                    <button onClick={() => { setView("machine"); doPull(results.length); }} style={{ flex:2, background:"linear-gradient(135deg,#5C1A00,#8B2500)", border:`2px solid ${ACC}`, borderRadius:10, padding:"12px", color:"#fff", fontWeight:"bold", fontSize:13, cursor:"pointer", animation: "fadeIn 0.3s ease" }}>🔥 もう一度 {results.length}回引く</button>
+                    <button onClick={() => setView("machine")} style={{ flex:1, background:"#150800", border:`2px solid ${BORD}`, borderRadius:10, padding:"12px", color:LIGHT, fontWeight:"bold", fontSize:13, cursor:"pointer", animation: "fadeIn 0.3s ease" }}>◀ 戻る</button>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -567,39 +579,16 @@ export default function GachaScreen() {
                     const has   = count>0;
                     
                     return (
-                      <div 
-                        key={skin.id} className="gcitem" 
-                        onClick={() => { if(has) setSelectedSkinDetail(skin) }}
-                        style={{
-                          background: has ? PANEL : "#0C0600", 
-                          border:`2px solid ${has ? cfg.border : "#2A1208"}`, 
-                          borderRadius: 14, padding: 12, textAlign: "center", 
-                          position: "relative", 
-                          boxShadow: has ? `0 0 12px ${cfg.glow}44` : "none", 
-                          cursor: has ? "pointer" : "default",
-                          display: "flex", flexDirection: "column", justifyContent: "center"
-                        }}
-                      >
+                      <div key={skin.id} className="gcitem" onClick={() => { if(has) setSelectedSkinDetail(skin) }} style={{ background: has ? PANEL : "#0C0600", border:`2px solid ${has ? cfg.border : "#2A1208"}`, borderRadius: 14, padding: 12, textAlign: "center", position: "relative", boxShadow: has ? `0 0 12px ${cfg.glow}44` : "none", cursor: has ? "pointer" : "default", display: "flex", flexDirection: "column", justifyContent: "center" }}>
                         <div style={{ position:"relative", display:"inline-block", marginBottom:8 }}>
-                          <div style={{
-                            width: 65, height: 65, 
-                            borderRadius:"50%", background: has?skin.pieceColor:"#1A0A00", 
-                            border:`3px solid ${has?skin.ring:"#444"}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto", overflow:"hidden", position:"relative", 
-                            boxShadow: has ? "0 4px 10px #0008, inset 0 3px 5px #ffffff14" : "none",
-                          }}>
+                          <div style={{ width: 65, height: 65, borderRadius:"50%", background: has?skin.pieceColor:"#1A0A00", border:`3px solid ${has?skin.ring:"#444"}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto", overflow:"hidden", position:"relative", boxShadow: has ? "0 4px 10px #0008, inset 0 3px 5px #ffffff14" : "none" }}>
                             {has && <div style={{ position:"absolute", top:"8%", left:"12%", width:"38%", height:"28%", borderRadius:"50%", background:"rgba(255,255,255,0.18)", transform:"rotate(-25deg)" }}/>}
-                            <img src={skin.front} alt={skin.name} style={{ 
-                                width: "100%", height: "100%", objectFit: "cover",
-                                filter: has ? 'none' : 'brightness(0.35) grayscale(0.5)', 
-                                opacity: has ? 1 : 0.8
-                            }} />
+                            <img src={skin.front} alt={skin.name} style={{ width: "100%", height: "100%", objectFit: "cover", filter: has ? 'none' : 'brightness(0.35) grayscale(0.5)', opacity: has ? 1 : 0.8 }} />
                           </div>
                           {count>1&& <div style={{ position:"absolute", top:-4, right:-4, background:GOLD, color:"#000", borderRadius:"50%", width:20, height:20, fontSize:11, fontWeight:"bold", display:"flex", alignItems:"center", justifyContent:"center", border: '2px solid #000' }}>{count}</div>}
                         </div>
                         <div style={{ fontSize:9, color:cfg.gold, fontWeight:"bold", marginBottom:2 }}>{rarity}</div>
-                        <div style={{ fontSize: 11, color: has ? LIGHT : "#888", lineHeight: 1.3, fontWeight: has ? "bold" : "normal" }}>
-                            {skin.name}
-                        </div>
+                        <div style={{ fontSize: 11, color: has ? LIGHT : "#888", lineHeight: 1.3, fontWeight: has ? "bold" : "normal" }}>{skin.name}</div>
                       </div>
                     );
                   })}
