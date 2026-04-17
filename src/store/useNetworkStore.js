@@ -201,6 +201,10 @@ export const useNetworkStore = create((setStore, getStore) => ({
                                 else if (data.actionType === 'EXECUTE_CAN_BALLISTA') skills.executeCanBallista(data.payload.hitTargets, data.payload.consumeAmount);
                                 else if (data.actionType === 'ACTION_TENCHI') skills.actionTenchi();
                             }).catch(console.error);
+
+                            import('../game/actions').then(actions => {
+                                if (data.actionType === 'EXECUTE_END_MINIGAME') actions.executeEndMinigame(data.payload.isWin, data.payload.pts, data.payload.cardId, data.payload.msg);
+                            }).catch(console.error);
                         }
                     }
 

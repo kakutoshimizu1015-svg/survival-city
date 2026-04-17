@@ -247,15 +247,29 @@ function CinematicReveal({ skins, onDone, newPulls }) {
               const isNew = newPulls.includes(s.id); // NEW判定
               return (
                 <div key={i} style={{
-                  width:40, height:40, borderRadius:"50%", background: vis ? s.pieceColor : "#111", border:`2px solid ${vis ? c.border : "#333"}`, display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.22s", transform: i === current && step === 1 ? "scale(1.35)" : "scale(1)", boxShadow: vis ? `0 0 12px ${c.glow}77` : "none", opacity: vis ? 1 : 0.2, overflow: "hidden", position: "relative"
+                  position: "relative",
+                  width: 40, height: 40,
+                  transition: "all 0.22s",
+                  transform: i === current && step === 1 ? "scale(1.35)" : "scale(1)",
+                  opacity: vis ? 1 : 0.2
                 }}>
-                    {/* ▼ サムネイル用のNEWバッジ */}
+                    {/* ▼ 外側の箱に置くことで、NEWバッジが丸枠からはみ出せるようになります */}
                     {vis && isNew && (
-                        <div style={{ position: "absolute", top: -2, right: -2, background: "#FF0044", color: "#fff", fontSize: 7, fontWeight: "bold", padding: "1px 3px", borderRadius: 8, border: "1px solid #fff", zIndex: 10 }}>
+                        <div style={{ position: "absolute", top: -4, right: -6, background: "#FF0044", color: "#fff", fontSize: 7, fontWeight: "bold", padding: "1px 3px", borderRadius: 8, border: "1px solid #fff", zIndex: 10 }}>
                           NEW
                         </div>
                     )}
-                    {vis ? <img src={s.front} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "?"}
+
+                    {/* ▼ 画像を丸く切り抜くための内側の箱 */}
+                    <div style={{
+                      width: "100%", height: "100%", borderRadius: "50%", 
+                      background: vis ? s.pieceColor : "#111", border: `2px solid ${vis ? c.border : "#333"}`, 
+                      display: "flex", alignItems: "center", justifyContent: "center", 
+                      boxShadow: vis ? `0 0 12px ${c.glow}77` : "none", 
+                      overflow: "hidden"
+                    }}>
+                        {vis ? <img src={s.front} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "?"}
+                    </div>
                 </div>
               );
             })}

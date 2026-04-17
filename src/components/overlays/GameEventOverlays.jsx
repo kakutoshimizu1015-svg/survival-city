@@ -6,6 +6,7 @@ import { logMsg } from '../../game/actions';
 import { deckData } from '../../constants/cards'; 
 import { dealDamage } from '../../game/combat';
 import { setupNpcMove } from '../../game/skills'; 
+import { executeEndMinigame } from '../../game/actions';
 
 // ▼ 追加: 15種類のミニゲームコンポーネントをすべてインポート
 import { BoxGame, VendGame, ScratchGame, HLGame } from '../../features/minigames/MiniGamesPart1';
@@ -184,34 +185,25 @@ export const GameEventOverlays = () => {
                         </div>
                     ) : (
                     React.createElement(MINIGAME_COMPONENTS[mgType], {
-                        isEventMode: true, // イベントモードであることを伝えるフラグ
-                        isObserver: !isMyTurn, // ▼ 追加: ミニゲーム内部にも観戦者であることを伝える
+                        isEventMode: true, 
+                        isObserver: !isMyTurn, 
                         pts: cp?.p || 0,
                         addPts: (pts) => {
                             if (!isMyTurn || mgRewardGiven) return;
-                            setMgRewardGiven(true); // 報酬は1マスにつき1回のみ付与
-                            
-                            useGameStore.getState().updateCurrentPlayer(p => ({ p: p.p + pts }));
-                            useGameStore.getState().incrementGameStat(cp.id, 'minigames', 1);
-                            
-                            // ボードゲーム本編のボーナス: 勝ったらカードを引く
+                            setMgRewardGiven(true); 
                             const cardId = Math.floor(Math.random() * 38);
-                            useGameStore.getState().updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
-                            
-                            const cardData = deckData.find(c => c.id === cardId) || { name: '謎のカード', icon: '🃏', color: '#fff', desc: '詳細不明' };
-                            useGameStore.setState({ acquiredCard: cardData });
-                            setTimeout(() => useGameStore.setState({ acquiredCard: null }), 2500); 
-                            
-                            logMsg(`🎲 ミニゲーム大成功！ +${pts}P と「${cardData.name}」を獲得！`);
+                            // ローカルでの直接操作をやめ、ホストへ報酬と終了を依頼する
+                            executeEndMinigame(true, pts, cardId, `ミニゲーム大成功！ +${pts}P とカードを獲得！`);
                         },
                         subPts: (pts) => {
                             if (!isMyTurn) return;
-                            useGameStore.getState().updateCurrentPlayer(p => ({ p: Math.max(0, p.p - pts) }));
-                            logMsg(`🎲 ミニゲームで ${pts}P 失った...`);
+                            // ローカルでの直接操作をやめ、ホストへペナルティと終了を依頼する
+                            executeEndMinigame(false, pts, null, `ミニゲームで ${pts}P 失った...`);
                         },
                         onBack: () => {
-                            // ミニゲーム画面を終了してマップへ戻る
-                            useGameStore.setState({ mgActive: false, mgType: null });
+                            if (!isMyTurn) return;
+                            // ホストへミニゲームの終了（リタイア）を依頼する
+                            executeEndMinigame(false, 0, null, null);
                         }
                     })
                     )} {/* ← 修正: 三項演算子を閉じるためのカッコ「 ) 」を追加しました */}
