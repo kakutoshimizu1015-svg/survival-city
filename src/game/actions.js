@@ -651,10 +651,11 @@ export const actionEndTurn = async () => {
             playSfx('hit');
         }
         
+        // UIの状態をリセット
         useGameStore.setState({ 
             isBranchPicking: false, isDashPicking: false, 
             isSalesVisiting: false, salesTargetId: null, npcSelectActive: false,
-            mgActive: false, storyActive: false, turnBannerActive: false, npcMovePick: null,
+            mgActive: false, storyActive: false, npcMovePick: null,
             isTrapScanActive: false, isTrapPicking: false,
             isRecyclePicking: false, isFakeInfoPicking: false, isSubwayPicking: false, isManholePicking: false,
             fakeInfoTargets: [], manholeOptions: []
@@ -669,12 +670,22 @@ export const actionEndTurn = async () => {
                     suppressNextSync(500);
                     netState.hostConnection.send({ type: 'REQUEST_ROUND_END' });
                 }
+                // ゲスト側はホストからの同期を待つため、ここでターンバナーをfalseにしておく
+                useGameStore.setState({ turnBannerActive: false });
                 return; 
             }
             await processRoundEnd();
         }
 
-        useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false }));
+        // 次のターンへ移行し、バナーとスクロールをトリガーする
+        const nextTurnIdx = (state.turn + 1) % state.players.length;
+        useGameStore.setState({ 
+            turn: nextTurnIdx, 
+            diceRolled: false,
+            // ターン開始イベントとしてIDを発行し、バナーと自動スクロールを有効にする
+            turnBanner: { id: Date.now(), playerIdx: nextTurnIdx },
+            turnBannerActive: true 
+        });
     } catch (e) { 
         console.error("actionEndTurn Error:", e); 
         useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false })); 

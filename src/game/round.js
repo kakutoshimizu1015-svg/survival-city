@@ -235,10 +235,16 @@ export const processRoundEnd = async () => {
         moveOrRespawn('loansharkPos', 'loansharkCd');
         moveOrRespawn('friendPos', 'friendCd');
 
-        useGameStore.setState({ roundSummary: summaryDigest });
-        await sleep(summaryDigest.length * 400 + 2500);
-        useGameStore.setState({ roundSummary: null });
-        await sleep(300);
+        // ラウンドサマリーをID付きでセット。ゲスト側UIはこのIDの変更を検知してレポートを表示する。
+        useGameStore.setState({ 
+            roundSummary: { 
+                id: Date.now(), 
+                data: summaryDigest, 
+                createdAt: Date.now() 
+            } 
+        });
+        // ホスト側のロジックを止めない（演出の終了は各クライアントのUIが担当する）
+        await sleep(500);
 
         logMsg(`<span style="color:#c0392b">🛻 ごみ収集車が暴走！</span>`);
         useGameStore.setState({ horrorMode: true }); 

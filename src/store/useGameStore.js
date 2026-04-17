@@ -123,19 +123,28 @@ export const useGameStore = create((set, get) => ({
     resetGame: () => set(initialState),
     applyNetworkAction: (action) => { console.log("Network action:", action); },
     
+    // ポップアップを履歴として追加（UI側で表示時間を管理する設計に変更）
     addEventPopup: (playerId, icon, title, detail = "", type = "neutral") => {
         const id = Date.now() + Math.random();
-        set(state => ({ eventPopups: [...state.eventPopups.slice(-2), { id, playerId, icon, title, detail, type }] }));
-        setTimeout(() => set(state => ({ eventPopups: state.eventPopups.filter(p => p.id !== id) })), 2800);
+        set(state => ({ 
+            eventPopups: [...state.eventPopups.slice(-10), { id, playerId, icon, title, detail, type, createdAt: Date.now() }] 
+        }));
     },
 
+    // トースト通知をログ形式に変更
     showToast: (msg) => {
-        set({ toastMsg: msg });
-        setTimeout(() => set({ toastMsg: null }), 3000);
+        const id = Date.now() + Math.random();
+        set(state => ({ 
+            toastMsg: { id, text: msg, createdAt: Date.now() } 
+        }));
     },
+
+    // 中央警告をログ形式に変更
     showCenterWarning: (msg) => {
-        set({ centerWarning: msg });
-        setTimeout(() => set({ centerWarning: null }), 4000);
+        const id = Date.now() + Math.random();
+        set(state => ({ 
+            centerWarning: { id, text: msg, createdAt: Date.now() } 
+        }));
     },
     
     setTooltipData: (data) => set({ tooltipData: data })
