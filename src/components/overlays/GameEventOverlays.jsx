@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { ClayButton } from '../common/ClayButton';
-import { logMsg } from '../../game/actions';
-import { deckData } from '../../constants/cards'; 
+// ▼ 修正: logMsg に加えて、STORY_EVENTS と executeStoryChoice を読み込む
+import { logMsg, STORY_EVENTS, executeStoryChoice } from '../../game/actions';
+import { deckData } from '../../constants/cards';
 import { dealDamage } from '../../game/combat';
 import { setupNpcMove } from '../../game/skills'; 
 import { executeEndMinigame } from '../../game/actions';
@@ -66,41 +67,8 @@ export const GameEventOverlays = () => {
         return victoryPhrases[Math.floor(Math.random() * victoryPhrases.length)];
     }, [gameResult]);
 
-    const storyEvents = [
-        {
-            title: "💰 怪しい男の投資話", 
-            text: "怪しい男が近づいてきた。「確実に儲かる投資がある」と言うが...", 
-            choices: [
-                { label: "乗る(50%で+8P/失敗-5P)", action: (cp, s) => { if(Math.random() > 0.5) { s.updateCurrentPlayer(p=>({p:p.p+8})); logMsg("💰 投資大成功！+8P"); s.addEventPopup(cp.id, "✨", "投資大成功！", "+8P", "good"); } else { s.updateCurrentPlayer(p=>({p: Math.max(0, p.p-5)})); logMsg("💰 投資詐欺！-5P"); s.addEventPopup(cp.id, "💥", "投資詐欺！", "-5P", "bad"); } } },
-                { label: "断る", action: (cp, s) => { logMsg("💰 怪しい話は断った。"); s.addEventPopup(cp.id, "📖", "断った", "", "neutral"); } }
-            ]
-        },
-        {
-            title: "🪙 自販機の下", 
-            text: "自動販売機の下に手を入れてみると...", 
-            choices: [
-                { label: "探す", action: (cp, s) => { let g = Math.floor(Math.random()*5); s.updateCurrentPlayer(p=>({p:p.p+g})); logMsg(`🪙 ${g}P見つけた！`); s.addEventPopup(cp.id, "✨", "小銭発見", `+${g}P`, "good"); } },
-                { label: "やめる", action: (cp, s) => { logMsg("🪙 やめておいた。"); s.addEventPopup(cp.id, "📖", "やめた", "", "neutral"); } }
-            ]
-        },
-        {
-            title: "🎁 見知らぬ人の贈り物", 
-            text: "親切そうな人がカバンをくれた！", 
-            choices: [
-                { label: "受け取る", action: (cp, s) => { if(Math.random() > 0.3) { let cid = [6,7,10,15][Math.floor(Math.random()*4)]; s.updateCurrentPlayer(p=>({hand:[...p.hand, cid]})); logMsg(`🎁 カードを獲得！`); s.addEventPopup(cp.id, "🎁", "贈り物", "カード獲得", "card"); } else { dealDamage(cp.id, 15, "罠"); logMsg("🎁 罠だった！15ダメージ！"); s.addEventPopup(cp.id, "💥", "罠だった！", "-15HP", "damage"); } } },
-                { label: "無視する", action: (cp, s) => { logMsg("🎁 無視した。"); s.addEventPopup(cp.id, "📖", "無視した", "", "neutral"); } }
-            ]
-        },
-        {
-            title: "🐕 野良犬に追われた！", 
-            text: "突然野良犬が襲ってきた！", 
-            choices: [
-                { label: "戦う(50%で勝利→+3P)", action: (cp, s) => { if(Math.random() > 0.5) { s.updateCurrentPlayer(p=>({p:p.p+3})); logMsg("🐕 野良犬を撃退！+3P"); s.addEventPopup(cp.id, "✨", "撃退成功", "+3P", "good"); } else { dealDamage(cp.id, 10, "野良犬"); logMsg("🐕 噛まれた！10ダメージ！"); s.addEventPopup(cp.id, "💥", "噛まれた", "-10HP", "damage"); } } },
-                { label: "逃げる(AP-2)", action: (cp, s) => { s.updateCurrentPlayer(p=>({ap: Math.max(0, p.ap-2)})); logMsg("🐕 全力で逃げた！AP-2"); s.addEventPopup(cp.id, "💨", "逃げた", "AP-2", "neutral"); } }
-            ]
-        }
-    ];
-    const activeStory = storyActive ? storyEvents[storyIndex || 0] : null;
+    // ▼ 修正: actions.jsに定義した共有データ(STORY_EVENTS)を参照するように変更
+    const activeStory = storyActive ? STORY_EVENTS[storyIndex || 0] : null;
 
     return (
         <>
@@ -132,8 +100,7 @@ export const GameEventOverlays = () => {
                             {activeStory.choices.map((c, i) => (
                                 <ClayButton key={i} onClick={() => {
                                     if (isMyTurn) {
-                                        c.action(cp, useGameStore.getState());
-                                        useGameStore.setState({ storyActive: false });
+                                        executeStoryChoice(i); // ▼ 修正: ローカル処理をやめ、ホストへ依頼
                                     }
                                 }}>{c.label}</ClayButton>
                             ))}

@@ -204,6 +204,8 @@ export const useNetworkStore = create((setStore, getStore) => ({
 
                             import('../game/actions').then(actions => {
                                 if (data.actionType === 'EXECUTE_END_MINIGAME') actions.executeEndMinigame(data.payload.isWin, data.payload.pts, data.payload.cardId, data.payload.msg);
+                                // ▼ 追加：ストーリー選択の処理
+                                else if (data.actionType === 'EXECUTE_STORY_CHOICE') actions.executeStoryChoice(data.payload);
                             }).catch(console.error);
                         }
                     }

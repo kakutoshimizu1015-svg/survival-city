@@ -793,3 +793,58 @@ export const executeEndMinigame = (isWin, pts, cardId, msg) => {
     // ホストがミニゲームを終了させ、全員の画面を解放する
     useGameStore.setState({ mgActive: false, mgType: null, mgResult: null, mgStarted: false });
 };
+// ▼ ストーリーイベントの定義（一元管理用）
+export const STORY_EVENTS = [
+    {
+        title: "💰 怪しい男の投資話", 
+        text: "怪しい男が近づいてきた。「確実に儲かる投資がある」と言うが...", 
+        choices: [
+            { label: "乗る(50%で+8P/失敗-5P)", func: (s) => { if(Math.random() > 0.5) { s.updateCurrentPlayer(p=>({p:p.p+8})); return "💰 投資大成功！+8P"; } else { s.updateCurrentPlayer(p=>({p: Math.max(0, p.p-5)})); return "💰 投資詐欺！-5P"; } } },
+            { label: "断る", func: () => "💰 怪しい話は断った。" }
+        ]
+    },
+    {
+        title: "🪙 自販機の下", 
+        text: "自動販売機の下に手を入れてみると...", 
+        choices: [
+            { label: "探す", func: (s) => { let g = Math.floor(Math.random()*5); s.updateCurrentPlayer(p=>({p:p.p+g})); return `🪙 ${g}P見つけた！`; } },
+            { label: "やめる", func: () => "🪙 やめておいた。" }
+        ]
+    },
+    {
+        title: "🎁 見知らぬ人の贈り物", 
+        text: "親切そうな人がカバンをくれた！", 
+        choices: [
+            { label: "受け取る", func: (s, cp) => { if(Math.random() > 0.3) { let cid = [6,7,10,15][Math.floor(Math.random()*4)]; s.updateCurrentPlayer(p=>({hand:[...p.hand, cid]})); return "🎁 カードを獲得！"; } else { dealDamage(cp.id, 15, "罠"); return "🎁 罠だった！15ダメージ！"; } } },
+            { label: "無視する", func: () => "🎁 無視した。" }
+        ]
+    },
+    {
+        title: "🐕 野良犬に追われた！", 
+        text: "突然野良犬が襲ってきた！", 
+        choices: [
+            { label: "戦う(50%で勝利→+3P)", func: (s, cp) => { if(Math.random() > 0.5) { s.updateCurrentPlayer(p=>({p:p.p+3})); return "🐕 野良犬を撃退！+3P"; } else { dealDamage(cp.id, 10, "野良犬"); return "🐕 噛まれた！10ダメージ！"; } } },
+            { label: "逃げる(AP-2)", func: (s) => { s.updateCurrentPlayer(p=>({ap: Math.max(0, p.ap-2)})); return "🐕 全力で逃げた！AP-2"; } }
+        ]
+    }
+];
+
+// ▼ ストーリーの結果をホスト側で確定させる関数
+export const executeStoryChoice = (choiceIdx) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_STORY_CHOICE', payload: choiceIdx, userId: netState.myUserId });
+        useGameStore.setState({ storyActive: false });
+        return;
+    }
+
+    const s = useGameStore.getState();
+    const cp = s.players[s.turn];
+    const event = STORY_EVENTS[s.storyIndex];
+    if (!event) return;
+
+    const resultMsg = event.choices[choiceIdx].func(s, cp);
+    logMsg(resultMsg);
+    
+    useGameStore.setState({ storyActive: false });
+};
