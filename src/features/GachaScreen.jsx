@@ -130,7 +130,8 @@ function BarrelMachine({ phase }) {
   );
 }
 
-function CardboardReveal({ skin, revealed, onReveal, index }) {
+// ▼ isNew プロパティを受け取るように修正
+function CardboardReveal({ skin, revealed, onReveal, index, isNew }) {
   const cfg = RARITY_CFG[skin.rarity];
   const [opening, setOpening] = useState(false);
 
@@ -158,6 +159,12 @@ function CardboardReveal({ skin, revealed, onReveal, index }) {
         <div style={{
           height:122, position:"relative", background:`linear-gradient(145deg, ${cfg.bg}, ${cfg.bg}ee)`, border:`2px solid ${cfg.border}`, borderRadius:10, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, padding:"6px 4px", boxShadow:`0 0 16px ${cfg.glow}55`, animation:"revealPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
         }}>
+          {/* ▼ NEWバッジの追加 */}
+          {isNew && (
+            <div style={{ position: "absolute", top: -6, right: -6, background: "#FF0044", color: "#fff", fontSize: 9, fontWeight: "bold", padding: "2px 6px", borderRadius: 10, border: "1px solid #fff", zIndex: 10, animation: "canBounce 0.5s ease infinite alternate", boxShadow: "0 2px 4px #0008" }}>
+              NEW!
+            </div>
+          )}
           {(skin.rarity === "UR" || skin.rarity === "SSR" || skin.rarity === "SR") && <div style={{ position:"absolute", inset:0, borderRadius:8, background:`radial-gradient(ellipse at 50% 0%, ${cfg.glow}55 0%, transparent 70%)`, animation:"shimmer 2s ease-in-out infinite" }}/>}
           <div style={{ background:cfg.gold, color:"#000", fontSize:8, fontWeight:"bold", padding:"1px 10px", borderRadius:20, position:"relative", zIndex:1 }}>{skin.rarity}</div>
           <div style={{
@@ -173,14 +180,15 @@ function CardboardReveal({ skin, revealed, onReveal, index }) {
   );
 }
 
-function CinematicReveal({ skins, onDone }) {
+// ▼ newPulls プロパティを受け取るように修正
+function CinematicReveal({ skins, onDone, newPulls }) {
   const [step,    setStep]    = useState(0);
   const [shown,   setShown]   = useState([]);
   const [current, setCurrent] = useState(-1);
   const [best,    setBest]    = useState(null);
 
   useEffect(() => {
-    let mounted = true; // ゴーストタイマー対策
+    let mounted = true;
     const rankOf = r => ({UR:4,SSR:3,SR:2,R:1,N:0})[r];
     const topSkin = skins.reduce((b,s) => rankOf(s.rarity) > rankOf(b.rarity) ? s : b, skins[0]);
     setBest(topSkin);
@@ -216,7 +224,13 @@ function CinematicReveal({ skins, onDone }) {
       {step >= 1 && (
         <>
           {step === 2 && best && (
-            <div style={{ textAlign:"center", animation:"zoomIn 0.6s cubic-bezier(0.34,1.56,0.64,1)", marginBottom:4 }}>
+            <div style={{ textAlign:"center", animation:"zoomIn 0.6s cubic-bezier(0.34,1.56,0.64,1)", marginBottom:4, position: "relative" }}>
+              {/* ▼ ベストスキンがNEWの場合 */}
+              {newPulls.includes(best.id) && (
+                  <div style={{ position: "absolute", top: -10, right: 30, background: "#FF0044", color: "#fff", fontSize: 12, fontWeight: "bold", padding: "2px 8px", borderRadius: 10, border: "2px solid #fff", zIndex: 10, animation: "canBounce 0.5s ease infinite alternate", boxShadow: "0 2px 8px #000" }}>
+                    NEW!
+                  </div>
+              )}
               <div style={{ fontSize:11, color:cfg.gold, letterSpacing:5, marginBottom:8 }}>★ {cfg.label} 排出 ★</div>
               <div style={{
                 width:78, height:78, borderRadius:"50%", background:best.pieceColor, border:`4px solid ${best.ring}`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px", boxShadow:`0 0 28px ${cfg.glow}, 0 0 56px ${cfg.glow}55`, overflow: "hidden"
@@ -230,10 +244,17 @@ function CinematicReveal({ skins, onDone }) {
             {skins.map((s, i) => {
               const c   = RARITY_CFG[s.rarity];
               const vis = shown.includes(i);
+              const isNew = newPulls.includes(s.id); // NEW判定
               return (
                 <div key={i} style={{
-                  width:40, height:40, borderRadius:"50%", background: vis ? s.pieceColor : "#111", border:`2px solid ${vis ? c.border : "#333"}`, display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.22s", transform: i === current && step === 1 ? "scale(1.35)" : "scale(1)", boxShadow: vis ? `0 0 12px ${c.glow}77` : "none", opacity: vis ? 1 : 0.2, overflow: "hidden"
+                  width:40, height:40, borderRadius:"50%", background: vis ? s.pieceColor : "#111", border:`2px solid ${vis ? c.border : "#333"}`, display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.22s", transform: i === current && step === 1 ? "scale(1.35)" : "scale(1)", boxShadow: vis ? `0 0 12px ${c.glow}77` : "none", opacity: vis ? 1 : 0.2, overflow: "hidden", position: "relative"
                 }}>
+                    {/* ▼ サムネイル用のNEWバッジ */}
+                    {vis && isNew && (
+                        <div style={{ position: "absolute", top: -2, right: -2, background: "#FF0044", color: "#fff", fontSize: 7, fontWeight: "bold", padding: "1px 3px", borderRadius: 8, border: "1px solid #fff", zIndex: 10 }}>
+                          NEW
+                        </div>
+                    )}
                     {vis ? <img src={s.front} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "?"}
                 </div>
               );
@@ -260,8 +281,9 @@ export default function GachaScreen() {
   const [showCinema,  setShowCinema]  = useState(false);
   const [pendingRes,  setPendingRes]  = useState([]);
   
-  // 重複変換の内訳を保持するステート
   const [pullConversion, setPullConversion] = useState({ duplicates: [], totalP: 0 });
+  // ▼ 新規獲得スキンIDを保持するステート
+  const [newPulls, setNewPulls] = useState([]);
   
   const [selectedSkinDetail, setSelectedSkinDetail] = useState(null);
   const [viewTransform, setViewTransform] = useState({ scale: 1 });
@@ -292,6 +314,7 @@ export default function GachaScreen() {
     
     // UIリセット
     setPullConversion({ duplicates: [], totalP: 0 });
+    setNewPulls([]); // 初期化
     
     await sleep(350);
     setCanTick(p => p + 1);
@@ -299,14 +322,12 @@ export default function GachaScreen() {
     
     const pulled = pullSkins(count);
     
-    // ▼ 重複判定とP変換の計算
     const currentUnlocked = useUserStore.getState().unlockedSkins || [];
     let earnedP = 0;
     const duplicateDetails = [];
     const newSkinsToUnlock = [];
     
     pulled.forEach(skin => {
-        // すでに所持しているか、今回の10連の中で被った場合
         if (currentUnlocked.includes(skin.id) || newSkinsToUnlock.includes(skin.id)) {
             const pValue = DUPLICATE_P_RATE[skin.rarity] || 5;
             earnedP += pValue;
@@ -317,8 +338,8 @@ export default function GachaScreen() {
     });
 
     setPullConversion({ duplicates: duplicateDetails, totalP: earnedP });
+    setNewPulls(newSkinsToUnlock); // 今回初ゲットのスキン一覧をセット
 
-    // Storeへ一括保存
     if (newSkinsToUnlock.length > 0) unlockMultipleSkins(newSkinsToUnlock);
     if (earnedP > 0) addGachaAssets(0, earnedP);
 
@@ -399,7 +420,8 @@ export default function GachaScreen() {
       `}</style>
 
       <CanParticle trigger={canTick} count={22}/>
-      {showCinema && <CinematicReveal skins={pendingRes} onDone={onCinemaDone}/>}
+      {/* ▼ 10連演出に newPulls を渡す */}
+      {showCinema && <CinematicReveal skins={pendingRes} onDone={onCinemaDone} newPulls={newPulls} />}
       {notif && (
         <div style={{ position:"fixed", top:14, left:"50%", transform:"translateX(-50%)", background: notif.type==="err" ? "#6B0000" : "#1E3A14", border:`2px solid ${notif.type==="err" ? "#EF5350" : "#66BB6A"}`, borderRadius:10, padding:"9px 22px", color:"#fff", fontWeight:"bold", fontSize:13, zIndex:400, animation:"fadeIn 0.3s ease", whiteSpace:"nowrap" }}>{notif.msg}</div>
       )}
@@ -521,10 +543,10 @@ export default function GachaScreen() {
               {results.some(s=>s.rarity==="UR"||s.rarity==="SSR"||s.rarity==="SR") && <div style={{ background:"linear-gradient(135deg,#3D1500,#7A3800)", border:"2px solid #FFD700", borderRadius:12, padding:"10px 16px", textAlign:"center", marginBottom:14, animation:"shimmer 2s ease-in-out infinite" }}><div style={{ fontSize:16, fontWeight:"bold", color:"#FFD700" }}>🔥 レアスキン排出！ 🔥</div></div>}
               
               <div style={{ display:"flex", flexWrap:"wrap", gap:9, justifyContent:"center", marginBottom:14 }}>
-                {results.map((skin, i) => <CardboardReveal key={i} skin={skin} index={i} revealed={revealed.has(i)} onReveal={() => revealOne(i)} />)}
+                {/* ▼ isNew プロパティを渡してNEWバッジを表示 */}
+                {results.map((skin, i) => <CardboardReveal key={i} skin={skin} index={i} revealed={revealed.has(i)} onReveal={() => revealOne(i)} isNew={newPulls.includes(skin.id)} />)}
               </div>
               
-              {/* ▼ 被り変換UIの表示 (全て開封済みの時のみ) */}
               {allRev && pullConversion.totalP > 0 && (
                 <div style={{ marginBottom: 16, padding: 12, background: "#150A00", border: `2px solid ${GOLD}`, borderRadius: 10, animation: "fadeIn 0.5s ease" }}>
                   <div style={{ fontSize: 13, color: GOLD, fontWeight: "bold", marginBottom: 8, textAlign: "center", textShadow: "0 1px 4px #000" }}>
