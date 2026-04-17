@@ -1,10 +1,16 @@
 import { useGameStore } from '../store/useGameStore';
-import { deckData } from '../constants/cards'; // ▼ 追加: カード情報を参照するため
+import { useNetworkStore } from '../store/useNetworkStore';
+import { deckData } from '../constants/cards'; 
 import { logMsg } from './actions';
 import { dealDamage } from './combat';
 import { getDistance } from '../utils/gameLogic';
 
 export const actionDash = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_DASH', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 3) return;
@@ -36,6 +42,11 @@ export const actionDash = () => {
 };
 
 export const actionPunch = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_PUNCH', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const targets = state.players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
@@ -48,6 +59,11 @@ export const actionPunch = () => {
 };
 
 export const actionCamp = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_CAMP', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 2) return;
@@ -58,6 +74,11 @@ export const actionCamp = () => {
 };
 
 export const actionSalesVisit = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_SALES_VISIT', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const targets = state.players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
@@ -68,6 +89,11 @@ export const actionSalesVisit = () => {
 };
 
 export const executeSalesVisit = (cardIndex) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_SALES_VISIT', payload: cardIndex, userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const targetId = state.salesTargetId;
@@ -89,6 +115,11 @@ export const executeSalesVisit = (cardIndex) => {
 };
 
 export const actionHack = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_HACK', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     if (state.players[state.turn].ap < 3) return;
     state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
@@ -97,6 +128,11 @@ export const actionHack = () => {
 };
 
 export const actionConcert = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_CONCERT', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 3) return;
@@ -125,6 +161,11 @@ export const actionConcert = () => {
 };
 
 export const actionDarkCure = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_DARK_CURE', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const targets = state.players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
@@ -139,6 +180,12 @@ export const actionDarkCure = () => {
 };
 
 export const executeDarkCure = (targetId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_DARK_CURE', payload: targetId, userId: netState.myUserId });
+        useGameStore.setState({ isDarkCurePicking: false, darkCureTargets: [] });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const target = state.players.find(p => p.id === targetId);
@@ -161,6 +208,11 @@ export const executeDarkCure = (targetId) => {
 };
 
 export const actionGamble = () => { 
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_GAMBLE', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 3) return;
@@ -189,6 +241,11 @@ export const actionGamble = () => {
 };
 
 export const actionNpcMove = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_NPC_MOVE', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     
@@ -203,6 +260,12 @@ export const actionNpcMove = () => {
 };
 
 export const setupNpcMove = (npcKey) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'SETUP_NPC_MOVE', payload: npcKey, userId: netState.myUserId });
+        useGameStore.setState({ npcSelectActive: false });
+        return;
+    }
     const state = useGameStore.getState();
     state.updateCurrentPlayer(p => ({ ap: p.ap - 3, detectiveCd: 3 }));
     useGameStore.setState({ npcSelectActive: false, npcMovePick: npcKey });
@@ -210,6 +273,11 @@ export const setupNpcMove = (npcKey) => {
 };
 
 export const actionSetTrap = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_SET_TRAP', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     
@@ -225,11 +293,23 @@ export const actionSetTrap = () => {
 };
 
 export const setupSetTrap = (trapType) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'SETUP_SET_TRAP', payload: trapType, userId: netState.myUserId });
+        useGameStore.setState({ isTrapTypePicking: false, isTrapTilePicking: true, selectedTrapType: trapType });
+        return;
+    }
     useGameStore.setState({ isTrapTypePicking: false, isTrapTilePicking: true, selectedTrapType: trapType });
     logMsg(`🪤 罠を仕掛けるマスをタップしてください。`);
 };
 
 export const executeSetTrap = (tileId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_SET_TRAP', payload: tileId, userId: netState.myUserId });
+        useGameStore.setState({ isTrapTilePicking: false, selectedTrapType: null });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const type = state.selectedTrapType;
@@ -246,12 +326,12 @@ export const executeSetTrap = (tileId) => {
     logMsg(`🪤 ${cp.name}が罠を設置した...（他プレイヤーには見えません）`);
 };
 
-// ==========================================
-// ▼ フェーズ3: 新キャラクターのアクションスキル
-// ==========================================
-
-// 🍳 元シェフ: 特製料理
 export const actionChef = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_CHEF', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 3) return;
@@ -261,6 +341,12 @@ export const actionChef = () => {
 };
 
 export const executeChef = (handIndex) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_CHEF', payload: handIndex, userId: netState.myUserId });
+        useGameStore.setState({ isChefPicking: false });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const cardId = cp.hand[handIndex];
@@ -284,8 +370,12 @@ export const executeChef = (handIndex) => {
     state.addEventPopup(cp.id, "🍳", "特製料理", `HP+${healAmount}`, "good");
 };
 
-// ▼ 修正: 🍳 元シェフ: 腐敗料理（攻撃）のフロー変更と追加効果
 export const actionChefAttack = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_CHEF_ATTACK', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const targets = state.players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
@@ -293,7 +383,6 @@ export const actionChefAttack = () => {
     if (targets.length === 0 || cp.ap < 2) return;
 
     if (targets.length === 1) {
-        // 相手が1人の場合はすぐにカード選択モードへ移行
         useGameStore.setState({ 
             isChefAttackPicking: false, 
             chefAttackTargets: [], 
@@ -302,13 +391,17 @@ export const actionChefAttack = () => {
         });
         logMsg(`🤢 ${targets[0].name} に食べさせる食料を手札から選んでください。`);
     } else {
-        // 複数いる場合はターゲット選択モードへ
         useGameStore.setState({ isChefAttackPicking: true, chefAttackTargets: targets.map(t => t.id) });
     }
 };
 
-// ▼ 引数を targetId から handIndex に変更し、手札を消費させる
 export const executeChefAttack = (handIndex) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_CHEF_ATTACK', payload: handIndex, userId: netState.myUserId });
+        useGameStore.setState({ isChefAttackCardPicking: false, chefAttackTargetId: null });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const targetId = state.chefAttackTargetId;
@@ -324,14 +417,12 @@ export const executeChefAttack = (handIndex) => {
         return;
     }
 
-    // 手札を消費
     const newHand = [...cp.hand];
     newHand.splice(handIndex, 1);
 
     state.updateCurrentPlayer(p => ({ ap: p.ap - 2, hand: newHand }));
     useGameStore.setState({ isChefAttackCardPicking: false, chefAttackTargetId: null });
 
-    // 腐敗判定（名前による判定、または毒効果持ち）
     const isRotten = cardData.name.includes("腐った") || cardData.name.includes("拾った") || cardData.poison;
     const damage = isRotten ? 40 : 25;
 
@@ -339,15 +430,18 @@ export const executeChefAttack = (handIndex) => {
     dealDamage(targetId, damage, "腐敗料理", cp.id);
     state.addEventPopup(targetId, "🤢", "食中毒", `${damage}ダメージ`, "damage");
 
-    // 腐った食品の場合は腹痛（2ターンAP-1）を付与
     if (isRotten && target.hp > 0) {
         state.updatePlayer(targetId, p => ({ stomachache: (p.stomachache || 0) + 2 }));
         logMsg(`🤢 さらに猛烈な腹痛が ${target.name} を襲う！（2ターンAP-1）`);
     }
 };
 
-// 🛠️ スカベンジャー: ガラクタ工作
 export const actionScavenger = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_SCAVENGER', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 3) return;
@@ -360,6 +454,12 @@ export const actionScavenger = () => {
 };
 
 export const executeScavenger = (type) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_SCAVENGER', payload: type, userId: netState.myUserId });
+        useGameStore.setState({ isScavengerPicking: false });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
 
@@ -371,13 +471,11 @@ export const executeScavenger = (type) => {
         const equipPool = [8, 24, 25, 26, 27, 28, 29, 45, 46];
         const generated = equipPool[Math.floor(Math.random() * equipPool.length)];
         newHand.push(generated);
-        // ランダム装備はゴミ3つ消費
         state.updateCurrentPlayer(p => ({ ap: p.ap - 3, trash: p.trash - 3, hand: newHand }));
         msg = `ランダムな装備品`;
     } else if (type === 'junkgun') {
         if (cp.ap < 3 || cp.cans < 10) return;
-        newHand.push(48); // 48: ジャンクガン(残3)
-        // ジャンクガンは缶10個消費
+        newHand.push(48);
         state.updateCurrentPlayer(p => ({ ap: p.ap - 3, cans: p.cans - 10, hand: newHand }));
         msg = `ジャンクガン[残3]`;
     }
@@ -387,8 +485,13 @@ export const executeScavenger = (type) => {
     state.addEventPopup(cp.id, "🛠️", "工作完了", msg + "を獲得", "good");
 };
 
-// ▼ 追加: ジャンクガンの使用フロー
 export const setupJunkGun = (handIndex, cardId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'SETUP_JUNK_GUN', payload: { handIndex, cardId }, userId: netState.myUserId });
+        useGameStore.setState({ isJunkGunPicking: true, junkGunData: { handIndex, cardId } });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 2) {
@@ -404,11 +507,16 @@ export const setupJunkGun = (handIndex, cardId) => {
 };
 
 export const executeJunkGunAim = (consumeTrash, dmg) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_JUNK_GUN_AIM', payload: { consumeTrash, dmg }, userId: netState.myUserId });
+        useGameStore.setState({ isJunkGunPicking: false });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const { handIndex, cardId } = state.junkGunData;
 
-    // 武器のエイムUIを呼び出す
     const playerTargets = state.players.filter(op => op.id !== cp.id && op.hp > 0);
     const npcs = [
         { id: 'npc_police', name: 'パトカー', pos: state.policePos, hp: state.policeHp, type: 'npc' },
@@ -429,12 +537,16 @@ export const executeJunkGunAim = (consumeTrash, dmg) => {
 };
 
 export const executeJunkGunFire = (targetId, cardData) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_JUNK_GUN_FIRE', payload: { targetId, cardData }, userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
 
     if (cp.ap < 2 || cp.trash < cardData.consumeTrash) return;
 
-    // 耐久度（カードID）を減らす処理
     let newHand = [...cp.hand];
     let nextCardId = null;
     let broken = false;
@@ -450,15 +562,18 @@ export const executeJunkGunFire = (targetId, cardData) => {
         newHand[cardData.handIndex] = nextCardId;
     }
 
-    // ゴミとAPを消費
     state.updateCurrentPlayer(p => ({ ap: p.ap - 2, trash: p.trash - cardData.consumeTrash, hand: newHand }));
     
     dealDamage(targetId, cardData.dmg, "ジャンクガン", cp.id);
     logMsg(`🔫 【ジャンクガン】ゴミ${cardData.consumeTrash}個を弾丸にして発射！ ${cardData.dmg}ダメージ！`);
 };
 
-// 💴 億万長者: 買収
 export const actionBribe = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_BRIBE', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 2) return;
@@ -467,6 +582,12 @@ export const actionBribe = () => {
 };
 
 export const executeBribe = (targetId, type, pos) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_BRIBE', payload: { targetId, type, pos }, userId: netState.myUserId });
+        useGameStore.setState({ isBribePicking: false });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     const target = state.players.find(p => p.id === targetId);
@@ -479,7 +600,6 @@ export const executeBribe = (targetId, type, pos) => {
     if (type === 'hand') {
         cost = 5;
         if (cp.p < cost || target.hand.length === 0) return;
-        // ▼ 10%還元 (5Pの10%で最低1P戻るように計算)
         cashback = Math.ceil(cost * 0.1); 
         
         const stolenCardIndex = Math.floor(Math.random() * target.hand.length);
@@ -495,7 +615,6 @@ export const executeBribe = (targetId, type, pos) => {
         state.addEventPopup(targetId, "🃏", "買収された", "手札を奪われた", "bad");
         
     } else if (type === 'territory') {
-        // ▼ 修正: 陣地は「無料」で譲り受ける（コスト0、還元なし）
         state.updateCurrentPlayer(p => ({ ap: p.ap - 2 }));
         useGameStore.setState(st => ({ territories: { ...st.territories, [pos]: cp.id } }));
         logMsg(`💴 【陣地買収】圧倒的な圧力により、${target.name}の陣地を無料で譲り受けた！`);
@@ -504,19 +623,21 @@ export const executeBribe = (targetId, type, pos) => {
     } else if (type === 'hire') {
         cost = 10;
         if (cp.p < cost) return;
-        // ▼ 10%還元 (10Pの10%で1P戻る)
         cashback = Math.ceil(cost * 0.1); 
         
         state.updateCurrentPlayer(p => ({ ap: p.ap - 2, p: p.p - cost + cashback }));
-        // ▼ 修正: 相手のAPを奪うのではなく、強制的に「次回AP-5」の疲労を与える
         state.updatePlayer(targetId, p => ({ penaltyAP: (p.penaltyAP || 0) + 5 })); 
         logMsg(`💴 【雇用】10Pを支払い、${target.name}を過労させた！（次ターンAP-5）（成金10%還元: +${cashback}P）`);
         state.addEventPopup(targetId, "💼", "買収された", "次回AP-5", "bad");
     }
 };
 
-// 👼 路上の神様: 神託
 export const actionOracle = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_ORACLE', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 3) return;
@@ -524,18 +645,20 @@ export const actionOracle = () => {
     state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
     state.players.forEach(p => {
         if (p.id !== cp.id && p.hp > 0) {
-            // ▼ 修正: フラグ名を oracleBuff に統一し、ボーナスAPを付与
             state.updatePlayer(p.id, prev => ({ oracleBuff: true, bonusAP: (prev.bonusAP || 0) + 2 }));
             state.addEventPopup(p.id, "👼", "神の導き", "次ダイス+2", "good");
         }
     });
     logMsg(`👼 【神託】自分以外の全員に「神の導き（次ダイス+2）」を与えた！`);
-    // ▼ 修正: ログの送金額表示を 所持Pの10% に変更
     logMsg(`（※導きを受けたプレイヤーは、ターン終了時に自身の所持Pの10%を神様へ強制送金します）`);
 };
 
-// 🥫 缶コレクターの帝王: 缶バリスタ
 export const actionCanBallista = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_CAN_BALLISTA', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     if (cp.ap < 2) return;
@@ -547,15 +670,20 @@ export const actionCanBallista = () => {
     logMsg(`🥫 缶バリスタ！発射する缶の数を選んでください。`);
 };
 
-// ▼ 追加: 武器の照準UI(WeaponArcOverlay)を呼び出す関数
 export const setupCanBallistaAim = (consumeAmount) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'SETUP_CAN_BALLISTA_AIM', payload: consumeAmount, userId: netState.myUserId });
+        useGameStore.setState({ isCanBallistaPicking: false });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
 
     if (cp.ap < 2 || cp.cans < consumeAmount) return;
 
     let dmg = 0, range = 0, aoe = false;
-    if (consumeAmount >= 12) { dmg = 60; range = 5; aoe = true; } // 12個消費は扇状範囲攻撃に！
+    if (consumeAmount >= 12) { dmg = 60; range = 5; aoe = true; } 
     else if (consumeAmount >= 9) { dmg = 40; range = 4; }
     else if (consumeAmount >= 6) { dmg = 25; range = 3; }
     else { dmg = 10; range = 2; }
@@ -569,7 +697,6 @@ export const setupCanBallistaAim = (consumeAmount) => {
         { id: 'npc_friend', name: '仲間のホームレス', pos: state.friendPos, hp: state.friendHp, type: 'npc' }
     ].filter(n => n.hp > 0 && n.pos !== 999);
 
-    // 武器と同じエイムUIを呼び出す
     useGameStore.setState({
         isCanBallistaPicking: false,
         weaponArcData: {
@@ -580,14 +707,17 @@ export const setupCanBallistaAim = (consumeAmount) => {
     });
 };
 
-// ▼ 修正: 照準UIからターゲットを受け取り、ここで初めてAPと缶を消費する
 export const executeCanBallista = (hitTargets, consumeAmount) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_CAN_BALLISTA', payload: { hitTargets, consumeAmount }, userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
 
     if (hitTargets.length === 0 || cp.ap < 2 || cp.cans < consumeAmount) return;
 
-    // コスト消費（ここで初めて消費する）
     state.updateCurrentPlayer(p => ({ ap: p.ap - 2, cans: p.cans - consumeAmount }));
 
     let dmg = 0;
@@ -619,8 +749,12 @@ export const executeCanBallista = (hitTargets, consumeAmount) => {
     }
 };
 
-// ☁️ 路上の仙人: 天地開闢
 export const actionTenchi = () => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_TENCHI', userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
 
@@ -642,7 +776,6 @@ export const actionTenchi = () => {
 
     const addP = Math.min(30, cp.p);
     
-    // ▼ 修正: 他の人間プレイヤーを強制的に「鬼畜CPU」化し、次ターン操作不能(暴走)にする
     state.players.forEach(p => {
         if (p.id !== cp.id && !p.isCPU && p.hp > 0) {
             state.updatePlayer(p.id, { isCPU: true, cpuDifficulty: 'hard', forcedCpuTurns: 1 });
@@ -654,7 +787,7 @@ export const actionTenchi = () => {
     state.updateCurrentPlayer(p => ({
         senki: 0,
         p: p.p + addP,
-        zazenTurns: 2 // 行動不能フラグ
+        zazenTurns: 2
     }));
 
     logMsg(`☁️ 【天地開闢】発動！！ 次ラウンドの全陣地収入がゼロになり、全NPCがワープした！`);

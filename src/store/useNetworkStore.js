@@ -146,10 +146,60 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         
                         // 現在の手番プレイヤーが本人からの要求かチェック
                         if (cp && cp.userId === data.userId) {
-                            // 循環参照エラーを防ぐため、動的インポートで安全にホスト側の計算処理を呼び出す
                             import('../game/actions').then(actions => {
                                 if (data.actionType === 'ROLL_DICE') actions.actionRollDice();
                                 else if (data.actionType === 'END_TURN') actions.actionEndTurn();
+                                else if (data.actionType === 'EXECUTE_MOVE') actions.executeMove(data.payload);
+                                else if (data.actionType === 'ACTION_CAN') actions.actionCan();
+                                else if (data.actionType === 'ACTION_TRASH') actions.actionTrash();
+                                else if (data.actionType === 'ACTION_JOB') actions.actionJob();
+                                else if (data.actionType === 'ACTION_OCCUPY') actions.actionOccupy();
+                                else if (data.actionType === 'ACTION_EXCHANGE') actions.actionExchange();
+                                else if (data.actionType === 'ACTION_MANHOLE') actions.actionManhole();
+                                else if (data.actionType === 'EXECUTE_MANHOLE') actions.executeManhole(data.payload);
+                            }).catch(console.error);
+
+                            import('../game/cards').then(cards => {
+                                if (data.actionType === 'USE_CARD') cards.actionUseCard(data.payload.handIndex, data.payload.cardId);
+                                else if (data.actionType === 'DISCARD_CARD') cards.actionDiscardCard(data.payload);
+                                else if (data.actionType === 'CANCEL_WEAPON') cards.actionCancelWeapon(data.payload);
+                                else if (data.actionType === 'EXECUTE_RECYCLE') cards.executeRecycle(data.payload);
+                                else if (data.actionType === 'EXECUTE_FAKE_INFO') cards.executeFakeInfo(data.payload);
+                                else if (data.actionType === 'EXECUTE_SUBWAY') cards.executeSubway(data.payload);
+                            }).catch(console.error);
+
+                            import('../game/skills').then(skills => {
+                                if (data.actionType === 'ACTION_DASH') skills.actionDash();
+                                else if (data.actionType === 'ACTION_PUNCH') skills.actionPunch();
+                                else if (data.actionType === 'ACTION_CAMP') skills.actionCamp();
+                                else if (data.actionType === 'ACTION_SALES_VISIT') skills.actionSalesVisit();
+                                else if (data.actionType === 'EXECUTE_SALES_VISIT') skills.executeSalesVisit(data.payload);
+                                else if (data.actionType === 'ACTION_HACK') skills.actionHack();
+                                else if (data.actionType === 'ACTION_CONCERT') skills.actionConcert();
+                                else if (data.actionType === 'ACTION_DARK_CURE') skills.actionDarkCure();
+                                else if (data.actionType === 'EXECUTE_DARK_CURE') skills.executeDarkCure(data.payload);
+                                else if (data.actionType === 'ACTION_GAMBLE') skills.actionGamble();
+                                else if (data.actionType === 'ACTION_NPC_MOVE') skills.actionNpcMove();
+                                else if (data.actionType === 'SETUP_NPC_MOVE') skills.setupNpcMove(data.payload);
+                                else if (data.actionType === 'ACTION_SET_TRAP') skills.actionSetTrap();
+                                else if (data.actionType === 'SETUP_SET_TRAP') skills.setupSetTrap(data.payload);
+                                else if (data.actionType === 'EXECUTE_SET_TRAP') skills.executeSetTrap(data.payload);
+                                else if (data.actionType === 'ACTION_CHEF') skills.actionChef();
+                                else if (data.actionType === 'EXECUTE_CHEF') skills.executeChef(data.payload);
+                                else if (data.actionType === 'ACTION_CHEF_ATTACK') skills.actionChefAttack();
+                                else if (data.actionType === 'EXECUTE_CHEF_ATTACK') skills.executeChefAttack(data.payload);
+                                else if (data.actionType === 'ACTION_SCAVENGER') skills.actionScavenger();
+                                else if (data.actionType === 'EXECUTE_SCAVENGER') skills.executeScavenger(data.payload);
+                                else if (data.actionType === 'SETUP_JUNK_GUN') skills.setupJunkGun(data.payload.handIndex, data.payload.cardId);
+                                else if (data.actionType === 'EXECUTE_JUNK_GUN_AIM') skills.executeJunkGunAim(data.payload.consumeTrash, data.payload.dmg);
+                                else if (data.actionType === 'EXECUTE_JUNK_GUN_FIRE') skills.executeJunkGunFire(data.payload.targetId, data.payload.cardData);
+                                else if (data.actionType === 'ACTION_BRIBE') skills.actionBribe();
+                                else if (data.actionType === 'EXECUTE_BRIBE') skills.executeBribe(data.payload.targetId, data.payload.type, data.payload.pos);
+                                else if (data.actionType === 'ACTION_ORACLE') skills.actionOracle();
+                                else if (data.actionType === 'ACTION_CAN_BALLISTA') skills.actionCanBallista();
+                                else if (data.actionType === 'SETUP_CAN_BALLISTA_AIM') skills.setupCanBallistaAim(data.payload);
+                                else if (data.actionType === 'EXECUTE_CAN_BALLISTA') skills.executeCanBallista(data.payload.hitTargets, data.payload.consumeAmount);
+                                else if (data.actionType === 'ACTION_TENCHI') skills.actionTenchi();
                             }).catch(console.error);
                         }
                     }

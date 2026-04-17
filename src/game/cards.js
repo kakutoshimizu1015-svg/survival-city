@@ -1,11 +1,18 @@
 import { useGameStore } from '../store/useGameStore';
 import { useUserStore } from '../store/useUserStore';
+import { useNetworkStore } from '../store/useNetworkStore';
 import { deckData } from '../constants/cards';
 import { logMsg } from './actions';
 
 export const actionUseCard = (handIndex, cardId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'USE_CARD', payload: { handIndex, cardId }, userId: netState.myUserId });
+        return;
+    }
+
     const state = useGameStore.getState();
-    const { turn, players, territories, mapData, isCreativeMode } = state;
+    const { turn, players, territories, isCreativeMode } = state;
     const cp = players[turn];
     const cardData = deckData.find(c => c.id === cardId);
 
@@ -248,8 +255,6 @@ export const actionUseCard = (handIndex, cardId) => {
             playerUpdates.reaction = 'counter'; logMsg(`🔄 反撃の一撃！次のダメージを相手に返す`); 
             state.addEventPopup(cp.id, "🔄", "反撃の構え", "次ダメージを返す", "good");
             break;
-        
-        // ▼ 新規追加: フェーズ2のカード
         case 38: 
             useGameStore.setState({ fixedWeather: 'sunny' }); logMsg(`☀️ 晴れ男/晴れ女！次のラウンドは晴れ確定！`); 
             state.addEventPopup(cp.id, "☀️", "晴れ男/晴れ女", "次ラウンドは晴れ", "good");
@@ -321,6 +326,11 @@ export const actionUseCard = (handIndex, cardId) => {
 };
 
 export const actionDiscardCard = (handIndex) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'DISCARD_CARD', payload: handIndex, userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const newHand = [...state.players[state.turn].hand];
     newHand.splice(handIndex, 1);
@@ -329,6 +339,11 @@ export const actionDiscardCard = (handIndex) => {
 };
 
 export const actionCancelWeapon = (cardId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'CANCEL_WEAPON', payload: cardId, userId: netState.myUserId });
+        return;
+    }
     const state = useGameStore.getState();
     const cardData = deckData.find(c => c.id === cardId);
     if (!cardData || cardData.type !== 'weapon') return;
@@ -341,8 +356,13 @@ export const actionCancelWeapon = (cardId) => {
     logMsg(`🔙 武器の使用をキャンセルしました`);
 };
 
-// ▼ 新規追加: フェーズ2のUI選択確定アクション群
 export const executeRecycle = (handIndex) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_RECYCLE', payload: handIndex, userId: netState.myUserId });
+        useGameStore.setState({ isRecyclePicking: false });
+        return;
+    }
     const state = useGameStore.getState(), cp = state.players[state.turn];
     if (cp.hand.length <= handIndex) return;
     const newHand = [...cp.hand]; newHand.splice(handIndex, 1);
@@ -354,6 +374,12 @@ export const executeRecycle = (handIndex) => {
 };
 
 export const executeFakeInfo = (targetId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_FAKE_INFO', payload: targetId, userId: netState.myUserId });
+        useGameStore.setState({ isFakeInfoPicking: false, fakeInfoTargets: [] });
+        return;
+    }
     const state = useGameStore.getState(), target = state.players.find(p=>p.id===targetId);
     const cp = state.players[state.turn];
     state.updatePlayer(targetId, { fakeInfoDebuff: 1 });
@@ -364,6 +390,12 @@ export const executeFakeInfo = (targetId) => {
 };
 
 export const executeSubway = (tileId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_SUBWAY', payload: tileId, userId: netState.myUserId });
+        useGameStore.setState({ isSubwayPicking: false });
+        return;
+    }
     const state = useGameStore.getState();
     const cp = state.players[state.turn];
     state.updateCurrentPlayer({ pos: tileId });

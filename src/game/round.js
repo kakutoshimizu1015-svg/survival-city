@@ -16,14 +16,11 @@ const getDestRandom = (start, steps, mapData, initialPrevPos = -1) => {
         let tile = mapData.find(t => t.id === current);
         if (!tile || tile.next.length === 0) break;
         
-        // 逆走防止：直前にいたマスを除外した候補リストを作成
         let validNexts = tile.next.filter(id => id !== previous);
-        
-        // 行き止まり（候補が0）の場合は、例外的に逆走を許可して全隣接マスから選ぶ
         if (validNexts.length === 0) validNexts = tile.next; 
         
         let nextPos = validNexts[Math.floor(Math.random() * validNexts.length)];
-        previous = current; // 現在地を「直前の位置」として更新
+        previous = current; 
         current = nextPos;
         hitList.push(current);
     }
@@ -45,7 +42,6 @@ const endGame = () => {
         { key: 'cans', name: '🥫 空き缶王', desc: '最も多く空き缶を拾った' },
         { key: 'trash', name: '🗑️ ゴミ漁り名人', desc: '最も多くゴミを漁った' },
         { key: 'shopP', name: '🛍️ 爆買い王', desc: 'ショップで最もPを消費した' },
-        // ▼ 新しく追加された3つの賞
         { key: 'jobs', name: '💼 バイト王', desc: '最も多くバイトに成功した' },
         { key: 'territories', name: '🏢 不動産王', desc: '最も多く陣地を獲得した' },
         { key: 'minigames', name: '🎮 ミニゲーム王', desc: '最も多くミニゲームに勝利した' }
@@ -162,7 +158,7 @@ export const processRoundEnd = async () => {
 
         state.players.forEach(p => {
             if (p.detectiveCd > 0) useGameStore.getState().updatePlayer(p.id, { detectiveCd: p.detectiveCd - 1 });
-            if (p.fakeInfoDebuff > 0) useGameStore.getState().updatePlayer(p.id, { fakeInfoDebuff: p.fakeInfoDebuff - 1 }); // ニセ情報の解除
+            if (p.fakeInfoDebuff > 0) useGameStore.getState().updatePlayer(p.id, { fakeInfoDebuff: p.fakeInfoDebuff - 1 });
         });
 
         let weather = state.fixedWeather ? state.fixedWeather : (Math.random() < 0.2 ? "rainy" : Math.random() < 0.4 ? "cloudy" : "sunny");
@@ -170,7 +166,7 @@ export const processRoundEnd = async () => {
         let canPrice = state.fixedMarket ? 3 : Math.max(1, Math.floor(Math.random() * 4));
         let trashPrice = state.fixedMarket ? 5 : Math.max(1, Math.floor(Math.random() * 6));
         
-        useGameStore.setState({ fixedWeather: null, fixedMarket: false }); // 固定フラグのリセット
+        useGameStore.setState({ fixedWeather: null, fixedMarket: false });
 
         summaryDigest.push(weather === "rainy" ? "🌧️ 雨" : weather === "cloudy" ? "☁️ 曇り" : "☀️ 晴れ");
         summaryDigest.push(isNight ? "🌙 夜になった" : "☀️ 昼になった");
@@ -235,15 +231,9 @@ export const processRoundEnd = async () => {
         moveOrRespawn('loansharkPos', 'loansharkCd');
         moveOrRespawn('friendPos', 'friendCd');
 
-        // ラウンドサマリーをID付きでセット。ゲスト側UIはこのIDの変更を検知してレポートを表示する。
         useGameStore.setState({ 
-            roundSummary: { 
-                id: Date.now(), 
-                data: summaryDigest, 
-                createdAt: Date.now() 
-            } 
+            roundSummary: { id: Date.now(), data: summaryDigest, createdAt: Date.now() } 
         });
-        // ホスト側のロジックを止めない（演出の終了は各クライアントのUIが担当する）
         await sleep(500);
 
         logMsg(`<span style="color:#c0392b">🛻 ごみ収集車が暴走！</span>`);
@@ -260,6 +250,7 @@ export const processRoundEnd = async () => {
 
         for (let stepId of allTruckPath) {
             useGameStore.setState({ truckPos: stepId });
+            let hitSomeoneThisStep = false; // ▼ 追加: ヒットストップ判定用フラグ
             
             useGameStore.getState().players.forEach(p => {
                 if (p.hp > 0 && p.pos === stepId && !hitPlayers.includes(p.id)) {
@@ -270,17 +261,24 @@ export const processRoundEnd = async () => {
                         logMsg(`🎎 身代わり人形が${p.name}を守った！`);
                         useGameStore.getState().addEventPopup(p.id, "🎎", "回避", "身代わり人形が守った", "good");
                     } else if (Math.random() < 0.55) {
-                        useGameStore.setState({ bloodAnim: p.name });
-                        setTimeout(() => useGameStore.setState({ bloodAnim: null }), 2000);
+                        useGameStore.setState({ bloodAnim: p.name }); // 重複バグの原因だった setTimeout を削除
                         dealDamage(p.id, 50, "収集車");
                         useGameStore.getState().addEventPopup(p.id, "💥", "轢かれた！", "収集車に轢かれた", "damage");
+                        hitSomeoneThisStep = true;
                     } else {
                         logMsg(`💨 ${p.name}は収集車をギリギリ回避！`);
                         useGameStore.getState().addEventPopup(p.id, "💨", "回避！", "収集車をギリギリかわした", "good");
                     }
                 }
             });
-            await sleep(300);
+
+            // ▼ 修正: 轢いた瞬間は1.5秒間ピタッと停止（ヒットストップ）。その後血しぶきを消して再開
+            if (hitSomeoneThisStep) {
+                await sleep(1500);
+                useGameStore.setState({ bloodAnim: null });
+            } else {
+                await sleep(300);
+            }
         }
 
         await sleep(800);

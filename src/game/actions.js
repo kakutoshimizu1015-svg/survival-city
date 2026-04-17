@@ -210,6 +210,14 @@ export const actionMove = () => {
 };
 
 export const executeMove = (targetTileId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        // ゲストは先行してUI表示を消し、ホストへ移動処理を依頼
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_MOVE', payload: targetTileId, userId: netState.myUserId });
+        useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [], isDashPicking: false });
+        return;
+    }
+
     const state = useGameStore.getState();
     const tile = state.mapData.find(t => t.id === targetTileId);
     const cp = state.players[state.turn];
@@ -370,6 +378,12 @@ export const executeMove = (targetTileId) => {
 };
 
 export const actionCan = () => { 
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_CAN', userId: netState.myUserId });
+        return;
+    }
+
     const s = useGameStore.getState();
     const cp = s.players[s.turn]; 
     
@@ -385,6 +399,12 @@ export const actionCan = () => {
 };
 
 export const actionTrash = () => { 
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_TRASH', userId: netState.myUserId });
+        return;
+    }
+
     const s = useGameStore.getState();
     const cp = s.players[s.turn]; 
 
@@ -436,6 +456,12 @@ export const actionTrash = () => {
 };
 
 export const actionJob = () => { 
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_JOB', userId: netState.myUserId });
+        return;
+    }
+
     const s = useGameStore.getState();
     const cp = s.players[s.turn];
     const isSales = cp.charType === "sales";
@@ -472,6 +498,12 @@ export const getOccupyCost = (tileId) => {
 };
 
 export const actionOccupy = () => { 
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_OCCUPY', userId: netState.myUserId });
+        return;
+    }
+
     const s = useGameStore.getState();
     const cp = s.players[s.turn];
     const currentTile = s.mapData.find(t => t.id === cp.pos); 
@@ -517,9 +549,24 @@ export const actionOccupy = () => {
     }
 };
 
-export const actionExchange = () => { const s = useGameStore.getState(), cp = s.players[s.turn], tot = cp.cans * s.canPrice + cp.trash * s.trashPrice; s.updateCurrentPlayer(p => ({ p: p.p + tot, cans: 0, trash: 0 })); playSfx('coin'); };
+export const actionExchange = () => { 
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_EXCHANGE', userId: netState.myUserId });
+        return;
+    }
+    const s = useGameStore.getState(), cp = s.players[s.turn], tot = cp.cans * s.canPrice + cp.trash * s.trashPrice; 
+    s.updateCurrentPlayer(p => ({ p: p.p + tot, cans: 0, trash: 0 })); 
+    playSfx('coin'); 
+};
 
 export const actionManhole = () => { 
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'ACTION_MANHOLE', userId: netState.myUserId });
+        return;
+    }
+    
     const s = useGameStore.getState(), cp = s.players[s.turn], mh = s.mapData.filter(t => t.type === "manhole" && t.id !== cp.pos); 
     if (mh.length > 0) { 
         if (cp.equip?.foldBike && mh.length >= 2) {
@@ -535,6 +582,13 @@ export const actionManhole = () => {
 };
 
 export const executeManhole = (tileId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_MANHOLE', payload: tileId, userId: netState.myUserId });
+        useGameStore.setState({ isManholePicking: false, manholeOptions: [] });
+        return;
+    }
+
     const s = useGameStore.getState(), cp = s.players[s.turn];
     s.updateCurrentPlayer({ pos: tileId });
     useGameStore.setState({ isManholePicking: false, manholeOptions: [] });
