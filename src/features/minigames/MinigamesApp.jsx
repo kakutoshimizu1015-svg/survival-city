@@ -40,7 +40,7 @@ function TitleScreen({ pts, onSelect, scrollRef }) {
     <div id="minigames-scroll-area" onScroll={(e) => scrollRef.current = e.target.scrollTop} style={{
       position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', 
       overflowY: 'auto', overflowX: 'hidden', background: 'radial-gradient(ellipse 120% 80% at 50% 20%,#2a1a08 0%,#0c0a07 65%)', 
-      color: '#d4c4a0', fontFamily: "'Noto Sans JP',sans-serif", zIndex: 1000, 
+      color: '#d4c4a0', zIndex: 1000,
       justifyContent: 'flex-start', paddingBottom: '2rem'
     }}>
       <p style={{ marginTop: '1.5rem', fontSize: '.7rem', letterSpacing: '.3em', color: '#7a6a4a' }}>脱・ホームレスサバイバルシティ</p>

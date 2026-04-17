@@ -52,7 +52,7 @@ function calcSkip(vel, totalPx, unit) {
 // 2. グローバル CSS (ご提示のコードと同様)
 // ─────────────────────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol&display=swap');
 @keyframes mt-sway        { from{transform:translateX(-4px);opacity:.3} to{transform:translateX(4px);opacity:.9} }
 @keyframes mt-donePulse   {
   0%,100%{ box-shadow:0 0 16px #c8782a44,0 0 40px #c8782a18,inset 0 0 20px #c8782a08 }
@@ -175,7 +175,7 @@ function showRewardOverlay(ic, nm, g, col, tier) {
     position:"fixed", inset:"0", zIndex:"9000",
     display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
     background:"rgba(0,0,0,.82)", animation:"mt-overlayIn .2s ease-out forwards",
-    cursor:"pointer", fontFamily:"'Noto Sans JP',sans-serif",
+    cursor:"pointer", fontFamily:"'Kaisei Decol', serif",
   });
   overlay.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
@@ -549,7 +549,7 @@ function MissionCard({ m, claimed, onClaim }) {
 }
 
 const S = {
-  root:{ position:"fixed", inset:0, zIndex:10000, display:"flex", flexDirection:"column", background:"#120900", overflow:"hidden", fontFamily:"'Noto Sans JP',sans-serif", userSelect:"none" },
+  root:{ position:"fixed", inset:0, zIndex:10000, display:"flex", flexDirection:"column", background:"#120900", overflow:"hidden", fontFamily:"'Kaisei Decol', serif", userSelect:"none" },
   header:{ flex:"0 0 auto", padding:"14px 20px 11px", borderBottom:"1px solid #3a2200", display:"flex", alignItems:"center", justifyContent:"space-between", background:"linear-gradient(180deg,#1e140099,#12090066)", zIndex:20 },
   hSub:{ fontSize:10, color:"#7a5a30", letterSpacing:2 },
   hTitle:{ fontSize:20, fontWeight:900, letterSpacing:2, color:"#e8972a", textShadow:"0 0 20px #c8782a66,0 2px 4px #00000077" },
@@ -568,7 +568,7 @@ const S = {
   ha:{ display:"inline-block", animation:"mt-sway 1.1s ease-in-out infinite alternate" },
   track:{ flex:"1 1 0", minHeight:0, width:"100%", position:"relative", zIndex:5, display:"flex", alignItems:"center", overflow:"hidden", cursor:"grab", touchAction:"none", perspective:"900px", perspectiveOrigin:"50% 50%" },
   rail:{ display:"flex", alignItems:"center", height:"100%", gap:GAP, willChange:"transform", transformStyle:"preserve-3d" },
-  arrBtn:{ position:"absolute", top:"50%", transform:"translateY(-50%)", zIndex:12, width:28, height:44, display:"flex", alignItems:"center", justifyContent:"center", background:"#1c100099", border:"1px solid #4a301066", borderRadius:8, cursor:"pointer", backdropFilter:"blur(4px)", transition:"opacity .25s", color:"#e8972a", fontSize:18, lineHeight:1, padding:0, fontFamily:"inherit" },
+  arrBtn:{ position:"absolute", top:"50%", transform:"translateY(-50%)", zIndex:12, width:28, height:44, display:"flex", alignItems:"center", justifyContent:"center", background:"#1c100099", border:"1px solid #4a301066", borderRadius:8, cursor:"pointer", backdropFilter:"blur(4px)", transition:"opacity .25s", color:"#e8972a", fontSize:18, lineHeight:1, padding:0 },
   dots:{ flex:"0 0 auto", display:"flex", gap:5, alignItems:"center", padding:"7px 0 4px", position:"relative", zIndex:9, flexWrap:"wrap", justifyContent:"center", maxWidth:"88%" },
   progCount:{ fontSize:9, color:"#4a3018", letterSpacing:1, padding:"1px 0 2px" },
   footer:{ flex:"0 0 auto", padding:"10px 20px 14px", borderTop:"1px solid #3a2200", zIndex:20 },

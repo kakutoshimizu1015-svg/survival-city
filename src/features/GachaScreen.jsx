@@ -353,7 +353,7 @@ export default function GachaScreen() {
 
   return (
     <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100000, background:BG, overflowY: 'auto', fontFamily:'"Noto Sans JP","Hiragino Kaku Gothic Pro","Yu Gothic",sans-serif', color:LIGHT, display:"flex", flexDirection:"column", userSelect:"none",
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100000, background:BG, overflowY: 'auto', color:LIGHT, display:"flex", flexDirection:"column", userSelect:"none",
     }}>
       <style>{`
         @keyframes canFly     { 0%{transform:translateY(0) translateX(0) rotate(0);opacity:1} 100%{transform:translateY(-105vh) translateX(var(--drift,0px)) rotate(360deg);opacity:0} }
