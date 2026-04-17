@@ -27,6 +27,17 @@ export const actionRollDice = async (isCpuCall = false) => {
     const cp = players[turn];
     if (diceRolled || (!isCpuCall && cp.isCPU)) return;
 
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        // ゲストなら計算せず、ホストへ「サイコロ振って」と依頼するだけ
+        netState.hostConnection.send({ 
+            type: 'REQUEST_ACTION', 
+            actionType: 'ROLL_DICE', 
+            userId: netState.myUserId 
+        });
+        return;
+    }
+
     // ▼ パッシブスキルの解決（ターン開始時）
     
     // 🩺 闇医者のパッシブ【再生能力】
@@ -535,6 +546,29 @@ export const actionEndTurn = async () => {
     const state = useGameStore.getState();
     if (state._roundEndInProgress) return;
 
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        // ▼ ゲストの処理：UIのボタンを先行してリセット・非表示にし、連打を防ぎつつホストへ依頼
+        useGameStore.setState({ 
+            isBranchPicking: false, isDashPicking: false, 
+            isSalesVisiting: false, salesTargetId: null, npcSelectActive: false,
+            mgActive: false, storyActive: false, npcMovePick: null,
+            isTrapScanActive: false, isTrapPicking: false,
+            isRecyclePicking: false, isFakeInfoPicking: false, isSubwayPicking: false, isManholePicking: false,
+            fakeInfoTargets: [], manholeOptions: [],
+            turnBannerActive: false
+        });
+        if (netState.hostConnection && netState.hostConnection.open) {
+            netState.hostConnection.send({ 
+                type: 'REQUEST_ACTION', 
+                actionType: 'END_TURN', 
+                userId: netState.myUserId 
+            });
+        }
+        return;
+    }
+
+    // ▼ ここから下はホスト（またはオフライン）専用の処理
     try {
         const cp = state.players[state.turn];
         const { mapData, players } = state;
@@ -555,14 +589,11 @@ export const actionEndTurn = async () => {
             if (carryOverAP > 0) logMsg(`☁️ 仙人の無為自然！APを ${carryOverAP} 繰り越した。`);
         }
 
-        // ▼ 修正: ☁️ 路上の仙人専用: 仙気スタックの累積発動ロジック
         let newSenki = cp.senki || 0;
         if (cp.charType === 'sennin') {
             if (cp.ap > 0 && cp.ap === state.lastDiceRollTotal) { 
                  newSenki = Math.min(5, newSenki + 1);
                  logMsg(`☁️ 仙気が高まる... (現在: ${newSenki}スタック)`);
-                 
-                 // ▼ スタック数以上の効果がすべて累積で発動する
                  if (newSenki >= 1) {
                      state.updateCurrentPlayer(p => ({ senkiCardDiscount: true }));
                      logMsg(`🧘 仙気[1以上]: 次に使用するカードのAPコストが-1される状態になった。`);
@@ -581,19 +612,11 @@ export const actionEndTurn = async () => {
                          }
                      });
                  }
-            } else {
-                 newSenki = 0; 
-            }
-        } else {
-             newSenki = 0; // 仙人以外は溜まらない
-        }
+            } else { newSenki = 0; }
+        } else { newSenki = 0; }
 
-        // ▼ 追加: 天地開闢による強制CPU化（暴走状態）の解除処理
         if (cp.forcedCpuTurns > 0) {
-            state.updateCurrentPlayer(p => ({
-                isCPU: false,
-                forcedCpuTurns: 0
-            }));
+            state.updateCurrentPlayer(p => ({ isCPU: false, forcedCpuTurns: 0 }));
             logMsg(`👤 ${cp.name} は意識の暴走から解放され、正気を取り戻した。`);
         }
 
@@ -641,17 +664,12 @@ export const actionEndTurn = async () => {
             if (newHp <= 0) {
                 logMsg(`☠️ 毒により死亡...`);
                 state.updateCurrentPlayer(p => ({ hp: 100, p: Math.floor(p.p*0.66), pos: hospitalId, deaths: (p.deaths || 0) + 1, respawnShield: 2 }));
-            } else {
-                state.updateCurrentPlayer(p => ({ hp: newHp }));
-            }
-            state.updateCurrentPlayer(p => ({
-                statusEffects: { ...p.statusEffects, poison: p.statusEffects.poison - 1 }
-            }));
+            } else { state.updateCurrentPlayer(p => ({ hp: newHp })); }
+            state.updateCurrentPlayer(p => ({ statusEffects: { ...p.statusEffects, poison: p.statusEffects.poison - 1 } }));
             state.addEventPopup(cp.id, "☠️", "毒ダメージ", "8ダメージ", "damage");
             playSfx('hit');
         }
         
-        // UIの状態をリセット
         useGameStore.setState({ 
             isBranchPicking: false, isDashPicking: false, 
             isSalesVisiting: false, salesTargetId: null, npcSelectActive: false,
@@ -664,28 +682,16 @@ export const actionEndTurn = async () => {
         const isLastPlayer = state.turn === state.players.length - 1;
 
         if (isLastPlayer) {
-            const netState = useNetworkStore.getState();
-            if (netState.status === 'connected' && !netState.isHost) {
-                if (netState.hostConnection && netState.hostConnection.open) {
-                    suppressNextSync(500);
-                    netState.hostConnection.send({ type: 'REQUEST_ROUND_END' });
-                }
-                // ゲスト側はホストからの同期を待つため、ここでターンバナーをfalseにしておく
-                useGameStore.setState({ turnBannerActive: false });
-                return; 
-            }
             await processRoundEnd();
+        } else {
+            const nextTurnIdx = (state.turn + 1) % state.players.length;
+            useGameStore.setState({ 
+                turn: nextTurnIdx, 
+                diceRolled: false,
+                turnBanner: { id: Date.now(), playerIdx: nextTurnIdx },
+                turnBannerActive: true 
+            });
         }
-
-        // 次のターンへ移行し、バナーとスクロールをトリガーする
-        const nextTurnIdx = (state.turn + 1) % state.players.length;
-        useGameStore.setState({ 
-            turn: nextTurnIdx, 
-            diceRolled: false,
-            // ターン開始イベントとしてIDを発行し、バナーと自動スクロールを有効にする
-            turnBanner: { id: Date.now(), playerIdx: nextTurnIdx },
-            turnBannerActive: true 
-        });
     } catch (e) { 
         console.error("actionEndTurn Error:", e); 
         useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false })); 

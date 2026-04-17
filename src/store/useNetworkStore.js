@@ -139,6 +139,21 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         });
                     }
 
+                    if (data.type === 'REQUEST_ACTION') {
+                        if (!getStore().isHost) return;
+                        const gameState = useGameStore.getState();
+                        const cp = gameState.players[gameState.turn];
+                        
+                        // 現在の手番プレイヤーが本人からの要求かチェック
+                        if (cp && cp.userId === data.userId) {
+                            // 循環参照エラーを防ぐため、動的インポートで安全にホスト側の計算処理を呼び出す
+                            import('../game/actions').then(actions => {
+                                if (data.actionType === 'ROLL_DICE') actions.actionRollDice();
+                                else if (data.actionType === 'END_TURN') actions.actionEndTurn();
+                            }).catch(console.error);
+                        }
+                    }
+
                     if (data.type === 'REQUEST_ROUND_END') {
                         // ホストのみが処理する（isHostチェックで万一の安全弁）
                         if (!getStore().isHost) return;
@@ -353,6 +368,9 @@ useGameStore.subscribe((state) => {
     if (netState.status !== 'connected' || isReceivingNetworkData || state.gamePhase !== 'playing') return;
 
     if (!netState.isHost && state._roundEndInProgress) return;
+
+    // ▼ 追加: ゲストはミニゲーム中以外、勝手に自分の状態を送信(GAME_SYNC)して上書きしない！
+    if (!netState.isHost && !state.mgActive) return;
 
     const now = Date.now();
     const syncInterval = state.mgActive ? 33 : 100;
