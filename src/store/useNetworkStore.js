@@ -131,7 +131,11 @@ export const useNetworkStore = create((setStore, getStore) => ({
                                 try {
                                     useGameStore.setState({ _roundEndInProgress: true });
                                     await processRoundEnd();
-                                    useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false }));
+                                    useGameStore.setState(s => ({ 
+                                        turn: (s.turn + 1) % s.players.length, 
+                                        diceRolled: false,
+                                        _roundEndInProgress: false // ◁ 明示的にfalseへ戻す処理を追加
+                                    }));
                                 } catch (e) {
                                     console.error("Host processRoundEnd error:", e);
                                     useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false, _roundEndInProgress: false }));
