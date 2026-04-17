@@ -362,10 +362,10 @@ useGameStore.subscribe((state) => {
     const doSync = () => {
         lastSyncTime = Date.now();
         const localOnlyKeys = [
-            'charInfoModal', 'acquiredCard', 'toastMsg', 'centerWarning', 'tooltipData',
+            // ▼ 同期が必要な全体演出（toastMsg, centerWarning, eventPopups, bloodAnim, turnBanner, turnBannerActive）を除外リストから削除
+            'charInfoModal', 'acquiredCard', 'tooltipData',
             'settingsActive', 'rulesActive', 'tutorialActive', 'shopActive', 'shopCart',
-            'layoutMode', 'autoScrollToPlayer', 'eventPopups', 'bloodAnim', 'turnBanner',
-            'turnBannerActive', 'jobResult', 'volume', 'showSkipButton',
+            'layoutMode', 'autoScrollToPlayer', 'jobResult', 'volume', 'showSkipButton',
         ];
 
         const pureState = {};
