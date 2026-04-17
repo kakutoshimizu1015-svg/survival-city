@@ -2,23 +2,22 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { ClayButton } from '../common/ClayButton';
-// ▼ 修正: logMsg に加えて、STORY_EVENTS と executeStoryChoice を読み込む
-import { logMsg, STORY_EVENTS, executeStoryChoice } from '../../game/actions';
-import { deckData } from '../../constants/cards';
+import { deckData } from '../../constants/cards'; 
 import { dealDamage } from '../../game/combat';
+// ▼ 修正: ホスト権威のアクションをインポート
+import { logMsg, STORY_EVENTS, executeStoryChoice, executeEndMinigame } from '../../game/actions';
 import { setupNpcMove } from '../../game/skills'; 
-import { executeEndMinigame } from '../../game/actions';
 
-// ▼ 追加: 15種類のミニゲームコンポーネントをすべてインポート
+// ▼ ミニゲームコンポーネントのインポート
 import { BoxGame, VendGame, ScratchGame, HLGame } from '../../features/minigames/MiniGamesPart1';
 import { SlotGame, OxoGame, TetrisGame, FlyGame } from '../../features/minigames/MiniGamesPart2';
 import { RatGame, DrunkGame, RainGame, KashiGame } from '../../features/minigames/MiniGamesPart3';
 import { BegGame, MusicGame, NegoGame } from '../../features/minigames/MiniGamesPart4';
 
-// ▼ 追加: ルール説明文を呼び出すためのインポート
+// ▼ ルール説明文を呼び出すためのインポート
 import { ALL_GAMES } from '../../features/minigames/MinigamesApp';
 
-// ▼ 追加: コンポーネントのマッピング
+// コンポーネントのマッピング
 const MINIGAME_COMPONENTS = {
     box: BoxGame, vend: VendGame, scratch: ScratchGame, hl: HLGame,
     slot: SlotGame, oxo: OxoGame, tetris: TetrisGame, fly: FlyGame,
@@ -27,51 +26,51 @@ const MINIGAME_COMPONENTS = {
 };
 
 export const GameEventOverlays = () => {
-    // ▼ 修正: この行に「mgStarted」を追加して、Storeから引っ張り出します！
-    const { mgActive, mgType, mgStarted, storyActive, storyIndex, players, turn, jobResult, npcSelectActive } = useGameStore();
+    // Storeから状態を取得
+    const { 
+        mgActive, mgType, mgStarted, storyActive, storyIndex, 
+        players, turn, jobResult, npcSelectActive,
+        territorySelectOptions, mapData, territories, gameResult 
+    } = useGameStore();
+    
     const { myUserId, status } = useNetworkStore();
     const cp = players[turn];
 
+    // 自分のターンかどうかの判定
     const isMyTurn = status === 'connected' ? (cp?.userId === myUserId) : true;
     
-    const { charInfoModal, roundSummary, acquiredCard, territorySelectOptions, mapData, territories, gameResult } = useGameStore();
     const [confirmEnd, setConfirmEnd] = useState(false);
-    
-    // ▼ 追加: リトライ等で何度も報酬を受け取れないようにするためのフラグ
-        const [mgRewardGiven, setMgRewardGiven] = useState(false);
-        
-        // 修正: useStateでの管理を削除し、上記で追加した useGameStore から mgStarted を読み込むように、
-        // 22行目付近の const { mgActive, mgType... } の中に mgStarted を追加してください。
-        // 例: const { mgActive, mgType, mgStarted, storyActive... } = useGameStore();
+    const [mgRewardGiven, setMgRewardGiven] = useState(false);
 
-        useEffect(() => {
-            // ミニゲーム起動時に状態をリセット
-            if (mgActive) {
-                setMgRewardGiven(false);
-                // ▼ 修正: プレイヤー本人だけが全体のルール画面状態をリセットする通信を送る
-                if (isMyTurn) {
-                    useGameStore.setState({ mgStarted: false });
-                }
+    useEffect(() => {
+        // ミニゲーム起動時に状態をリセット
+        if (mgActive) {
+            setMgRewardGiven(false);
+            if (isMyTurn) {
+                useGameStore.setState({ mgStarted: false });
             }
-        }, [mgActive, isMyTurn]);
+        }
+    }, [mgActive, isMyTurn]);
 
+    // 勝利フレーズの定義
     const victoryPhrases = [
-        
         "空き缶拾って成り上がり！見事、人生カンストだ！！",
         "過酷なサバイバル完了！見事、路上卒業（路卒）だ！！",
         "勝った！勝った！今日の炊き出しは特上ステーキだ！",
         "段ボールハウス、本日解体！今夜はタワマン最上階だ！"
     ];
+
     const randomVictoryPhrase = useMemo(() => {
         if (!gameResult) return "";
         return victoryPhrases[Math.floor(Math.random() * victoryPhrases.length)];
     }, [gameResult]);
 
-    // ▼ 修正: actions.jsに定義した共有データ(STORY_EVENTS)を参照するように変更
+    // 現在進行中のストーリーイベントを取得（actions.jsで定義された共有データを使用）
     const activeStory = storyActive ? STORY_EVENTS[storyIndex || 0] : null;
 
     return (
         <>
+            {/* NPC移動選択モーダル */}
             {npcSelectActive && isMyTurn && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }}>
                     <div className="modal-box" style={{ background: '#2c3e50', color: 'white', maxWidth: '400px' }}>
@@ -91,6 +90,7 @@ export const GameEventOverlays = () => {
                 </div>
             )}
 
+            {/* ストーリーイベントモーダル */}
             {storyActive && activeStory && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }}>
                     <div className="modal-box" style={{ background: '#2c3e50', color: 'white', maxWidth: '450px' }}>
@@ -100,7 +100,8 @@ export const GameEventOverlays = () => {
                             {activeStory.choices.map((c, i) => (
                                 <ClayButton key={i} onClick={() => {
                                     if (isMyTurn) {
-                                        executeStoryChoice(i); // ▼ 修正: ローカル処理をやめ、ホストへ依頼
+                                        // ▼ 修正: ホスト側で結果を計算・同期させる
+                                        executeStoryChoice(i);
                                     }
                                 }}>{c.label}</ClayButton>
                             ))}
@@ -109,6 +110,7 @@ export const GameEventOverlays = () => {
                 </div>
             )}
 
+            {/* バイト結果モーダル */}
             {jobResult?.active && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }} onClick={() => useGameStore.setState({ jobResult: null })}>
                     <div className="modal-box" style={{ background: jobResult.isSuccess ? '#f1c40f' : '#2c3e50', color: jobResult.isSuccess ? '#333' : 'white', borderColor: jobResult.isSuccess ? '#f39c12' : '#1a252f' }}>
@@ -120,9 +122,8 @@ export const GameEventOverlays = () => {
                 </div>
             )}
 
-            {/* ▼ 修正: 古いHTML版ミニゲーム用UIを完全に削除し、新コンポーネントをフルスクリーンで呼び出す */}
+            {/* ミニゲームコンテナ */}
             {mgActive && mgType && MINIGAME_COMPONENTS[mgType] && (
-                // ▼ 修正: 観戦モード時はコンテナ全体でpointerEventsを無効化し、操作貫通を完全に防ぐ
                 <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#0c0a07', pointerEvents: isMyTurn ? 'auto' : 'none' }}>
                     {!isMyTurn && (
                         <div style={{ position: 'absolute', top: 20, width: '100%', textAlign: 'center', color: 'white', zIndex: 10001, fontSize: '1.2rem', fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
@@ -130,7 +131,6 @@ export const GameEventOverlays = () => {
                         </div>
                     )}
                     
-                    {/* ▼ 追加: スタートボタンが押される前ならルール画面を表示 */}
                     {!mgStarted ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#f0e8d0', padding: '20px', textAlign: 'center' }}>
                             <div style={{ background: '#241a0e', border: '2px solid #c97b2a', borderRadius: '15px', padding: '30px', maxWidth: '400px', width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
@@ -141,7 +141,6 @@ export const GameEventOverlays = () => {
                                     {ALL_GAMES.find(g => g.id === mgType)?.desc}
                                 </p>
                                 {isMyTurn ? (
-                                    // ▼ 修正: プレイヤーが押したとき、Storeに書き込んで全員の画面を切り替える
                                     <ClayButton onClick={() => useGameStore.setState({ mgStarted: true })} style={{ width: '100%', fontSize: '1.2rem', padding: '15px' }}>
                                         🎮 ゲームスタート！
                                     </ClayButton>
@@ -151,34 +150,33 @@ export const GameEventOverlays = () => {
                             </div>
                         </div>
                     ) : (
-                    React.createElement(MINIGAME_COMPONENTS[mgType], {
-                        isEventMode: true, 
-                        isObserver: !isMyTurn, 
-                        pts: cp?.p || 0,
-                        addPts: (pts) => {
-                            if (!isMyTurn || mgRewardGiven) return;
-                            setMgRewardGiven(true); 
-                            const cardId = Math.floor(Math.random() * 38);
-                            // ローカルでの直接操作をやめ、ホストへ報酬と終了を依頼する
-                            executeEndMinigame(true, pts, cardId, `ミニゲーム大成功！ +${pts}P とカードを獲得！`);
-                        },
-                        subPts: (pts) => {
-                            if (!isMyTurn) return;
-                            // ローカルでの直接操作をやめ、ホストへペナルティと終了を依頼する
-                            executeEndMinigame(false, pts, null, `ミニゲームで ${pts}P 失った...`);
-                        },
-                        onBack: () => {
-                            if (!isMyTurn) return;
-                            // ホストへミニゲームの終了（リタイア）を依頼する
-                            executeEndMinigame(false, 0, null, null);
-                        }
-                    })
-                    )} {/* ← 修正: 三項演算子を閉じるためのカッコ「 ) 」を追加しました */}
+                        React.createElement(MINIGAME_COMPONENTS[mgType], {
+                            isEventMode: true, 
+                            isObserver: !isMyTurn, 
+                            pts: cp?.p || 0,
+                            addPts: (pts) => {
+                                if (!isMyTurn || mgRewardGiven) return;
+                                setMgRewardGiven(true); 
+                                const cardId = Math.floor(Math.random() * 38);
+                                // ▼ 修正: ホスト側で報酬付与と終了処理を一括管理
+                                executeEndMinigame(true, pts, cardId, `ミニゲーム大成功！ +${pts}P とカードを獲得！`);
+                            },
+                            subPts: (pts) => {
+                                if (!isMyTurn) return;
+                                // ▼ 修正: ホスト側でポイント減少と終了処理を一括管理
+                                executeEndMinigame(false, pts, null, `ミニゲームで ${pts}P 失った...`);
+                            },
+                            onBack: () => {
+                                if (!isMyTurn) return;
+                                // ▼ 修正: ホスト側へ終了を依頼（報酬なし）
+                                executeEndMinigame(false, 0, null, null);
+                            }
+                        })
+                    )}
                 </div>
             )}
 
-            {/* 重複していた roundSummary, acquiredCard の描画ブロックは削除しました（GameEffectsOverlayに集約済み） */}
-
+            {/* 陣地奪取選択モーダル */}
             {territorySelectOptions && territorySelectOptions.length > 0 && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 10002 }}>
                     <div className="modal-box" style={{ maxWidth: '500px' }}>
@@ -205,6 +203,7 @@ export const GameEventOverlays = () => {
                 </div>
             )}
 
+            {/* 最終リザルト画面 */}
             {gameResult && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 9998, background: 'radial-gradient(circle,#f1c40f,#e67e22,#c0392b)', flexDirection: 'column', alignItems: 'center', color: 'white', textAlign: 'center', animation: 'win-bg-anim 2s infinite alternate', cursor: 'pointer' }} onClick={() => setConfirmEnd(true)}>
                     <div style={{ fontSize: '80px', marginBottom: '15px' }}>🏆</div>
@@ -248,6 +247,7 @@ export const GameEventOverlays = () => {
                 </div>
             )}
 
+            {/* ゲーム終了確認モーダル */}
             {confirmEnd && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 10000 }}>
                      <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723' }} onClick={e => e.stopPropagation()}>

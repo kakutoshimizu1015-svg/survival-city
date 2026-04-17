@@ -1,263 +1,246 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
-import { ClayButton } from '../common/ClayButton';
-import { deckData } from '../../constants/cards'; 
-import { dealDamage } from '../../game/combat';
-// ▼ 修正: ホスト権威のアクションをインポート
-import { logMsg, STORY_EVENTS, executeStoryChoice, executeEndMinigame } from '../../game/actions';
-import { setupNpcMove } from '../../game/skills'; 
+import { deckData } from '../../constants/cards';
+import { charInfo, charDetailData } from '../../constants/characters';
+import { playSfx } from '../../utils/audio';
+import { actionDiscardCard } from '../../game/actions';
+import { CharImage } from '../common/CharImage';
 
-// ▼ ミニゲームコンポーネントのインポート
-import { BoxGame, VendGame, ScratchGame, HLGame } from '../../features/minigames/MiniGamesPart1';
-import { SlotGame, OxoGame, TetrisGame, FlyGame } from '../../features/minigames/MiniGamesPart2';
-import { RatGame, DrunkGame, RainGame, KashiGame } from '../../features/minigames/MiniGamesPart3';
-import { BegGame, MusicGame, NegoGame } from '../../features/minigames/MiniGamesPart4';
-
-// ▼ ルール説明文を呼び出すためのインポート
-import { ALL_GAMES } from '../../features/minigames/MinigamesApp';
-
-// コンポーネントのマッピング
-const MINIGAME_COMPONENTS = {
-    box: BoxGame, vend: VendGame, scratch: ScratchGame, hl: HLGame,
-    slot: SlotGame, oxo: OxoGame, tetris: TetrisGame, fly: FlyGame,
-    rat: RatGame, drunk: DrunkGame, rain: RainGame, kashi: KashiGame,
-    beg: BegGame, music: MusicGame, nego: NegoGame
-};
-
-export const GameEventOverlays = () => {
-    // Storeから状態を取得
+export const GameEffectsOverlay = () => {
     const { 
-        mgActive, mgType, mgStarted, storyActive, storyIndex, 
-        players, turn, jobResult, npcSelectActive,
-        territorySelectOptions, mapData, territories, gameResult 
+        turnBanner, eventPopups, disasterWarning, bloodAnim, players, turn, 
+        toastMsg, centerWarning, roundSummary, acquiredCard, charInfoModal 
     } = useGameStore();
-    
+
     const { myUserId, status } = useNetworkStore();
     const cp = players[turn];
-
-    // 自分のターンかどうかの判定
-    const isMyTurn = status === 'connected' ? (cp?.userId === myUserId) : true;
     
-    const [confirmEnd, setConfirmEnd] = useState(false);
-    const [mgRewardGiven, setMgRewardGiven] = useState(false);
+    // 自分のターンかどうか、および手札上限の判定
+    const isMyTurn = status === 'connected' ? (cp?.userId === myUserId) : !cp?.isCPU;
+    const isHandOverLimit = cp && cp.hand.length > (cp.maxHand || 7);
 
+    // UI側で表示時間を管理するためのローカルステート
+    const [localToast, setLocalToast] = useState(null);
+    const [localWarning, setLocalWarning] = useState(null);
+    const [localSummary, setLocalSummary] = useState(null);
+    const [localAcquired, setLocalAcquired] = useState(null);
+
+    // トースト通知のタイマー
     useEffect(() => {
-        // ミニゲーム起動時に状態をリセット
-        if (mgActive) {
-            setMgRewardGiven(false);
-            if (isMyTurn) {
-                useGameStore.setState({ mgStarted: false });
-            }
+        if (toastMsg && toastMsg.id) {
+            setLocalToast(toastMsg.text);
+            const timer = setTimeout(() => setLocalToast(null), 3000);
+            return () => clearTimeout(timer);
         }
-    }, [mgActive, isMyTurn]);
+    }, [toastMsg?.id]);
 
-    // 勝利フレーズの定義
-    const victoryPhrases = [
-        "空き缶拾って成り上がり！見事、人生カンストだ！！",
-        "過酷なサバイバル完了！見事、路上卒業（路卒）だ！！",
-        "勝った！勝った！今日の炊き出しは特上ステーキだ！",
-        "段ボールハウス、本日解体！今夜はタワマン最上階だ！"
-    ];
+    // 中央警告のタイマー
+    useEffect(() => {
+        if (centerWarning && centerWarning.id) {
+            setLocalWarning(centerWarning.text);
+            const timer = setTimeout(() => setLocalWarning(null), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [centerWarning?.id]);
 
-    const randomVictoryPhrase = useMemo(() => {
-        if (!gameResult) return "";
-        return victoryPhrases[Math.floor(Math.random() * victoryPhrases.length)];
-    }, [gameResult]);
+    // ラウンドレポートのタイマー
+    useEffect(() => {
+        if (roundSummary && roundSummary.id) {
+            setLocalSummary(roundSummary);
+            const timer = setTimeout(() => setLocalSummary(null), 5000); 
+            return () => clearTimeout(timer);
+        }
+    }, [roundSummary?.id]);
 
-    // 現在進行中のストーリーイベントを取得（actions.jsで定義された共有データを使用）
-    const activeStory = storyActive ? STORY_EVENTS[storyIndex || 0] : null;
+    // カード獲得演出のタイマー
+    useEffect(() => {
+        if (acquiredCard && acquiredCard.id) {
+            setLocalAcquired(acquiredCard);
+            const timer = setTimeout(() => setLocalAcquired(null), 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [acquiredCard?.id]);
+
+    // キャラクター詳細モーダル用のデータ準備
+    const targetPlayer = charInfoModal !== null ? players.find(p => p.id === charInfoModal) : null;
+    const detail = targetPlayer ? charDetailData[targetPlayer.charType] : null;
+    const cInfo = targetPlayer ? charInfo[targetPlayer.charType] : null;
+
+    const equipLabels = {bicycle:'🚲自転車',shoes:'👢安全靴',cart:'🛒リヤカー',shield:'🛡️段ボール盾',helmet:'🪖ヘルメット',doll:'🎎身代わり人形',backpack:'🎒リュック'};
+    const reactionLabels = {block:'⚖️弁護士の盾',reflect:'🤝裏取引',counter:'🔄反撃'};
+    const activeTags = [];
+    if (targetPlayer) {
+        if (targetPlayer.stealth) activeTags.push('💨ステルス中');
+        if (targetPlayer.rainGear) activeTags.push('☂️雨具装備');
+        if (targetPlayer.hasID) activeTags.push('🪪身分証あり');
+        if (targetPlayer.reaction) activeTags.push(reactionLabels[targetPlayer.reaction] || targetPlayer.reaction);
+        Object.entries(targetPlayer.equip || {}).forEach(([k, v]) => { if (v && equipLabels[k]) activeTags.push(equipLabels[k]); });
+    }
 
     return (
         <>
-            {/* NPC移動選択モーダル */}
-            {npcSelectActive && isMyTurn && (
-                <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }}>
-                    <div className="modal-box" style={{ background: '#2c3e50', color: 'white', maxWidth: '400px' }}>
-                        <h2 style={{ color: '#f1c40f', marginTop: 0 }}>🕵️ 情報操作</h2>
-                        <p style={{ fontSize: '14px', marginBottom: '15px' }}>動かしたいNPCを選んでください</p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-                            <ClayButton onClick={() => setupNpcMove('policePos')} style={{ width: '130px', padding: '10px' }}>🚓 警察</ClayButton>
-                            <ClayButton onClick={() => setupNpcMove('truckPos')} style={{ width: '130px', padding: '10px' }}>🛻 収集車</ClayButton>
-                            <ClayButton onClick={() => setupNpcMove('unclePos')} style={{ width: '130px', padding: '10px' }}>🧓 おじさん</ClayButton>
-                            <ClayButton onClick={() => setupNpcMove('yakuzaPos')} style={{ width: '130px', padding: '10px' }}>😎 ヤクザ</ClayButton>
-                            <ClayButton onClick={() => setupNpcMove('loansharkPos')} style={{ width: '130px', padding: '10px' }}>💀 闇金</ClayButton>
-                            <ClayButton onClick={() => setupNpcMove('animalPos')} style={{ width: '130px', padding: '10px' }}>🐀 野良動物</ClayButton>
-                            <ClayButton onClick={() => setupNpcMove('friendPos')} style={{ width: '130px', padding: '10px' }}>🤝 仲間</ClayButton>
-                        </div>
-                        <ClayButton onClick={() => useGameStore.setState({ npcSelectActive: false })} style={{ width: '100%', marginTop: '20px', background: '#7f8c8d' }}>キャンセル</ClayButton>
-                    </div>
+            <style>{`
+                @keyframes banner-anim { 0%{opacity:0;transform:scale(0.8);} 10%{opacity:1;transform:scale(1);} 90%{opacity:1;transform:scale(1);} 100%{opacity:0;transform:scale(1.2);} }
+                @keyframes event-popup-anim { 0%{opacity:0;transform:scale(0.6) translateY(10px);} 13%{opacity:1;transform:scale(1.04) translateY(0);} 22%{transform:scale(1);} 74%{opacity:0.9;transform:scale(1) translateY(-8px);} 100%{opacity:0;transform:scale(0.9) translateY(-24px);} }
+                @keyframes warningPulse { 0%{box-shadow:0 0 40px #e74c3c,0 0 80px rgba(231,76,60,0.4);} 100%{box-shadow:0 0 80px #ff0000,0 0 160px rgba(255,0,0,0.7),0 0 240px rgba(255,0,0,0.2);} }
+                @keyframes warningBg { 0%,100%{background:rgba(0,0,0,0);} 10%,90%{background:rgba(60,0,0,0.85);} }
+                @keyframes blood-splash { 0%{transform:scale(0.1); opacity:0;} 50%{transform:scale(1.5); opacity:1;} 100%{transform:scale(1); opacity:0.8;} }
+                @keyframes slide-down { 0%{transform:translate(-50%, -20px); opacity:0;} 100%{transform:translate(-50%, 0); opacity:1;} }
+                @keyframes pop-in { 0%{transform:translate(-50%, -50%) scale(0.8); opacity:0;} 100%{transform:translate(-50%, -50%) scale(1); opacity:1;} }
+                @keyframes fade-in-right { 0%{transform:translateX(-20px); opacity:0;} 100%{transform:translateX(0); opacity:1;} }
+            `}</style>
+
+            {/* 画面上部トースト通知 */}
+            {localToast && (
+                <div style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(231,76,60,0.95)', color: 'white', padding: '15px 30px', borderRadius: '10px', zIndex: 10010, fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', fontSize: '16px', border: '2px solid #fff', animation: 'slide-down 0.3s forwards' }}>
+                    ⚠️ {localToast}
                 </div>
             )}
 
-            {/* ストーリーイベントモーダル */}
-            {storyActive && activeStory && (
-                <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }}>
-                    <div className="modal-box" style={{ background: '#2c3e50', color: 'white', maxWidth: '450px' }}>
-                        <h2 style={{ color: '#f1c40f' }}>📖 {activeStory.title}</h2>
-                        <p style={{ fontSize: '15px', fontWeight: 'bold' }}>{activeStory.text}</p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-                            {activeStory.choices.map((c, i) => (
-                                <ClayButton key={i} onClick={() => {
-                                    if (isMyTurn) {
-                                        // ▼ 修正: ホスト側で結果を計算・同期させる
-                                        executeStoryChoice(i);
-                                    }
-                                }}>{c.label}</ClayButton>
-                            ))}
-                        </div>
-                    </div>
+            {/* 画面中央警告 */}
+            {localWarning && (
+                <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(241,196,15,0.95)', color: '#c0392b', padding: '20px 40px', borderRadius: '15px', zIndex: 10005, fontWeight: 'bold', boxShadow: '0 0 40px rgba(241,196,15,0.8)', fontSize: '24px', border: '4px dashed #c0392b', animation: 'pop-in 0.3s forwards', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    {localWarning}
                 </div>
             )}
 
-            {/* バイト結果モーダル */}
-            {jobResult?.active && (
-                <div className="modal-overlay" style={{ display: 'flex', zIndex: 1000 }} onClick={() => useGameStore.setState({ jobResult: null })}>
-                    <div className="modal-box" style={{ background: jobResult.isSuccess ? '#f1c40f' : '#2c3e50', color: jobResult.isSuccess ? '#333' : 'white', borderColor: jobResult.isSuccess ? '#f39c12' : '#1a252f' }}>
-                        <div style={{ fontSize: '60px' }}>{jobResult.isSuccess ? '💼🎉' : '😭'}</div>
-                        <h2 style={{ marginTop: '10px' }}>{jobResult.isSuccess ? 'バイト大成功！' : 'バイト失敗...'}</h2>
-                        <p style={{ fontWeight: 'bold', fontSize: '18px' }}>{jobResult.isSuccess ? `${jobResult.points}P獲得！` : '報酬なし。'}</p>
-                        <p style={{ fontSize: '12px', color: '#bdc3c7', marginTop: '20px' }}>(タップして戻る)</p>
-                    </div>
-                </div>
-            )}
-
-            {/* ミニゲームコンテナ */}
-            {mgActive && mgType && MINIGAME_COMPONENTS[mgType] && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#0c0a07', pointerEvents: isMyTurn ? 'auto' : 'none' }}>
-                    {!isMyTurn && (
-                        <div style={{ position: 'absolute', top: 20, width: '100%', textAlign: 'center', color: 'white', zIndex: 10001, fontSize: '1.2rem', fontWeight: 'bold', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
-                            (他プレイヤーがミニゲーム中...)
-                        </div>
-                    )}
-                    
-                    {!mgStarted ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#f0e8d0', padding: '20px', textAlign: 'center' }}>
-                            <div style={{ background: '#241a0e', border: '2px solid #c97b2a', borderRadius: '15px', padding: '30px', maxWidth: '400px', width: '100%', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
-                                <h2 style={{ fontSize: '1.8rem', color: '#e8b84b', margin: '0 0 15px 0' }}>
-                                    {ALL_GAMES.find(g => g.id === mgType)?.icon} {ALL_GAMES.find(g => g.id === mgType)?.name}
-                                </h2>
-                                <p style={{ fontSize: '1.1rem', color: '#d4c4a0', marginBottom: '25px', lineHeight: '1.6' }}>
-                                    {ALL_GAMES.find(g => g.id === mgType)?.desc}
-                                </p>
-                                {isMyTurn ? (
-                                    <ClayButton onClick={() => useGameStore.setState({ mgStarted: true })} style={{ width: '100%', fontSize: '1.2rem', padding: '15px' }}>
-                                        🎮 ゲームスタート！
-                                    </ClayButton>
-                                ) : (
-                                    <p style={{ color: '#7a6a4a', fontWeight: 'bold' }}>プレイヤーの操作を待っています...</p>
-                                )}
-                            </div>
-                        </div>
-                    ) : (
-                        React.createElement(MINIGAME_COMPONENTS[mgType], {
-                            isEventMode: true, 
-                            isObserver: !isMyTurn, 
-                            pts: cp?.p || 0,
-                            addPts: (pts) => {
-                                if (!isMyTurn || mgRewardGiven) return;
-                                setMgRewardGiven(true); 
-                                const cardId = Math.floor(Math.random() * 38);
-                                // ▼ 修正: ホスト側で報酬付与と終了処理を一括管理
-                                executeEndMinigame(true, pts, cardId, `ミニゲーム大成功！ +${pts}P とカードを獲得！`);
-                            },
-                            subPts: (pts) => {
-                                if (!isMyTurn) return;
-                                // ▼ 修正: ホスト側でポイント減少と終了処理を一括管理
-                                executeEndMinigame(false, pts, null, `ミニゲームで ${pts}P 失った...`);
-                            },
-                            onBack: () => {
-                                if (!isMyTurn) return;
-                                // ▼ 修正: ホスト側へ終了を依頼（報酬なし）
-                                executeEndMinigame(false, 0, null, null);
-                            }
-                        })
-                    )}
-                </div>
-            )}
-
-            {/* 陣地奪取選択モーダル */}
-            {territorySelectOptions && territorySelectOptions.length > 0 && (
-                <div className="modal-overlay" style={{ display: 'flex', zIndex: 10002 }}>
-                    <div className="modal-box" style={{ maxWidth: '500px' }}>
-                        <h3 style={{ marginTop: 0 }}>🚩 奪う陣地を選択</h3>
-                        <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
-                            {territorySelectOptions.map(tId => {
-                                const tile = mapData.find(t => t.id == tId);
-                                const ownerId = territories[tId];
-                                const owner = players.find(p => p.id == ownerId);
+            {/* 手札上限オーバー時のカード破棄モーダル（ホスト依頼型） */}
+            {isHandOverLimit && isMyTurn && (
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 9999 }}>
+                    <div className="modal-box" style={{ border: '4px solid #e74c3c' }}>
+                        <h2 style={{ color: '#e74c3c', marginTop: 0 }}>⚠️ 手札が上限を超えました</h2>
+                        <p style={{ fontWeight: 'bold' }}>捨てるカードを1枚選んでください（上限: {cp.maxHand || 7}枚）</p>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '15px' }}>
+                            {cp.hand.map((cardId, idx) => {
+                                const cd = deckData.find(d => d.id === cardId);
+                                if (!cd) return null;
                                 return (
-                                    <button key={tId} onClick={() => {
-                                        useGameStore.setState(s => ({ territories: { ...s.territories, [tId]: cp.id }, territorySelectOptions: null }));
-                                        logMsg(`🚩 マス${tId}「${tile?.name}」を奪取！（${owner?.name}から）`);
-                                        useGameStore.getState().addEventPopup(cp.id, "🚩", "陣地奪取！", `${tile?.name}を乗っ取った`, "good");
-                                    }} style={{ width: '100%', margin: '4px 0', textAlign: 'left', padding: '8px', cursor: 'pointer', borderRadius: '8px', border: '2px solid #8d6e63' }}>
-                                        🚩 マス{tId}「{tile?.name}」<br/>
-                                        <span style={{ fontSize: '10px', color: '#e74c3c' }}>所有者: {owner?.name}</span>
+                                    <button key={idx} onClick={() => {
+                                        actionDiscardCard(idx); // ホストへ依頼
+                                        playSfx('coin');
+                                    }} style={{ padding: '8px 12px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer', border: `2px solid ${cd.color}`, background: '#fff', fontWeight: 'bold', boxShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
+                                        {cd.icon} {cd.name} を捨てる
                                     </button>
                                 );
                             })}
                         </div>
-                        <button className="btn-large" style={{ width: '100%', marginTop: '15px', background: '#7f8c8d', borderColor: '#2c3e50' }} onClick={() => useGameStore.setState({ territorySelectOptions: null })}>キャンセル</button>
                     </div>
                 </div>
             )}
 
-            {/* 最終リザルト画面 */}
-            {gameResult && (
-                <div className="modal-overlay" style={{ display: 'flex', zIndex: 9998, background: 'radial-gradient(circle,#f1c40f,#e67e22,#c0392b)', flexDirection: 'column', alignItems: 'center', color: 'white', textAlign: 'center', animation: 'win-bg-anim 2s infinite alternate', cursor: 'pointer' }} onClick={() => setConfirmEnd(true)}>
-                    <div style={{ fontSize: '80px', marginBottom: '15px' }}>🏆</div>
-                    <h1 style={{ fontSize: gameResult.isTeamGame ? '28px' : '26px', textShadow: '2px 2px 10px #000', margin: 0, lineHeight: '1.4' }}>
-                        {gameResult.isTeamGame 
-                            ? (gameResult.sortedTeams[0].color !== 'none' ? `${gameResult.sortedTeams[0].color}チーム` : `${gameResult.sortedTeams[0].members[0].emoji} ${gameResult.sortedTeams[0].members[0].name}`)
-                            : `${gameResult.results[0].emoji} ${gameResult.results[0].name}`}
-                        <br />
-                        <span style={{ fontSize: '32px', color: '#f1c40f' }}>{randomVictoryPhrase}</span>
-                    </h1>
-                    
-                    <div style={{ fontSize: '18px', marginTop: '20px', textAlign: 'left', background: 'rgba(0,0,0,0.3)', padding: '20px', borderRadius: '15px', maxHeight: '50vh', overflowY: 'auto' }}>
-                        {gameResult.isTeamGame ? (
-                            <>
-                                <div style={{ marginBottom:'12px', fontSize:'14px', color:'#f1c40f', borderBottom:'1px dashed #f1c40f', paddingBottom:'6px' }}>🏆 チーム順位</div>
-                                {gameResult.sortedTeams.map((team, i) => (
-                                    <div key={i}>
-                                        <div style={{ margin:'8px 0', fontSize: i===0?20:15 }}>
-                                            {i===0?'🥇':i===1?'🥈':i===2?'🥉':'4️⃣'} {team.color !== 'none' ? `${team.color}チーム` : `${team.members[0].emoji}${team.members[0].name}(ソロ)`}: <b>{team.total}pt</b>
-                                        </div>
-                                        {team.members.map(r => (
-                                            <div key={r.id} style={{ margin:'2px 0 2px 20px', fontSize:'12px', color:'#bdc3c7' }}>
-                                                {r.emoji}{r.name}: {r.totalScore}pt (💰{r.scaledP} 🚩{r.terrValue} ⚔️{r.killBonus} 💀-{r.deathPenalty})
-                                            </div>
+            {/* ターン開始バナー */}
+            {turnBanner && (
+                <div style={{ position:'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(0,0,0,0.6)', zIndex:300, display:'flex', justifyContent:'center', alignItems:'center', pointerEvents:'none', animation:'banner-anim 1.5s forwards' }}>
+                    <div style={{ fontSize:'50px', fontWeight:'bold', padding:'20px 50px', color:'#fff', background:'rgba(44,62,80,0.95)', borderRadius:'20px', border:`8px solid ${turnBanner.color}`, textAlign:'center', textShadow:`0 0 20px ${turnBanner.color}, 2px 2px 4px rgba(0,0,0,0.8)` }}>
+                        {turnBanner.name} のターン
+                    </div>
+                </div>
+            )}
+
+            {/* イベントポップアップ（ダメージ、回復など） */}
+            <div style={{ position:'fixed', bottom:'18%', left:'50%', transform:'translateX(-50%)', zIndex:9500, pointerEvents:'none', display:'flex', flexDirection:'column', alignItems:'center', gap:'5px' }}>
+                {eventPopups.map(p => {
+                    const player = players.find(pl => pl.id === p.playerId);
+                    const colorMap = { damage:"#e74c3c", good:"#2ecc71", bad:"#e67e22", neutral:"#3498db", card:"#9b59b6" };
+                    const bColor = player?.color || colorMap[p.type] || "#888";
+                    const bgMap = { damage:"rgba(40,5,5,0.62)", good:"rgba(5,35,15,0.62)", bad:"rgba(40,20,0,0.62)", card:"rgba(25,5,40,0.62)", neutral:"rgba(12,12,22,0.62)" };
+                    return (
+                        <div key={p.id} style={{ background:bgMap[p.type], padding:'7px 18px', borderRadius:'12px', border:`2px solid ${bColor}`, textAlign:'center', fontWeight:'bold', color:'white', animation:'event-popup-anim 2.8s forwards', boxShadow:`0 4px 16px rgba(0,0,0,0.5), 0 0 12px ${bColor}44`, minWidth:'140px', maxWidth:'240px', backdropFilter:'blur(6px)' }}>
+                            <div style={{ fontSize:'24px', lineHeight:'1.1' }}>{p.icon}</div>
+                            {player && <div style={{ color:player.color, fontSize:'11px', fontWeight:'bold', margin:'2px 0' }}>{player.name}</div>}
+                            <div style={{ fontSize:'13px', margin:'2px 0', lineHeight:'1.3' }}>{p.title}</div>
+                            {p.detail && <div style={{ fontSize:'10px', color:'#bdc3c7', marginTop:'3px' }}>{p.detail}</div>}
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* 収集車の接近警告 */}
+            {disasterWarning && (
+                <div style={{ position:'fixed', top:0, left:0, width:'100%', height:'100%', zIndex:9999, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', pointerEvents:'none', animation:'warningBg 3.5s forwards' }}>
+                    <div style={{ textAlign:'center', padding:'30px 40px', border:'3px solid #e74c3c', borderRadius:'16px', background:'rgba(20,0,0,0.92)', animation:'warningPulse 0.4s ease-in-out infinite alternate' }}>
+                        <div style={{ fontSize:'52px', marginBottom:'10px' }}>🛻⚠️</div>
+                        <div style={{ fontSize:'22px', fontWeight:900, color:'#ff3333', textShadow:'0 0 20px #ff0000', letterSpacing:'2px', marginBottom:'12px' }}>【 予 兆 】</div>
+                        <div style={{ fontSize:'16px', color:'#ffaa88', maxWidth:'340px', lineHeight:1.7 }}>{disasterWarning}</div>
+                    </div>
+                </div>
+            )}
+
+            {/* 収集車に轢かれたときの血しぶき */}
+            {bloodAnim && (
+                <div style={{ position:'fixed', top:0, left:0, width:'100%', height:'100%', zIndex:9000, pointerEvents:'none', display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', backgroundColor:'rgba(150,0,0,0.4)' }}>
+                    <div style={{ fontSize:'120px', animation:'blood-splash 0.5s forwards' }}>🩸</div>
+                    <h1 style={{ color:'red', textShadow:'2px 2px 0px #fff,-2px -2px 0px #fff,2px -2px 0px #fff,-2px 2px 0px #fff', fontSize:'50px', marginTop:'20px', textAlign:'center' }}>{bloodAnim}が轢かれた！</h1>
+                </div>
+            )}
+
+            {/* キャラクター詳細情報モーダル */}
+            {targetPlayer && detail && cInfo && (
+                <div className="modal-overlay" style={{ display: 'flex', zIndex: 1100 }} onClick={(e) => { if(e.target === e.currentTarget) useGameStore.setState({ charInfoModal: null }); }}>
+                    <div className="modal-box" style={{ maxWidth: '420px', background: '#1a1a2e', color: '#fdf5e6', border: `3px solid ${targetPlayer.color}`, padding: 0, overflow: 'hidden' }}>
+                        <div style={{ padding: '18px 20px 14px', display: 'flex', alignItems: 'center', gap: '12px', background: `linear-gradient(135deg,${targetPlayer.color}22 0%,rgba(26,26,46,0.95) 100%)`, borderBottom: `2px solid ${targetPlayer.color}44` }}>
+                            <CharImage charType={targetPlayer.charType} size={70} />
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '19px', fontWeight: 900, color: '#f1c40f' }}>{cInfo.name}</div>
+                                <div style={{ fontSize: '12px', color: '#bdc3c7', marginTop: '3px', fontStyle: 'italic' }}>{detail.tagline}</div>
+                            </div>
+                            <button onClick={() => useGameStore.setState({ charInfoModal: null })} style={{ background: 'none', border: 'none', color: '#bdc3c7', fontSize: '22px', cursor: 'pointer' }}>✕</button>
+                        </div>
+                        <div style={{ padding: '14px 18px' }}>
+                            <div style={{ background: 'rgba(46,204,113,0.12)', border: '2px solid #2ecc71', borderRadius: '10px', padding: '11px 13px', marginBottom: '9px', textAlign: 'left' }}>
+                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#2ecc71', marginBottom: '5px' }}>⭐ パッシブスキル</div>
+                                <div style={{ fontSize: '14px', fontWeight: 900, marginBottom: '3px' }}>{detail.passive.name}</div>
+                                <div style={{ fontSize: '12px', color: '#bdc3c7', lineHeight: 1.6 }}>{detail.passive.desc}</div>
+                            </div>
+                            <div style={{ background: 'rgba(231,76,60,0.12)', border: '2px solid #e74c3c', borderRadius: '10px', padding: '11px 13px', textAlign: 'left' }}>
+                                <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#e74c3c', marginBottom: '5px' }}>⚡ アクションスキル</div>
+                                <div style={{ fontSize: '14px', fontWeight: 900, marginBottom: '3px' }}>{detail.action.name}</div>
+                                <div style={{ fontSize: '12px', color: '#bdc3c7', lineHeight: 1.6 }}>{detail.action.desc}</div>
+                            </div>
+
+                            {activeTags.length > 0 && (
+                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '12px', paddingTop: '10px', textAlign: 'left' }}>
+                                    <div style={{ fontSize: '10px', color: '#bdc3c7', marginBottom: '5px', fontWeight: 'bold' }}>現在の状態・装備</div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                        {activeTags.map((tag, idx) => (
+                                            <span key={idx} style={{ background: 'rgba(241,196,15,0.15)', border: '1px solid rgba(241,196,15,0.4)', borderRadius: '5px', padding: '2px 7px', fontSize: '11px', color: '#f1c40f' }}>
+                                                {tag}
+                                            </span>
                                         ))}
                                     </div>
-                                ))}
-                            </>
-                        ) : (
-                            gameResult.results.map((r, i) => (
-                                <div key={i} style={{ margin:'8px 0', fontSize: i===0?22:16 }}>
-                                    {i===0?'🥇':i===1?'🥈':i===2?'🥉':'4️⃣'} <span style={{ color: r.color }}>{r.emoji}{r.name}</span>: <b>{r.totalScore}pt</b><br/>
-                                    <span style={{ fontSize:'11px', color:'#bdc3c7' }}>
-                                        (💰P×2=<b style={{ color:'#f1c40f' }}>{r.scaledP}</b> 🚩{r.terrValue} 資源{r.resourceValue} ⚔️{r.kills}K<span style={{ color:'#2ecc71' }}>+{r.killBonus}</span> 💀{r.deaths}D<span style={{ color:'#e74c3c' }}>-{r.deathPenalty}</span>)
-                                    </span>
                                 </div>
-                            ))
-                        )}
+                            )}
+                        </div>
                     </div>
-                    <p style={{ fontSize: '16px', marginTop: '20px' }}>(画面タップで終了確認)</p>
                 </div>
             )}
 
-            {/* ゲーム終了確認モーダル */}
-            {confirmEnd && (
-                <div className="modal-overlay" style={{ display: 'flex', zIndex: 10000 }}>
-                     <div className="modal-box" style={{ background: '#fdf5e6', color: '#3e2723' }} onClick={e => e.stopPropagation()}>
-                         <h3 style={{ color: '#e74c3c', marginTop: 0 }}>⚠️ ゲーム終了確認</h3>
-                         <p style={{ fontWeight: 'bold' }}>本当にゲームを終えてタイトルに戻りますか？</p>
-                         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                             <button className="btn-clay" onClick={() => { setConfirmEnd(false); useGameStore.getState().resetGame(); }} style={{ flex: 1, background: '#e74c3c', color: '#fff', border: '2px solid #c0392b', padding: '10px' }}>はい</button>
-                             <button className="btn-clay" onClick={() => setConfirmEnd(false)} style={{ flex: 1, background: '#95a5a6', color: '#fff', border: '2px solid #7f8c8d', padding: '10px' }}>いいえ</button>
-                         </div>
-                     </div>
+            {/* ラウンド終了レポート */}
+            {localSummary && localSummary.data && (
+                <div 
+                    onClick={() => setLocalSummary(null)}
+                    style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(92,74,68,0.98)', border: '6px solid #f1c40f', borderRadius: '15px', padding: '25px 40px', zIndex: 280, display: 'flex', flexDirection: 'column', color: '#fdf5e6', boxShadow: '0 0 40px rgba(0,0,0,0.8)', minWidth: '350px', overflow: 'hidden', cursor: 'pointer' }}
+                >
+                    <h2 style={{ margin: '0 0 15px 0', color: '#f1c40f', textAlign: 'center', borderBottom: '2px dashed #f1c40f', paddingBottom: '10px' }}>🌙 ラウンド終了レポート <span style={{fontSize:'12px', color:'#bdc3c7', fontWeight:'normal'}}>(タップで閉じる)</span></h2>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', width: 'fit-content', margin: '0 auto' }}>
+                        {localSummary.data.map((item, i) => (
+                            <div key={i} style={{ fontSize: '16px', fontWeight: 'bold', animation: `fade-in-right 0.3s forwards ${i * 0.4}s`, opacity: 0, textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: item }} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* カード獲得演出 */}
+            {localAcquired && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 5000, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                    <div style={{ background: '#5c4a44', border: '8px solid #f1c40f', borderRadius: '20px', padding: '40px', color: '#fff', boxShadow: '0 0 50px rgba(241,196,15,0.8)', animation: 'card-get-anim 2.5s forwards' }}>
+                        <style>{`@keyframes card-get-anim { 0%{transform:scale(0.1) rotate(-20deg); opacity:0;} 20%{transform:scale(1.2) rotate(10deg); opacity:1;} 40%{transform:scale(1) rotate(0deg); opacity:1;} 80%{transform:scale(1) rotate(0deg); opacity:1;} 100%{transform:scale(1.5); opacity:0;} }`}</style>
+                        <h2 style={{ color: '#f1c40f', marginTop: 0 }}>✨ カードGET! ✨</h2>
+                        <div style={{ fontSize: '80px' }}>{localAcquired.icon}</div>
+                        <div style={{ fontSize: '28px', fontWeight: 'bold', margin: '15px 0', color: localAcquired.color, textShadow: '2px 2px 4px #000' }}>{localAcquired.name}</div>
+                        <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{localAcquired.desc}</div>
+                    </div>
                 </div>
             )}
         </>
