@@ -91,12 +91,30 @@ export const useNetworkStore = create((setStore, getStore) => ({
                     if (data.type === 'GAME_SYNC') {
                         if (data.lastUpdater !== getStore().myUserId) {
                             const currentHostState = useGameStore.getState();
-                            // ▼ ガード条件: 以下のいずれかの場合はゲストのstateを無視する
-                            // 1. ラウンド処理中（processRoundEnd 実行中）
-                            // 2. 受信したstateのroundCountが現在より古い（ラウンド処理直後の遅延パケット）
-                            const isStale =
-                                currentHostState._roundEndInProgress ||
-                                (data.gameState.roundCount < currentHostState.roundCount);
+                            const incoming = data.gameState;
+                            
+                            // 進行度の計算 (ラウンド数 * 1000 + ターン)
+                            const hostProgress = (currentHostState.roundCount || 0) * 1000 + (currentHostState.turn || 0);
+                            const incomingProgress = (incoming.roundCount || 0) * 1000 + (incoming.turn || 0);
+
+                            let isStale = false;
+
+                            // 1. ラウンド処理中のパケットは無視
+                            if (currentHostState._roundEndInProgress) {
+                                isStale = true;
+                            }
+                            // 2. 過去のターンや過去のラウンドからの遅延パケットは無視
+                            else if (incomingProgress < hostProgress) {
+                                isStale = true;
+                            }
+                            // 3. ミニゲーム中以外において、手番ではないプレイヤーからの状態上書きを完全にブロック
+                            else if (!currentHostState.mgActive && incomingProgress === hostProgress) {
+                                const activePlayer = currentHostState.players[currentHostState.turn];
+                                // 現在の手番プレイヤー（またはCPU）以外が送信したデータなら破棄
+                                if (activePlayer && activePlayer.userId !== data.lastUpdater) {
+                                    isStale = true;
+                                }
+                            }
 
                             if (!isStale) {
                                 isReceivingNetworkData = true;
