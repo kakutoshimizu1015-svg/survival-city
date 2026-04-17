@@ -355,23 +355,22 @@ useGameStore.subscribe((state) => {
     if (!netState.isHost && state._roundEndInProgress) return;
 
     const now = Date.now();
-    // ▼ 修正: ミニゲーム中は約30fps(33ms)、通常時は負荷軽減のため10fps(100ms)に落とす
     const syncInterval = state.mgActive ? 33 : 100;
 
-    // 同期処理を関数化
     const doSync = () => {
         lastSyncTime = Date.now();
         const localOnlyKeys = [
-            // ▼ 同期が必要な全体演出（toastMsg, centerWarning, eventPopups, bloodAnim, turnBanner, turnBannerActive）を除外リストから削除
             'charInfoModal', 'acquiredCard', 'tooltipData',
             'settingsActive', 'rulesActive', 'tutorialActive', 'shopActive', 'shopCart',
             'layoutMode', 'autoScrollToPlayer', 'jobResult', 'volume', 'showSkipButton',
         ];
 
         const pureState = {};
-        for (const key in state) {
-            if (typeof state[key] !== 'function' && !localOnlyKeys.includes(key)) {
-                pureState[key] = state[key];
+        // 修正: 引数の古いstateではなく、送信する瞬間の「最新のstate」を取得して梱包する！
+        const currentState = useGameStore.getState();
+        for (const key in currentState) {
+            if (typeof currentState[key] !== 'function' && !localOnlyKeys.includes(key)) {
+                pureState[key] = currentState[key];
             }
         }
         
@@ -384,7 +383,6 @@ useGameStore.subscribe((state) => {
         }
     };
 
-    // 前回同期からの経過時間が syncInterval を超えていれば即時実行
     if (now - lastSyncTime >= syncInterval) {
         if (syncTimeout) {
             clearTimeout(syncTimeout);
@@ -392,7 +390,6 @@ useGameStore.subscribe((state) => {
         }
         doSync();
     } else {
-        // まだ時間が経過していない場合、最後の更新を確実に届けるためにタイマーをセット
         if (!syncTimeout) {
             syncTimeout = setTimeout(() => {
                 syncTimeout = null;

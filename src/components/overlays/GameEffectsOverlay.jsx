@@ -42,7 +42,7 @@ export const GameEffectsOverlay = () => {
     useEffect(() => {
         if (roundSummary && roundSummary.id) {
             setLocalSummary(roundSummary);
-            const timer = setTimeout(() => setLocalSummary(null), 8000);
+            const timer = setTimeout(() => setLocalSummary(null), 5000); // 5秒に短縮
             return () => clearTimeout(timer);
         }
     }, [roundSummary]);
@@ -390,8 +390,11 @@ export const GameEffectsOverlay = () => {
             )}
 
             {localSummary && localSummary.data && (
-                <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(92,74,68,0.98)', border: '6px solid #f1c40f', borderRadius: '15px', padding: '25px 40px', zIndex: 280, display: 'flex', flexDirection: 'column', color: '#fdf5e6', boxShadow: '0 0 40px rgba(0,0,0,0.8)', minWidth: '350px', overflow: 'hidden' }}>
-                    <h2 style={{ margin: '0 0 15px 0', color: '#f1c40f', textAlign: 'center', borderBottom: '2px dashed #f1c40f', paddingBottom: '10px' }}>🌙 ラウンド終了レポート</h2>
+                <div 
+                    onClick={() => setLocalSummary(null)}
+                    style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(92,74,68,0.98)', border: '6px solid #f1c40f', borderRadius: '15px', padding: '25px 40px', zIndex: 280, display: 'flex', flexDirection: 'column', color: '#fdf5e6', boxShadow: '0 0 40px rgba(0,0,0,0.8)', minWidth: '350px', overflow: 'hidden', cursor: 'pointer' }}
+                >
+                    <h2 style={{ margin: '0 0 15px 0', color: '#f1c40f', textAlign: 'center', borderBottom: '2px dashed #f1c40f', paddingBottom: '10px' }}>🌙 ラウンド終了レポート <span style={{fontSize:'12px', color:'#bdc3c7', fontWeight:'normal'}}>(タップで閉じる)</span></h2>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', width: 'fit-content', margin: '0 auto' }}>
                         {localSummary.data.map((item, i) => (
                             <div key={i} style={{ fontSize: '16px', fontWeight: 'bold', animation: `fade-in-right 0.3s forwards ${i * 0.4}s`, opacity: 0, textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: item }} />
