@@ -4,7 +4,7 @@ import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
 import { charInfo, charDetailData } from '../../constants/characters';
 import { playSfx } from '../../utils/audio';
-import { actionDiscardCard } from '../../game/actions';
+import { actionDiscardCard } from '../../game/cards';
 import { CharImage } from '../common/CharImage';
 
 export const GameEffectsOverlay = () => {
