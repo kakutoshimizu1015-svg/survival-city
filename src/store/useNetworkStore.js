@@ -89,9 +89,33 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         getStore().broadcast({ type: 'LOBBY_UPDATE', players: updatedPlayers });
                     }
                     if (data.type === 'GAME_SYNC') {
-                        // ホストはゲームの唯一の権威者。
-                        // ゲストから受け取ったstateでホスト自身のstoreを上書きしてはいけない。
-                        // ホストはGAME_SYNCを「中継する」だけでよい。
+                        if (data.lastUpdater !== getStore().myUserId) {
+                            const currentHostState = useGameStore.getState();
+                            // ▼ ガード条件: 以下のいずれかの場合はゲストのstateを無視する
+                            // 1. ラウンド処理中（processRoundEnd 実行中）
+                            // 2. 受信したstateのroundCountが現在より古い（ラウンド処理直後の遅延パケット）
+                            const isStale =
+                                currentHostState._roundEndInProgress ||
+                                (data.gameState.roundCount < currentHostState.roundCount);
+
+                            if (!isStale) {
+                                isReceivingNetworkData = true;
+                                if (networkReceiveTimer) clearTimeout(networkReceiveTimer);
+                                
+                                const logger = document.getElementById("log");
+                                if (logger && data.gameState.logs) {
+                                    logger.innerHTML = data.gameState.logs
+                                        .map(msg => `<div>> ${msg}</div>`).join('');
+                                    logger.scrollTop = logger.scrollHeight;
+                                }
+                                
+                                useGameStore.setState(data.gameState);
+                                networkReceiveTimer = setTimeout(() => {
+                                    isReceivingNetworkData = false;
+                                }, 200);
+                            }
+                        }
+                        // 常に他のゲストへ中継する（isStaleに関わらず）
                         getStore().connections.forEach(c => {
                             if (c.peer !== conn.peer && c.open) c.send(data);
                         });
