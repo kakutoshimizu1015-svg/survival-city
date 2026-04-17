@@ -18,6 +18,43 @@ export const GameEffectsOverlay = () => {
 
     const [confirmEnd, setConfirmEnd] = useState(false);
 
+    const [localToast, setLocalToast] = useState(null);
+    const [localWarning, setLocalWarning] = useState(null);
+    const [localSummary, setLocalSummary] = useState(null);
+    const [localAcquired, setLocalAcquired] = useState(null);
+
+    useEffect(() => {
+        if (toastMsg && toastMsg.id) {
+            setLocalToast(toastMsg.text);
+            const timer = setTimeout(() => setLocalToast(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [toastMsg]);
+
+    useEffect(() => {
+        if (centerWarning && centerWarning.id) {
+            setLocalWarning(centerWarning.text);
+            const timer = setTimeout(() => setLocalWarning(null), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [centerWarning]);
+
+    useEffect(() => {
+        if (roundSummary && roundSummary.id) {
+            setLocalSummary(roundSummary);
+            const timer = setTimeout(() => setLocalSummary(null), 8000);
+            return () => clearTimeout(timer);
+        }
+    }, [roundSummary]);
+
+    useEffect(() => {
+        if (acquiredCard && acquiredCard.id) {
+            setLocalAcquired(acquiredCard);
+            const timer = setTimeout(() => setLocalAcquired(null), 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [acquiredCard]);
+
     const [slotReels, setSlotReels] = useState([0, 0, 0]);
     const [slotStopped, setSlotStopped] = useState([false, false, false]);
     const slotReelsRef = useRef([0, 0, 0]);
@@ -145,15 +182,15 @@ export const GameEffectsOverlay = () => {
                 @keyframes fade-in-right { 0%{transform:translateX(-20px); opacity:0;} 100%{transform:translateX(0); opacity:1;} }
             `}</style>
 
-            {toastMsg && (
+            {localToast && (
                 <div style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(231,76,60,0.95)', color: 'white', padding: '15px 30px', borderRadius: '10px', zIndex: 10010, fontWeight: 'bold', boxShadow: '0 4px 10px rgba(0,0,0,0.5)', fontSize: '16px', border: '2px solid #fff', animation: 'slide-down 0.3s forwards' }}>
-                    ⚠️ {toastMsg}
+                    ⚠️ {localToast}
                 </div>
             )}
 
-            {centerWarning && (
+            {localWarning && (
                 <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(241,196,15,0.95)', color: '#c0392b', padding: '20px 40px', borderRadius: '15px', zIndex: 10005, fontWeight: 'bold', boxShadow: '0 0 40px rgba(241,196,15,0.8)', fontSize: '24px', border: '4px dashed #c0392b', animation: 'pop-in 0.3s forwards', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                    {centerWarning}
+                    {localWarning}
                 </div>
             )}
 
@@ -352,29 +389,28 @@ export const GameEffectsOverlay = () => {
                 </div>
             )}
 
-            {roundSummary && (
+            {localSummary && localSummary.data && (
                 <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(92,74,68,0.98)', border: '6px solid #f1c40f', borderRadius: '15px', padding: '25px 40px', zIndex: 280, display: 'flex', flexDirection: 'column', color: '#fdf5e6', boxShadow: '0 0 40px rgba(0,0,0,0.8)', minWidth: '350px', overflow: 'hidden' }}>
                     <h2 style={{ margin: '0 0 15px 0', color: '#f1c40f', textAlign: 'center', borderBottom: '2px dashed #f1c40f', paddingBottom: '10px' }}>🌙 ラウンド終了レポート</h2>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', width: 'fit-content', margin: '0 auto' }}>
-                        {roundSummary.map((item, i) => (
+                        {localSummary.data.map((item, i) => (
                             <div key={i} style={{ fontSize: '16px', fontWeight: 'bold', animation: `fade-in-right 0.3s forwards ${i * 0.4}s`, opacity: 0, textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: item }} />
                         ))}
                     </div>
                 </div>
             )}
 
-            {acquiredCard && (
+            {localAcquired && (
                 <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 5000, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
                     <div style={{ background: '#5c4a44', border: '8px solid #f1c40f', borderRadius: '20px', padding: '40px', color: '#fff', boxShadow: '0 0 50px rgba(241,196,15,0.8)', animation: 'card-get-anim 2.5s forwards' }}>
                         <style>{`@keyframes card-get-anim { 0%{transform:scale(0.1) rotate(-20deg); opacity:0;} 20%{transform:scale(1.2) rotate(10deg); opacity:1;} 40%{transform:scale(1) rotate(0deg); opacity:1;} 80%{transform:scale(1) rotate(0deg); opacity:1;} 100%{transform:scale(1.5); opacity:0;} }`}</style>
                         <h2 style={{ color: '#f1c40f', marginTop: 0 }}>✨ カードGET! ✨</h2>
-                        <div style={{ fontSize: '80px' }}>{acquiredCard.icon}</div>
-                        <div style={{ fontSize: '28px', fontWeight: 'bold', margin: '15px 0', color: acquiredCard.color, textShadow: '2px 2px 4px #000' }}>{acquiredCard.name}</div>
-                        <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{acquiredCard.desc}</div>
+                        <div style={{ fontSize: '80px' }}>{localAcquired.icon}</div>
+                        <div style={{ fontSize: '28px', fontWeight: 'bold', margin: '15px 0', color: localAcquired.color, textShadow: '2px 2px 4px #000' }}>{localAcquired.name}</div>
+                        <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{localAcquired.desc}</div>
                     </div>
                 </div>
             )}
-
             {territorySelectOptions && territorySelectOptions.length > 0 && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 10002 }}>
                     <div className="modal-box" style={{ maxWidth: '500px' }}>

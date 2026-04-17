@@ -218,28 +218,7 @@ export const GameEventOverlays = () => {
                 </div>
             )}
 
-            {roundSummary && (
-                <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(92,74,68,0.98)', border: '6px solid #f1c40f', borderRadius: '15px', padding: '25px 40px', zIndex: 280, display: 'flex', flexDirection: 'column', color: '#fdf5e6', boxShadow: '0 0 40px rgba(0,0,0,0.8)', minWidth: '350px', overflow: 'hidden' }}>
-                    <h2 style={{ margin: '0 0 15px 0', color: '#f1c40f', textAlign: 'center', borderBottom: '2px dashed #f1c40f', paddingBottom: '10px' }}>🌙 ラウンド終了レポート</h2>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', width: 'fit-content', margin: '0 auto' }}>
-                        {roundSummary.map((item, i) => (
-                            <div key={i} style={{ fontSize: '16px', fontWeight: 'bold', animation: `fade-in-right 0.3s forwards ${i * 0.4}s`, opacity: 0, textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: item }} />
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {acquiredCard && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', zIndex: 5000, display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-                    <div style={{ background: '#5c4a44', border: '8px solid #f1c40f', borderRadius: '20px', padding: '40px', color: '#fff', boxShadow: '0 0 50px rgba(241,196,15,0.8)', animation: 'card-get-anim 2.5s forwards' }}>
-                        <style>{`@keyframes card-get-anim { 0%{transform:scale(0.1) rotate(-20deg); opacity:0;} 20%{transform:scale(1.2) rotate(10deg); opacity:1;} 40%{transform:scale(1) rotate(0deg); opacity:1;} 80%{transform:scale(1) rotate(0deg); opacity:1;} 100%{transform:scale(1.5); opacity:0;} }`}</style>
-                        <h2 style={{ color: '#f1c40f', marginTop: 0 }}>✨ カードGET! ✨</h2>
-                        <div style={{ fontSize: '80px' }}>{acquiredCard.icon}</div>
-                        <div style={{ fontSize: '28px', fontWeight: 'bold', margin: '15px 0', color: acquiredCard.color, textShadow: '2px 2px 4px #000' }}>{acquiredCard.name}</div>
-                        <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{acquiredCard.desc}</div>
-                    </div>
-                </div>
-            )}
+            {/* 重複していた roundSummary, acquiredCard の描画ブロックは削除しました（GameEffectsOverlayに集約済み） */}
 
             {territorySelectOptions && territorySelectOptions.length > 0 && (
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 10002 }}>
