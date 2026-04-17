@@ -755,3 +755,41 @@ export const actionEndTurn = async () => {
         useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false })); 
     }
 };
+// ▼ 新規追加: ミニゲームの結果と終了をホストに一元管理させる処理
+export const executeEndMinigame = (isWin, pts, cardId, msg) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        // ゲストはホストに結果を送信し、自分の画面のミニゲームを即座に閉じる
+        netState.hostConnection.send({ 
+            type: 'REQUEST_ACTION', 
+            actionType: 'EXECUTE_END_MINIGAME', 
+            payload: { isWin, pts, cardId, msg }, 
+            userId: netState.myUserId 
+        });
+        useGameStore.setState({ mgActive: false, mgType: null, mgResult: null, mgStarted: false });
+        return;
+    }
+
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+
+    if (msg) logMsg(`🎲 ${msg}`);
+
+    if (isWin) {
+        if (pts > 0) state.updateCurrentPlayer(p => ({ p: p.p + pts }));
+        state.incrementGameStat(cp.id, 'minigames', 1);
+        
+        if (cardId !== null && cardId !== undefined) {
+            state.updateCurrentPlayer(p => ({ hand: [...p.hand, cardId] }));
+            state.addEventPopup(cp.id, "🎁", "ミニゲーム勝利", pts > 0 ? `+${pts}Pとカード獲得` : "カード獲得", "good");
+        } else if (pts > 0) {
+            state.addEventPopup(cp.id, "✨", "ミニゲーム勝利", `+${pts}P獲得`, "good");
+        }
+    } else if (pts > 0) {
+        // 失敗時のP減少
+        state.updateCurrentPlayer(p => ({ p: Math.max(0, p.p - pts) }));
+    }
+
+    // ホストがミニゲームを終了させ、全員の画面を解放する
+    useGameStore.setState({ mgActive: false, mgType: null, mgResult: null, mgStarted: false });
+};
