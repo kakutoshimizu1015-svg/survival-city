@@ -29,7 +29,7 @@ export const GameEffectsOverlay = () => {
             const timer = setTimeout(() => setLocalToast(null), 3000);
             return () => clearTimeout(timer);
         }
-    }, [toastMsg]);
+    }, [toastMsg?.id]);
 
     useEffect(() => {
         if (centerWarning && centerWarning.id) {
@@ -37,15 +37,15 @@ export const GameEffectsOverlay = () => {
             const timer = setTimeout(() => setLocalWarning(null), 4000);
             return () => clearTimeout(timer);
         }
-    }, [centerWarning]);
+    }, [centerWarning?.id]);
 
     useEffect(() => {
         if (roundSummary && roundSummary.id) {
             setLocalSummary(roundSummary);
-            const timer = setTimeout(() => setLocalSummary(null), 5000); // 5秒に短縮
+            const timer = setTimeout(() => setLocalSummary(null), 5000); 
             return () => clearTimeout(timer);
         }
-    }, [roundSummary]);
+    }, [roundSummary?.id]);
 
     useEffect(() => {
         if (acquiredCard && acquiredCard.id) {
@@ -53,8 +53,7 @@ export const GameEffectsOverlay = () => {
             const timer = setTimeout(() => setLocalAcquired(null), 2500);
             return () => clearTimeout(timer);
         }
-    }, [acquiredCard]);
-
+    }, [acquiredCard?.id]);
     const [slotReels, setSlotReels] = useState([0, 0, 0]);
     const [slotStopped, setSlotStopped] = useState([false, false, false]);
     const slotReelsRef = useRef([0, 0, 0]);

@@ -737,15 +737,19 @@ export const actionEndTurn = async () => {
 
         if (isLastPlayer) {
             await processRoundEnd();
-        } else {
-            const nextTurnIdx = (state.turn + 1) % state.players.length;
-            useGameStore.setState({ 
-                turn: nextTurnIdx, 
-                diceRolled: false,
-                turnBanner: { id: Date.now(), playerIdx: nextTurnIdx },
-                turnBannerActive: true 
-            });
+            // ▼ ラウンド処理によってゲーム終了（最大ラウンド到達）した場合はここでストップ
+            if (useGameStore.getState().gameOver) return;
         }
+
+        // ▼ 修正: else を外し、ラウンド終了後も確実に次のプレイヤーへターンを回す
+        const nextTurnIdx = (state.turn + 1) % state.players.length;
+        useGameStore.setState({ 
+            turn: nextTurnIdx, 
+            diceRolled: false,
+            // ターン開始イベントとしてIDを発行し、バナーと自動スクロールを有効にする
+            turnBanner: { id: Date.now(), playerIdx: nextTurnIdx },
+            turnBannerActive: true 
+        });
     } catch (e) { 
         console.error("actionEndTurn Error:", e); 
         useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false })); 
