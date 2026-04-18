@@ -144,7 +144,6 @@ export const useNetworkStore = create((setStore, getStore) => ({
                         const gameState = useGameStore.getState();
                         const cp = gameState.players[gameState.turn];
                         
-                        // 現在の手番プレイヤーが本人からの要求かチェック
                         if (cp && cp.userId === data.userId) {
                             import('../game/actions').then(actions => {
                                 if (data.actionType === 'ROLL_DICE') actions.actionRollDice();
@@ -157,6 +156,10 @@ export const useNetworkStore = create((setStore, getStore) => ({
                                 else if (data.actionType === 'ACTION_EXCHANGE') actions.actionExchange();
                                 else if (data.actionType === 'ACTION_MANHOLE') actions.actionManhole();
                                 else if (data.actionType === 'EXECUTE_MANHOLE') actions.executeManhole(data.payload);
+                                else if (data.actionType === 'EXECUTE_END_MINIGAME') actions.executeEndMinigame(data.payload.isWin, data.payload.pts, data.payload.cardId, data.payload.msg);
+                                else if (data.actionType === 'EXECUTE_STORY_CHOICE') actions.executeStoryChoice(data.payload);
+                                else if (data.actionType === 'CANCEL_UI') actions.actionCancelUI(data.payload);
+                                else if (data.actionType === 'EXECUTE_WEAPON_FIRE') actions.executeWeaponFire(data.payload.activeTargetId, data.payload.hitTargetIds, data.payload.cardData, data.payload.attackerId);
                             }).catch(console.error);
 
                             import('../game/cards').then(cards => {
@@ -181,10 +184,10 @@ export const useNetworkStore = create((setStore, getStore) => ({
                                 else if (data.actionType === 'ACTION_GAMBLE') skills.actionGamble();
                                 else if (data.actionType === 'ACTION_NPC_MOVE') skills.actionNpcMove();
                                 else if (data.actionType === 'SETUP_NPC_MOVE') skills.setupNpcMove(data.payload);
+                                else if (data.actionType === 'EXECUTE_NPC_MOVE') skills.executeNpcMove(data.payload);
                                 else if (data.actionType === 'ACTION_SET_TRAP') skills.actionSetTrap();
                                 else if (data.actionType === 'SETUP_SET_TRAP') skills.setupSetTrap(data.payload);
                                 else if (data.actionType === 'EXECUTE_SET_TRAP') skills.executeSetTrap(data.payload);
-                                else if (data.actionType === 'EXECUTE_NPC_MOVE') skills.executeNpcMove(data.payload); // ▼ 追加
                                 else if (data.actionType === 'ACTION_CHEF') skills.actionChef();
                                 else if (data.actionType === 'EXECUTE_CHEF') skills.executeChef(data.payload);
                                 else if (data.actionType === 'ACTION_CHEF_ATTACK') skills.actionChefAttack();
@@ -193,21 +196,20 @@ export const useNetworkStore = create((setStore, getStore) => ({
                                 else if (data.actionType === 'EXECUTE_SCAVENGER') skills.executeScavenger(data.payload);
                                 else if (data.actionType === 'SETUP_JUNK_GUN') skills.setupJunkGun(data.payload.handIndex, data.payload.cardId);
                                 else if (data.actionType === 'EXECUTE_JUNK_GUN_AIM') skills.executeJunkGunAim(data.payload.consumeTrash, data.payload.dmg);
-                                else if (data.actionType === 'EXECUTE_JUNK_GUN_FIRE') skills.executeJunkGunFire(data.payload.targetId, data.payload.cardData);
+                                else if (data.actionType === 'EXECUTE_JUNK_GUN_FIRE') {
+                                    skills.executeJunkGunFire(data.payload.targetId, data.payload.cardData);
+                                    useGameStore.setState({ weaponArcData: null });
+                                }
                                 else if (data.actionType === 'ACTION_BRIBE') skills.actionBribe();
                                 else if (data.actionType === 'EXECUTE_BRIBE') skills.executeBribe(data.payload.targetId, data.payload.type, data.payload.pos);
                                 else if (data.actionType === 'ACTION_ORACLE') skills.actionOracle();
                                 else if (data.actionType === 'ACTION_CAN_BALLISTA') skills.actionCanBallista();
                                 else if (data.actionType === 'SETUP_CAN_BALLISTA_AIM') skills.setupCanBallistaAim(data.payload);
-                                else if (data.actionType === 'EXECUTE_CAN_BALLISTA') skills.executeCanBallista(data.payload.hitTargets, data.payload.consumeAmount);
+                                else if (data.actionType === 'EXECUTE_CAN_BALLISTA') {
+                                    skills.executeCanBallista(data.payload.hitTargets, data.payload.consumeAmount);
+                                    useGameStore.setState({ weaponArcData: null });
+                                }
                                 else if (data.actionType === 'ACTION_TENCHI') skills.actionTenchi();
-                            }).catch(console.error);
-
-                            import('../game/actions').then(actions => {
-                                if (data.actionType === 'EXECUTE_END_MINIGAME') actions.executeEndMinigame(data.payload.isWin, data.payload.pts, data.payload.cardId, data.payload.msg);
-                                // ▼ 追加：ストーリー選択の処理
-                                else if (data.actionType === 'EXECUTE_STORY_CHOICE') actions.executeStoryChoice(data.payload);
-                                else if (data.actionType === 'CANCEL_UI') actions.actionCancelUI(data.payload); // ▼ 追加
                             }).catch(console.error);
                         }
                     }

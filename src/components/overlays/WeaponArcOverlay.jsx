@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useGameStore } from '../../store/useGameStore';
-import { dealDamage } from '../../game/combat';
+import { useNetworkStore } from '../../store/useNetworkStore'; // ▼ 追加: 自分のIDを確認するためにインポート
 import { logMsg } from '../../game/actions';
 import { actionCancelWeapon } from '../../game/cards';
-import { executeCanBallista } from '../../game/skills'; // ▼ 追加: 缶バリスタの実行関数
+import { executeCanBallista } from '../../game/skills'; 
 
 export const WeaponArcOverlay = () => {
     const weaponArcData = useGameStore(state => state.weaponArcData);
     const mapData = useGameStore(state => state.mapData);
+    const { myUserId, status } = useNetworkStore(); // ▼ 追加: ネットワーク状態を取得
+
     const [angleDeg, setAngleDeg] = useState(90);
     const [attackerPos, setAttackerPos] = useState({ x: 0, y: 0 });
     const [radius, setRadius] = useState(0);
-
     const [selectedTargetId, setSelectedTargetId] = useState(null);
 
     const panelRef = useRef(null);
@@ -96,6 +97,9 @@ export const WeaponArcOverlay = () => {
     const attackerTile = mapData.find(t => t.id === attacker.pos);
     if (!attackerTile) return null;
 
+    // ▼ 新規追加: 現在の画面を見ているのが「攻撃者本人」かどうかを判定
+    const isAttacker = status === 'connected' ? (attacker.userId === myUserId) : true;
+
     const spreadDeg = 75; 
     
     const hitTargets = targets.filter(target => {
@@ -115,43 +119,36 @@ export const WeaponArcOverlay = () => {
         return diff <= spreadDeg || dist === 0;
     });
 
-    // ▼ 修正: useEffectを削除し、レンダリング時に動的に「現在選択されているターゲット」を決定する
     const activeTargetId = hitTargets.some(t => t.id === selectedTargetId)
         ? selectedTargetId
         : (hitTargets.length > 0 ? hitTargets[0].id : null);
 
     const fireWeapon = () => {
-        useGameStore.setState({ weaponArcData: null });
+        if (!isAttacker) return; // 念のためのガード
+
         if (hitTargets.length === 0) {
+            useGameStore.setState({ weaponArcData: null });
             logMsg(`⚔️ ${cardData.name}発射！しかし射程内に敵がいなかった...`);
             return;
         }
 
-        // ▼ 追加: 缶バリスタスキルの専用処理ルート
         if (cardData.isSkill === 'canBallista') {
             const targetsToHit = cardData.aoe ? hitTargets : hitTargets.filter(t => t.id === activeTargetId);
+            useGameStore.setState({ weaponArcData: null });
             executeCanBallista(targetsToHit, cardData.consumeAmount);
             return;
         }
 
-        // ▼ 追加: ジャンクガンの専用処理ルート
         if (cardData.isSkill === 'junkGun') {
             const targetsToHit = hitTargets.filter(t => t.id === activeTargetId);
+            useGameStore.setState({ weaponArcData: null });
             if (targetsToHit.length > 0) {
-                // ダメージ処理、ゴミ・AP消費、耐久度減少を skills.js の関数へ投げる
                 import('../../game/skills').then(m => m.executeJunkGunFire(targetsToHit[0].id, cardData));
             }
             return;
         }
 
-        if (cardData.aoe) {
-            hitTargets.forEach(t => dealDamage(t.id, cardData.dmg, cardData.name, attacker.id));
-            logMsg(`💥 広範囲攻撃！ ${hitTargets.length}人に命中！`);
-        } else {
-            if (activeTargetId !== null) {
-                dealDamage(activeTargetId, cardData.dmg, cardData.name, attacker.id);
-            }
-        }
+        import('../../game/actions').then(m => m.executeWeaponFire(activeTargetId, hitTargets.map(t=>t.id), cardData, attacker.id));
     };
 
     const startRad = (angleDeg - spreadDeg) * Math.PI / 180;
@@ -176,10 +173,11 @@ export const WeaponArcOverlay = () => {
             <input 
                 type="range" min="-180" max="180" value={angleDeg} 
                 onChange={e => setAngleDeg(Number(e.target.value))} 
-                style={{ width: '100%', accentColor: '#e74c3c', marginBottom: '10px', cursor: 'pointer' }}
+                disabled={!isAttacker} // ▼ 修正: 他人はスライダーをいじれないようにする
+                style={{ width: '100%', accentColor: '#e74c3c', marginBottom: '10px', cursor: isAttacker ? 'pointer' : 'not-allowed', opacity: isAttacker ? 1 : 0.5 }}
             />
             <div style={{ fontSize: '12px', color: '#bdc3c7', marginBottom: '15px', pointerEvents: 'none' }}>
-                スライダーで方向を調整（枠をドラッグで移動）
+                {isAttacker ? 'スライダーで方向を調整（枠をドラッグで移動）' : `${attacker.name} が照準を合わせ中...`}
             </div>
 
             <div style={{ fontSize: '13px', color: '#f1c40f', marginBottom: '15px', pointerEvents: 'auto', fontWeight: 'bold', textAlign: 'left' }}>
@@ -190,14 +188,15 @@ export const WeaponArcOverlay = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                             <div style={{color: '#fff', textAlign: 'center', marginBottom: '5px'}}>🎯 攻撃対象を選んでください</div>
                             {hitTargets.map(t => (
-                                <label key={t.id} style={{cursor: 'pointer', background: activeTargetId === t.id ? 'rgba(231,76,60,0.5)' : 'rgba(0,0,0,0.3)', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center'}}>
+                                <label key={t.id} style={{cursor: isAttacker ? 'pointer' : 'not-allowed', background: activeTargetId === t.id ? 'rgba(231,76,60,0.5)' : 'rgba(0,0,0,0.3)', padding: '6px', borderRadius: '4px', display: 'flex', alignItems: 'center'}}>
                                     <input 
                                         type="radio" 
                                         name="target" 
                                         value={t.id} 
                                         checked={activeTargetId === t.id} 
                                         onChange={() => setSelectedTargetId(t.id)} 
-                                        style={{marginRight: '8px', cursor: 'pointer', accentColor: '#e74c3c'}}
+                                        disabled={!isAttacker} // ▼ 修正: 他人はターゲット変更不可に
+                                        style={{marginRight: '8px', cursor: isAttacker ? 'pointer' : 'not-allowed', accentColor: '#e74c3c'}}
                                     />
                                     {t.name} (HP: {t.hp})
                                 </label>
@@ -208,22 +207,30 @@ export const WeaponArcOverlay = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-                <button className="btn-large" style={{ background: '#e74c3c', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} onClick={fireWeapon}>💥 攻撃！</button>
-                <button 
-                    className="btn-large" 
-                    style={{ background: '#7f8c8d', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} 
-                    onClick={() => {
-                        // ▼ 修正: スキル使用キャンセルの場合はAPを返却しない（まだ消費していないため）
-                        if (cardData.isSkill) {
-                            useGameStore.setState({ weaponArcData: null });
-                            logMsg(`🔙 ${cardData.name}の構えを解除した`);
-                        } else {
-                            actionCancelWeapon(cardData.id);
-                        }
-                    }}
-                >
-                    ✕ ｷｬンｾﾙ
-                </button>
+                {isAttacker ? (
+                    <>
+                        <button className="btn-large" style={{ background: '#e74c3c', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} onClick={fireWeapon}>💥 攻撃！</button>
+                        <button 
+                            className="btn-large" 
+                            style={{ background: '#7f8c8d', flex: 1, border: 'none', color: 'white', cursor: 'pointer' }} 
+                            onClick={() => {
+                                if (cardData.isSkill) {
+                                    import('../../game/actions').then(m => m.actionCancelUI('weaponArcData'));
+                                    logMsg(`🔙 ${cardData.name}の構えを解除した`);
+                                } else {
+                                    actionCancelWeapon(cardData.id);
+                                }
+                            }}
+                        >
+                            ✕ ｷｬンｾﾙ
+                        </button>
+                    </>
+                ) : (
+                    // ▼ 修正: 他プレイヤーの画面にはボタンの代わりに待機メッセージを表示する
+                    <div style={{ flex: 1, textAlign: 'center', color: '#bdc3c7', padding: '8px 0', fontSize: '14px', fontWeight: 'bold', background: 'rgba(0,0,0,0.3)', borderRadius: '8px' }}>
+                        操作待機中...
+                    </div>
+                )}
             </div>
         </div>
     );

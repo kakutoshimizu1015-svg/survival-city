@@ -29,7 +29,6 @@ export const actionRollDice = async (isCpuCall = false) => {
 
     const netState = useNetworkStore.getState();
     if (netState.status === 'connected' && !netState.isHost) {
-        // ゲストなら計算せず、ホストへ「サイコロ振って」と依頼するだけ
         netState.hostConnection.send({ 
             type: 'REQUEST_ACTION', 
             actionType: 'ROLL_DICE', 
@@ -38,9 +37,6 @@ export const actionRollDice = async (isCpuCall = false) => {
         return;
     }
 
-    // ▼ パッシブスキルの解決（ターン開始時）
-    
-    // 🩺 闇医者のパッシブ【再生能力】
     if (cp.charType === 'doctor') {
         const healAmt = cp.hp <= 50 ? 16 : 8; 
         const actualHeal = Math.min(healAmt, 100 - cp.hp);
@@ -52,7 +48,6 @@ export const actionRollDice = async (isCpuCall = false) => {
         }
     }
 
-    // 🥫 缶コレクターの帝王: 15缶以上の時HP+5回復
     if (cp.charType === 'emperor' && cp.cans >= 15) {
         const heal = Math.min(5, 100 - cp.hp);
         if (heal > 0) {
@@ -62,7 +57,6 @@ export const actionRollDice = async (isCpuCall = false) => {
         }
     }
 
-    // 🥫 缶コレクターの帝王: 20缶以上の時、同マスの相手に毎ターン3ダメージ
     if (cp.charType === 'emperor' && cp.cans >= 20) {
         const others = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0);
         others.forEach(target => {
@@ -71,7 +65,6 @@ export const actionRollDice = async (isCpuCall = false) => {
         });
     }
 
-    // 💴 億万長者: 所持Pが50以上の時、同マスの相手から自動で所持Pの10%を徴収
     if (cp.charType === 'billionaire' && cp.p >= 50) {
         const others = players.filter(p => p.id !== cp.id && p.pos === cp.pos && p.hp > 0 && p.p > 0);
         others.forEach(target => {
@@ -84,7 +77,6 @@ export const actionRollDice = async (isCpuCall = false) => {
         });
     }
 
-    // 👼 路上の神様: ゲーム開始時（1ラウンド目）のみ全員に加護トークン付与
     if (cp.charType === 'god' && state.roundCount === 1) {
         players.forEach(p => {
             if (p.id !== cp.id) {
@@ -212,7 +204,6 @@ export const actionMove = () => {
 export const executeMove = (targetTileId) => {
     const netState = useNetworkStore.getState();
     if (netState.status === 'connected' && !netState.isHost) {
-        // ゲストは先行してUI表示を消し、ホストへ移動処理を依頼
         netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_MOVE', payload: targetTileId, userId: netState.myUserId });
         useGameStore.setState({ isBranchPicking: false, currentBranchOptions: [], isDashPicking: false });
         return;
@@ -602,7 +593,6 @@ export const actionEndTurn = async () => {
 
     const netState = useNetworkStore.getState();
     if (netState.status === 'connected' && !netState.isHost) {
-        // ▼ ゲストの処理：UIのボタンを先行してリセット・非表示にし、連打を防ぎつつホストへ依頼
         useGameStore.setState({ 
             isBranchPicking: false, isDashPicking: false, 
             isSalesVisiting: false, salesTargetId: null, npcSelectActive: false,
@@ -622,7 +612,6 @@ export const actionEndTurn = async () => {
         return;
     }
 
-    // ▼ ここから下はホスト（またはオフライン）専用の処理
     try {
         const cp = state.players[state.turn];
         const { mapData, players } = state;
@@ -737,16 +726,13 @@ export const actionEndTurn = async () => {
 
         if (isLastPlayer) {
             await processRoundEnd();
-            // ▼ ラウンド処理によってゲーム終了（最大ラウンド到達）した場合はここでストップ
             if (useGameStore.getState().gameOver) return;
         }
 
-        // ▼ 修正: else を外し、ラウンド終了後も確実に次のプレイヤーへターンを回す
         const nextTurnIdx = (state.turn + 1) % state.players.length;
         useGameStore.setState({ 
             turn: nextTurnIdx, 
             diceRolled: false,
-            // ターン開始イベントとしてIDを発行し、バナーと自動スクロールを有効にする
             turnBanner: { id: Date.now(), playerIdx: nextTurnIdx },
             turnBannerActive: true 
         });
@@ -755,11 +741,10 @@ export const actionEndTurn = async () => {
         useGameStore.setState(s => ({ turn: (s.turn + 1) % s.players.length, diceRolled: false })); 
     }
 };
-// ▼ 新規追加: ミニゲームの結果と終了をホストに一元管理させる処理
+
 export const executeEndMinigame = (isWin, pts, cardId, msg) => {
     const netState = useNetworkStore.getState();
     if (netState.status === 'connected' && !netState.isHost) {
-        // ゲストはホストに結果を送信し、自分の画面のミニゲームを即座に閉じる
         netState.hostConnection.send({ 
             type: 'REQUEST_ACTION', 
             actionType: 'EXECUTE_END_MINIGAME', 
@@ -786,14 +771,12 @@ export const executeEndMinigame = (isWin, pts, cardId, msg) => {
             state.addEventPopup(cp.id, "✨", "ミニゲーム勝利", `+${pts}P獲得`, "good");
         }
     } else if (pts > 0) {
-        // 失敗時のP減少
         state.updateCurrentPlayer(p => ({ p: Math.max(0, p.p - pts) }));
     }
 
-    // ホストがミニゲームを終了させ、全員の画面を解放する
     useGameStore.setState({ mgActive: false, mgType: null, mgResult: null, mgStarted: false });
 };
-// ▼ ストーリーイベントの定義（一元管理用）
+
 export const STORY_EVENTS = [
     {
         title: "💰 怪しい男の投資話", 
@@ -815,7 +798,7 @@ export const STORY_EVENTS = [
         title: "🎁 見知らぬ人の贈り物", 
         text: "親切そうな人がカバンをくれた！", 
         choices: [
-            { label: "受け取る", func: (s, cp) => { if(Math.random() > 0.3) { let cid = [6,7,10,15][Math.floor(Math.random()*4)]; s.updateCurrentPlayer(p=>({hand:[...p.hand, cid]})); return "🎁 カードを獲得！"; } else { dealDamage(cp.id, 15, "罠"); return "🎁 罠だった！15ダメージ！"; } } },
+            { label: "受け取る", func: (s, cp) => { if(Math.random() > 0.3) { let cid = [6,7,10,15][Math.floor(Math.random()*4)]; s.updateCurrentPlayer(p=>({hand:[...p.hand, cid]})); return "🎁 カードを獲得！"; } else { import('./combat').then(m => m.dealDamage(cp.id, 15, "罠")); return "🎁 罠だった！15ダメージ！"; } } },
             { label: "無視する", func: () => "🎁 無視した。" }
         ]
     },
@@ -823,13 +806,12 @@ export const STORY_EVENTS = [
         title: "🐕 野良犬に追われた！", 
         text: "突然野良犬が襲ってきた！", 
         choices: [
-            { label: "戦う(50%で勝利→+3P)", func: (s, cp) => { if(Math.random() > 0.5) { s.updateCurrentPlayer(p=>({p:p.p+3})); return "🐕 野良犬を撃退！+3P"; } else { dealDamage(cp.id, 10, "野良犬"); return "🐕 噛まれた！10ダメージ！"; } } },
+            { label: "戦う(50%で勝利→+3P)", func: (s, cp) => { if(Math.random() > 0.5) { s.updateCurrentPlayer(p=>({p:p.p+3})); return "🐕 野良犬を撃退！+3P"; } else { import('./combat').then(m => m.dealDamage(cp.id, 10, "野良犬")); return "🐕 噛まれた！10ダメージ！"; } } },
             { label: "逃げる(AP-2)", func: (s) => { s.updateCurrentPlayer(p=>({ap: Math.max(0, p.ap-2)})); return "🐕 全力で逃げた！AP-2"; } }
         ]
     }
 ];
 
-// ▼ ストーリーの結果をホスト側で確定させる関数
 export const executeStoryChoice = (choiceIdx) => {
     const netState = useNetworkStore.getState();
     if (netState.status === 'connected' && !netState.isHost) {
@@ -848,12 +830,11 @@ export const executeStoryChoice = (choiceIdx) => {
     
     useGameStore.setState({ storyActive: false });
 };
-// ▼ 新規追加: キャンセル処理をホストへ伝え、必要ならAPを返還するアクション
+
 export const actionCancelUI = (uiKey) => {
     const netState = useNetworkStore.getState();
     if (netState.status === 'connected' && !netState.isHost) {
         netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'CANCEL_UI', payload: uiKey, userId: netState.myUserId });
-        // ゲストの画面を即座に消すための先行処理
         if (uiKey === 'npcSelectActive') useGameStore.setState({ npcSelectActive: false });
         else if (uiKey === 'npcMovePick') useGameStore.setState({ npcMovePick: null });
         else if (uiKey === 'isTrapTypePicking') useGameStore.setState({ isTrapTypePicking: false });
@@ -861,12 +842,12 @@ export const actionCancelUI = (uiKey) => {
         else if (uiKey === 'isSubwayPicking') useGameStore.setState({ isSubwayPicking: false });
         else if (uiKey === 'territorySelectOptions') useGameStore.setState({ territorySelectOptions: null });
         else if (uiKey === 'isManholePicking') useGameStore.setState({ isManholePicking: false, manholeOptions: [] });
+        else if (uiKey === 'weaponArcData') useGameStore.setState({ weaponArcData: null });
         return;
     }
 
     const state = useGameStore.getState();
 
-    // ホスト側でフラグを解除し、必要に応じて消費済みAPを返還する
     if (uiKey === 'npcSelectActive') {
         useGameStore.setState({ npcSelectActive: false });
     } else if (uiKey === 'npcMovePick') {
@@ -886,5 +867,34 @@ export const actionCancelUI = (uiKey) => {
         state.updateCurrentPlayer(p => ({ ap: p.ap + 1 }));
         useGameStore.setState({ isManholePicking: false, manholeOptions: [] });
         logMsg(`🚲 マンホール移動をキャンセルしました（AP 1 返還）`);
+    } else if (uiKey === 'weaponArcData') {
+        useGameStore.setState({ weaponArcData: null });
+    }
+};
+
+export const executeWeaponFire = (activeTargetId, hitTargetIds, cardData, attackerId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ 
+            type: 'REQUEST_ACTION', 
+            actionType: 'EXECUTE_WEAPON_FIRE', 
+            payload: { activeTargetId, hitTargetIds, cardData, attackerId }, 
+            userId: netState.myUserId 
+        });
+        useGameStore.setState({ weaponArcData: null });
+        return;
+    }
+
+    useGameStore.setState({ weaponArcData: null });
+
+    if (cardData.aoe) {
+        hitTargetIds.forEach(tId => {
+            import('./combat').then(m => m.dealDamage(tId, cardData.dmg, cardData.name, attackerId));
+        });
+        logMsg(`💥 広範囲攻撃！ ${hitTargetIds.length}人に命中！`);
+    } else {
+        if (activeTargetId !== null) {
+            import('./combat').then(m => m.dealDamage(activeTargetId, cardData.dmg, cardData.name, attackerId));
+        }
     }
 };
