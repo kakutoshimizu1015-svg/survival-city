@@ -4,9 +4,10 @@ import { useNetworkStore } from '../../store/useNetworkStore';
 import { ClayButton } from '../common/ClayButton';
 import { deckData } from '../../constants/cards'; 
 import { dealDamage } from '../../game/combat';
+import { dealDamage } from '../../game/combat';
 // ▼ 修正: ホスト権威のアクションをインポート
-import { logMsg, STORY_EVENTS, executeStoryChoice, executeEndMinigame } from '../../game/actions';
-import { setupNpcMove } from '../../game/skills'; 
+import { logMsg, STORY_EVENTS, executeStoryChoice, executeEndMinigame, actionCancelUI } from '../../game/actions';
+import { setupNpcMove } from '../../game/skills';
 
 // ▼ ミニゲームコンポーネントのインポート
 import { BoxGame, VendGame, ScratchGame, HLGame } from '../../features/minigames/MiniGamesPart1';
@@ -85,7 +86,7 @@ export const GameEventOverlays = () => {
                             <ClayButton onClick={() => setupNpcMove('animalPos')} style={{ width: '130px', padding: '10px' }}>🐀 野良動物</ClayButton>
                             <ClayButton onClick={() => setupNpcMove('friendPos')} style={{ width: '130px', padding: '10px' }}>🤝 仲間</ClayButton>
                         </div>
-                        <ClayButton onClick={() => useGameStore.setState({ npcSelectActive: false })} style={{ width: '100%', marginTop: '20px', background: '#7f8c8d' }}>キャンセル</ClayButton>
+                        <ClayButton onClick={() => actionCancelUI('npcSelectActive')} style={{ width: '100%', marginTop: '20px', background: '#7f8c8d' }}>キャンセル</ClayButton>
                     </div>
                 </div>
             )}
@@ -198,7 +199,7 @@ export const GameEventOverlays = () => {
                                 );
                             })}
                         </div>
-                        <button className="btn-large" style={{ width: '100%', marginTop: '15px', background: '#7f8c8d', borderColor: '#2c3e50' }} onClick={() => useGameStore.setState({ territorySelectOptions: null })}>キャンセル</button>
+                        <button className="btn-large" style={{ width: '100%', marginTop: '15px', background: '#7f8c8d', borderColor: '#2c3e50' }} onClick={() => actionCancelUI('territorySelectOptions')}>キャンセル</button>
                     </div>
                 </div>
             )}

@@ -184,6 +184,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                                 else if (data.actionType === 'ACTION_SET_TRAP') skills.actionSetTrap();
                                 else if (data.actionType === 'SETUP_SET_TRAP') skills.setupSetTrap(data.payload);
                                 else if (data.actionType === 'EXECUTE_SET_TRAP') skills.executeSetTrap(data.payload);
+                                else if (data.actionType === 'EXECUTE_NPC_MOVE') skills.executeNpcMove(data.payload); // ▼ 追加
                                 else if (data.actionType === 'ACTION_CHEF') skills.actionChef();
                                 else if (data.actionType === 'EXECUTE_CHEF') skills.executeChef(data.payload);
                                 else if (data.actionType === 'ACTION_CHEF_ATTACK') skills.actionChefAttack();
@@ -206,6 +207,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                                 if (data.actionType === 'EXECUTE_END_MINIGAME') actions.executeEndMinigame(data.payload.isWin, data.payload.pts, data.payload.cardId, data.payload.msg);
                                 // ▼ 追加：ストーリー選択の処理
                                 else if (data.actionType === 'EXECUTE_STORY_CHOICE') actions.executeStoryChoice(data.payload);
+                                else if (data.actionType === 'CANCEL_UI') actions.actionCancelUI(data.payload); // ▼ 追加
                             }).catch(console.error);
                         }
                     }

@@ -848,3 +848,43 @@ export const executeStoryChoice = (choiceIdx) => {
     
     useGameStore.setState({ storyActive: false });
 };
+// ▼ 新規追加: キャンセル処理をホストへ伝え、必要ならAPを返還するアクション
+export const actionCancelUI = (uiKey) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'CANCEL_UI', payload: uiKey, userId: netState.myUserId });
+        // ゲストの画面を即座に消すための先行処理
+        if (uiKey === 'npcSelectActive') useGameStore.setState({ npcSelectActive: false });
+        else if (uiKey === 'npcMovePick') useGameStore.setState({ npcMovePick: null });
+        else if (uiKey === 'isTrapTypePicking') useGameStore.setState({ isTrapTypePicking: false });
+        else if (uiKey === 'isTrapTilePicking') useGameStore.setState({ isTrapTilePicking: false, selectedTrapType: null });
+        else if (uiKey === 'isSubwayPicking') useGameStore.setState({ isSubwayPicking: false });
+        else if (uiKey === 'territorySelectOptions') useGameStore.setState({ territorySelectOptions: null });
+        else if (uiKey === 'isManholePicking') useGameStore.setState({ isManholePicking: false, manholeOptions: [] });
+        return;
+    }
+
+    const state = useGameStore.getState();
+
+    // ホスト側でフラグを解除し、必要に応じて消費済みAPを返還する
+    if (uiKey === 'npcSelectActive') {
+        useGameStore.setState({ npcSelectActive: false });
+    } else if (uiKey === 'npcMovePick') {
+        state.updateCurrentPlayer(p => ({ ap: p.ap + 3, detectiveCd: 0 })); 
+        useGameStore.setState({ npcMovePick: null });
+        logMsg(`🕵️ 情報操作をキャンセルしました（AP 3 返還）`);
+    } else if (uiKey === 'isTrapTypePicking') {
+        useGameStore.setState({ isTrapTypePicking: false });
+    } else if (uiKey === 'isTrapTilePicking') {
+        useGameStore.setState({ isTrapTilePicking: false, selectedTrapType: null });
+    } else if (uiKey === 'isSubwayPicking') {
+        useGameStore.setState({ isSubwayPicking: false });
+        logMsg(`🚇 地下鉄の切符の使用をキャンセルしました`);
+    } else if (uiKey === 'territorySelectOptions') {
+        useGameStore.setState({ territorySelectOptions: null });
+    } else if (uiKey === 'isManholePicking') {
+        state.updateCurrentPlayer(p => ({ ap: p.ap + 1 }));
+        useGameStore.setState({ isManholePicking: false, manholeOptions: [] });
+        logMsg(`🚲 マンホール移動をキャンセルしました（AP 1 返還）`);
+    }
+};

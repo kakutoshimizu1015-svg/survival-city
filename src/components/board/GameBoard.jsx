@@ -2,8 +2,8 @@ import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useUserStore } from '../../store/useUserStore';
 import { getDistance, getPathPreviewTiles, getManholeLinkedTiles, buildMapIndex } from '../../utils/gameLogic';
-import { executeMove, executeManhole } from '../../game/actions';
-import { executeSetTrap } from '../../game/skills';
+import { executeMove, executeManhole, actionCancelUI } from '../../game/actions';
+import { executeSetTrap, executeNpcMove } from '../../game/skills';
 import { executeSubway } from '../../game/cards';
 import { WeaponArcOverlay } from '../overlays/WeaponArcOverlay';
 import { useNetworkStore } from '../../store/useNetworkStore';
@@ -269,9 +269,7 @@ export const GameBoard = () => {
         }
 
         if (npcMovePick) {
-            const state = useGameStore.getState();
-            state.updateCurrentPlayer(p => ({ ap: p.ap - 3 }));
-            useGameStore.setState({ [npcMovePick]: tileId, npcMovePick: null });
+            executeNpcMove(tileId); // ▼ 修正: 直接操作をやめ、ホストへ依頼
         } else if (isTrapTilePicking) {
             executeSetTrap(tileId);
         } else if (isBranchPicking && currentBranchOptions.includes(tileId)) {
@@ -353,23 +351,23 @@ export const GameBoard = () => {
             <TileTooltip />
             
             {npcMovePick && (
-                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ npcMovePick: null }); useGameStore.getState().showToast("情報操作をキャンセルしました"); }}>
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(149,165,166,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => actionCancelUI('npcMovePick')}>
                     🕵️ 移動先マスをタップしてください（タップでキャンセル）
                 </div>
             )}
             {isTrapTilePicking && (
-                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(142,68,173,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ isTrapTilePicking: false, selectedTrapType: null }); useGameStore.getState().showToast("罠の設置をキャンセルしました"); }}>
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(142,68,173,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => actionCancelUI('isTrapTilePicking')}>
                     🪤 罠を仕掛けるマスをタップしてください（タップでキャンセル）
                 </div>
             )}
             {isSubwayPicking && (
-                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(44,62,80,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => { useGameStore.setState({ isSubwayPicking: false }); useGameStore.getState().showToast("地下鉄の切符をキャンセルしました"); }}>
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(44,62,80,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => actionCancelUI('isSubwayPicking')}>
                     🚇 ワープ先をタップしてください（自陣地 or 各エリア / タップでキャンセル）
                 </div>
             )}
             {isManholePicking && (
-                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(46,204,113,0.95)' }}>
-                    🚲 ワープ先のマンホールをタップしてください
+                <div id="branch-prompt" style={{ display: 'block', background: 'rgba(46,204,113,0.95)', pointerEvents: 'auto', cursor: 'pointer' }} onClick={() => actionCancelUI('isManholePicking')}>
+                    🚲 ワープ先のマンホールをタップしてください（タップでキャンセル）
                 </div>
             )}
             {isBranchPicking && !npcMovePick && !isTrapTilePicking && !isSubwayPicking && (

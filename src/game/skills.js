@@ -794,3 +794,19 @@ export const actionTenchi = () => {
     logMsg(`🧘 ${cp.name}は所持Pが倍増したが、仙気を失い2ターンの座禅（行動不可）に入った...`);
     state.addEventPopup(cp.id, "☁️", "天地開闢", "マップ全体に影響！", "good");
 };
+// ▼ 新規追加: NPCの移動先マスをクリックしたときの確定処理
+export const executeNpcMove = (tileId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ type: 'REQUEST_ACTION', actionType: 'EXECUTE_NPC_MOVE', payload: tileId, userId: netState.myUserId });
+        useGameStore.setState({ npcMovePick: null });
+        return;
+    }
+    const state = useGameStore.getState();
+    const npcKey = state.npcMovePick;
+    
+    if (npcKey) {
+        useGameStore.setState({ [npcKey]: tileId, npcMovePick: null });
+        logMsg(`🕵️ 情報操作により、NPCを移動させました！`);
+    }
+};
