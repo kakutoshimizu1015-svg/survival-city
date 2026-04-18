@@ -160,6 +160,7 @@ export const useNetworkStore = create((setStore, getStore) => ({
                                 else if (data.actionType === 'EXECUTE_STORY_CHOICE') actions.executeStoryChoice(data.payload);
                                 else if (data.actionType === 'CANCEL_UI') actions.actionCancelUI(data.payload);
                                 else if (data.actionType === 'EXECUTE_WEAPON_FIRE') actions.executeWeaponFire(data.payload.activeTargetId, data.payload.hitTargetIds, data.payload.cardData, data.payload.attackerId);
+                                else if (data.actionType === 'EXECUTE_TERRITORY_CHALLENGE') actions.executeTerritoryChallenge(data.payload); // ▼ 追加
                             }).catch(console.error);
 
                             import('../game/cards').then(cards => {

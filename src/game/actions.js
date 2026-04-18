@@ -898,3 +898,35 @@ export const executeWeaponFire = (activeTargetId, hitTargetIds, cardData, attack
         }
     }
 };
+// ▼ 新規追加: 領土挑戦状での陣地奪取をホストに依頼し、確定させる処理
+export const executeTerritoryChallenge = (targetTileId) => {
+    const netState = useNetworkStore.getState();
+    if (netState.status === 'connected' && !netState.isHost) {
+        netState.hostConnection.send({ 
+            type: 'REQUEST_ACTION', 
+            actionType: 'EXECUTE_TERRITORY_CHALLENGE', 
+            payload: targetTileId, 
+            userId: netState.myUserId 
+        });
+        useGameStore.setState({ territorySelectOptions: null });
+        return;
+    }
+
+    const state = useGameStore.getState();
+    const cp = state.players[state.turn];
+    const tile = state.mapData.find(t => t.id == targetTileId);
+    const ownerId = state.territories[targetTileId];
+    const owner = state.players.find(p => p.id == ownerId);
+
+    // ホスト側で陣地を書き換え、UIを閉じる
+    useGameStore.setState(s => ({ 
+        territories: { ...s.territories, [targetTileId]: cp.id }, 
+        territorySelectOptions: null 
+    }));
+
+    logMsg(`🚩 マス${targetTileId}「${tile?.name}」を奪取！（${owner?.name || '不明'}から）`);
+    state.addEventPopup(cp.id, "🚩", "陣地奪取！", `${tile?.name}を乗っ取った`, "good");
+    if (owner) {
+        state.addEventPopup(owner.id, "🚩", "陣地を奪われた", `${cp.name}に奪取された`, "bad");
+    }
+};

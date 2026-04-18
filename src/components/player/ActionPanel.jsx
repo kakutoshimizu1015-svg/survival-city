@@ -2,10 +2,9 @@ import React, { useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useNetworkStore } from '../../store/useNetworkStore';
 import { deckData } from '../../constants/cards';
-import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, actionManhole, getOccupyCost } from '../../game/actions';
-// ▼ 修正: actionChefAttack, executeChefAttack を追加インポート
-// ▼ 修正: executeJunkGunAim を追加インポート
+import { actionRollDice, actionMove, actionCan, actionTrash, actionJob, actionOccupy, actionExchange, actionEndTurn, actionManhole, getOccupyCost, actionCancelUI } from '../../game/actions'; // ▼ 修正: actionCancelUIを追加
 import { actionPunch, actionCamp, actionSalesVisit, actionHack, actionDarkCure, executeDarkCure, actionGamble, actionDash, actionConcert, actionNpcMove, actionSetTrap, setupSetTrap, actionChef, actionChefAttack, executeChefAttack, actionScavenger, executeScavenger, actionBribe, executeBribe, actionOracle, actionCanBallista, setupCanBallistaAim, actionTenchi, executeJunkGunAim } from '../../game/skills';
+import { executeFakeInfo } from '../../game/cards'; // ▼ 追加: ニセ情報の実行アクション
 
 /* ── Dark themed action button ── */
 const ActionBtn = ({ action, condition, failMsg, highlight, style, children, isMyTurn, isBusy, className = '' }) => (
@@ -28,7 +27,8 @@ export const ActionPanel = () => {
     const {
         turn, players, mapData, diceRolled, diceAnim, isBranchPicking, mgActive, storyActive,
         canPickedThisTurn, territories, animalPos, turnBannerActive, showSkipButton, _roundEndInProgress,
-        isTrapTypePicking, isTrapTilePicking, isDarkCurePicking, darkCureTargets
+        isTrapTypePicking, isTrapTilePicking, isDarkCurePicking, darkCureTargets,
+        isFakeInfoPicking, fakeInfoTargets, isRecyclePicking // ▼ 追加: ニセ情報と廃品再生のフラグを取得
     } = state;
 
     const cp = players[turn];
@@ -38,7 +38,6 @@ export const ActionPanel = () => {
     const currentTile = mapData.find(t => t.id === cp.pos) || {};
     const tileType = currentTile.type;
 
-    // ▼ 修正: 移動コストの計算を actions.js と完全に同期（帝王の0AP制限、折りたたみ自転車など）
     let baseMoveCost = (state.isRainy && !cp.rainGear && cp.charType !== 'athlete' && !cp.equip?.foldBike) ? 2 : 1;
     const freeMoves = cp.freeMovesThisTurn || 0;
     if (cp.charType === 'emperor' && cp.cans >= 5 && freeMoves < 6) {
@@ -94,6 +93,31 @@ export const ActionPanel = () => {
        Special mode UIs
        ══════════════════ */
 
+    // ▼ 新規追加: ニセ情報カードのターゲット選択UI
+    if (isFakeInfoPicking && isMyTurn) {
+        return (
+            <div id="action-panel" className="dt-action-panel">
+                <div style={{ textAlign: 'center', color: 'var(--dt-gold)', fontWeight: 700, marginBottom: 4 }}>📰 ニセ情報を流す相手を選んでください</div>
+                {fakeInfoTargets.map(tid => {
+                    const t = players.find(p => p.id === tid);
+                    return <button key={tid} className="dt-action-btn" onClick={() => executeFakeInfo(tid)} style={{ borderColor: 'rgba(52,152,219,0.3)' }}>{t?.name} に情報を流す</button>;
+                })}
+                <button className="dt-action-btn" onClick={() => actionCancelUI('isFakeInfoPicking')} style={{ color: '#888', marginTop: 4 }}>✖ キャンセル</button>
+            </div>
+        );
+    }
+
+    // ▼ 新規追加: 廃品再生カードの案内UI
+    if (isRecyclePicking && isMyTurn) {
+        return (
+            <div id="action-panel" className="dt-action-panel" style={{ textAlign: 'center', padding: 15, background: 'rgba(46,204,113,0.2)', borderColor: 'rgba(46,204,113,0.4)' }}>
+                <div style={{ color: 'var(--dt-text)', fontWeight: 700, marginBottom: 8 }}>♻️ 売却するカードを選んでください</div>
+                <div style={{ fontSize: '11px', color: '#bdc3c7', marginBottom: 10 }}>手札から「売却する」ボタンを押してください。</div>
+                <button className="dt-action-btn" onClick={() => actionCancelUI('isRecyclePicking')} style={{ color: '#888' }}>✖ キャンセル</button>
+            </div>
+        );
+    }
+
     if (isTrapTypePicking && isMyTurn) {
         return (
             <div id="action-panel" className="dt-action-panel">
@@ -101,7 +125,7 @@ export const ActionPanel = () => {
                 <button className="dt-action-btn" onClick={() => setupSetTrap('police')} style={{ borderColor: 'rgba(52,152,219,0.3)' }}>👮 警察罠 (AP減少)</button>
                 <button className="dt-action-btn" onClick={() => setupSetTrap('pitfall')} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>🕳️ 落とし穴 (ダメージ)</button>
                 <button className="dt-action-btn" onClick={() => setupSetTrap('jamming')} style={{ borderColor: 'rgba(155,89,182,0.3)' }}>📡 情報撹乱 (手札破棄)</button>
-                <button className="dt-action-btn" onClick={() => useGameStore.setState({ isTrapTypePicking: false })} style={{ color: '#888', marginTop: 4 }}>✖ キャンセル</button>
+                <button className="dt-action-btn" onClick={() => actionCancelUI('isTrapTypePicking')} style={{ color: '#888', marginTop: 4 }}>✖ キャンセル</button>
             </div>
         );
     }
@@ -114,12 +138,11 @@ export const ActionPanel = () => {
                     const t = players.find(p => p.id === tid);
                     return <button key={tid} className="dt-action-btn" onClick={() => executeDarkCure(tid)} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>{t?.name} を治療</button>;
                 })}
-                <button className="dt-action-btn" onClick={() => useGameStore.setState({ isDarkCurePicking: false, darkCureTargets: [] })} style={{ color: '#888', marginTop: 4 }}>✖ キャンセル</button>
+                <button className="dt-action-btn" onClick={() => actionCancelUI('isDarkCurePicking')} style={{ color: '#888', marginTop: 4 }}>✖ キャンセル</button>
             </div>
         );
     }
 
-    // ▼ 修正: 腐敗料理のターゲット選択UI（ターゲットを選んだらカード選択へ移行）
     if (state.isChefAttackPicking && isMyTurn) {
         return (
             <div id="action-panel" className="dt-action-panel">
@@ -132,18 +155,18 @@ export const ActionPanel = () => {
                         }} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>{t?.name} に食べさせる</button>
                     );
                 })}
-                <button className="dt-action-btn" onClick={() => useGameStore.setState({ isChefAttackPicking: false, chefAttackTargets: [] })} style={{ color: '#888', marginTop: 4 }}>✖ キャンセル</button>
+                <button className="dt-action-btn" onClick={() => actionCancelUI('isChefAttackPicking')} style={{ color: '#888', marginTop: 4 }}>✖ キャンセル</button>
             </div>
         );
     }
 
     const { isChefPicking, isChefAttackCardPicking, isScavengerPicking, isBribePicking, isCanBallistaPicking } = state;
 
-    // ▼ 修正: 特製料理 または 腐敗食のカード選択UI
     if ((isChefPicking || isChefAttackCardPicking) && isMyTurn) {
         return (
             <div id="action-panel" className="dt-action-panel" style={{ textAlign: 'center', padding: 15, background: isChefPicking ? 'rgba(211,84,0,0.2)' : 'rgba(142,68,173,0.2)', borderColor: isChefPicking ? 'rgba(211,84,0,0.4)' : 'rgba(142,68,173,0.4)' }}>
-                {isChefPicking ? '🍳 手札の回復カードをタップして調理してください' : '🤢 手札の回復カードをタップして相手に食べさせてください'}
+                <div style={{ marginBottom: 8 }}>{isChefPicking ? '🍳 手札の回復カードをタップして調理してください' : '🤢 手札の回復カードをタップして相手に食べさせてください'}</div>
+                <button className="dt-action-btn" onClick={() => actionCancelUI(isChefPicking ? 'isChefPicking' : 'isChefAttackCardPicking')} style={{ color: '#888' }}>✖ キャンセル</button>
             </div>
         );
     }
@@ -154,12 +177,11 @@ export const ActionPanel = () => {
                 <div style={{ textAlign: 'center', color: 'var(--dt-text)', fontWeight: 700 }}>🛠️ 何を組み上げますか？</div>
                 <button className="dt-action-btn" onClick={() => executeScavenger('equip')} disabled={cp.trash < 3} style={{ borderColor: 'rgba(46,204,113,0.3)' }}>🛡️ ランダム装備 (ゴミ3消費)</button>
                 <button className="dt-action-btn" onClick={() => executeScavenger('junkgun')} disabled={cp.cans < 10} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>🔫 ジャンクガン (缶10消費)</button>
-                <button className="dt-action-btn" onClick={() => useGameStore.setState({ isScavengerPicking: false })} style={{ color: '#888' }}>✖ キャンセル</button>
+                <button className="dt-action-btn" onClick={() => actionCancelUI('isScavengerPicking')} style={{ color: '#888' }}>✖ キャンセル</button>
             </div>
         );
     }
 
-    // ▼ 追加: ジャンクガンの消費ゴミ数を選ぶUI
     if (state.isJunkGunPicking && isMyTurn) {
         return (
             <div id="action-panel" className="dt-action-panel">
@@ -170,7 +192,7 @@ export const ActionPanel = () => {
                     <button className="dt-action-btn" onClick={() => executeJunkGunAim(5, 35)} disabled={cp.trash < 5}>5個 (35ダメ)</button>
                     <button className="dt-action-btn" onClick={() => executeJunkGunAim(10, 50)} disabled={cp.trash < 10}>10個 (50ダメ)</button>
                 </div>
-                <button className="dt-action-btn" onClick={() => useGameStore.setState({ isJunkGunPicking: false, junkGunData: null })} style={{ color: '#888', marginTop: 5 }}>✖ キャンセル</button>
+                <button className="dt-action-btn" onClick={() => actionCancelUI('isJunkGunPicking')} style={{ color: '#888', marginTop: 5 }}>✖ キャンセル</button>
             </div>
         );
     }
@@ -185,7 +207,7 @@ export const ActionPanel = () => {
                     {targets.map(t => (
                         <button key={t.id} className="dt-action-btn" onClick={() => useGameStore.setState({ bribeTargetId: t.id })} style={{ borderColor: 'rgba(243,156,18,0.3)' }}>{t.name}</button>
                     ))}
-                    <button className="dt-action-btn" onClick={() => useGameStore.setState({ isBribePicking: false })} style={{ color: '#888' }}>✖ キャンセル</button>
+                    <button className="dt-action-btn" onClick={() => actionCancelUI('isBribePicking')} style={{ color: '#888' }}>✖ キャンセル</button>
                 </div>
             );
         }
@@ -195,11 +217,9 @@ export const ActionPanel = () => {
             <div id="action-panel" className="dt-action-panel">
                 <div style={{ textAlign: 'center', color: 'var(--dt-gold)', fontWeight: 700 }}>💴 {target?.name} をどう買収しますか？</div>
                 <button className="dt-action-btn" onClick={() => { executeBribe(target.id, 'hand', 0); useGameStore.setState({ bribeTargetId: null }); }} disabled={cp.p < 5 || target.hand.length === 0} style={{ borderColor: 'rgba(243,156,18,0.3)' }}>🃏 手札を1枚奪う (5P / 還元有)</button>
-                {/* ▼ 修正: 陣地は無料で譲り受けるため、必要Pなどの制限を削除 */}
                 <button className="dt-action-btn" onClick={() => { executeBribe(target.id, 'territory', cp.pos); useGameStore.setState({ bribeTargetId: null }); }} disabled={territories[cp.pos] !== target.id} style={{ borderColor: 'rgba(243,156,18,0.3)' }}>🚩 この陣地を譲り受ける (無料)</button>
-                {/* ▼ 修正: 雇用のテキストを AP-5 に変更 */}
                 <button className="dt-action-btn" onClick={() => { executeBribe(target.id, 'hire', 0); useGameStore.setState({ bribeTargetId: null }); }} disabled={cp.p < 10} style={{ borderColor: 'rgba(243,156,18,0.3)' }}>💼 雇用して疲労させる (10P / 相手次AP-5)</button>
-                <button className="dt-action-btn" onClick={() => useGameStore.setState({ isBribePicking: false, bribeTargetId: null })} style={{ color: '#888' }}>✖ キャンセル</button>
+                <button className="dt-action-btn" onClick={() => actionCancelUI('isBribePicking')} style={{ color: '#888' }}>✖ キャンセル</button>
             </div>
         );
     }
@@ -214,7 +234,7 @@ export const ActionPanel = () => {
                     <button className="dt-action-btn" onClick={() => setupCanBallistaAim(9)} disabled={cp.cans < 9}>9個 (射程4/40ダメ/破壊)</button>
                     <button className="dt-action-btn" onClick={() => setupCanBallistaAim(12)} disabled={cp.cans < 12}>12個 (射程5/広範囲爆撃)</button>
                 </div>
-                <button className="dt-action-btn" onClick={() => useGameStore.setState({ isCanBallistaPicking: false })} style={{ color: '#888' }}>✖ キャンセル</button>
+                <button className="dt-action-btn" onClick={() => actionCancelUI('isCanBallistaPicking')} style={{ color: '#888' }}>✖ キャンセル</button>
             </div>
         );
     }
@@ -225,7 +245,6 @@ export const ActionPanel = () => {
        ══════════════════ */
     return (
         <div id="action-panel" className="dt-action-panel">
-            {/* ▼ 追加: 仙気スタックのリアルタイムUI表示メーター */}
             {cp.charType === 'sennin' && (
                 <div style={{ background: 'rgba(155, 89, 182, 0.2)', border: '1px solid #9b59b6', borderRadius: '8px', padding: '5px', textAlign: 'center', color: '#e0b0ff', fontWeight: 'bold', marginBottom: '8px', fontSize: '12px' }}>
                     ☁️ 現在の仙気: {cp.senki || 0} / 5
@@ -233,10 +252,8 @@ export const ActionPanel = () => {
                 </div>
             )}
 
-            {/* Core actions */}
             <div id="btn-roll"><ActionBtn action={actionRollDice} condition={canRoll} failMsg={diceRolled ? 'すでにサイコロを振っています' : '今は振れません'} highlight={canRoll} isMyTurn={isMyTurn} isBusy={isBusy}>🎲 サイコロを振る</ActionBtn></div>
             
-            {/* ▼ 修正: 帝王で缶が5個以上あり、無料移動が残っている場合、ボタン内に残り回数を表示 */}
             <div id="btn-move">
                 <ActionBtn action={actionMove} condition={canMove} failMsg={cp.cannotMove ? '足止めされています！' : !diceRolled ? 'サイコロを振ってください' : 'APが不足しています'} highlight={canMove} isMyTurn={isMyTurn} isBusy={isBusy}>
                     🚶 移動 ({currentMoveCost}AP)
@@ -251,12 +268,10 @@ export const ActionPanel = () => {
             <div id="btn-occupy"><ActionBtn action={actionOccupy} condition={canDoOccupy} failMsg={cp.p < occupyCost ? 'Pが不足しています' : 'このマスは陣地にできません'} isMyTurn={isMyTurn} isBusy={isBusy}>🚩 陣地占領 ({occupyCost}P)</ActionBtn></div>
             <div id="btn-job"><ActionBtn action={actionJob} condition={canDoJob} failMsg="AP不足か場所が違います" isMyTurn={isMyTurn} isBusy={isBusy}>💼 バイト (3AP)</ActionBtn></div>
 
-            {/* Tile-specific */}
             {tileType === 'exchange' && <ActionBtn action={actionExchange} condition={canDoExchange} failMsg="換金するものがありません" isMyTurn={isMyTurn} isBusy={isBusy}>💱 換金 (0AP)</ActionBtn>}
             {tileType === 'manhole' && <ActionBtn action={actionManhole} condition={isMyTurn && diceRolled && hasAP(1) && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy}>🕳️ ワープ (1AP)</ActionBtn>}
             {tileType === 'shop' && <ActionBtn action={() => useGameStore.setState({ shopActive: true })} condition={canDoShop} failMsg="今は開けません" isMyTurn={isMyTurn} isBusy={isBusy}>🛒 ショップ</ActionBtn>}
 
-            {/* Character skills */}
             <div id="btn-dash">{cp.charType === 'athlete' && <ActionBtn action={actionDash} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(46,204,113,0.3)' }}>💨 疾風ダッシュ (3AP)</ActionBtn>}</div>
             {cp.charType === 'yankee' && othersOnTile.length > 0 && <ActionBtn action={actionPunch} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>👊 殴る (2AP)</ActionBtn>}
             {cp.charType === 'survivor' && <ActionBtn action={actionCamp} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(46,204,113,0.3)' }}>⛺ 野宿 (2AP)</ActionBtn>}
@@ -266,8 +281,6 @@ export const ActionPanel = () => {
             {cp.charType === 'doctor' && othersOnTile.length > 0 && <ActionBtn action={actionDarkCure} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>🩺 毒入り治療 (2AP)</ActionBtn>}
             {cp.charType === 'gambler' && <ActionBtn action={actionGamble} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(241,196,15,0.3)' }}>🎲 ドロー勝負 (3AP)</ActionBtn>}
 
-            {/* Phase 3 characters */}
-            {/* ▼ 修正: 食料カードを持っているかどうかの判定を追加 */}
             {cp.charType === 'chef' && (() => {
                 const hasHealCard = cp.hand.some(cId => {
                     const cd = deckData.find(d => d.id === cId);
@@ -282,15 +295,12 @@ export const ActionPanel = () => {
                     </div>
                 );
             })()}
-            {/* ▼ 修正: 工作の条件を「ゴミ3以上 または 缶10以上」に変更 */}
             {cp.charType === 'scavenger' && <ActionBtn action={actionScavenger} condition={hasAP(3) && (cp.trash >= 3 || cp.cans >= 10) && isMyTurn && !isBusy} failMsg="AP不足か素材(ゴミ3/缶10)が足りません" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(52,152,219,0.3)' }}>🛠️ ガラクタ工作 (3AP)</ActionBtn>}
             {cp.charType === 'billionaire' && othersOnTile.length > 0 && <ActionBtn action={actionBribe} condition={hasAP(2) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(241,196,15,0.3)' }}>💴 買収 (2AP)</ActionBtn>}
             {cp.charType === 'god' && <ActionBtn action={actionOracle} condition={hasAP(3) && isMyTurn && !isBusy} failMsg="AP不足です" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(241,196,15,0.3)', background: 'rgba(241,196,15,0.06)' }}>👼 神託 (3AP)</ActionBtn>}
             {cp.charType === 'emperor' && <ActionBtn action={actionCanBallista} condition={hasAP(2) && cp.cans >= 1 && isMyTurn && !isBusy} failMsg="AP不足か缶がありません" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(231,76,60,0.3)' }}>🥫 缶バリスタ (2AP)</ActionBtn>}
-            {/* ▼ 修正: 天地開闢ボタンに現在の仙気スタック数を表示 */}
             {cp.charType === 'sennin' && <ActionBtn action={actionTenchi} condition={(cp.senki || 0) >= 5 && isMyTurn && !isBusy} failMsg="仙気スタックが足りません(5必要)" isMyTurn={isMyTurn} isBusy={isBusy} style={{ borderColor: 'rgba(155,89,182,0.3)' }}>🧘 天地開闢 (0AP) [仙気: {cp.senki || 0}/5]</ActionBtn>}
 
-            {/* Detective compound buttons */}
             {cp.charType === 'detective' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div style={{ display: 'flex', gap: 4 }}>
@@ -309,10 +319,8 @@ export const ActionPanel = () => {
                 </div>
             )}
 
-            {/* Spacer */}
             <div style={{ flexGrow: 1, minHeight: 5 }} />
 
-            {/* End turn */}
             <div style={{ display: 'flex', gap: 4 }}>
                 <div id="btn-end" style={{ flex: 1 }}>
                     <ActionBtn

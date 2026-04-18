@@ -5,7 +5,8 @@ import { ClayButton } from '../common/ClayButton';
 import { deckData } from '../../constants/cards'; 
 import { dealDamage } from '../../game/combat';
 // ▼ 修正: ホスト権威のアクションをインポート
-import { logMsg, STORY_EVENTS, executeStoryChoice, executeEndMinigame, actionCancelUI } from '../../game/actions';
+// ▼ executeTerritoryChallenge を追加
+import { logMsg, STORY_EVENTS, executeStoryChoice, executeEndMinigame, actionCancelUI, executeTerritoryChallenge } from '../../game/actions';
 import { setupNpcMove } from '../../game/skills';
 
 // ▼ ミニゲームコンポーネントのインポート
@@ -181,24 +182,30 @@ export const GameEventOverlays = () => {
                 <div className="modal-overlay" style={{ display: 'flex', zIndex: 10002 }}>
                     <div className="modal-box" style={{ maxWidth: '500px' }}>
                         <h3 style={{ marginTop: 0 }}>🚩 奪う陣地を選択</h3>
-                        <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
-                            {territorySelectOptions.map(tId => {
-                                const tile = mapData.find(t => t.id == tId);
-                                const ownerId = territories[tId];
-                                const owner = players.find(p => p.id == ownerId);
-                                return (
-                                    <button key={tId} onClick={() => {
-                                        useGameStore.setState(s => ({ territories: { ...s.territories, [tId]: cp.id }, territorySelectOptions: null }));
-                                        logMsg(`🚩 マス${tId}「${tile?.name}」を奪取！（${owner?.name}から）`);
-                                        useGameStore.getState().addEventPopup(cp.id, "🚩", "陣地奪取！", `${tile?.name}を乗っ取った`, "good");
-                                    }} style={{ width: '100%', margin: '4px 0', textAlign: 'left', padding: '8px', cursor: 'pointer', borderRadius: '8px', border: '2px solid #8d6e63' }}>
-                                        🚩 マス{tId}「{tile?.name}」<br/>
-                                        <span style={{ fontSize: '10px', color: '#e74c3c' }}>所有者: {owner?.name}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        <button className="btn-large" style={{ width: '100%', marginTop: '15px', background: '#7f8c8d', borderColor: '#2c3e50' }} onClick={() => actionCancelUI('territorySelectOptions')}>キャンセル</button>
+                        
+                        {/* ▼ 修正: 本人のターンならボタンを表示、他人なら待機中を表示 */}
+                        {isMyTurn ? (
+                            <>
+                                <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
+                                    {territorySelectOptions.map(tId => {
+                                        const tile = mapData.find(t => t.id == tId);
+                                        const ownerId = territories[tId];
+                                        const owner = players.find(p => p.id == ownerId);
+                                        return (
+                                            <button key={tId} onClick={() => executeTerritoryChallenge(tId)} style={{ width: '100%', margin: '4px 0', textAlign: 'left', padding: '8px', cursor: 'pointer', borderRadius: '8px', border: '2px solid #8d6e63' }}>
+                                                🚩 マス{tId}「{tile?.name}」<br/>
+                                                <span style={{ fontSize: '10px', color: '#e74c3c' }}>所有者: {owner?.name}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <button className="btn-large" style={{ width: '100%', marginTop: '15px', background: '#7f8c8d', borderColor: '#2c3e50' }} onClick={() => actionCancelUI('territorySelectOptions')}>キャンセル</button>
+                            </>
+                        ) : (
+                            <div style={{ padding: '20px', textAlign: 'center', color: '#bdc3c7', fontWeight: 'bold', background: 'rgba(0,0,0,0.3)', borderRadius: '8px' }}>
+                                {cp?.name} が陣地を選択中...
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
