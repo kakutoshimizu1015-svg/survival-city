@@ -9,6 +9,8 @@ def replace_once(old,new):
  s=s.replace(old,new,1)
 replace_once('id:`tile-${t.id}`,','id:`tile-${t.id}`,"data-original-tile":t.id,')
 replace_once('style:{gridColumn:A.col,gridRow:A.row,position:`relative`','"data-original-player":t.id,style:{gridColumn:A.col,gridRow:A.row,position:`relative`')
+replace_once('onClick:a?s:void 0,onMouseEnter:F', 'onClick:a?s:e=>window.cityMobileTile?.(t.id),onMouseEnter:F')
+replace_once('F=(e,r=0,i=0)=>{let o=document.getElementById(`game-board-wrapper`)', 'F=(e,r=0,i=0)=>{if(window.cityMobileActive)return;let o=document.getElementById(`game-board-wrapper`)')
 replace_once('d:O,fill:`url(#arcGradient)`','d:window.cityProjection?.weaponArc(g,p.range+.5,i)||O,"data-weapon-arc":true,fill:`url(#arcGradient)`')
 replace_once('x2:o.x+c*Math.cos(i*Math.PI/180),y2:o.y+c*Math.sin(i*Math.PI/180)', 'x2:window.cityProjection?.aimEnd(g,p.range+.5,i)?.x??o.x+c*Math.cos(i*Math.PI/180),y2:window.cityProjection?.aimEnd(g,p.range+.5,i)?.y??o.y+c*Math.sin(i*Math.PI/180)')
 replace_once('onClick:()=>t(e.id),style:{background:`#1a1309`', '"data-minigame":e.id,role:`button`,tabIndex:0,onKeyDown:r=>{if(r.key===`Enter`||r.key===` `){r.preventDefault();t(e.id)}},onClick:()=>t(e.id),style:{background:`#1a1309`')
@@ -29,6 +31,6 @@ replace_once('function It(){return[','function legacyMidtownMap(){return[')
 assert s.count('midtown (46)')==2
 s=s.replace('midtown (46)','街めぐり (48・路地と噴水広場)')
 s='import {PixelShop,PixelEvent} from "../src/pixel-scenes.js";\nimport {createCityBoard} from "../src/city-board-map.js";\nfunction It(){return createCityBoard()}\n'+s
-s+='\nexport {Mt as smallMap,Nt as mediumMap,Pt as largeMap,It as originalMap,Ti as miniGames};\n'
+s+='\nexport {Mt as smallMap,Nt as mediumMap,Pt as largeMap,It as originalMap,Ti as miniGames,mr as tileDescriptions};\n'
 (root/'assets/original-city-runtime.js').write_text(s)
 print('Original rules preserved; 48-square district board and presentation hooks added.')

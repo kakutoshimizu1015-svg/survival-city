@@ -1,3 +1,4 @@
+import { installMobileUI } from './mobile-ui.js';
 import '../assets/original-city-runtime.js';
 import { t as itemCards } from '../assets/cards-BGoWm8gy.js';
 import { I as gameStore } from '../assets/useNetworkStore-CIe06z3C.js';
@@ -17,7 +18,19 @@ function controls(container){
  nav.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.camera==='mode'){const tour=world?.getCameraMode()!=='tour';world?.setCameraMode(tour?'tour':'play');syncCameraControls();return;}if(b.dataset.district)world?.district(b.dataset.district);else switch(b.dataset.camera){case 'overview':world?.overview();break;case 'center':world?.center();break;case 'left':world?.rotate(-1);break;case 'right':world?.rotate(1);break;case 'in':world?.zoom(1.2);break;case 'out':world?.zoom(.8);break;}});
  container.dataset.cameraMode='play';
  container.append(nav);
- container.addEventListener('click',e=>{if(world?.getCameraMode()==='tour'&&e.target.closest('[data-original-tile]')){e.stopPropagation();e.preventDefault();}},true);
+ let touchStart=null,touchMoved=false;
+ container.addEventListener('pointerdown',e=>{touchStart={x:e.clientX,y:e.clientY};touchMoved=false;},true);
+ container.addEventListener('pointermove',e=>{if(touchStart&&Math.hypot(e.clientX-touchStart.x,e.clientY-touchStart.y)>8)touchMoved=true;},true);
+ container.addEventListener('click',e=>{
+  if(window.cityMobileActive&&e.isTrusted&&touchMoved&&e.target.closest('#game-board')){e.stopPropagation();e.preventDefault();return;}
+  // Enlarged touch targets overlap in the overview. Resolve taps to the nearest projected marker.
+  if(window.cityMobileActive&&e.isTrusted&&e.target.closest('#game-board')&&world){
+   const rect=document.querySelector('#game-board').getBoundingClientRect();let nearest=null,distance=32;
+   for(const tile of gameStore.getState().mapData){const p=world.projectGrid(tile.col,tile.row),d=Math.hypot(e.clientX-rect.left-p.x,e.clientY-rect.top-p.y);if(d<distance){distance=d;nearest=tile;}}
+   if(nearest){e.stopPropagation();e.preventDefault();if(world.getCameraMode()==='tour')window.cityMobileTile?.(nearest.id);else document.querySelector(`[data-original-tile="${nearest.id}"]`)?.click();return;}
+  }
+  if(world?.getCameraMode()==='tour'&&e.target.closest('[data-original-tile]')){e.stopPropagation();e.preventDefault();}
+ },true);
  container.addEventListener('keydown',e=>{if(e.key==='Escape'&&world?.getCameraMode()==='tour')nav.querySelector('[data-camera=mode]').click();},true);
 }
 function refresh(){pending=false;const state=gameStore.getState();document.body.dataset.cityPhase=state.gamePhase;
@@ -50,3 +63,5 @@ gameStore.subscribe((next,previous)=>{
 // React commits after store notifications. Watch only child changes, never projected styles.
 new MutationObserver(schedule).observe(document.querySelector('#root'),{childList:true,subtree:true});
 window.addEventListener('pagehide',e=>{if(!e.persisted)world?.dispose();});schedule();
+
+installMobileUI(gameStore);

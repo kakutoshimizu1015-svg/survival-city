@@ -62,3 +62,45 @@ body.city-3d #game-board[data-board-layout="district-board-v3"] .tile.tile-obscu
 @media(min-width:761px){.pixel-item-detail h2{font-size:20px}.pixel-item-detail p{font-size:14px}.pixel-price{font-size:20px}.pixel-shelf-name{font-size:12px}.pixel-shelf-price{font-size:12px}.pixel-categories button{font-size:12px}.pixel-checkout button{font-size:14px}}
 @media(max-width:760px){[data-pixel-scene=shop] .pixel-scene-art canvas{object-position:100% 38%}}
 body.city-touring #action-panel,body.city-touring #card-panel-clay{opacity:.45}
+/* Phone cockpit: stable viewport, persistent results and generous touch controls. */
+#city-mobile-ui[hidden],.mobile-sheet[hidden]{display:none!important}
+#city-mobile-ui{color:#f3e7c7;font-family:system-ui,-apple-system,Meiryo,sans-serif}
+@media(max-width:768px){
+ body.city-mobile{overflow:hidden!important;overscroll-behavior:none;height:var(--city-vh,100dvh);--mobile-head:60px;--mobile-dock:210px;--mobile-safe:env(safe-area-inset-bottom,0px)}
+ body.city-mobile #game-screen{position:fixed!important;inset:0!important;height:var(--city-vh,100dvh)!important;min-height:0!important;overflow:hidden!important;padding:0!important;gap:0!important}
+ body.city-mobile #top-bar,body.city-mobile #right-side-area,body.city-mobile #log-area,body.city-mobile #hand-cards-area,body.city-mobile #card-panel-clay{display:none!important}
+ body.city-mobile #main-area{position:absolute!important;inset:var(--mobile-head) 0 calc(var(--mobile-dock) + var(--mobile-safe))!important;display:block!important;margin:0!important;padding:0!important;min-height:0!important;height:auto!important}
+ body.city-mobile #board-area{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;border:0!important;border-radius:0!important}
+ body.city-mobile #game-board-container{height:100%!important;min-height:0!important}
+ body.city-mobile .city-world-tools{top:5px!important;right:5px!important;left:auto!important;gap:3px!important;max-width:calc(100% - 10px)}
+ body.city-mobile .city-camera-modes button{min-height:40px!important;padding:6px 9px!important;font-size:11px!important}
+ body.city-mobile .city-camera button{min-width:40px;min-height:40px;font-size:13px}
+ body.city-mobile .city-districts button{min-height:40px}.city-mobile .tour-help{display:none!important}
+ body.city-mobile #map-env-hud{top:5px!important;left:5px!important;max-width:52%!important}
+ body.city-mobile #map-env-hud>div:first-child{font-size:9px!important;padding:4px 6px!important}
+ body.city-mobile #game-board [data-original-player]{pointer-events:none!important}
+ body.city-mobile #game-board .tile{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;touch-action:manipulation}
+ body.city-mobile #game-board .tile.tile-highlight-branch,body.city-mobile #game-board .tile.tile-highlight-dash{width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important}
+ body.city-mobile.mobile-branch #branch-prompt{display:none!important}
+ .mobile-status{position:fixed;top:0;left:0;right:0;height:var(--mobile-head);box-sizing:border-box;background:#172d29;z-index:200;padding:6px 58px 5px 10px;border-bottom:1px solid #758565;display:flex;flex-direction:column;justify-content:center;gap:5px}
+ .mobile-status>div{display:flex;align-items:center;gap:9px}.mobile-status strong{font-size:13px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mobile-status span{font-size:10px;color:#c1ccb7}.mobile-status .mobile-stats{gap:10px;white-space:nowrap}.mobile-stats b{font-size:13px;font-variant-numeric:tabular-nums}.mobile-stats b:first-child{color:#c4e3a5}.mobile-stats b:nth-child(2){color:#ffe1a1}
+ .mobile-dock{position:fixed;left:0;right:0;bottom:0;height:calc(var(--mobile-dock) + var(--mobile-safe));padding:5px 6px calc(5px + var(--mobile-safe));box-sizing:border-box;background:#172d29;z-index:200;display:grid;grid-template-rows:46px minmax(0,1fr) 44px;gap:5px;border-top:1px solid #829273}
+ #city-mobile-ui button{font-family:inherit;cursor:pointer;touch-action:manipulation;border:1px solid #728366;border-radius:6px;background:#2e4436;color:#f5e7bf;min-height:44px;font-size:12px;padding:5px;line-height:1.35}
+ #city-mobile-ui button:disabled{opacity:.4;cursor:default}#city-mobile-ui button:focus-visible{outline:3px solid #ffe0a1;outline-offset:-3px}
+ #city-mobile-ui .mobile-result{background:#263c32;text-align:left;font-size:11px;color:#f7dfa5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.65;padding:4px 8px}
+ .mobile-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(44px,1fr);gap:4px;min-height:0;overflow:auto;overscroll-behavior:contain}.mobile-actions p{grid-column:1/-1;text-align:center;font-size:12px}
+ .mobile-actions button:not(:disabled){border-color:#d4ba7e;background:#4b5638}.mobile-actions button b,.mobile-actions button span{display:block}.mobile-actions button span{font-size:11px}.choosing-route .mobile-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .mobile-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}#city-mobile-ui .mobile-tabs button{background:#1b332c;font-size:12px}.mobile-tabs button[aria-expanded=true]{border-color:#efd090!important;color:#ffe4ac!important}
+ .mobile-sheet{position:fixed;z-index:600;inset:var(--mobile-head) 6px calc(var(--mobile-dock) + var(--mobile-safe) + 5px);background:#1c332e;border:2px solid #b6ab7c;border-radius:9px;box-shadow:0 7px 25px #0008;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+ .mobile-sheet>header{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;flex:none;background:#2d4235;border-bottom:1px solid #788668;gap:8px}.mobile-sheet h2{font-size:15px;margin:0}.mobile-close{min-width:80px}.mobile-sheet-content{padding:10px;overflow:auto;overscroll-behavior:contain;min-height:0;font-size:13px;line-height:1.7;white-space:normal}.mobile-sheet-content p{margin:6px 0;white-space:pre-line}.mobile-sheet-content article{padding:8px;border-bottom:1px solid #718568}.mobile-sheet-content h3{font-size:14px;margin:0 0 7px}.mobile-log{padding-left:20px;margin:0}.mobile-log li{padding:8px 0;border-bottom:1px solid #63745a;overflow-wrap:anywhere}.mobile-tile-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.mobile-tile-list button[aria-pressed=true]{border-color:#ffe1a1!important}
+ body.city-mobile #game-screen>.modal-overlay{max-height:var(--city-vh,100dvh);overflow:auto;overscroll-behavior:contain}
+ body.city-mobile .pixel-scene-dialog{height:calc(var(--city-vh,100dvh) - 20px)}
+}
+@media(max-width:360px){body.city-mobile{--mobile-head:58px;--mobile-dock:210px}.mobile-status{padding-left:6px}.mobile-status .mobile-stats{gap:7px}.mobile-status span{font-size:9px}#city-mobile-ui .mobile-actions button{font-size:11px}}
+@media(max-width:768px) and (max-height:550px){body.city-mobile{--mobile-head:52px;--mobile-dock:180px}.mobile-dock{grid-template-rows:28px minmax(0,1fr) 40px}#city-mobile-ui .mobile-result{min-height:28px;font-size:10px;-webkit-line-clamp:1}#city-mobile-ui .mobile-tabs button{min-height:40px}}
+@media(max-width:768px){body.city-mobile #settings-btn{top:5px!important;right:8px!important;left:auto!important;width:44px!important;height:44px!important;font-size:24px!important;z-index:800!important}}
+
+.mobile-hand{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mobile-hand article{padding:8px;background:#344735;border:1px solid #778668;border-radius:6px;min-width:0}.mobile-hand img{width:64px;height:64px;image-rendering:pixelated;display:block;margin:0 auto 6px}.mobile-hand p{font-size:11px}.mobile-hand article>div{display:flex;flex-direction:column;gap:5px}.mobile-hand h3{font-size:13px}
+@media(max-width:768px){body.city-mobile #game-screen{position:static!important}body.city-mobile #main-area{position:fixed!important}}
+
+@media(max-width:768px){body.city-mobile #game-board[data-camera-mode=tour] .tile{pointer-events:auto!important}}
