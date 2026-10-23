@@ -1,0 +1,15 @@
+const {chromium}=require('playwright');const assert=require('node:assert/strict');
+(async()=>{const b=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--enable-unsafe-swiftshader']});try{const p=await b.newPage({viewport:{width:1440,height:1000}}),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto(process.env.BASE_URL||'http://localhost:8000');await p.evaluate(async()=>{const {I:s}=await import('./assets/useNetworkStore-CIe06z3C.js'),{originalMap}=await import('./assets/original-city-runtime.js'),{r:use}=await import('./assets/cards-C7BZxg2n.js');window.s=s;window.use=use;s.setState({gamePhase:'playing',mapData:originalMap(),players:[0,1].map(id=>({id,name:id?'相手':'サバイバー',charType:id?'sales':'athlete',color:id?'#71bce1':'#dfbd77',isCPU:false,teamColor:'none',skinId:'default',pos:id?23:24,hp:100,p:30,ap:50,hand:id?[]:[17,18,20,34],maxHand:7,cans:0,trash:0,kills:0,deaths:0,equip:id?{}:{shoppingCart:true,backpack:true,helmet:true}})),turn:0,diceRolled:true,turnOrderActive:false,turnBannerActive:false,truckPos:-1,policePos:-1,unclePos:-1,animalPos:-1,yakuzaPos:-1,loansharkPos:-1,friendPos:-1});});await p.waitForFunction(()=>document.querySelector('#game-board')?.dataset.worldStatus==='ready');await p.waitForTimeout(2700);await p.evaluate(()=>s.setState({turnBannerActive:false,turnBanner:null}));await p.locator('[data-camera=mode]').click();await p.locator('[data-camera=center]').click();for(let i=0;i<2;i++)await p.locator('[data-camera=in]').click();await p.screenshot({path:'docs/player-items-equipped-close.png'});
+ for(const [id,kind] of [[17,'brick'],[18,'bat'],[20,'pistol']]){
+  await p.evaluate(id=>use(s.getState().players[0].hand.indexOf(id),id),id);await p.waitForFunction(kind=>document.querySelector('#game-board').dataset.aimItem===kind,kind);
+  await p.locator('[data-weapon-panel] input[type=range]').fill('0');
+  await p.evaluate(()=>{window.savedRAF=window.requestAnimationFrame;window.savedNow=performance.now.bind(performance);window.frozenFrame=savedNow();performance.now=()=>frozenFrame;window.requestAnimationFrame=cb=>savedRAF(()=>cb(frozenFrame));});
+  await p.waitForTimeout(100);
+  await p.getByRole('button',{name:/攻撃！/}).click();
+  await p.evaluate(()=>window.frozenFrame+=380);
+  await p.waitForTimeout(180);await p.screenshot({path:`docs/player-attack-${kind}.png`});
+  assert.ok(await p.locator('#game-board').evaluate((e,k)=>JSON.parse(e.dataset.itemEffects).some(x=>x.kind===k),kind));
+  await p.evaluate(()=>{window.requestAnimationFrame=window.savedRAF;performance.now=window.savedNow;});await p.waitForFunction(()=>JSON.parse(document.querySelector('#game-board').dataset.itemEffects).length===0);
+ }
+ await p.setViewportSize({width:390,height:844});await p.locator('[data-camera=center]').click();await p.screenshot({path:'docs/player-items-equipped-mobile.png'});assert.deepEqual(errors,[]);console.log('PASS: animated brick, bat and pistol, equipment close-up and mobile; temporary effects removed.');
+}finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});

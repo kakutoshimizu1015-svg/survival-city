@@ -1,0 +1,35 @@
+const {chromium}=require('playwright');const assert=require('node:assert/strict');
+const waitForAsync=async(page,fn,arg,{timeout=30000}={})=>{const end=Date.now()+timeout;while(Date.now()<end){if(await page.evaluate(fn,arg))return;await page.waitForTimeout(100)}throw new Error('Timed out waiting for original game state')};
+(async()=>{const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--enable-unsafe-swiftshader']});const errors=[];try{
+ const p=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'});p.on('pageerror',e=>errors.push(e.message));await p.goto((process.env.BASE_URL||'http://localhost:8000'));await waitForAsync(p,async()=>{const{C:u}=await import('./assets/tradeLogic-Bkaob9Zm.js');return u.getState().isAuthResolved;});
+ const catalog=await p.evaluate(async()=>{const{n:chars}=await import('./assets/useNetworkStore-CIe06z3C.js');const{miniGames,...maps}=await import('./assets/original-city-runtime.js');return {characters:chars.length,minigames:Object.keys(miniGames),maps:Object.fromEntries(Object.entries(maps).map(([k,v])=>[k,v().length]))};});assert.equal(catalog.characters,15);assert.equal(catalog.minigames.length,15);assert.deepEqual(catalog.maps,{largeMap:75,mediumMap:48,originalMap:48,smallMap:12});
+ const patch=async data=>p.evaluate(async data=>{const{I:s}=await import('./assets/useNetworkStore-CIe06z3C.js');s.setState(data);},data);
+ const read=()=>p.evaluate(async()=>{const{I:s}=await import('./assets/useNetworkStore-CIe06z3C.js');const a=s.getState();return {players:a.players,turn:a.turn,mapData:a.mapData,diceRolled:a.diceRolled,diceAnim:a.diceAnim,isBranchPicking:a.isBranchPicking,currentBranchOptions:a.currentBranchOptions,roundCount:a.roundCount,phase:a.gamePhase};});
+ await patch({gamePhase:'setup_offline'});await p.getByRole('button',{name:'+ 🤖 CPUを追加',exact:true}).click();assert.match(await p.locator('body').innerText(),/PLAYERS \(3\/8\)/);assert.equal(await p.getByText('鬼畜',{exact:true}).count(),2);
+ await p.getByRole('button',{name:'🎲 ゲームを開始する',exact:true}).click();await p.waitForFunction(()=>document.querySelector('#game-board')?.dataset.worldStatus==='ready');
+ let initial=await read();assert.equal(initial.players.length,3);const fixturePlayers=initial.players.map((x,i)=>({...x,isCPU:false,id:i,pos:9,ap:8,hand:[],p:15}));
+ await patch({players:fixturePlayers,turn:0,turnOrderActive:false,turnOrderData:null,turnBanner:null,turnBannerActive:false,diceAnim:{active:false,d1:1,d2:2,d3:0},diceRolled:true,showSkipButton:false});
+ await p.waitForTimeout(1800);await patch({turnBanner:null,turnBannerActive:false});
+ await p.locator('#btn-move button').click();await waitForAsync(p,async()=>{const{I:s}=await import('./assets/useNetworkStore-CIe06z3C.js');return s.getState().isBranchPicking;});
+ const before=await read();assert.ok(before.currentBranchOptions.length>=2);const target=before.currentBranchOptions[0];await p.locator(`[data-original-tile="${target}"]`).click();await waitForAsync(p,async target=>{const{I:s}=await import('./assets/useNetworkStore-CIe06z3C.js');return s.getState().players[0].pos===target;},target);assert.equal((await read()).players[0].ap,7);
+ console.log('PASS: native setup, 15 characters, 15 mini-games, CPU difficulty options, original 1 AP move and projected branch click.');
+ // Verify all original maps and three distinct sets of architecture.
+ for(const name of ['smallMap','mediumMap','largeMap','originalMap']){
+  await p.evaluate(async({name,players})=>{const maps=await import('./assets/original-city-runtime.js');const{I:s}=await import('./assets/useNetworkStore-CIe06z3C.js');const map=maps[name]();s.setState({mapData:map,players:players.map(x=>({...x,pos:map[0].id})),turn:0,isBranchPicking:false,turnBannerActive:false});},{name,players:fixturePlayers});
+  await p.waitForFunction(()=>document.querySelector('#game-board')?.dataset.worldStatus==='ready'&&Number(document.querySelector('#game-board')?.dataset.triangles)>0);
+  assert.equal(await p.locator('[data-original-tile]').count(),catalog.maps[name]);const counts=JSON.parse(await p.locator('#game-board').getAttribute('data-districts'));assert.ok(counts.slum>0&&counts.commercial>0&&counts.luxury>0,JSON.stringify(counts));
+ }
+ await p.locator('[data-camera=mode]').click();await p.locator('[data-camera=overview]').click();await p.screenshot({path:'docs/original-districts-overview.png'});for(const area of ['slum','commercial','luxury']){await p.locator(`[data-district=${area}]`).click();await p.screenshot({path:`docs/original-district-${area}.png`});}
+ for(const width of [320,390,768,1440]){await p.setViewportSize({width,height:844});assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no page overflow '+width);await p.locator('[data-camera=center]').click();assert.ok(await p.locator('#btn-move button').isVisible());}
+ await p.screenshot({path:'docs/original-game-mobile.png',fullPage:true});console.log('PASS: 12 / 48 / 75 / 48-square maps, district architecture, camera controls, four viewport widths.');
+ // All minigames are the original mounted components, with their own input screens.
+ for(const id of catalog.minigames){await patch({gamePhase:'mode_select'});await patch({gamePhase:'minigames'});await p.locator(`[data-minigame=${id}]`).click();await p.waitForTimeout(80);assert.equal(await p.locator('[data-minigame]').count(),0,id+' opens');assert.ok((await p.locator('body').innerText()).length>20,id+' content');}
+ assert.deepEqual(errors,[]);console.log('PASS: all 15 native mini-games open with no JavaScript errors.');
+ await p.close();
+ // Actual CPU turn, using shorter waits only in this test browser.
+ const cpu=await browser.newPage({reducedMotion:'reduce'});cpu.on('pageerror',e=>errors.push(e.message));await cpu.addInitScript(()=>{const original=window.setTimeout;window.setTimeout=(fn,ms,...args)=>original(fn,Math.min(ms||0,80),...args);});await cpu.goto((process.env.BASE_URL||'http://localhost:8000'));
+ await cpu.evaluate(async()=>{const{I:s}=await import('./assets/useNetworkStore-CIe06z3C.js');s.setState({gamePhase:'setup_offline'});});await cpu.getByRole('button',{name:'🎲 ゲームを開始する',exact:true}).click();
+ await waitForAsync(cpu,async()=>{const{I:s}=await import('./assets/useNetworkStore-CIe06z3C.js');return s.getState().players.length===2;});
+ await cpu.evaluate(async()=>{const{I:s}=await import('./assets/useNetworkStore-CIe06z3C.js');const players=s.getState().players.map((p,i)=>({...p,id:i,isCPU:i===1,hand:[],pos:1,cpuDifficulty:'normal'}));s.setState({players,turn:1,turnOrderActive:false,turnOrderData:null,diceRolled:false,diceAnim:{active:false,d1:1,d2:1,d3:0},turnBannerActive:false,turnBanner:null,roundCount:1});});
+ await waitForAsync(cpu,async()=>{const{I:s}=await import('./assets/useNetworkStore-CIe06z3C.js');return s.getState().roundCount>=2&&s.getState().turn===0;},{},{timeout:90000});assert.deepEqual(errors,[]);console.log('PASS: original CPU rolls, takes actions, ends its turn and advances the round.');await cpu.close();
+ }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});
