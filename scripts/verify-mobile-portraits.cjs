@@ -11,7 +11,7 @@ assert.ok(await p.locator('.original-world-canvas').evaluate(e=>e.width>=e.getBo
 const urls=await p.locator('.mobile-status img').evaluateAll(xs=>xs.map(i=>i.src));assert.ok(new Set(urls).size>=3,'uses each original character image');
 await p.screenshot({path:'docs/mobile-restored-portraits.png'});
 await p.locator('.mobile-rival[data-character="1"]').tap();await p.waitForFunction(()=>mobileStore.getState().charInfoModal===1);await p.evaluate(()=>mobileStore.setState({charInfoModal:null}));
-await p.locator('[data-panel=players]').tap();assert.equal(await p.locator('.mobile-player-card').count(),4);assert.ok(await p.locator('.mobile-equipment').first().isVisible());assert.match(await p.locator('.mobile-player-card').first().textContent(),/HP 80/);await p.screenshot({path:'docs/mobile-restored-status.png'});await p.getByRole('button',{name:'情報を閉じる'}).tap();
+await p.locator('[data-panel=players]').tap();assert.equal(await p.locator('.mobile-rank-row').count(),4);assert.match(await p.locator('.mobile-sheet h2').textContent(),/ランキング/);await p.screenshot({path:'docs/mobile-restored-status.png'});await p.getByRole('button',{name:'情報を閉じる'}).tap();
 await p.setViewportSize({width:320,height:568});await p.waitForTimeout(300);assert.ok(await p.evaluate(()=>document.documentElement.scrollHeight<=innerHeight+1&&document.documentElement.scrollWidth<=innerWidth));assert.ok((await p.locator('#board-area').boundingBox()).height>=230);assert.ok(await p.locator('.mobile-portrait').first().isVisible());await p.screenshot({path:'docs/mobile-restored-small.png'});assert.deepEqual(errors,[]);
-console.log('PASS: original portraits for all four players, HP bar, native character details, equipment icons, 2x rendering, and 320px fixed layout.');
+console.log('PASS: original portraits for all four players, HP bar, native character details, ranking, 2x rendering, and 320px fixed layout.');
 }finally{await b.close();}})().catch(e=>{console.error(e);process.exitCode=1});

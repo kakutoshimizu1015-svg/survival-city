@@ -127,3 +127,36 @@ body.city-touring #action-panel,body.city-touring #card-panel-clay{opacity:.45}
 @media(max-width:360px){body.city-mobile{--mobile-head:124px}.mobile-name-row small{font-size:8px}.mobile-status .mobile-resources span{font-size:8px}.mobile-status .mobile-name-row strong{font-size:11px}.mobile-status .mobile-stats b{font-size:11px}}
 @media(max-width:768px) and (max-height:550px){body.city-mobile{--mobile-head:112px}.mobile-status>.mobile-active-player{height:60px}.mobile-status>.mobile-opponents{height:40px;min-height:40px}}
 .mobile-portrait img,.mobile-rival-portrait img{transform:scale(1.15)}
+/* Give the map roughly two thirds of the phone viewport. Secondary actions open in place. */
+@media(max-width:768px){
+ body.city-mobile{--mobile-head:clamp(68px,calc(var(--city-vh,100dvh) * .34 - 124px - var(--mobile-safe)),124px);--mobile-dock:124px}
+ body.city-mobile.mobile-branch{--mobile-dock:168px}
+ .mobile-dock{grid-template-rows:26px minmax(0,1fr) 34px;gap:4px;padding-top:4px;padding-bottom:calc(4px + var(--mobile-safe))}
+ #city-mobile-ui .mobile-result{min-height:26px;font-size:10px;line-height:1.5;padding:3px 7px;-webkit-line-clamp:1}
+ .mobile-actions{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:minmax(44px,1fr);grid-auto-rows:44px}
+ #city-mobile-ui .mobile-actions button{font-size:11px;padding:3px;min-height:44px}.mobile-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}#city-mobile-ui .mobile-tabs button{min-height:34px;font-size:11px;padding:3px}
+ .choosing-route .mobile-actions{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(44px,1fr))}
+ .mobile-all-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mobile-all-actions button{min-height:52px!important}
+ .mobile-ranking{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}.mobile-rank-row{display:flex;align-items:center;gap:8px;padding:8px;background:#302718;border:1px solid #79613a;border-radius:7px}.mobile-rank-number{font-size:23px;width:26px;text-align:center;flex:none}.mobile-rank-row>div{min-width:0}.mobile-rank-row h3{font-size:13px;margin:0 0 3px;overflow-wrap:anywhere}.mobile-rank-row strong{color:#efca7f}.mobile-rank-row p{font-size:11px;margin:2px 0}.mobile-rank-row small{font-size:10px;color:#c5b58f}
+ body.city-mobile[data-mobile-panel=tiles] .mobile-sheet{top:auto;max-height:min(230px,calc(var(--city-vh,100dvh) * .42));left:8px;right:8px;bottom:calc(var(--mobile-dock) + var(--mobile-safe) + 8px)}
+ body.city-mobile[data-mobile-panel=tiles] .mobile-sheet>header{padding:3px 8px}body.city-mobile[data-mobile-panel=tiles] .mobile-sheet h2{font-size:11px}body.city-mobile[data-mobile-panel=tiles] .mobile-close{min-height:32px;font-size:11px;min-width:64px}body.city-mobile[data-mobile-panel=tiles] .mobile-sheet-content{padding:6px 8px}.mobile-tile-detail{padding:4px!important;border:0!important}.mobile-tile-detail h3{font-size:13px}.mobile-tile-detail p{font-size:12px;margin:4px 0}
+ body.city-mobile .city-world-tools{left:5px!important;right:auto!important;top:5px!important;align-items:flex-start!important;gap:3px!important;max-width:220px}
+ body.city-mobile .city-camera-modes{padding:2px;border-radius:4px;gap:0}
+ body.city-mobile .city-camera-modes button{min-height:28px!important;font-size:10px!important;padding:3px 7px!important}
+ body.city-mobile .city-tour-tools{align-items:stretch;gap:3px;width:218px;max-width:calc(100vw - 12px)}
+ body.city-mobile .city-districts{padding:2px;gap:1px;flex-wrap:nowrap}.city-mobile .city-districts button{min-height:25px!important;font-size:9px!important;padding:3px 4px!important;gap:3px!important;flex:1;justify-content:center}.city-mobile .city-districts i{width:5px;height:5px}
+ body.city-mobile .city-camera{display:grid!important;grid-template-columns:repeat(4,1fr);gap:3px;padding:3px;align-self:stretch;width:100%;border-radius:5px}
+ body.city-mobile .city-camera button{min-height:29px!important;min-width:0!important;font-size:10px!important;padding:3px!important}
+ body.city-mobile #map-env-hud{left:auto!important;right:5px!important;top:5px!important;max-width:45%!important}
+ body.city-mobile #map-env-hud>div:first-child{font-size:8px!important;padding:3px 5px!important;line-height:1.4!important}
+}
+@media(max-width:768px) and (max-height:720px){
+ .mobile-status{gap:2px;padding-top:3px}.mobile-status>.mobile-active-player{height:calc(var(--mobile-head) - 35px);min-height:43px;gap:6px}.mobile-status>.mobile-opponents{height:29px;min-height:29px;padding-top:1px}
+ #city-mobile-ui .mobile-rival{min-height:27px;height:27px;padding:1px 4px;gap:4px}.mobile-rival-portrait{width:23px;height:23px}.mobile-rival strong{font-size:9px!important}.mobile-rival small{font-size:8px}
+ #city-mobile-ui .mobile-status .mobile-portrait{width:43px;height:43px;min-width:43px;min-height:43px}.mobile-active-stats{gap:1px}.mobile-status .mobile-name-row strong{font-size:10px}.mobile-status .mobile-name-row small{font-size:8px}.mobile-status .mobile-stats b{font-size:10px}.mobile-status .mobile-resources span{font-size:8px}.mobile-status .mobile-hp-track{height:3px;min-height:3px}
+}
+@media(max-width:768px) and (max-height:610px){
+ .mobile-status{padding-top:1px;gap:0}.mobile-status>.mobile-active-player{height:43px;min-height:43px}.mobile-status>.mobile-opponents{height:24px;min-height:24px}#city-mobile-ui .mobile-rival{min-height:23px;height:23px}.mobile-rival-portrait{width:21px;height:21px}.mobile-rival>span:last-child{display:flex;align-items:center;gap:3px}.mobile-rival strong{max-width:56px!important;font-size:8px!important}.mobile-rival small{font-size:8px}
+}
+@media(max-width:768px){body.city-mobile .city-tour-tools .city-districts{display:none}}
+@media(max-width:768px){body.city-mobile #map-ap-hud{top:40px!important;right:5px!important;padding:2px 4px!important;border:0!important}body.city-mobile #map-ap-hud>div:first-child{display:none!important}body.city-mobile #map-ap-hud:not(:has(>div:nth-child(2))){display:none!important}}
