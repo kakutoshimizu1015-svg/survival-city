@@ -31,6 +31,6 @@ replace_once('function It(){return[','function legacyMidtownMap(){return[')
 assert s.count('midtown (46)')==2
 s=s.replace('midtown (46)','街めぐり (48・路地と噴水広場)')
 s='import {PixelShop,PixelEvent} from "../src/pixel-scenes.js";\nimport {createCityBoard} from "../src/city-board-map.js";\nfunction It(){return createCityBoard()}\n'+s
-s+='\nexport {Mt as smallMap,Nt as mediumMap,Pt as largeMap,It as originalMap,Ti as miniGames,mr as tileDescriptions};\n'
+s+='\nexport {Mt as smallMap,Nt as mediumMap,Pt as largeMap,It as originalMap,Ti as miniGames,mr as tileDescriptions,tr as statusEquipment,nr as hasStatusEquipment};\n'
 (root/'assets/original-city-runtime.js').write_text(s)
 print('Original rules preserved; 48-square district board and presentation hooks added.')

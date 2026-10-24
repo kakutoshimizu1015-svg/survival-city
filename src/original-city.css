@@ -104,3 +104,26 @@ body.city-touring #action-panel,body.city-touring #card-panel-clay{opacity:.45}
 @media(max-width:768px){body.city-mobile #game-screen{position:static!important}body.city-mobile #main-area{position:fixed!important}}
 
 @media(max-width:768px){body.city-mobile #game-board[data-camera-mode=tour] .tile{pointer-events:auto!important}}
+/* Restore the original character-led, brass-and-brown interface within the phone layout. */
+@media(max-width:768px){
+ body.city-mobile{--mobile-head:124px}
+ .mobile-status{padding:5px 8px 0;background:#211b12;border-color:#6c5837;gap:3px;justify-content:flex-start}
+ .mobile-status>.mobile-active-player{height:68px;flex:none;gap:8px;padding-right:42px;align-items:center}
+ #city-mobile-ui .mobile-portrait{display:grid;place-items:center;width:52px;height:56px;min-width:52px;min-height:52px;padding:2px;border:2px solid var(--player-color,#c8a24e);background:#18150f;border-radius:8px;overflow:hidden;flex-shrink:0}
+ .mobile-portrait img,.mobile-rival-portrait img{width:100%;height:100%;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 2px 1px #0008)}
+ .mobile-active-stats{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.mobile-status .mobile-name-row{display:flex;align-items:baseline;gap:5px;min-width:0;white-space:nowrap}.mobile-status .mobile-name-row strong{font-size:12px;flex-shrink:1;max-width:110px;color:#f5e6c6}.mobile-name-row small{font-size:9px;color:#d7b56b;overflow:hidden;text-overflow:ellipsis;min-width:0}
+ .mobile-status .mobile-stats{display:flex;justify-content:space-between;gap:4px}.mobile-stats b{font-size:12px;color:#edcd81!important}
+ .mobile-hp-track{display:block!important;width:100%;height:5px;min-height:5px;border-radius:3px;background:#403522;overflow:hidden}.mobile-hp-track i{display:block;height:100%;border-radius:3px}
+ .mobile-resources{display:flex;justify-content:space-between;gap:3px;white-space:nowrap}.mobile-status .mobile-resources span{font-size:9px;color:#d8c9a9}
+ .mobile-status>.mobile-opponents{height:44px;min-height:44px;display:flex;gap:5px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;align-items:stretch;max-width:100%;border-top:1px solid #69573166;padding-top:2px}
+ #city-mobile-ui .mobile-rival{display:flex;align-items:center;gap:5px;flex:1;min-width:100px;min-height:40px;height:40px;padding:2px 5px;border:1px solid #6e5a35;background:#2c2316;text-align:left;border-radius:6px}
+ .mobile-rival-portrait{display:block;width:31px;height:33px;flex-shrink:0;border:1px solid var(--player-color,#bd9b59);border-radius:4px;background:#1c1811;overflow:hidden}.mobile-rival>span:last-child{min-width:0}.mobile-rival strong{display:block;font-size:10px!important;max-width:120px!important;color:#dfc585!important}.mobile-rival small{font-size:9px;color:#dbd0b7;white-space:nowrap}
+ .mobile-dock{background:#211b12;border-color:#6c5837}.mobile-sheet{background:#241d13;border-color:#a88a4f}.mobile-sheet>header{background:#33291a;border-color:#6c5837}.mobile-sheet-content article{border-color:#78623c}.mobile-sheet h2{color:#e8cc8d}
+ #city-mobile-ui button{background:#33291a;border-color:#79613a;color:#ead8ad;box-shadow:inset 0 1px 0 #dac08e12,inset 0 -2px 0 #0b09054d}
+ #city-mobile-ui .mobile-result{background:#302718;border-color:#75633d;color:#f0dba4}#city-mobile-ui .mobile-tabs button{background:#2a2115;border-color:#6c5837;color:#e2cd9e}
+ .mobile-actions button:not(:disabled){background:#3b301c;border-color:#b99851;color:#f3dc9f}.mobile-actions button:disabled{opacity:.43}.mobile-hand article{background:#3a301f;border-color:#88704b}.mobile-hand h3{color:#f3d9a0}
+ .mobile-player-card{background:#2e2518;border:1px solid #73603c!important;border-radius:8px;margin-bottom:9px}.mobile-player-card>header{display:flex;align-items:center;gap:10px;margin-bottom:9px}.mobile-player-card>header p{font-size:11px;color:#d9b666}.mobile-detail-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:7px}.mobile-detail-stats b{font-size:11px;background:#211b12;border:1px solid #73603c;border-radius:4px;padding:5px 3px;text-align:center}.mobile-player-card>p{font-size:11px}.mobile-equipment{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}.mobile-equip{font-size:19px;opacity:.25;filter:grayscale(1)}.mobile-equip.equipped{opacity:1;filter:none}.mobile-player-card>button{width:100%}
+}
+@media(max-width:360px){body.city-mobile{--mobile-head:124px}.mobile-name-row small{font-size:8px}.mobile-status .mobile-resources span{font-size:8px}.mobile-status .mobile-name-row strong{font-size:11px}.mobile-status .mobile-stats b{font-size:11px}}
+@media(max-width:768px) and (max-height:550px){body.city-mobile{--mobile-head:112px}.mobile-status>.mobile-active-player{height:60px}.mobile-status>.mobile-opponents{height:40px;min-height:40px}}
+.mobile-portrait img,.mobile-rival-portrait img{transform:scale(1.15)}
