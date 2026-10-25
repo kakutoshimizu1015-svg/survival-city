@@ -14,15 +14,15 @@ function syncCameraControls(){
 function controls(container){
  const existing=container.querySelector('.city-world-tools');if(existing){container.dataset.cameraMode='play';const b=existing.querySelector('[data-camera=mode]');b.textContent='マップ巡回';b.setAttribute('aria-pressed','false');return;}
  const nav=document.createElement('nav');nav.className='city-world-tools';nav.setAttribute('aria-label','立体マップの視点');
- nav.innerHTML=`<div class="city-camera-modes"><button data-camera="mode" aria-pressed="false">マップ巡回</button><span class="tour-help">ドラッグで移動</span></div><div class="city-tour-tools"><div class="city-districts">${Object.entries(DISTRICTS).map(([id,d])=>`<button data-district="${id}" style="--district-color:${d.color}"><i></i>${d.name}</button>`).join('')}</div><div class="city-camera"><button data-camera="overview">全景</button><button data-camera="left" aria-label="左へ回転">↶</button><button data-camera="right" aria-label="右へ回転">↷</button><button data-camera="out" aria-label="縮小">−</button><button data-camera="center">現在地</button><button data-camera="in" aria-label="拡大">＋</button><button data-camera="tilt-up" aria-label="上から見下ろす">俯瞰 ↑</button><button data-camera="tilt-down" aria-label="低い角度で見る">低く ↓</button></div>`;
- nav.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.camera==='mode'){const tour=world?.getCameraMode()!=='tour';world?.setCameraMode(tour?'tour':'play');syncCameraControls();return;}if(b.dataset.district)world?.district(b.dataset.district);else switch(b.dataset.camera){case 'overview':world?.overview();break;case 'center':world?.center();break;case 'left':world?.rotate(-1);break;case 'right':world?.rotate(1);break;case 'in':world?.zoom(1.2);break;case 'out':world?.zoom(.8);break;case 'tilt-up':world?.tilt(1);break;case 'tilt-down':world?.tilt(-1);break;}});
+ nav.innerHTML=`<div class="city-camera-modes"><button data-camera="mode" aria-pressed="false" aria-describedby="city-gesture-help">マップ巡回</button></div><div id="city-gesture-help" class="city-tour-tools city-gesture-help"><span class="gesture-touch">1本指：移動<br>2本指：開閉でズーム・ひねって回転<br>2本指を上下：角度</span><span class="gesture-mouse">ドラッグ：移動 ／ ホイール：ズーム<br>右ドラッグ：回転・角度<br>ダブルクリック：全景</span></div>`;
+ nav.addEventListener('click',e=>{if(!e.target.closest('[data-camera=mode]'))return;const tour=world?.getCameraMode()!=='tour';world?.setCameraMode(tour?'tour':'play');syncCameraControls();});
  container.dataset.cameraMode='play';
  container.append(nav);
  let touchStart=null,touchMoved=false;
  container.addEventListener('pointerdown',e=>{touchStart={x:e.clientX,y:e.clientY};touchMoved=false;},true);
  container.addEventListener('pointermove',e=>{if(touchStart&&Math.hypot(e.clientX-touchStart.x,e.clientY-touchStart.y)>8)touchMoved=true;},true);
  container.addEventListener('click',e=>{
-  if(window.cityMobileActive&&e.isTrusted&&touchMoved&&e.target.closest('#game-board')){e.stopPropagation();e.preventDefault();return;}
+  if(e.isTrusted&&(touchMoved||world?.wasCameraGesture())&&e.target.closest('#game-board')){e.stopPropagation();e.preventDefault();return;}
   // Enlarged touch targets overlap in the overview. Resolve taps to the nearest projected marker.
   if(window.cityMobileActive&&e.isTrusted&&e.target.closest('#game-board')&&world){
    const rect=document.querySelector('#game-board').getBoundingClientRect();let nearest=null,distance=32;

@@ -8,7 +8,7 @@ const {chromium}=require('playwright');const assert=require('node:assert/strict'
  for(const id of [46,8,28,27])await p.evaluate(id=>useTestCard(id),id);
  await p.waitForFunction(()=>JSON.parse(document.querySelector('#game-board').dataset.playerEquipment||'[]').length===4);
  let eq=await equip();assert.deepEqual(eq.map(x=>x.kind).sort(),['backpack','helmet','shield','shoppingCart']);const initial=eq.find(x=>x.kind==='shoppingCart');
- await p.evaluate(()=>itemStore.getState().updatePlayer(1,{pos:22}));await p.waitForTimeout(3000);await p.locator('[data-camera=mode]').click();await p.locator('[data-camera=center]').click();await p.locator('[data-camera=in]').click();await p.screenshot({path:'docs/player-equipment.png'});await p.locator('[data-camera=mode]').click();await p.evaluate(()=>itemStore.getState().updatePlayer(1,{pos:24}));
+ await p.evaluate(()=>itemStore.getState().updatePlayer(1,{pos:22}));await p.waitForTimeout(3000);await p.locator('[data-camera=mode]').click();await p.evaluate(()=>cityProjection.center());await p.evaluate(()=>cityProjection.zoom(1.2));await p.screenshot({path:'docs/player-equipment.png'});await p.locator('[data-camera=mode]').click();await p.evaluate(()=>itemStore.getState().updatePlayer(1,{pos:24}));
  await p.evaluate(()=>itemStore.getState().updatePlayer(0,{pos:25}));await p.waitForTimeout(550);eq=await equip();const moved=eq.find(x=>x.kind==='shoppingCart');assert.notEqual(initial.x+','+initial.z,moved.x+','+moved.z);
  // Native damage consumes helmet/shield, and their geometry must disappear.
  await p.evaluate(async()=>{const {j:damage}=await import('./assets/useNetworkStore-CIe06z3C.js');damage(0,10,'テスト',1);});

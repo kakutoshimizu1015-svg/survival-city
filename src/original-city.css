@@ -159,4 +159,19 @@ body.city-touring #action-panel,body.city-touring #card-panel-clay{opacity:.45}
  .mobile-status{padding-top:1px;gap:0}.mobile-status>.mobile-active-player{height:43px;min-height:43px}.mobile-status>.mobile-opponents{height:24px;min-height:24px}#city-mobile-ui .mobile-rival{min-height:23px;height:23px}.mobile-rival-portrait{width:21px;height:21px}.mobile-rival>span:last-child{display:flex;align-items:center;gap:3px}.mobile-rival strong{max-width:56px!important;font-size:8px!important}.mobile-rival small{font-size:8px}
 }
 @media(max-width:768px){body.city-mobile .city-tour-tools .city-districts{display:none}}
-@media(max-width:768px){body.city-mobile #map-ap-hud{top:40px!important;right:5px!important;padding:2px 4px!important;border:0!important}body.city-mobile #map-ap-hud>div:first-child{display:none!important}body.city-mobile #map-ap-hud:not(:has(>div:nth-child(2))){display:none!important}}
+
+
+/* Keep the round/weather at left and AP visible; tour controls use direct gestures. */
+body.city-3d .city-world-tools{left:12px!important;right:auto!important;top:72px!important;align-items:flex-start!important;gap:4px}
+.city-gesture-help{pointer-events:none;background:#17352edb;color:#eaddbd;border:1px solid #adc29e33;border-radius:5px;padding:5px 7px;font:10px/1.5 sans-serif;max-width:225px;align-items:flex-start}
+.gesture-touch{display:none}@media(pointer:coarse){.gesture-touch{display:inline}.gesture-mouse{display:none}}
+body.city-3d #game-board[data-camera-mode=tour]{touch-action:none;user-select:none;-webkit-user-select:none}
+body.city-3d #game-board[data-camera-mode=tour] .tile{touch-action:none}
+@media(max-width:768px){
+ body.city-mobile #map-env-hud{left:5px!important;right:auto!important;top:5px!important;max-width:60%!important}
+ body.city-mobile #map-env-hud>div:first-child{font-size:10px!important;padding:4px 6px!important;line-height:1.4!important}
+ body.city-mobile .city-world-tools{left:5px!important;right:auto!important;top:58px!important;max-width:210px}
+ body.city-mobile .city-tour-tools{width:auto;max-width:210px}
+ body.city-mobile #map-ap-hud{display:flex!important;top:5px!important;right:5px!important;padding:4px 7px!important;max-width:35%;z-index:60!important}
+ body.city-mobile #map-ap-hud>div:first-child{display:flex!important;font-size:20px!important;line-height:1.2!important}
+}

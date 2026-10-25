@@ -10,7 +10,7 @@ const assert=require('node:assert/strict');
   await p.waitForFunction(()=>document.querySelector('#game-board')?.dataset.worldStatus==='ready');
   await p.evaluate(()=>{const s=window.npcStore;s.setState({turnOrderActive:false,turnOrderData:null,turnBannerActive:false,turnBanner:null,isNight:false,truckPos:25,policePos:24,unclePos:23,animalPos:22,yakuzaPos:21,loansharkPos:20,friendPos:19,policeHp:100,uncleHp:100,yakuzaHp:100,loansharkHp:100,friendHp:100,players:s.getState().players.map(p=>({...p,isCPU:false}))});});
   await p.waitForFunction(()=>JSON.parse(document.querySelector('#game-board').dataset.npcModels||'[]').length===7);
-  await p.locator('[data-camera=mode]').click();await p.locator('[data-camera=overview]').click();await p.screenshot({path:'docs/npc-overview.png'});
+  await p.locator('[data-camera=mode]').click();await p.evaluate(()=>cityProjection.overview());await p.screenshot({path:'docs/npc-overview.png'});
   const status=()=>p.locator('#game-board').evaluate(e=>JSON.parse(e.dataset.npcModels));
   const before=(await status()).find(x=>x.kind==='truck');
   await p.evaluate(()=>window.npcStore.setState({truckPos:26}));
@@ -22,8 +22,8 @@ const assert=require('node:assert/strict');
   await p.waitForFunction(()=>JSON.parse(document.querySelector('#game-board').dataset.npcModels).some(x=>x.kind==='police'));
   // Group the models in the foreground for a visual check; this fixture does not ship in the game.
   await p.evaluate(()=>{const s=window.npcStore;s.setState({truckPos:25,players:s.getState().players.map((p,i)=>({...p,pos:i?21:24}))});});
-  await p.waitForTimeout(700);await p.locator('[data-camera=center]').click();await p.screenshot({path:'docs/npc-closeup.png'});
-  await p.locator('[data-camera=right]').click();await p.screenshot({path:'docs/npc-rotated.png'});
+  await p.waitForTimeout(700);await p.evaluate(()=>cityProjection.center());await p.screenshot({path:'docs/npc-closeup.png'});
+  await p.evaluate(()=>cityProjection.rotate(1));await p.screenshot({path:'docs/npc-rotated.png'});
   await p.setViewportSize({width:390,height:844});await p.screenshot({path:'docs/npc-mobile.png'});
   // Verify visibility against the native UI, including the horror truck's fog exception.
   await p.evaluate(()=>window.npcStore.setState({isNight:true,horrorMode:true,truckPos:8,policePos:10,unclePos:12,animalPos:14}));
