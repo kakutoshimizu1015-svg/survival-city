@@ -1,3 +1,4 @@
+import {createGoldModels} from './gold-models.js';
 import { tileVisual, drawTileIcon } from './tile-visuals.js';
 import { createPlayerItems } from './player-items.js';
 import { createNpcModel, NPC_KEYS } from './npc-models.js';
@@ -146,6 +147,7 @@ export function createOriginalWorld(host,map){
   const cap=mesh(new T.PlaneGeometry(isCityBoard?3.25:1.5,isCityBoard?3.25:1.5),new T.MeshBasicMaterial({map:top,transparent:true,alphaTest:.1}),t.x,.93,t.z);cap.rotation.x=-Math.PI/2;cap.castShadow=false;
  }
  const textureCache=new Map(),actors=new Map(),npcActors=new Map();
+ const goldModels=createGoldModels({T,scene,squares,elevation,host,reduced});
  const playerItems=createPlayerItems({T,scene,actors,squares,elevation,host,reduced});
  const routeOccluders=scene.children.filter(o=>o.geometry?.type==='BoxGeometry'),routeRay=new T.Raycaster();
  const cam={yaw:.3,pitch:isCityBoard?.65:.8,zoom:1,target:new T.Vector3(0,0,0)};let state=null,raf,dead=false,dirty=true,w=1,h=1,last=0,followKey='',cameraChanged=true,cameraMode='play';const vehicleShots=[];let vehicleShot=null;
@@ -203,7 +205,7 @@ export function createOriginalWorld(host,map){
    npcStatus.push({kind:key,pos:a.pos,x:+x.toFixed(2),z:+z.toFixed(2),heading:+a.angle.toFixed(2),moving,model:'mesh'});
   }
   if(cameraMode==='play')followAction(now);
-  playerItems.draw(now,cam.yaw);
+  playerItems.draw(now,cam.yaw);host.dataset.goldModels=JSON.stringify(goldModels.draw(state,now));
   host.dataset.npcModels=JSON.stringify(npcStatus);
   projectDOM();renderer.render(scene,camera);host.dataset.triangles=String(renderer.info.render.triangles);host.dataset.districts=JSON.stringify(counts);host.dataset.scenery=JSON.stringify(features);host.dataset.interiorLots=String(sceneryLots.filter(p=>p.col>0&&p.col<8&&p.row>0&&p.row<5).length);host.dataset.boardLayout=isCityBoard?CITY_BOARD.id:'legacy';host.dataset.actorCount=String([...actors.values()].filter(a=>a.sprite.visible).length+npcStatus.length);
  }
@@ -226,7 +228,7 @@ export function createOriginalWorld(host,map){
  }
  function playView(){cam.yaw=.3;cam.pitch=isCityBoard?.65:.92;cam.zoom=1;followPlayer(true);sync();}
  function fixedView(){cam.target.set(0,0,0);cam.yaw=.3;cam.pitch=isCityBoard?.65:.92;cam.zoom=1;sync();focus(map.map(t=>t.id),false);if(isCityBoard){cam.target.z-=5;cam.zoom*=.96;sync();}}
- function setCameraMode(mode){cameraMode=mode==='tour'?'tour':'play';pointers.clear();gestureMoved=false;twoFinger=null;cancelAnimationFrame(twoFingerFrame);twoFingerFrame=0;vehicleShots.length=0;vehicleShot=null;if(cameraMode==='play')playView();else fixedView();host.closest('#board-area')?.setAttribute('data-camera-mode',cameraMode);}
+ function setCameraMode(mode){cameraMode=mode==='tour'?'tour':'play';pointers.clear();gestureMoved=false;twoFinger=null;cancelAnimationFrame(twoFingerFrame);twoFingerFrame=0;vehicleShots.length=0;vehicleShot=null;if(cameraMode==='play')playView();else fixedView();host.closest('#board-area')?.setAttribute('data-camera-mode',cameraMode);window.dispatchEvent(new Event('city-camera-change'));}
  const canvas=renderer.domElement;const pointers=new Map();let gestureMoved=false,twoFinger=null,twoFingerFrame=0;
  const inputEvents=new AbortController(),inputOptions={capture:true,signal:inputEvents.signal};
  function pan(dx,dy){const units=(camera.right-camera.left)/w;cam.target.x-=dx*units*Math.cos(cam.yaw)+dy*units*Math.sin(cam.yaw)/Math.sin(cam.pitch);cam.target.z+=dx*units*Math.sin(cam.yaw)-dy*units*Math.cos(cam.yaw)/Math.sin(cam.pitch);cam.target.x=Math.max(-width/2,Math.min(width/2,cam.target.x));cam.target.z=Math.max(-depth/2,Math.min(depth/2,cam.target.z));}
@@ -261,7 +263,7 @@ export function createOriginalWorld(host,map){
  host.addEventListener('dblclick',e=>{if(cameraMode==='tour'){e.preventDefault();fixedView();}},inputOptions);
  window.addEventListener('blur',()=>pointers.clear(),{signal:inputEvents.signal});
  const resize=new ResizeObserver(()=>{sync();projectDOM();});resize.observe(host);sync();raf=requestAnimationFrame(draw);
- return {update,wasCameraGesture:()=>gestureMoved,setCameraMode,getCameraMode:()=>cameraMode,useItem(id,card){playerItems.use(id,card);dirty=true;},playAttack(data){playerItems.attack(data);dirty=true;},setWeaponAim(angle){playerItems.setAim(angle);dirty=true;},tilt(d){if(cameraMode!=='tour')return;cam.pitch=Math.max(.38,Math.min(1.15,cam.pitch+d*.1));sync();},rotate(d){if(cameraMode!=='tour')return;cam.yaw+=d*Math.PI/8;sync();},zoom(d){if(cameraMode!=='tour')return;cam.zoom=Math.max(.4,Math.min(5,cam.zoom*d));sync();},center(){if(cameraMode!=='tour')return;focus([state?.players[state.turn]?.pos]);},overview(){if(cameraMode==='tour')fixedView();},district(area){if(cameraMode!=='tour')return;focus(map.filter(t=>t.area===area).map(t=>t.id));if(isCityBoard&&area==='luxury'){cam.target.y=5;cam.zoom*=.78;sync();}},projectGrid,
+ return {update,inspectTile(id){const t=squares.get(id);if(!t)return;setCameraMode('tour');cam.target.set(t.x,elevation(t.x,t.z)+1.5,t.z);cam.zoom=3.5;sync();},wasCameraGesture:()=>gestureMoved,setCameraMode,getCameraMode:()=>cameraMode,useItem(id,card){playerItems.use(id,card);dirty=true;},playAttack(data){playerItems.attack(data);dirty=true;},setWeaponAim(angle){playerItems.setAim(angle);dirty=true;},tilt(d){if(cameraMode!=='tour')return;cam.pitch=Math.max(.38,Math.min(1.15,cam.pitch+d*.1));sync();},rotate(d){if(cameraMode!=='tour')return;cam.yaw+=d*Math.PI/8;sync();},zoom(d){if(cameraMode!=='tour')return;cam.zoom=Math.max(.4,Math.min(5,cam.zoom*d));sync();},center(){if(cameraMode!=='tour')return;focus([state?.players[state.turn]?.pos]);},overview(){if(cameraMode==='tour')fixedView();},district(area){if(cameraMode!=='tour')return;focus(map.filter(t=>t.area===area).map(t=>t.id));if(isCityBoard&&area==='luxury'){cam.target.y=5;cam.zoom*=.78;sync();}},projectGrid,
   aimEnd(t,range,angle){return projectGrid(t.col+Math.cos(angle*Math.PI/180)*range,t.row+Math.sin(angle*Math.PI/180)*range);},
   weaponArc(t,range,angle){const points=[projectGrid(t.col,t.row)];for(let d=angle-75;d<=angle+75;d+=5)points.push(projectGrid(t.col+Math.cos(d*Math.PI/180)*range,t.row+Math.sin(d*Math.PI/180)*range));return points.map((p,i)=>`${i?'L':'M'} ${p.x} ${p.y}`).join(' ')+' Z';},
   dispose(){dead=true;cancelAnimationFrame(twoFingerFrame);inputEvents.abort();playerItems.dispose();cancelAnimationFrame(raf);resize.disconnect();scene.traverse(o=>{o.geometry?.dispose();if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();});for(const tex of [...assets,...textureCache.values()])tex.dispose();renderer.dispose();canvas.remove();}

@@ -30,7 +30,26 @@ replace_once(old,'r&&w&&(0,G.jsx)(PixelEvent,{key:i,react:W,story:w,index:i||0,c
 replace_once('function It(){return[','function legacyMidtownMap(){return[')
 assert s.count('midtown (46)')==2
 s=s.replace('midtown (46)','街めぐり (48・路地と噴水広場)')
-s='import {PixelShop,PixelEvent} from "../src/pixel-scenes.js";\nimport {createCityBoard} from "../src/city-board-map.js";\nfunction It(){return createCityBoard()}\n'+s
+# Gold-can competition: generated runtime only; classic.html keeps the original UI.
+replace_once('ie({type:`GAME_START`,gameState:m})','Object.assign(m,createGoldState(m));ie({type:`GAME_START`,gameState:m})')
+replace_once('let r=n.cpuDifficulty||`normal`;if(r===`easy`)', 'let remaining=e.maxRounds-e.roundCount+1,r=n.cpuDifficulty||`normal`;if(r===`easy`&&!e.goldMode)')
+replace_once('){let t=e.mapData.find(e=>e.id===n.pos);if(!t)break;', '){if(e.goldMode&&goldCpuStep(T,{cards:Ce,useCard:Oe,damage:V,move:le,exchange:z,job:R,network:oe,log:H,sound:D})){await Kn(500);continue}let t=e.mapData.find(e=>e.id===n.pos);if(!t)break;')
+start=s.index('f&&(0,G.jsxs)(`div`,{className:`modal-overlay`',s.index('Ei=()=>'))
+end=s.index(',_&&(0,G.jsx)',start)
+replace_once(s[start:end], 'f&&(f.goldMode?(0,G.jsx)(GoldResults,{react:W,result:f,onExit:()=>T.getState().resetGame()}):'+s[start+3:end]+')')
+replace_once('children:`✨ ボーナス +50P 獲得!! ✨`', 'children:T.getState().goldMode?`称号獲得！ 得点加算なし`:`✨ ボーナス +50P 獲得!! ✨`')
+replace_once('if(r){let e=[...i].sort((e,t)=>t.p-e.p);return', 'if(r&&!T.getState().goldMode){let e=[...i].sort((e,t)=>t.p-e.p);return')
+replace_once('qn=(e,t)=>{let n=', 'qn=(e,t)=>{if(t.goldMode)return goldScore(e);let n=')
+replace_once('r===`rank`?t.sort((e,t)=>t.p-e.p)', 'r===`rank`?t.sort(T.getState().goldMode?goldCompare:(e,t)=>t.p-e.p)')
+replace_once('children:[`⚔️ `,r.kills,`K / 💀`,r.deaths,`D`]', 'children:T.getState().goldMode?(0,G.jsx)(GoldBadge,{react:W,player:r}):[`⚔️ `,r.kills,`K / 💀`,r.deaths,`D`]')
+replace_once('children:[`❤️`,e.hp,` 💰`,e.p,`P 🎴`,e.hand?.length||0,` 🚩`,o]', 'children:T.getState().goldMode?[(0,G.jsx)(GoldBadge,{react:W,player:e}),` ❤️`,e.hp,` 💰`,e.p,`P`]:[`❤️`,e.hp,` 💰`,e.p,`P 🎴`,e.hand?.length||0,` 🚩`,o]')
+# The full tutorial and rules must agree with the new result screen.
+start=s.index('`スコア ＝ `')
+end=s.index('})',s.index('※ゲーム終了時の陣地の価値：',start))+2
+replace_once(s[start:end], '`金缶×3 ＋ 対人キル×2。同点は所持P。金缶は現地で10P、対人キルで最大1個奪取。NPC討伐は加点なし。`')
+s=s.replace('スコア ＝ 所持P × 2 ＋ 陣地の価値(スラム3/商業6/高級10) ＋ 資源価値 ＋ キル×3 − デス×5','スコア ＝ 金缶×3 ＋ 対人キル×2。同点は所持P。金缶は現地で10P、キルで最大1個奪取。')
+s=s.replace('死亡回数が多いと大きく減点されるので注意！','金缶は1個まで奪われます。NPCや環境で倒れると、その場に1個落とします。')
+s='import {createGoldState,goldScore,goldCompare} from "../src/gold-rules.js";\nimport {goldCpuStep} from "../src/gold-cpu.js";\nimport {GoldResults,GoldBadge} from "../src/gold-ui.js";\nimport {PixelShop,PixelEvent} from "../src/pixel-scenes.js";\nimport {createCityBoard} from "../src/city-board-map.js";\nfunction It(){return createCityBoard()}\n'+s
 s+='\nexport {Mt as smallMap,Nt as mediumMap,Pt as largeMap,It as originalMap,Ti as miniGames,mr as tileDescriptions,tr as statusEquipment,nr as hasStatusEquipment};\n'
 (root/'assets/original-city-runtime.js').write_text(s)
-print('Original rules preserved; 48-square district board and presentation hooks added.')
+print('48-square district board, gold competition and presentation hooks generated.')

@@ -1,9 +1,13 @@
+import {installGoldSession} from './gold-session.js';
+import {installGoldUI} from './gold-ui.js';
 import { tileVisual, tileIconURL } from './tile-visuals.js';
 import { installMobileUI } from './mobile-ui.js';
 import '../assets/original-city-runtime.js';
 import { t as itemCards } from '../assets/cards-BGoWm8gy.js';
-import { I as gameStore } from '../assets/useNetworkStore-CIe06z3C.js';
+import { I as gameStore, t as networkStore, k as gameLog, N as gameSound } from '../assets/useNetworkStore-CIe06z3C.js';
 import { createOriginalWorld, DISTRICTS } from './original-world.js';
+const goldSession=installGoldSession(gameStore,networkStore,gameLog,gameSound);
+installGoldUI(gameStore,networkStore,goldSession);
 // Read game state and project the original interactive nodes. No replacement rules.
 let world=null,board=null,mapKey='',pending=false,failed=false;
 function syncCameraControls(){
@@ -11,6 +15,7 @@ function syncCameraControls(){
  for(const el of document.querySelectorAll('#action-panel,#card-panel-clay'))el.inert=tour;
  const b=document.querySelector('[data-camera=mode]');if(b){const text=tour?'プレイに戻る':'マップ巡回';if(b.textContent!==text)b.textContent=text;b.setAttribute('aria-pressed',String(tour));}
 }
+window.addEventListener('city-camera-change',syncCameraControls);
 function controls(container){
  const existing=container.querySelector('.city-world-tools');if(existing){container.dataset.cameraMode='play';const b=existing.querySelector('[data-camera=mode]');b.textContent='マップ巡回';b.setAttribute('aria-pressed','false');return;}
  const nav=document.createElement('nav');nav.className='city-world-tools';nav.setAttribute('aria-label','立体マップの視点');

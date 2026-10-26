@@ -3,6 +3,7 @@ from pathlib import Path
 import argparse,shutil,subprocess
 parser=argparse.ArgumentParser();parser.add_argument('--destination',required=True);args=parser.parse_args()
 root=Path(__file__).resolve().parents[1];site=Path(args.destination).resolve();dist=site/'dist'
+subprocess.run(['python3',str(root/'scripts/build-gold-engine.py')],check=True)
 subprocess.run(['python3',str(root/'scripts/build-original-runtime.py')],check=True)
 for name in ['index.html','classic.html','quick.html','favicon.svg','icons.svg']:
  shutil.copy2(root/name,dist/name)
@@ -14,8 +15,10 @@ if (dist/'survival-city-offline.html').exists():(dist/'survival-city-offline.htm
 if (dist/'assets/street-dusk-pixel.png').exists():(dist/'assets/street-dusk-pixel.png').unlink()
 shutil.copy2(root/'README.md',site/'README.md')
 (site/'scripts').mkdir(exist_ok=True)
-for file in ['build-original-runtime.py','package-original-preview.py','verify-original-rules.cjs','verify-original-interactions.cjs','verify-district-board.cjs','verify-npc-models.cjs','verify-player-items.cjs','preview-player-items.cjs','verify-pixel-scenes.cjs','verify-mobile-ui.cjs','verify-mobile-portraits.cjs','verify-mobile-map-controls.cjs']:
+for file in ['build-original-runtime.py','build-gold-engine.py','verify-gold-cans.cjs','package-original-preview.py','verify-original-rules.cjs','verify-original-interactions.cjs','verify-district-board.cjs','verify-npc-models.cjs','verify-player-items.cjs','preview-player-items.cjs','verify-pixel-scenes.cjs','verify-mobile-ui.cjs','verify-mobile-portraits.cjs','verify-mobile-map-controls.cjs']:
  shutil.copy2(root/'scripts'/file,site/'scripts'/file)
 (site/'tests').mkdir(exist_ok=True)
+shutil.copytree(root/'scripts/vendor',site/'scripts/vendor',dirs_exist_ok=True)
+shutil.copy2(root/'tests/gold-rules.test.js',site/'tests/gold-rules.test.js')
 shutil.copy2(root/'tests/city-board-map.test.js',site/'tests/city-board-map.test.js')
 print('Packaged original engine, 15 characters, 15 minigames, original assets and 3D presentation.')
