@@ -1,3 +1,4 @@
+import { tileVisual, tileIconURL } from './tile-visuals.js';
 import { installMobileUI } from './mobile-ui.js';
 import '../assets/original-city-runtime.js';
 import { t as itemCards } from '../assets/cards-BGoWm8gy.js';
@@ -5,7 +6,6 @@ import { I as gameStore } from '../assets/useNetworkStore-CIe06z3C.js';
 import { createOriginalWorld, DISTRICTS } from './original-world.js';
 // Read game state and project the original interactive nodes. No replacement rules.
 let world=null,board=null,mapKey='',pending=false,failed=false;
-const symbols={center:'医',can:'缶',trash:'屑',shop:'店',job:'職',exchange:'換',event:'?',shelter:'休',manhole:'◎',koban:'警',normal:'·'};
 function syncCameraControls(){
  const tour=world?.getCameraMode()==='tour';document.body.classList.toggle('city-touring',tour);
  for(const el of document.querySelectorAll('#action-panel,#card-panel-clay'))el.inert=tour;
@@ -14,7 +14,7 @@ function syncCameraControls(){
 function controls(container){
  const existing=container.querySelector('.city-world-tools');if(existing){container.dataset.cameraMode='play';const b=existing.querySelector('[data-camera=mode]');b.textContent='マップ巡回';b.setAttribute('aria-pressed','false');return;}
  const nav=document.createElement('nav');nav.className='city-world-tools';nav.setAttribute('aria-label','立体マップの視点');
- nav.innerHTML=`<div class="city-camera-modes"><button data-camera="mode" aria-pressed="false" aria-describedby="city-gesture-help">マップ巡回</button></div><div id="city-gesture-help" class="city-tour-tools city-gesture-help"><span class="gesture-touch">1本指：移動<br>2本指：開閉でズーム・ひねって回転<br>2本指を上下：角度</span><span class="gesture-mouse">ドラッグ：移動 ／ ホイール：ズーム<br>右ドラッグ：回転・角度<br>ダブルクリック：全景</span></div>`;
+ nav.innerHTML=`<div class="city-camera-modes"><button data-camera="mode" aria-pressed="false" aria-describedby="city-gesture-help">マップ巡回</button></div><div id="city-gesture-help" class="city-tour-tools city-gesture-help"><span class="gesture-touch">1本指：移動<br>2本指：開閉でズーム・ひねって回転<br>2本指を上下：角度（指を離して切替）</span><span class="gesture-mouse">ドラッグ：移動 ／ ホイール：ズーム<br>右ドラッグ：回転・角度<br>ダブルクリック：全景</span></div>`;
  nav.addEventListener('click',e=>{if(!e.target.closest('[data-camera=mode]'))return;const tour=world?.getCameraMode()!=='tour';world?.setCameraMode(tour?'tour':'play');syncCameraControls();});
  container.dataset.cameraMode='play';
  container.append(nav);
@@ -42,7 +42,7 @@ function refresh(){pending=false;const state=gameStore.getState();document.body.
   try{document.body.classList.add('city-3d');world=createOriginalWorld(host,state.mapData);window.cityProjection=world;controls(document.querySelector('#board-area'));}
   catch(error){console.warn('3D world unavailable; original board remains playable.',error);failed=true;document.body.classList.remove('city-3d');window.cityProjection=null;return;}
  }
- for(const t of state.mapData){const el=host.querySelector(`[data-original-tile="${t.id}"]`);if(!el)continue;el.dataset.symbol=symbols[t.type]||'·';el.dataset.square=String(t.id);el.style.setProperty('--district-color',DISTRICTS[t.area]?.color||'#b8c2a2');el.setAttribute('aria-label',`${t.id}番 ${DISTRICTS[t.area]?.name} ${t.name}`);el.setAttribute('role','button');el.tabIndex=0;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}};}
+ for(const t of state.mapData){const el=host.querySelector(`[data-original-tile="${t.id}"]`);if(!el)continue;el.dataset.symbol='';el.dataset.tileType=t.type;el.style.setProperty('--tile-color',tileVisual(t.type).color);el.style.setProperty('--tile-icon',`url("${tileIconURL(t.type)}")`);const route=(state.isBranchPicking||state.isDashPicking)?state.currentBranchOptions?.indexOf(t.id):-1;el.dataset.routeNumber=route>=0?String(route+1):'';el.dataset.square=String(t.id);el.style.setProperty('--district-color',DISTRICTS[t.area]?.color||'#b8c2a2');el.setAttribute('aria-label',`${t.id}番 ${DISTRICTS[t.area]?.name} ${t.name}`);el.setAttribute('role','button');el.tabIndex=0;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}};}
  for(const p of state.players){const el=host.querySelector(`[data-original-player="${p.id}"]`);if(el){el.style.setProperty('--player-color',p.color);el.classList.toggle('current-player',p.id===state.turn);}}
  if((state.shopActive||state.storyActive)&&world?.getCameraMode()==='tour')world.setCameraMode('play');
  world.update(state);syncCameraControls();

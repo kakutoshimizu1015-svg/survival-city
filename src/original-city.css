@@ -175,3 +175,16 @@ body.city-3d #game-board[data-camera-mode=tour] .tile{touch-action:none}
  body.city-mobile #map-ap-hud{display:flex!important;top:5px!important;right:5px!important;padding:4px 7px!important;max-width:35%;z-index:60!important}
  body.city-mobile #map-ap-hud>div:first-child{display:flex!important;font-size:20px!important;line-height:1.2!important}
 }
+/* Match physical space icons, occluded markers and route cards, without relying on color alone. */
+body.city-3d #game-board .tile:before{content:''!important;background:var(--tile-icon) center/70% no-repeat!important;color:transparent!important}
+body.city-3d #game-board .tile.tile-obscured{background:var(--tile-color)!important;border:2px solid #fff0c8!important}
+body.city-3d #game-board .tile.tile-inspected{outline:3px solid #fff4b8!important;outline-offset:3px;background:var(--tile-color)!important;border-radius:50%!important}
+body.city-3d #game-board .tile.tile-inspected:before{visibility:visible!important}
+body.city-3d #game-board .tile[data-route-number]:not([data-route-number=""]):after{display:grid!important;content:attr(data-route-number)!important;position:absolute;right:-8px;top:-12px;width:24px;height:24px;place-items:center;border-radius:50%;background:#ffe2a1;color:#342915;font:bold 14px sans-serif;border:2px solid #493d27;z-index:40}
+body.city-3d #game-board .tile.tile-highlight-branch,body.city-3d #game-board .tile.tile-highlight-dash{background:var(--tile-color)!important}
+.city-tile-icon{width:28px;height:28px;object-fit:contain;flex:none;vertical-align:middle;padding:4px;background:var(--tile-color);border-radius:6px;border:1px solid #ffedbc88;box-sizing:border-box;margin-right:5px}
+.mobile-tile-detail h3{display:flex;align-items:center}
+#city-mobile-ui [data-route] b{display:flex;align-items:center;gap:3px;font-size:11px}
+#city-mobile-ui [data-route] em{font-style:normal;background:#eed096;color:#392c19;border-radius:50%;width:20px;line-height:20px;flex:none;text-align:center}
+#city-mobile-ui [data-route] span{display:block;font-size:10px}
+@media(max-width:768px){body.city-mobile .city-camera-modes button{min-height:40px!important;padding:5px 10px!important;font-size:11px!important}body.city-mobile .city-gesture-help{max-width:220px;font-size:9px}body.city-mobile #game-board .tile.tile-inspected{outline-offset:1px}}

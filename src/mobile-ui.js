@@ -1,3 +1,4 @@
+import { tileIconHTML } from './tile-visuals.js';
 import { t as itemCards } from '../assets/cards-BGoWm8gy.js';
 import { itemArt } from './pixel-item-art.js';
 import { c as characterTypes } from '../assets/useNetworkStore-CIe06z3C.js';
@@ -12,7 +13,7 @@ export function installMobileUI(store){
  const rendered=new WeakMap();const set=(el,html)=>{if(rendered.get(el)!==html){rendered.set(el,html);el.innerHTML=html;}};
  const sheet=root.querySelector('.mobile-sheet'),content=root.querySelector('.mobile-sheet-content');
  const close=()=>open('');
- function open(next){panel=next;signature='';document.body.dataset.mobilePanel=panel;sheet.hidden=!panel;root.querySelectorAll('[data-panel]').forEach(b=>b.setAttribute('aria-expanded',String(b.dataset.panel===panel)));update();if(panel)root.querySelector('.mobile-close').focus({preventScroll:true});}
+ function open(next){panel=next;document.querySelectorAll('.tile-inspected').forEach(e=>e.classList.remove('tile-inspected'));if(next==='tiles')document.querySelector(`[data-original-tile="${selectedTile}"]`)?.classList.add('tile-inspected');signature='';document.body.dataset.mobilePanel=panel;sheet.hidden=!panel;root.querySelectorAll('[data-panel]').forEach(b=>b.setAttribute('aria-expanded',String(b.dataset.panel===panel)));update();if(panel)root.querySelector('.mobile-close').focus({preventScroll:true});}
  root.querySelector('.mobile-close').onclick=close;
  root.querySelector('.mobile-tabs').onclick=e=>{const b=e.target.closest('[data-panel]');if(b){selectedTile=null;open(panel===b.dataset.panel?'':b.dataset.panel);}};
  root.querySelector('.mobile-result').onclick=()=>open('logs');
@@ -22,7 +23,7 @@ export function installMobileUI(store){
  content.onclick=e=>{const nativeAction=e.target.closest('[data-action]');if(nativeAction){performAction(nativeAction);return;}const action=e.target.closest('[data-card-action]');if(action&&!action.disabled){const card=document.querySelector('#card-panel-clay')?.children[Number(action.dataset.cardIndex)],button=card?.querySelectorAll('button')[Number(action.dataset.cardAction)];if(button&&!button.disabled&&!document.body.classList.contains('city-touring')){button.click();if(/使用|売却|渡す/.test(button.textContent))close();}queue();return;}};
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel)close();});
  window.cityMobileTile=id=>{if(!window.cityMobileActive)return;selectedTile=id;open('tiles');};
- function tileInfo(s,t){const info=tileDescriptions[t.type==='normal'?'normal_'+t.area:t.type]||tileDescriptions.normal;const owner=s.players.find(p=>p.id===s.territories?.[t.id]);return `<article class="mobile-tile-detail"><h3>${esc(t.id+'番 '+(t.name||info.title))}</h3><p>${esc(info.desc)}</p>${owner?'<p>所有者：'+esc(owner.name)+'</p>':''}</article>`;}
+ function tileInfo(s,t){const info=tileDescriptions[t.type==='normal'?'normal_'+t.area:t.type]||tileDescriptions.normal;const owner=s.players.find(p=>p.id===s.territories?.[t.id]);return `<article class="mobile-tile-detail"><h3>${tileIconHTML(t.type)}${esc(t.id+'番 '+(t.name||info.title))}</h3><p>${esc(info.desc)}</p>${owner?'<p>所有者：'+esc(owner.name)+'</p>':''}</article>`;}
  function portrait(a){const img=document.querySelector(`[data-original-player="${a.id}"] img`);return img?`<img src="${esc(img.src)}" alt="${esc(a.name)}のキャラクター" draggable="false">`:'<span aria-hidden="true">👤</span>';}
  function hpBar(a){return `<span class="mobile-hp-track" role="meter" aria-label="${esc(a.name)}のHP" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${a.hp}"><i style="width:${Math.max(0,Math.min(100,a.hp))}%;background:${a.hp>50?'#79b96a':a.hp>20?'#dda648':'#d66c56'}"></i></span>`;}
 
@@ -40,7 +41,7 @@ export function installMobileUI(store){
   const tour=document.body.classList.contains('city-touring');const branch=s.isBranchPicking||s.isDashPicking;
   root.classList.toggle('choosing-route',branch);document.body.classList.toggle('mobile-branch',branch);
   const actions=root.querySelector('.mobile-actions');
-  if(branch){const ids=s.currentBranchOptions||[];const html=ids.map((id,i)=>{const t=s.mapData.find(t=>t.id===id);return `<button data-route="${id}" ${tour?'disabled':''}><b>道 ${i+1} → ${id}番</b><span>${esc(t?.name||tileDescriptions[t?.type]?.title||'進む')}</span></button>`;}).join('');set(actions,html);}
+  if(branch){const ids=s.currentBranchOptions||[];const html=ids.map((id,i)=>{const t=s.mapData.find(t=>t.id===id);return `<button data-route="${id}" ${tour?'disabled':''}><b><em>${i+1}</em>${tileIconHTML(t?.type)}${esc(t?.name||'進む')}</b><span>${id}番 · ${esc(t?.name||tileDescriptions[t?.type]?.title||'進む')}</span></button>`;}).join('');set(actions,html);}
   else{const buttons=[...document.querySelectorAll('#action-panel button')],primary=buttons.filter(b=>/サイコロを振る|移動 \(1AP\)|ターン終了/.test(b.textContent)),compact=buttons.length>4;
    const html=(compact?(primary.length?primary:buttons.slice(0,3)):buttons).map(b=>actionButton(b,tour)).join('')+(compact?'<button data-more-actions>その他の行動</button>':'');set(actions,html||'<p>進行中…</p>');}
 

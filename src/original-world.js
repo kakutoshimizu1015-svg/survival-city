@@ -1,3 +1,4 @@
+import { tileVisual, drawTileIcon } from './tile-visuals.js';
 import { createPlayerItems } from './player-items.js';
 import { createNpcModel, NPC_KEYS } from './npc-models.js';
 import { buildCityBackdrop } from './city-backdrop.js';
@@ -137,11 +138,11 @@ export function createOriginalWorld(host,map){
  for(let i=0;i<16;i++){const x=-width/2+i*width/15;building(x,-depth/2-20-rnd()*6,3+rnd()*2,3,5+rnd()*10,'#69858a','tower');}
  }
  for(const {material,matrices} of batches.values()){const inst=new T.InstancedMesh(boxGeometry,material,matrices.length);matrices.forEach((m,i)=>inst.setMatrixAt(i,m));inst.castShadow=true;inst.receiveShadow=true;scene.add(inst);}
- const tileMeshes=new Map(),tileNames={center:'医',can:'缶',trash:'屑',shop:'店',job:'職',exchange:'換',event:'?',shelter:'休',manhole:'◎',koban:'警',normal:'·'};
+ const tileMeshes=new Map();
  for(const t of squares.values()){
-  const color=DISTRICTS[t.area]?.color||'#a7bb8d',hole=t.type==='manhole';
+  const color=tileVisual(t.type).color,hole=t.type==='manhole';
   const slab=mesh(hole?new T.CylinderGeometry(isCityBoard?1.65:.9,isCityBoard?1.65:.9,.24,24):isCityBoard?new T.CylinderGeometry(1.7,1.85,.26,24):new T.BoxGeometry(1.6,.2,1.6),new T.MeshLambertMaterial({color,emissive:color,emissiveIntensity:.03}),t.x,.74,t.z);tileMeshes.set(t.id,slab);
-  const top=texture((c,w,h)=>{c.clearRect(0,0,w,h);c.fillStyle=hole?'#324d4c':t.type==='event'?'#715774':t.type==='normal'?color:'#344d43';c.beginPath();c.arc(w/2,h/2,w/2-2,0,Math.PI*2);c.fill();c.strokeStyle=hole?'#afc1b3':'#f6e5b9';c.lineWidth=3;c.stroke();c.fillStyle=t.type==='normal'?'#394e43':'#fff0c8';c.font='bold 26px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(isCityBoard&&t.next.length>1?'分':tileNames[t.type]||'·',w/2,h/2);},64,64);
+  const top=texture((c,w,h)=>{c.clearRect(0,0,w,h);c.fillStyle=color;c.beginPath();c.arc(w/2,h/2,w/2-3,0,Math.PI*2);c.fill();c.strokeStyle='#fff1cd';c.lineWidth=5;c.stroke();c.fillStyle='#142e38';c.globalAlpha=.32;c.beginPath();c.arc(w/2,h/2,w*.37,0,Math.PI*2);c.fill();c.globalAlpha=1;drawTileIcon(c,t.type,w*.24,h*.24,w*.52);},128,128);
   const cap=mesh(new T.PlaneGeometry(isCityBoard?3.25:1.5,isCityBoard?3.25:1.5),new T.MeshBasicMaterial({map:top,transparent:true,alphaTest:.1}),t.x,.93,t.z);cap.rotation.x=-Math.PI/2;cap.castShadow=false;
  }
  const textureCache=new Map(),actors=new Map(),npcActors=new Map();
@@ -225,16 +226,34 @@ export function createOriginalWorld(host,map){
  }
  function playView(){cam.yaw=.3;cam.pitch=isCityBoard?.65:.92;cam.zoom=1;followPlayer(true);sync();}
  function fixedView(){cam.target.set(0,0,0);cam.yaw=.3;cam.pitch=isCityBoard?.65:.92;cam.zoom=1;sync();focus(map.map(t=>t.id),false);if(isCityBoard){cam.target.z-=5;cam.zoom*=.96;sync();}}
- function setCameraMode(mode){cameraMode=mode==='tour'?'tour':'play';pointers.clear();gestureMoved=false;vehicleShots.length=0;vehicleShot=null;if(cameraMode==='play')playView();else fixedView();host.closest('#board-area')?.setAttribute('data-camera-mode',cameraMode);}
- const canvas=renderer.domElement;const pointers=new Map();let gestureMoved=false;
+ function setCameraMode(mode){cameraMode=mode==='tour'?'tour':'play';pointers.clear();gestureMoved=false;twoFinger=null;cancelAnimationFrame(twoFingerFrame);twoFingerFrame=0;vehicleShots.length=0;vehicleShot=null;if(cameraMode==='play')playView();else fixedView();host.closest('#board-area')?.setAttribute('data-camera-mode',cameraMode);}
+ const canvas=renderer.domElement;const pointers=new Map();let gestureMoved=false,twoFinger=null,twoFingerFrame=0;
  const inputEvents=new AbortController(),inputOptions={capture:true,signal:inputEvents.signal};
  function pan(dx,dy){const units=(camera.right-camera.left)/w;cam.target.x-=dx*units*Math.cos(cam.yaw)+dy*units*Math.sin(cam.yaw)/Math.sin(cam.pitch);cam.target.z+=dx*units*Math.sin(cam.yaw)-dy*units*Math.cos(cam.yaw)/Math.sin(cam.pitch);cam.target.x=Math.max(-width/2,Math.min(width/2,cam.target.x));cam.target.z=Math.max(-depth/2,Math.min(depth/2,cam.target.z));}
  function orbit(dx,dy){cam.yaw+=dx*.008;cam.pitch=Math.max(.38,Math.min(1.15,cam.pitch+dy*.006));}
- function pair(){const [a,b]=[...pointers.values()];return {y:(a.y+b.y)/2,d:Math.hypot(b.x-a.x,b.y-a.y),angle:Math.atan2(b.y-a.y,b.x-a.x)};}
+ function pair(){const [a,b]=[...pointers.values()];return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,d:Math.hypot(b.x-a.x,b.y-a.y),angle:Math.atan2(b.y-a.y,b.x-a.x)};}
  // Listen on the board so a gesture can also begin on a tile or character label.
- host.addEventListener('pointerdown',e=>{if(cameraMode!=='tour'||(e.pointerType==='mouse'&&![0,1,2].includes(e.button)))return;e.stopPropagation();if(!pointers.size)gestureMoved=false;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,orbit:e.button===2||e.shiftKey});if(pointers.size>1)gestureMoved=true;host.setPointerCapture(e.pointerId);},inputOptions);
- host.addEventListener('pointermove',e=>{if(cameraMode!=='tour'||!pointers.has(e.pointerId))return;e.stopPropagation();const old=pointers.get(e.pointerId),before=pointers.size===2?pair():null,dx=e.clientX-old.x,dy=e.clientY-old.y;const moved=Math.hypot(e.clientX-old.startX,e.clientY-old.startY)>6;if(!gestureMoved&&!moved)return;gestureMoved=true;pointers.set(e.pointerId,{...old,x:e.clientX,y:e.clientY});if(before){const after=pair();cam.zoom=Math.max(.4,Math.min(5,cam.zoom*after.d/Math.max(1,before.d)));const angle=after.angle-before.angle;cam.yaw-=Math.atan2(Math.sin(angle),Math.cos(angle));orbit(0,after.y-before.y);}else if(pointers.size===1){if(old.orbit)orbit(dx,dy);else pan(dx,dy);}sync();},inputOptions);
- function releasePointer(e){if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(host.hasPointerCapture(e.pointerId))host.releasePointerCapture(e.pointerId);}
+ host.addEventListener('pointerdown',e=>{if(cameraMode!=='tour'||(e.pointerType==='mouse'&&![0,1,2].includes(e.button)))return;e.stopPropagation();if(!pointers.size)gestureMoved=false;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,orbit:e.button===2||e.shiftKey});if(pointers.size>1)gestureMoved=true;if(pointers.size===2)twoFinger={start:pair(),mode:'',zoom:cam.zoom,yaw:cam.yaw,pitch:cam.pitch};host.setPointerCapture(e.pointerId);},inputOptions);
+ function applyTwoFinger(){
+  twoFingerFrame=0;if(cameraMode!=='tour'||pointers.size!==2||!twoFinger)return;
+   const current=pair(),start=twoFinger.start,ratio=current.d/Math.max(12,start.d),rawAngle=current.angle-start.angle,angle=Math.atan2(Math.sin(rawAngle),Math.cos(rawAngle)),vertical=current.y-start.y;
+   // Lock the dominant intent until a finger lifts. Pinch jitter cannot tilt or rotate the map.
+   if(!twoFinger.mode){const scores=[['zoom',Math.abs(Math.log(Math.max(.01,ratio)))/.065],['rotate',Math.abs(angle)/.12],['tilt',Math.abs(vertical)/18]].sort((a,b)=>b[1]-a[1]);if(scores[0][1]<1)return;twoFinger.mode=scores[0][0];}
+   gestureMoved=true;host.dataset.cameraGesture=twoFinger.mode;
+   if(twoFinger.mode==='zoom'){
+    const next=Math.max(.4,Math.min(5,twoFinger.zoom*ratio)),factor=next/cam.zoom;cam.zoom=next;sync();const rect=host.getBoundingClientRect();pan((current.x-rect.left-w/2)*(1-factor),(current.y-rect.top-h/2)*(1-factor));
+   }else if(twoFinger.mode==='rotate')cam.yaw=twoFinger.yaw-angle;
+   else cam.pitch=Math.max(.38,Math.min(1.15,twoFinger.pitch+vertical*.004));
+  sync();
+ }
+ host.addEventListener('pointermove',e=>{
+  if(cameraMode!=='tour'||!pointers.has(e.pointerId))return;e.stopPropagation();const old=pointers.get(e.pointerId),dx=e.clientX-old.x,dy=e.clientY-old.y;
+  if(pointers.size===1&&!gestureMoved&&Math.hypot(e.clientX-old.startX,e.clientY-old.startY)<=8)return;
+  pointers.set(e.pointerId,{...old,x:e.clientX,y:e.clientY});
+  if(pointers.size===2){if(!twoFingerFrame)twoFingerFrame=requestAnimationFrame(applyTwoFinger);return;}
+  if(pointers.size===1){gestureMoved=true;host.dataset.cameraGesture=old.orbit?'rotate':'pan';if(old.orbit)orbit(dx,dy);else pan(dx,dy);sync();}
+ },inputOptions);
+ function releasePointer(e){if(!pointers.has(e.pointerId))return;if(twoFingerFrame){cancelAnimationFrame(twoFingerFrame);applyTwoFinger();}pointers.delete(e.pointerId);twoFinger=null;delete host.dataset.cameraGesture;if(host.hasPointerCapture(e.pointerId))host.releasePointerCapture(e.pointerId);}
  for(const name of ['pointerup','pointercancel','lostpointercapture'])host.addEventListener(name,releasePointer,inputOptions);
  host.addEventListener('contextmenu',e=>{if(cameraMode==='tour'){e.preventDefault();e.stopPropagation();}},inputOptions);
  host.addEventListener('wheel',e=>{e.stopPropagation();if(cameraMode!=='tour')return;e.preventDefault();const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?h:1);cam.zoom=Math.max(.4,Math.min(5,cam.zoom*Math.exp(-Math.max(-200,Math.min(200,delta))*.002)));sync();},{...inputOptions,passive:false});
@@ -245,6 +264,6 @@ export function createOriginalWorld(host,map){
  return {update,wasCameraGesture:()=>gestureMoved,setCameraMode,getCameraMode:()=>cameraMode,useItem(id,card){playerItems.use(id,card);dirty=true;},playAttack(data){playerItems.attack(data);dirty=true;},setWeaponAim(angle){playerItems.setAim(angle);dirty=true;},tilt(d){if(cameraMode!=='tour')return;cam.pitch=Math.max(.38,Math.min(1.15,cam.pitch+d*.1));sync();},rotate(d){if(cameraMode!=='tour')return;cam.yaw+=d*Math.PI/8;sync();},zoom(d){if(cameraMode!=='tour')return;cam.zoom=Math.max(.4,Math.min(5,cam.zoom*d));sync();},center(){if(cameraMode!=='tour')return;focus([state?.players[state.turn]?.pos]);},overview(){if(cameraMode==='tour')fixedView();},district(area){if(cameraMode!=='tour')return;focus(map.filter(t=>t.area===area).map(t=>t.id));if(isCityBoard&&area==='luxury'){cam.target.y=5;cam.zoom*=.78;sync();}},projectGrid,
   aimEnd(t,range,angle){return projectGrid(t.col+Math.cos(angle*Math.PI/180)*range,t.row+Math.sin(angle*Math.PI/180)*range);},
   weaponArc(t,range,angle){const points=[projectGrid(t.col,t.row)];for(let d=angle-75;d<=angle+75;d+=5)points.push(projectGrid(t.col+Math.cos(d*Math.PI/180)*range,t.row+Math.sin(d*Math.PI/180)*range));return points.map((p,i)=>`${i?'L':'M'} ${p.x} ${p.y}`).join(' ')+' Z';},
-  dispose(){dead=true;inputEvents.abort();playerItems.dispose();cancelAnimationFrame(raf);resize.disconnect();scene.traverse(o=>{o.geometry?.dispose();if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();});for(const tex of [...assets,...textureCache.values()])tex.dispose();renderer.dispose();canvas.remove();}
+  dispose(){dead=true;cancelAnimationFrame(twoFingerFrame);inputEvents.abort();playerItems.dispose();cancelAnimationFrame(raf);resize.disconnect();scene.traverse(o=>{o.geometry?.dispose();if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();});for(const tex of [...assets,...textureCache.values()])tex.dispose();renderer.dispose();canvas.remove();}
  };
 }
