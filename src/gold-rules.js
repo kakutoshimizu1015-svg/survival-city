@@ -1,3 +1,4 @@
+import {randomCityState} from './city-random.js';
 // Pure rules shared by the engine, CPU and UI. No rendering or global store imports.
 export const GOLD_PRICE=10;
 const safeName=s=>String(s||'プレイヤー').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -9,18 +10,23 @@ export function routeTo(s,from,to){
  while(queue.length){queue.sort((a,b)=>a.cost-b.cost);const q=queue.shift();if(q.id===to)return q;const tile=s.mapData.find(t=>t.id===q.id);for(const id of tile?.next||[]){if(id===s.constructionPos)continue;const cost=q.cost+(s.isRainy&&!p?.rainGear&&p?.charType!=='athlete'&&!p?.equip?.foldBike?2:1);if(cost<(best.get(id)??Infinity)){best.set(id,cost);queue.push({id,path:[...q.path,id],cost});}}}return null;
 }
 export function chooseGoldSpot(s,random=Math.random){
- const candidates=s.mapData.filter(t=>!['center','koban','manhole','event'].includes(t.type)&&t.id!==s.gold?.lastSpot&&!s.players.some(p=>p.pos===t.id)&&t.id!==s.constructionPos).map(t=>{const ds=s.players.map(p=>routeTo(s,p.pos,t.id)?.cost??Infinity);return {id:t.id,ds,tie:random()};}).filter(t=>t.ds.every(Number.isFinite));
- candidates.sort((a,b)=>{const score=t=>Math.abs(Math.min(...t.ds)-5)*2+(Math.max(...t.ds)-Math.min(...t.ds))*.7+Math.max(...t.ds)*.1;return score(a)-score(b)||a.tie-b.tie;});
- return candidates[0]?.id??null;
+ const recent=new Set([s.gold?.lastSpot,...(s.gold?.history||[])]);
+ const candidates=s.mapData.filter(t=>!['center','koban','manhole','event'].includes(t.type)&&!s.players.some(p=>p.pos===t.id)&&t.id!==s.constructionPos).map(t=>{const ds=s.players.map(p=>routeTo(s,p.pos,t.id)?.cost??Infinity);return {id:t.id,ds};}).filter(t=>t.ds.length&&t.ds.every(Number.isFinite));
+ const fresh=candidates.filter(t=>!recent.has(t.id)),pool=fresh.length?fresh:candidates.filter(t=>t.id!==s.gold?.lastSpot);
+ const score=t=>Math.abs(Math.min(...t.ds)-5)*2+(Math.max(...t.ds)-Math.min(...t.ds))*.7+Math.max(...t.ds)*.1;
+ pool.sort((a,b)=>score(a)-score(b));
+ // Draw from a fair band, rather than using randomness only for exact ties.
+ const shortlist=pool.filter(t=>score(t)<=score(pool[0])+8).slice(0,16);
+ return shortlist[Math.min(shortlist.length-1,Math.floor(random()*shortlist.length))]?.id??null;
 }
 export function createGoldState(s,random=Math.random){
- const state={...s,goldMode:true,gold:{version:1,spot:null,lastSpot:null,nextRound:1,issued:0,drops:{}},players:s.players.map(p=>({...p,goldCans:0,pvpKills:0,npcKills:0}))};
- state.gold.spot=chooseGoldSpot(state,random);return {goldMode:true,gold:state.gold,players:state.players};
+ const state={...s,goldMode:true,gold:{version:1,spot:null,lastSpot:null,nextRound:1,issued:0,drops:{},history:[]},players:s.players.map(p=>({...p,goldCans:0,pvpKills:0,npcKills:0}))};
+ state.gold.spot=chooseGoldSpot(state,random);return {...randomCityState(state,random),goldMode:true,gold:state.gold,players:state.players};
 }
 export function canBuyGold(s,id){const p=s.players[s.turn];return !!(s.goldMode&&!s.gameOver&&!s._roundEndInProgress&&!s.mgActive&&!s.storyActive&&!s.shopActive&&!s.weaponArcData&&!s.diceAnim?.active&&p?.id===id&&p.hp>0&&s.gold?.spot!=null&&p.pos===s.gold.spot&&p.p>=GOLD_PRICE);}
 export function buyGoldPatch(s,id){
  if(!canBuyGold(s,id))return null;
- return {players:s.players.map(p=>p.id===id?{...p,p:p.p-GOLD_PRICE,goldCans:(p.goldCans||0)+1}:p),gold:{...s.gold,spot:null,lastSpot:s.gold.spot,nextRound:s.roundCount+1,issued:s.gold.issued+1}};
+ return {players:s.players.map(p=>p.id===id?{...p,p:p.p-GOLD_PRICE,goldCans:(p.goldCans||0)+1}:p),gold:{...s.gold,spot:null,lastSpot:s.gold.spot,history:[...(s.gold.history||[]),s.gold.spot].slice(-3),nextRound:s.roundCount+1,issued:s.gold.issued+1}};
 }
 export function goldDeathPatch(s,victimId,attackerId,deathTile){
  if(!s.goldMode||!s.gold)return null;

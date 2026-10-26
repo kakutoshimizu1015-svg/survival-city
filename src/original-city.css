@@ -197,3 +197,81 @@ body.city-3d #game-board .tile.tile-highlight-branch,body.city-3d #game-board .t
 @media(max-width:768px){.gold-objective{bottom:5px;left:5px;padding:4px 6px;gap:5px;font-size:10px}.gold-objective .gold-can-icon{width:22px;height:29px}.gold-objective button{min-height:40px;padding:4px 7px}.gold-objective small{font-size:9px}.mobile-resources{gap:4px!important}}
 
 body.city-mobile .mobile-rival small{display:block;line-height:1.1}
+
+/* Stable metric groups never split a number from its icon or unit. */
+.gold-badge{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;white-space:nowrap;font-variant-numeric:tabular-nums}
+.gold-badge>span{display:inline-flex;align-items:center;white-space:nowrap;gap:2px}.gold-badge .gold-can-icon{width:15px;height:19px}.gold-badge b{color:#f4d378}
+.city-player-vitals{display:flex;flex-wrap:wrap;gap:3px 9px;align-items:center;margin-top:3px}.city-player-vitals span{white-space:nowrap}
+body.city-3d #player-list-panel>div:last-child{overflow:visible!important;max-height:none!important;padding-right:0!important}
+body.city-3d .dt-player-item{padding:7px 5px!important;gap:7px!important}.dt-player-item .gold-badge{font-size:11px;gap:6px}
+body.city-3d #left-status-area{overflow:visible!important;height:auto!important;max-height:none!important;min-width:0}
+body.city-3d .dt-status-panel{height:auto!important;max-height:none!important;overflow:visible!important;min-width:245px!important;flex:none!important;padding:9px!important}
+body.city-3d .dt-equip-bar{margin-top:3px!important;gap:4px!important}
+body.city-3d #right-side-area{overflow:visible!important;height:auto!important;max-height:none!important}
+body.city-3d #player-list-panel{max-height:none!important;overflow:visible!important;flex-shrink:0}
+/* Route descriptions remain visible until the player commits to a destination. */
+.city-route-options{position:absolute;bottom:78px;left:50%;transform:translateX(-50%);z-index:110;display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:6px;width:min(650px,95%)}
+.city-route-options[hidden]{display:none}.city-route-options button{background:#302819f5;color:#f7e5bb;border:2px solid #d9b564;border-radius:8px;padding:8px;cursor:pointer;text-align:left;min-height:64px}.city-route-options strong{display:flex;align-items:center;font-size:12px}.city-route-options span,.city-route-options small{display:block;font-size:11px;line-height:1.45}
+body.city-3d:has(.city-route-options:not([hidden])) #branch-prompt{display:none!important}
+.city-tile-detail{position:absolute;bottom:80px;left:10px;z-index:150;width:min(360px,calc(100% - 20px));padding:12px;background:#302819f5;border:2px solid #d9b564;color:#f7e5bb;border-radius:8px;font-size:13px;box-shadow:0 6px 20px #0006}.city-tile-detail strong{display:flex;align-items:center;padding-right:35px}.city-tile-detail p{white-space:pre-line;margin:6px 0;line-height:1.5}.city-tile-detail button{position:absolute;right:6px;top:6px;width:32px;height:32px;border:1px solid #aa8b4d;border-radius:5px;background:#493c28;color:#fff;font-size:20px;cursor:pointer}
+@media(max-width:768px){
+ .city-route-options,.city-tile-detail{display:none!important}
+ body.city-mobile{--mobile-head:clamp(106px,calc(var(--city-vh,100dvh) * .34 - 124px - var(--mobile-safe)),130px)}
+ .mobile-status{padding:3px 6px 2px;gap:2px;overflow:visible}
+ .mobile-status>.mobile-active-player{height:69px;min-height:69px;padding-right:32px;gap:5px}
+ .mobile-active-stats{gap:1px}.mobile-status .mobile-resources{gap:3px!important;flex-wrap:nowrap}.mobile-status .mobile-resources span{font-size:9px}
+ .mobile-equipment{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:0;min-height:16px;line-height:16px}.mobile-equipment span{font-size:13px!important;line-height:16px}.mobile-equipment small{font-size:9px;color:#baa985}
+ .mobile-status>.mobile-opponents{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);height:32px;min-height:32px;overflow:visible;gap:3px;width:100%;padding-top:1px}
+ #city-mobile-ui .mobile-rival{min-width:0;min-height:31px;height:31px;padding:1px 3px;gap:3px;overflow:hidden}.mobile-rival-portrait{width:24px;height:27px}.mobile-rival>span:last-child{display:block;min-width:0;flex:1}.mobile-rival strong{font-size:9px!important;max-width:none!important}.mobile-rival small{font-size:8px;line-height:1.05!important;letter-spacing:-.3px;white-space:nowrap}
+ body.city-mobile.mobile-branch{--mobile-dock:210px}
+ .choosing-route .mobile-actions{grid-template-rows:repeat(2,minmax(64px,1fr));overflow:visible}
+ #city-mobile-ui [data-route]{text-align:left;padding:4px 6px;line-height:1.3}#city-mobile-ui [data-route] span{font-size:10px;white-space:normal}#city-mobile-ui [data-route] small{display:block;color:#f4d278;font-size:9px}
+}
+/* Restore the original rainbow celebration while keeping gold-can scoring. */
+.gold-results{isolation:isolate;background:#612747;overflow:hidden}
+.gold-results:before{content:'';position:absolute;inset:-15%;z-index:-1;background:conic-gradient(from 20deg,#ba4c45,#bc832c,#728444,#286b72,#4b5194,#8f4179,#ba4c45);animation:gold-victory-colors 8s linear infinite;filter:saturate(1.2)}
+.gold-results>section{background:#211527d9;border-color:#ffe5a0;box-shadow:0 0 50px #ffdb8b66;width:min(620px,100%);padding:18px}
+.gold-victory-trophy{font-size:64px;line-height:1.2;filter:drop-shadow(0 3px 10px #ffcf43aa)}
+.gold-results .gold-winner{font-size:clamp(22px,4vw,32px);margin:8px 0;color:#fff6d9;text-shadow:2px 2px 8px #000;overflow-wrap:anywhere}
+.gold-results .gold-victory-message{font-weight:bold;font-size:clamp(14px,2.6vw,20px);line-height:1.6;color:#ffe37b;margin:8px 0 15px;text-shadow:1px 2px 5px #000}
+.gold-results .gold-result-can{height:32px}.gold-results h2{display:inline;font-size:17px;margin-left:8px}.gold-results ol{background:#160f20aa;border-radius:8px;padding:0 10px}.gold-results li{padding:9px 4px}.gold-results li:first-child{color:#ffe28a}
+@keyframes gold-victory-colors{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.gold-results:before{animation:none}}
+@media(max-height:620px){.gold-victory-trophy{font-size:36px}.gold-results>section{padding:10px}.gold-results .gold-winner{font-size:22px;margin:3px}.gold-results .gold-victory-message{font-size:13px;margin:4px}.gold-results li{padding:6px 3px}}
+@media(max-width:768px) and (max-height:610px){
+ body.city-mobile{--mobile-head:102px;--mobile-dock:102px}
+ .mobile-status>.mobile-active-player{height:64px;min-height:64px}
+ .mobile-dock{grid-template-rows:20px minmax(44px,1fr) 26px;gap:3px;padding:3px 5px calc(3px + var(--mobile-safe))}
+ #city-mobile-ui .mobile-result{min-height:20px;padding:1px 5px;font-size:9px}
+ #city-mobile-ui .mobile-tabs button{min-height:26px;font-size:10px;padding:2px}
+ body.city-mobile.mobile-branch{--mobile-dock:198px}
+}
+body.city-3d #game-board[data-camera-mode=tour] .tile{pointer-events:auto!important}
+@media(min-width:769px){
+ body.city-3d #game-screen{padding-top:48px!important}
+ body.city-3d #top-bar{height:auto!important;max-height:none!important;overflow:visible!important;margin-bottom:8px!important;align-items:stretch!important}
+ body.city-3d #top-bar #left-status-area{width:330px!important;flex:0 0 330px!important;overflow:visible!important}
+ body.city-3d .dt-status-panel{display:block!important;width:100%!important;min-width:0!important;height:auto!important;align-self:stretch}
+ body.city-3d .dt-status-panel>div{margin-bottom:3px!important}
+ body.city-3d .dt-status-panel>div:nth-last-child(2){display:none}
+ body.city-3d .dt-equip-bar{gap:3px!important}.dt-equip-icon{width:20px!important;height:20px!important;font-size:13px!important}
+ body.city-3d #top-bar #card-panel-clay{max-height:210px!important}
+ body.city-3d #board-area{height:calc(100svh - 285px)!important;min-height:420px!important}
+ body.city-3d #action-panel{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:4px!important;padding:7px!important;height:auto!important;min-height:0!important;flex:none!important}
+ body.city-3d #action-panel button{width:100%!important;min-width:0!important;min-height:36px!important;margin:0!important;padding:4px!important;font-size:10px!important;white-space:normal!important}
+ body.city-3d #right-side-area{width:240px!important;flex:0 0 240px!important}
+ body.city-3d #player-list-panel{padding:7px!important}.dt-player-item{min-height:48px}.dt-player-item .gold-can-icon{height:17px}
+}
+@media(min-width:769px){
+ body.city-3d #action-panel>div:empty{display:none!important}
+ body.city-3d #player-list-panel .dt-player-item{padding:2px 4px!important}
+ body.city-3d #player-list-panel .gold-badge .gold-can-icon{height:14px;width:11px}
+ body.city-3d #player-list-panel .city-player-vitals{margin-top:1px}
+}
+@media(max-width:768px){
+ .mobile-status>.mobile-active-player{padding-right:44px}
+ .mobile-status .mobile-equipment{gap:2px;flex-wrap:nowrap}
+ .mobile-status .mobile-equipment span{font-size:12px!important}
+ .mobile-status .mobile-resources span{font-size:8px}
+}
+@media(min-width:769px){body.city-3d .dt-status-panel .dt-stat-box{padding:2px 4px!important}body.city-3d .dt-status-panel>div{margin-bottom:2px!important}}

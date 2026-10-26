@@ -6,7 +6,7 @@ def once(old,new):
  global s
  assert s.count(old)==1,(old,s.count(old))
  s=s.replace(old,new,1)
-s='import {onGoldDeath,finishGoldGame,handleGoldPurchase} from "../src/gold-rules.js";\n'+s
+s='import {npcWalk,pickNpcNext} from "../src/city-random.js";\nimport {onGoldDeath,finishGoldGame,handleGoldPurchase} from "../src/gold-rules.js";\n'+s
 once('var _={gamePhase:', 'var _={goldMode:false,gold:null,gamePhase:')
 once('{kills:(e.kills||0)+1,p:t,hand:n}', '{kills:(e.kills||0)+1,npcKills:(e.npcKills||0)+1,p:t,hand:n}')
 once('o&&i.updatePlayer(r,e=>({kills:(e.kills||0)+1}))}', 'o&&i.updatePlayer(r,e=>({kills:(e.kills||0)+1}));onGoldDeath(v,e,r,a.pos,Y)}')
@@ -30,5 +30,9 @@ s=s.replace('p:Math.floor(e.p*.66)', 'p:e.goldCans!==undefined?e.p:Math.floor(e.
 once('Wa=()=>{let t=v.getState();v.setState({gameOver:!0});', 'Wa=()=>{let t=v.getState();if(t.goldMode){finishGoldGame(v,{network:$,profile:e,saveWin:h,log:Y,emoji:Ra});return}v.setState({gameOver:!0});')
 once('let e=v.getState(),t=e.players[e.turn];t&&t.userId===r.userId&&', 'let e=v.getState(),t=e.players[e.turn];if(r.actionType===`BUY_GOLD`){handleGoldPurchase(v,r.userId,$,Y,G);return}t&&t.userId===r.userId&&')
 once('let n=!1;i&&a&&a[0].members.some(e=>s(e))&&(n=!0),!i&&s(t[0])&&(n=!0),n&&h(c.totalScore)', 'let n=r.gameState.pendingGameResult.goldMode?r.gameState.pendingGameResult.winnerIds?.includes(c.id):i?!!(a&&a[0].members.some(e=>s(e))):s(t[0]);n&&h(c.totalScore)')
+# New matches randomize opening positions and route preferences. Legal road edges remain intact.
+once('Ua=(e,t,n,r=-1)=>{let i=e', 'Ua=(e,t,n,r=-1)=>{if(v.getState().goldMode)return npcWalk({...v.getState(),mapData:n},e,t,r);let i=e')
+once('a=e.next[Math.floor(Math.random()*e.next.length)]', 'a=v.getState().goldMode?pickNpcNext(v.getState(),a):e.next[Math.floor(Math.random()*e.next.length)]')
+once('_=e.next[Math.floor(Math.random()*e.next.length)]', '_=v.getState().goldMode?pickNpcNext(v.getState(),_):e.next[Math.floor(Math.random()*e.next.length)]')
 (root/'assets/useNetworkStore-CIe06z3C.js').write_text(s)
 print('Gold rules hooks generated; native legacy rules are conditional on goldMode.')

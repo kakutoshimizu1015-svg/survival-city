@@ -1,0 +1,2 @@
+const equipment=[['stealth','💨','ステルス'],['hasID','🪪','身分証'],['rainGear','☂️','雨具'],['equip.bicycle','🚲','自転車'],['equip.foldBike','🚲','折りたたみ自転車'],['equip.shoes','👢','安全靴'],['equip.cart','🛒','リヤカー'],['equip.shoppingCart','🛒','買い物カート'],['equip.shield','🛡️','盾'],['equip.helmet','🪖','ヘルメット'],['equip.doll','🎎','身代わり人形'],['equip.backpack','🎒','リュック']];
+export function equipmentHTML(p){return equipment.filter(([path])=>path.split('.').reduce((v,key)=>v?.[key],p)).map(([,icon,name])=>`<span title="${name}" aria-label="${name}">${icon}</span>`).join('')||'<small>装備なし</small>';}

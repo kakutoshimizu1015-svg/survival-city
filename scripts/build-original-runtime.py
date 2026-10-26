@@ -9,7 +9,7 @@ def replace_once(old,new):
  s=s.replace(old,new,1)
 replace_once('id:`tile-${t.id}`,','id:`tile-${t.id}`,"data-original-tile":t.id,')
 replace_once('style:{gridColumn:A.col,gridRow:A.row,position:`relative`','"data-original-player":t.id,style:{gridColumn:A.col,gridRow:A.row,position:`relative`')
-replace_once('onClick:a?s:void 0,onMouseEnter:F', 'onClick:a?s:e=>window.cityMobileTile?.(t.id),onMouseEnter:F')
+replace_once('onClick:a?s:void 0,onMouseEnter:F', 'onClick:a?s:e=>window.cityInspectTile?.(t.id),onMouseEnter:F')
 replace_once('F=(e,r=0,i=0)=>{let o=document.getElementById(`game-board-wrapper`)', 'F=(e,r=0,i=0)=>{if(window.cityMobileActive)return;let o=document.getElementById(`game-board-wrapper`)')
 replace_once('d:O,fill:`url(#arcGradient)`','d:window.cityProjection?.weaponArc(g,p.range+.5,i)||O,"data-weapon-arc":true,fill:`url(#arcGradient)`')
 replace_once('x2:o.x+c*Math.cos(i*Math.PI/180),y2:o.y+c*Math.sin(i*Math.PI/180)', 'x2:window.cityProjection?.aimEnd(g,p.range+.5,i)?.x??o.x+c*Math.cos(i*Math.PI/180),y2:window.cityProjection?.aimEnd(g,p.range+.5,i)?.y??o.y+c*Math.sin(i*Math.PI/180)')
@@ -36,13 +36,15 @@ replace_once('let r=n.cpuDifficulty||`normal`;if(r===`easy`)', 'let remaining=e.
 replace_once('){let t=e.mapData.find(e=>e.id===n.pos);if(!t)break;', '){if(e.goldMode&&goldCpuStep(T,{cards:Ce,useCard:Oe,damage:V,move:le,exchange:z,job:R,network:oe,log:H,sound:D})){await Kn(500);continue}let t=e.mapData.find(e=>e.id===n.pos);if(!t)break;')
 start=s.index('f&&(0,G.jsxs)(`div`,{className:`modal-overlay`',s.index('Ei=()=>'))
 end=s.index(',_&&(0,G.jsx)',start)
-replace_once(s[start:end], 'f&&(f.goldMode?(0,G.jsx)(GoldResults,{react:W,result:f,onExit:()=>T.getState().resetGame()}):'+s[start+3:end]+')')
+replace_once(s[start:end], 'f&&(f.goldMode?(0,G.jsx)(GoldResults,{react:W,result:f,message:S,onExit:()=>T.getState().resetGame()}):'+s[start+3:end]+')')
 replace_once('children:`✨ ボーナス +50P 獲得!! ✨`', 'children:T.getState().goldMode?`称号獲得！ 得点加算なし`:`✨ ボーナス +50P 獲得!! ✨`')
 replace_once('if(r){let e=[...i].sort((e,t)=>t.p-e.p);return', 'if(r&&!T.getState().goldMode){let e=[...i].sort((e,t)=>t.p-e.p);return')
 replace_once('qn=(e,t)=>{let n=', 'qn=(e,t)=>{if(t.goldMode)return goldScore(e);let n=')
 replace_once('r===`rank`?t.sort((e,t)=>t.p-e.p)', 'r===`rank`?t.sort(T.getState().goldMode?goldCompare:(e,t)=>t.p-e.p)')
 replace_once('children:[`⚔️ `,r.kills,`K / 💀`,r.deaths,`D`]', 'children:T.getState().goldMode?(0,G.jsx)(GoldBadge,{react:W,player:r}):[`⚔️ `,r.kills,`K / 💀`,r.deaths,`D`]')
-replace_once('children:[`❤️`,e.hp,` 💰`,e.p,`P 🎴`,e.hand?.length||0,` 🚩`,o]', 'children:T.getState().goldMode?[(0,G.jsx)(GoldBadge,{react:W,player:e}),` ❤️`,e.hp,` 💰`,e.p,`P`]:[`❤️`,e.hp,` 💰`,e.p,`P 🎴`,e.hand?.length||0,` 🚩`,o]')
+replace_once('children:[`❤️`,e.hp,` 💰`,e.p,`P 🎴`,e.hand?.length||0,` 🚩`,o]', 'children:T.getState().goldMode?[(0,G.jsx)(GoldBadge,{react:W,player:e}),(0,G.jsxs)(`div`,{className:`city-player-vitals`,children:[(0,G.jsxs)(`span`,{children:[`❤️ `,e.hp]}),(0,G.jsxs)(`span`,{children:[`💰 `,e.p,`P`]}),(0,G.jsxs)(`span`,{children:[`🎴 `,e.hand?.length||0]}),(0,G.jsxs)(`span`,{children:[`🚩 `,o]})]})]:[`❤️`,e.hp,` 💰`,e.p,`P 🎴`,e.hand?.length||0,` 🚩`,o]')
+# Include the carried equipment that was missing from the original compact status bar.
+replace_once('tr=[{key:`stealth`', 'tr=[{key:`shoppingCart`,field:`equip.shoppingCart`,emoji:`🛒`,title:`買い物カート`},{key:`foldBike`,field:`equip.foldBike`,emoji:`🚲`,title:`折りたたみ自転車`},{key:`backpack`,field:`equip.backpack`,emoji:`🎒`,title:`リュック`},{key:`stealth`')
 # The full tutorial and rules must agree with the new result screen.
 start=s.index('`スコア ＝ `')
 end=s.index('})',s.index('※ゲーム終了時の陣地の価値：',start))+2
