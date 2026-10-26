@@ -1,11 +1,19 @@
 // Small original pixel illustrations. SVG pixels stay crisp at every UI scale.
-const cache=new Map();
-export function itemArt(id){if(cache.has(id))return cache.get(id);let p='';const ink='#252c2c',light='#e0c68e',metal='#9aa99b',wood='#a57950',red='#b76549',green='#708d68';
+const cache=new Map(),illustrated=new Map();
+const atlasURL=new URL('./art/survival-items.png',import.meta.url).href;
+// Atlas cells are sliced at runtime, preserving the original generated source image.
+const atlasItems=[17,18,19,20,21,48,47,'gold',46,8,28,27,25,1,30,34];
+let loading=false;
+function loadAtlas(){if(loading||typeof document==='undefined')return;loading=true;const image=new Image();image.onload=()=>{const w=image.naturalWidth/4,h=image.naturalHeight/4;for(let i=0;i<atlasItems.length;i++){const c=document.createElement('canvas');c.width=c.height=160;const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.drawImage(image,(i%4)*w,Math.floor(i/4)*h,w,h,0,0,160,160);illustrated.set(atlasItems[i],c.toDataURL('image/png'));}window.dispatchEvent(new Event('city-item-art-ready'));};image.src=atlasURL;}
+export function PixelItemIcon({react:R,id,className='',alt=''}){const [,refresh]=R.useState(0);R.useEffect(()=>{const update=()=>refresh(v=>v+1);window.addEventListener('city-item-art-ready',update);return()=>window.removeEventListener('city-item-art-ready',update);},[]);return R.createElement('img',{src:itemArt(id),alt,className,draggable:false});}
+
+export function itemArt(id){loadAtlas();if(illustrated.has(id))return illustrated.get(id);if(cache.has(id))return cache.get(id);let p='';const ink='#252c2c',light='#e0c68e',metal='#9aa99b',wood='#a57950',red='#b76549',green='#708d68';
  const r=(x,y,w,h,c)=>p+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`;
  const poly=(points,c)=>p+=`<polygon points="${points}" fill="${c}"/>`;
  const wheel=(x,y)=>{r(x,y,8,8,ink);r(x+2,y+2,4,4,metal);};
  r(13,54,38,3,'#242c2b');
- if([17,18,19,20,21,22,23,48,49,50].includes(id)){
+ if(id==='gold'){r(20,12,25,39,'#754916');r(23,15,19,33,'#e7b64b');r(22,10,21,5,'#fff0ad');r(24,47,17,5,'#bc8222');r(26,17,5,24,'#ffe391');r(29,10,8,2,'#8d682e');r(46,15,3,11,'#fff0ad');r(42,19,11,3,'#fff0ad');}
+ else if([17,18,19,20,21,22,23,48,49,50].includes(id)){
   if(id===17){poly('9,29 43,20 55,27 55,42 20,50 9,43',ink);poly('11,29 43,23 53,28 20,36',red);poly('20,37 53,29 53,41 20,47','#8d4d3d');poly('11,31 18,37 18,46 11,41','#bc7851');for(let i=0;i<3;i++)r(22+i*9,28-i*2,5,3,'#5d3d34');}
   else if(id===18||id===19){poly('15,49 20,53 50,20 52,12 45,8 37,13',ink);poly('18,48 21,49 47,19 49,13 45,11 40,15',wood);poly('22,43 25,45 47,19 45,15',light);for(let i=0;i<4;i++)r(16+i*2,46-i*2,5,2,'#52635a');if(id===19)for(const [x,y] of [[34,19],[43,26],[46,9],[32,34]]){r(x,y,2,8,metal);r(x-1,y,4,2,light);}}
   else if(id===22){r(12,20,38,27,ink);r(15,22,31,20,red);r(22,43,17,9,wood);r(17,24,25,4,'#d48d64');r(43,32,10,11,red);}

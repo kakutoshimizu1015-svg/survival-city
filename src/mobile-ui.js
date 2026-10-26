@@ -4,7 +4,7 @@ import { tileIconHTML } from './tile-visuals.js';
 import { t as itemCards } from '../assets/cards-BGoWm8gy.js';
 import { itemArt } from './pixel-item-art.js';
 import { c as characterTypes } from '../assets/useNetworkStore-CIe06z3C.js';
-import {tileInfo as getTileInfo} from './tile-info.js';
+import {tileInfo as getTileInfo,tileDetailHTML} from './tile-info.js';
 import { equipmentHTML } from './player-info.js';
 import { tileDescriptions } from '../assets/original-city-runtime.js';
 // Compact presentation only: all actions and route choices still use the native controls.
@@ -27,7 +27,7 @@ export function installMobileUI(store){
  content.onclick=e=>{const nativeAction=e.target.closest('[data-action]');if(nativeAction){performAction(nativeAction);return;}const action=e.target.closest('[data-card-action]');if(action&&!action.disabled){const card=document.querySelector('#card-panel-clay')?.children[Number(action.dataset.cardIndex)],button=card?.querySelectorAll('button')[Number(action.dataset.cardAction)];if(button&&!button.disabled&&!document.body.classList.contains('city-touring')){button.click();if(/使用|売却|渡す/.test(button.textContent))close();}queue();return;}};
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel)close();});
  window.cityMobileTile=id=>{if(!window.cityMobileActive)return;selectedTile=id;open('tiles');};
- function tileInfo(s,t){const info=getTileInfo(s,t,tileDescriptions);return `<article class="mobile-tile-detail"><h3>${tileIconHTML(t.type)}${esc(t.id+'番 '+info.title)}</h3><p>${esc(info.desc)}</p>${info.extra?'<p>'+esc(info.extra)+'</p>':''}</article>`;}
+ function tileInfo(s,t){return `<div class="mobile-tile-detail">${tileDetailHTML(t,window.cityGetTileInfo?.(t.id)||getTileInfo(s,t,tileDescriptions))}</div>`;}
  function portrait(a){const img=document.querySelector(`[data-original-player="${a.id}"] img`);return img?`<img src="${esc(img.src)}" alt="${esc(a.name)}のキャラクター" draggable="false">`:'<span aria-hidden="true">👤</span>';}
  function hpBar(a){return `<span class="mobile-hp-track" role="meter" aria-label="${esc(a.name)}のHP" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${a.hp}"><i style="width:${Math.max(0,Math.min(100,a.hp))}%;background:${a.hp>50?'#79b96a':a.hp>20?'#dda648':'#d66c56'}"></i></span>`;}
 
@@ -50,7 +50,7 @@ export function installMobileUI(store){
    const html=(compact?(primary.length?primary:buttons.slice(0,3)):buttons).map(b=>actionButton(b,tour)).join('')+(compact?'<button data-more-actions>その他の行動</button>':'');set(actions,html||'<p>進行中…</p>');}
 
   const cardTab=root.querySelector('[data-panel=cards]');const cardText=`🎴 手札 ${p.hand?.length||0}`;if(cardTab.textContent!==cardText)cardTab.textContent=cardText;
-  const key=JSON.stringify([panel,selectedTile,logs,p,s.players,s.isBranchPicking,panel==='cards'?document.querySelector('#card-panel-clay')?.innerHTML:panel==='actions'?document.querySelector('#action-panel')?.innerHTML:'']);if(key===signature)return;signature=key;
+  const key=JSON.stringify([panel,selectedTile,logs,p,s.players,s.isBranchPicking,panel==='tiles'?window.cityGetTileInfo?.(selectedTile):null,panel==='cards'?document.querySelector('#card-panel-clay')?.innerHTML:panel==='actions'?document.querySelector('#action-panel')?.innerHTML:'']);if(key===signature)return;signature=key;
   sheet.hidden=!panel;if(!panel)return;root.querySelector('.mobile-sheet h2').textContent={cards:'手札・アイテム',tiles:'マスの説明',players:s.goldMode?'ランキング · 金缶×3＋対人キル×2':'ランキング · 所持P順',logs:'結果・ログ',actions:'行動を選ぶ'}[panel];
   if(panel==='cards'){const cards=[...(document.querySelector('#card-panel-clay')?.children||[])];set(content,'<div class="mobile-hand">'+cards.map((card,index)=>{const buttons=[...card.querySelectorAll('button')],item=itemCards.find(c=>c.id===p.hand?.[index]);return `<article>${buttons.length&&item?`<img src="${itemArt(item.id)}" alt=""><h3>${esc(item.name)}</h3><p>${esc(item.desc||item.description||'')}</p>`:`<p>${esc(card.textContent)}</p>`}<div>${buttons.map((b,i)=>`<button data-card-index="${index}" data-card-action="${i}" ${b.disabled||tour?'disabled':''}>${esc(b.textContent)}</button>`).join('')}</div></article>`;}).join('')+'</div>');return;}
   if(panel==='logs')set(content,logs.length?`<ol class="mobile-log">${logs.slice().reverse().map(l=>`<li>${esc(plain(l))}</li>`).join('')}</ol>`:'<p>まだログはありません。</p>');
@@ -60,6 +60,7 @@ export function installMobileUI(store){
 
  }
  function queue(){if(!pending){pending=true;requestAnimationFrame(update);}}
+ window.addEventListener('city-item-art-ready',()=>{signature='';queue();});
  store.subscribe(queue);new MutationObserver(queue).observe(document.querySelector('#root'),{childList:true,subtree:true});media.addEventListener('change',queue);
  new MutationObserver(queue).observe(document.body,{attributes:true,attributeFilter:['class']});
  // CSS dvh follows Safari's browser bars; this also handles older visual viewports.

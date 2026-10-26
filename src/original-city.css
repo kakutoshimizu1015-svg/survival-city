@@ -275,3 +275,27 @@ body.city-3d #game-board[data-camera-mode=tour] .tile{pointer-events:auto!import
  .mobile-status .mobile-resources span{font-size:8px}
 }
 @media(min-width:769px){body.city-3d .dt-status-panel .dt-stat-box{padding:2px 4px!important}body.city-3d .dt-status-panel>div{margin-bottom:2px!important}}
+/* A shared detail card for click, touch and the desktop hover tooltip. */
+.city-tile-content{padding:0!important;border:0!important;font:13px/1.5 sans-serif;color:#f7e5bb}
+.city-tile-content h3{display:flex;align-items:center;gap:4px;margin:0 34px 8px 0!important;font-size:13px!important;line-height:1.4}
+.city-tile-content p{white-space:pre-line;margin:6px 0!important;font-size:12px!important;line-height:1.6}
+.city-tile-npcs{padding:0;margin:8px 0;list-style:none;display:flex;flex-direction:column;gap:5px}
+.city-tile-npcs li{padding:6px 8px;border-left:3px solid #b8c8c8;border-radius:3px;background:#c4d2cb12}
+.city-tile-npcs li[data-npc-effect=bad]{border-color:#ff7667;background:#f8584815}.city-tile-npcs li[data-npc-effect=good]{border-color:#7adfa0;background:#61d98a15}
+.city-tile-npcs strong{font-size:12px!important;padding:0;display:block}.city-tile-npcs span{display:block;font-size:11px;line-height:1.5;margin-top:2px}.city-tile-extra{border-top:1px solid #9a815b;padding-top:6px}
+.city-tile-detail{max-height:min(390px,60vh);overflow:auto}
+body.city-3d #game-board .tile .npc-effect-mark{position:absolute;display:grid!important;place-items:center;left:-10px;top:-12px;width:20px;height:20px;border:1px solid #fff4cf;border-radius:50%;background:var(--npc-color);color:#172629;font:bold 14px/1 sans-serif;box-shadow:0 0 8px var(--npc-color);pointer-events:none;visibility:visible!important;z-index:45}
+body.city-3d #game-board .tile[data-npc-tone=bad],body.city-3d #game-board .tile[data-npc-tone=good]{box-shadow:0 0 0 2px var(--npc-color),0 0 13px var(--npc-color)!important;border-color:var(--npc-color)!important}
+body.city-3d #game-board .tile[data-npc-tone=neutral] .npc-effect-mark{box-shadow:none;font-size:18px}
+.city-hand-item-art{display:block;width:48px;height:48px;object-fit:contain;margin:0 auto 3px;image-rendering:pixelated}
+.pixel-item-icon,.mobile-hand img,.gold-can-icon{image-rendering:pixelated}
+@media(max-width:768px){
+ body.city-mobile[data-mobile-panel=tiles] .mobile-sheet{max-height:min(360px,calc(var(--city-vh,100dvh) * .48));background:#302819f5;border:2px solid #d9b564;box-shadow:0 6px 20px #0006}
+ body.city-mobile[data-mobile-panel=tiles] .mobile-sheet>header{position:absolute;top:4px;right:4px;padding:0;background:transparent;border:0;z-index:2}
+ body.city-mobile[data-mobile-panel=tiles] .mobile-sheet h2{display:none}
+ body.city-mobile[data-mobile-panel=tiles] .mobile-close{min-width:32px;min-height:32px;width:32px;height:32px;padding:0;font-size:0}
+ body.city-mobile[data-mobile-panel=tiles] .mobile-close:after{content:'×';font-size:20px}
+ body.city-mobile[data-mobile-panel=tiles] .mobile-sheet-content{padding:12px}
+ .mobile-tile-detail{padding:0!important}.mobile-tile-detail .city-tile-content h3{margin-right:28px!important}
+}
+body.city-mobile[data-mobile-panel=tiles] #city-mobile-ui .mobile-close{font-size:0!important;min-width:32px!important;min-height:32px!important;padding:0!important}

@@ -1,3 +1,4 @@
+import {createNpcSignals} from './npc-signals.js';
 import {createGoldModels} from './gold-models.js';
 import { tileVisual, drawTileIcon } from './tile-visuals.js';
 import { createPlayerItems } from './player-items.js';
@@ -147,6 +148,7 @@ export function createOriginalWorld(host,map){
   const cap=mesh(new T.PlaneGeometry(isCityBoard?3.25:1.5,isCityBoard?3.25:1.5),new T.MeshBasicMaterial({map:top,transparent:true,alphaTest:.1}),t.x,.93,t.z);cap.rotation.x=-Math.PI/2;cap.castShadow=false;
  }
  const textureCache=new Map(),actors=new Map(),npcActors=new Map();
+ const npcSignals=createNpcSignals({T,scene,squares,elevation,host,reduced,isCityBoard});
  const goldModels=createGoldModels({T,scene,squares,elevation,host,reduced});
  const playerItems=createPlayerItems({T,scene,actors,squares,elevation,host,reduced});
  const routeOccluders=scene.children.filter(o=>o.geometry?.type==='BoxGeometry'),routeRay=new T.Raycaster();
@@ -170,15 +172,15 @@ export function createOriginalWorld(host,map){
  function update(next){state=next;dirty=true;
   for(const a of actors.values())a.sprite.visible=false;
   const occupied=new Map();for(const p of state.players){const el=host.querySelector(`[data-original-player="${p.id}"]`),img=el?.querySelector('img');if(!el||!img)continue;const a=actor('p'+p.id,img.src,p.pos,p.statusEffects?.poison>0?'#c9a5e4':'#ffffff',p.hp>0);if(a){const offset=occupied.get(p.pos)||0;occupied.set(p.pos,offset+1);a.offset=offset*.7;a.frontOffset=[state.truckPos,state.policePos].includes(p.pos)?3.4:0;a.name=p.name;el.setAttribute('aria-label',p.name+(p.statusEffects?.poison>0?'（毒）':''));}}
-  const npcOccupied=new Map();
+  const npcOccupied=new Map(),visibleNpcs=[];
   for(const key of NPC_KEYS){
    const pos=state[key+'Pos'],tile=host.querySelector(`[data-original-tile="${pos}"]`),point=squares.get(pos);
    // Native images are also removed on defeat and in fog: retain those exact rules.
-   const present=!!point&&[...(tile?.querySelectorAll('img')||[])].some(i=>i.src.includes(key));
+   const present=!!point&&(key==='truck'||(state[key+'Hp']??10)>0)&&[...(tile?.querySelectorAll('img')||[])].some(i=>i.src.includes(key));
    let a=npcActors.get(key);const wasVisible=a?.model.root.visible;
    if(!present){if(a)a.model.root.visible=false;continue;}
    if(!a){const model=createNpcModel(T,key);model.root.scale.setScalar(isCityBoard?1:.58);scene.add(model.root);a={model,pos:null,start:0,from:[point.x,point.z],to:[point.x,point.z],angle:.3,targetAngle:.3};npcActors.set(key,a);}
-   a.model.root.visible=true;
+   a.model.root.visible=true;visibleNpcs.push({key,pos});
    const crowd=npcOccupied.get(pos)||0;npcOccupied.set(pos,crowd+1);
    const ox=crowd?Math.cos(crowd*2.4)*2.3:0,oz=crowd?Math.sin(crowd*2.4)*2.3:0;
    const destination=[point.x+ox,point.z+oz];
@@ -189,11 +191,13 @@ export function createOriginalWorld(host,map){
     if(cameraMode==='play'&&(key==='truck'||key==='police')){if(vehicleShot?.key===key)vehicleShot.until=performance.now()+1000;else if(!vehicleShots.includes(key))vehicleShots.push(key);}
    }
   }
+  npcSignals.sync(state,visibleNpcs);
   playerItems.sync(state);
   if(!followKey){playView();followKey='initialized';}
   updateNight();projectDOM();
  }
  function draw(now){if(dead)return;raf=requestAnimationFrame(draw);if(document.hidden||now-last<40)return;const moving=[...actors.values(),...npcActors.values()].some(a=>a.start&&now-a.start<400);if(reduced&&!dirty&&!moving&&!playerItems.active()&&!vehicleShot&&!vehicleShots.length)return;last=now;dirty=false;for(const a of actors.values()){const f=reduced?1:Math.min(1,(now-a.start)/400),x=a.from[0]+(a.to[0]-a.from[0])*f,z=a.from[1]+(a.to[1]-a.from[1])*f;a.sprite.position.set(x+(a.offset||0)+Math.sin(cam.yaw)*(a.frontOffset||0),elevation(x,z)+.62+(f<1?Math.sin(f*Math.PI)*.35:0),z+Math.cos(cam.yaw)*(a.frontOffset||0));}if(!reduced&&state?.isNight)for(const e of nightEffects)if(e.kind==='fire')e.object.material.opacity=.62+Math.sin(now*.007+e.object.position.x)*.06; if(!reduced)for(const a of animated){if(a.kind==='fire')a.object.scale.y=.9+Math.sin(now*.008)*.12;else if(a.kind==='train'){a.object.position.x=((now*.001*a.speed+a.span/2+a.offset)%a.span)-a.span/2;host.dataset.trainX=a.object.position.x.toFixed(2);}}
+  npcSignals.draw(now);
   const npcStatus=[];
   for(const [key,a] of npcActors){
    if(!a.model.root.visible)continue;
@@ -202,7 +206,7 @@ export function createOriginalWorld(host,map){
    const delta=Math.atan2(Math.sin(a.targetAngle-a.angle),Math.cos(a.targetAngle-a.angle));a.angle+=delta*(reduced?1:.35);
    a.model.root.position.set(x,elevation(x,z)+.58-(moving&&(key==='truck'||key==='police')?Math.sin(f*Math.PI)*.32:0),z);a.model.root.rotation.y=a.angle;
    a.model.animate(now,moving,reduced,state?.horrorMode);
-   npcStatus.push({kind:key,pos:a.pos,x:+x.toFixed(2),z:+z.toFixed(2),heading:+a.angle.toFixed(2),moving,model:'mesh'});
+   npcStatus.push({kind:key,pos:a.pos,x:+x.toFixed(2),z:+z.toFixed(2),heading:+a.angle.toFixed(2),moving,model:'mesh',features:a.model.root.userData.features||[]});
   }
   if(cameraMode==='play')followAction(now);
   playerItems.draw(now,cam.yaw);host.dataset.goldModels=JSON.stringify(goldModels.draw(state,now));
