@@ -231,18 +231,18 @@ export function createOriginalWorld(host,map){
  const inputEvents=new AbortController(),inputOptions={capture:true,signal:inputEvents.signal};
  function pan(dx,dy){const units=(camera.right-camera.left)/w;cam.target.x-=dx*units*Math.cos(cam.yaw)+dy*units*Math.sin(cam.yaw)/Math.sin(cam.pitch);cam.target.z+=dx*units*Math.sin(cam.yaw)-dy*units*Math.cos(cam.yaw)/Math.sin(cam.pitch);cam.target.x=Math.max(-width/2,Math.min(width/2,cam.target.x));cam.target.z=Math.max(-depth/2,Math.min(depth/2,cam.target.z));}
  function orbit(dx,dy){cam.yaw+=dx*.008;cam.pitch=Math.max(.38,Math.min(1.15,cam.pitch+dy*.006));}
- function pair(){const [a,b]=[...pointers.values()];return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,d:Math.hypot(b.x-a.x,b.y-a.y),angle:Math.atan2(b.y-a.y,b.x-a.x)};}
+ function pair(){const [a,b]=[...pointers.values()];return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,d:Math.hypot(b.x-a.x,b.y-a.y)};}
  // Listen on the board so a gesture can also begin on a tile or character label.
  host.addEventListener('pointerdown',e=>{if(cameraMode!=='tour'||(e.pointerType==='mouse'&&![0,1,2].includes(e.button)))return;e.stopPropagation();if(!pointers.size)gestureMoved=false;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,orbit:e.button===2||e.shiftKey});if(pointers.size>1)gestureMoved=true;if(pointers.size===2)twoFinger={start:pair(),mode:'',zoom:cam.zoom,yaw:cam.yaw,pitch:cam.pitch};host.setPointerCapture(e.pointerId);},inputOptions);
  function applyTwoFinger(){
   twoFingerFrame=0;if(cameraMode!=='tour'||pointers.size!==2||!twoFinger)return;
-   const current=pair(),start=twoFinger.start,ratio=current.d/Math.max(12,start.d),rawAngle=current.angle-start.angle,angle=Math.atan2(Math.sin(rawAngle),Math.cos(rawAngle)),vertical=current.y-start.y;
+   const current=pair(),start=twoFinger.start,ratio=current.d/Math.max(12,start.d),horizontal=current.x-start.x,vertical=current.y-start.y;
    // Lock the dominant intent until a finger lifts. Pinch jitter cannot tilt or rotate the map.
-   if(!twoFinger.mode){const scores=[['zoom',Math.abs(Math.log(Math.max(.01,ratio)))/.065],['rotate',Math.abs(angle)/.12],['tilt',Math.abs(vertical)/18]].sort((a,b)=>b[1]-a[1]);if(scores[0][1]<1)return;twoFinger.mode=scores[0][0];}
+   if(!twoFinger.mode){const scores=[['zoom',Math.abs(Math.log(Math.max(.01,ratio)))/.065],['rotate',Math.abs(horizontal)/18],['tilt',Math.abs(vertical)/18]].sort((a,b)=>b[1]-a[1]);if(scores[0][1]<1)return;twoFinger.mode=scores[0][0];}
    gestureMoved=true;host.dataset.cameraGesture=twoFinger.mode;
    if(twoFinger.mode==='zoom'){
     const next=Math.max(.4,Math.min(5,twoFinger.zoom*ratio)),factor=next/cam.zoom;cam.zoom=next;sync();const rect=host.getBoundingClientRect();pan((current.x-rect.left-w/2)*(1-factor),(current.y-rect.top-h/2)*(1-factor));
-   }else if(twoFinger.mode==='rotate')cam.yaw=twoFinger.yaw-angle;
+   }else if(twoFinger.mode==='rotate')cam.yaw=twoFinger.yaw+horizontal*.008;
    else cam.pitch=Math.max(.38,Math.min(1.15,twoFinger.pitch+vertical*.004));
   sync();
  }

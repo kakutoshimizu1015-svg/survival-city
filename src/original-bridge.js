@@ -14,7 +14,7 @@ function syncCameraControls(){
 function controls(container){
  const existing=container.querySelector('.city-world-tools');if(existing){container.dataset.cameraMode='play';const b=existing.querySelector('[data-camera=mode]');b.textContent='マップ巡回';b.setAttribute('aria-pressed','false');return;}
  const nav=document.createElement('nav');nav.className='city-world-tools';nav.setAttribute('aria-label','立体マップの視点');
- nav.innerHTML=`<div class="city-camera-modes"><button data-camera="mode" aria-pressed="false" aria-describedby="city-gesture-help">マップ巡回</button></div><div id="city-gesture-help" class="city-tour-tools city-gesture-help"><span class="gesture-touch">1本指：移動<br>2本指：開閉でズーム・ひねって回転<br>2本指を上下：角度（指を離して切替）</span><span class="gesture-mouse">ドラッグ：移動 ／ ホイール：ズーム<br>右ドラッグ：回転・角度<br>ダブルクリック：全景</span></div>`;
+ nav.innerHTML=`<div class="city-camera-modes"><button data-camera="mode" aria-pressed="false" aria-describedby="city-gesture-help">マップ巡回</button></div><div id="city-gesture-help" class="city-tour-tools city-gesture-help"><span class="gesture-touch">1本指：移動<br>2本指：左右で回転・上下で角度<br>指の開閉：ズーム（指を離して切替）</span><span class="gesture-mouse">ドラッグ：移動 ／ ホイール：ズーム<br>右ドラッグ：回転・角度<br>ダブルクリック：全景</span></div>`;
  nav.addEventListener('click',e=>{if(!e.target.closest('[data-camera=mode]'))return;const tour=world?.getCameraMode()!=='tour';world?.setCameraMode(tour?'tour':'play');syncCameraControls();});
  container.dataset.cameraMode='play';
  container.append(nav);
