@@ -75,6 +75,7 @@ function refresh(){pending=false;const state=gameStore.getState();document.body.
 }
 function schedule(){if(pending)return;pending=true;requestAnimationFrame(refresh);}
 gameStore.subscribe((next,previous)=>{
+ const net=networkStore.getState();if(next.shopAccess&&next.shopAccess!==previous.shopAccess&&net.status==='connected'&&!net.isHost&&next.players[next.turn]?.userId===net.myUserId)queueMicrotask(()=>gameStore.setState({shopActive:true}));
  // Accepted uses increment the native cards statistic before applying their effect.
  // Discarding, buying, failed attempts and hand transfers do not increment it.
  if(next.gamePhase==='playing'&&previous.gamePhase==='playing')for(const p of next.players){

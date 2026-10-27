@@ -25,6 +25,7 @@ def actions(once):
  once('y.p+=8,n(`🏦 行政の見落とし！', 'y.p=p.p+8,n(`🏦 行政の見落とし！')
 generate('original-card-actions.js','cards-C7BZxg2n.js',actions)
 def skills(once):
+ once('e.setState({shopStockTurn:-1,shopActive:!0})', 'e.setState({shopStockTurn:-1,shopActive:!0,shopAccess:`${i.roundCount}:${i.turn}`})')
  once('l=Math.random()<.1?s[Math.floor(Math.random()*s.length)]:c[Math.floor(Math.random()*c.length)];', 'l=i.goldMode?drawGoldCard(Math.random,.1):Math.random()<.1?s[Math.floor(Math.random()*s.length)]:c[Math.floor(Math.random()*c.length)];')
 generate('original-skills.js','skills-CsxruNUN.js',skills)
 p=root/'assets/skills-CsxruNUN.js';p.write_text('import {drawGoldCard} from "../src/card-balance.js";\n'+p.read_text())

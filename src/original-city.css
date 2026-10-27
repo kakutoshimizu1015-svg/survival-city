@@ -362,3 +362,31 @@ body.city-3d .city-tile-detail{display:block!important;background:rgba(10,10,20,
 .gold-rulebook h2{font-size:20px;margin:0;color:#f1ce7c}.gold-rulebook header button{min-height:44px;padding:8px 12px;background:#334a3b;color:#f5e6bd;border:1px solid #8e9974;border-radius:22px;cursor:pointer}
 .gold-rulebook-body{overflow:auto;overscroll-behavior:contain;padding:0 16px 16px}.gold-rulebook h3{font-size:15px;color:#dfc27b;margin:18px 0 6px}.gold-rulebook p{margin:6px 0}.gold-rulebook summary{cursor:pointer;padding:12px;background:#344234;border-radius:6px;margin-top:18px;font-weight:bold}
 .gold-rule-cards article{display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid #554a32}.gold-rule-cards img{width:42px;height:42px;object-fit:contain;image-rendering:pixelated}.gold-rule-cards p{font-size:12px}.gold-rule-cards strong{color:#e7ce92}
+/* A persistent close footer, independent of the settings content height. */
+.city-settings-overlay{height:var(--city-vh,100dvh)!important;box-sizing:border-box;padding:10px!important;overflow:hidden!important;align-items:center!important}
+.city-settings-dialog{display:flex!important;flex-direction:column;max-height:calc(var(--city-vh,100dvh) - 20px)!important;min-height:0;overflow:hidden!important;padding:10px!important;box-sizing:border-box;max-width:100%}
+.city-settings-content{overflow:auto;overscroll-behavior:contain;min-height:0;padding:5px;-webkit-overflow-scrolling:touch}
+.city-settings-dialog>button{flex:none;min-height:44px;margin-top:8px!important}
+.mobile-sort-tabs{display:flex;gap:6px;position:sticky;top:0;background:#211c13;padding:5px 0;z-index:1}
+.mobile-sort-tabs button{flex:1;min-height:44px;border:1px solid #78633d;border-radius:999px;background:#322919;color:#ead8ab}
+.mobile-sort-tabs button[aria-pressed=true]{background:#e6c47d;color:#211c13}
+.mobile-chat-history{overflow:auto;min-height:0;flex:1;list-style:none;padding:4px;margin:0;overscroll-behavior:contain}
+.mobile-chat-history li{padding:8px;border-bottom:1px solid #57482e;overflow-wrap:anywhere}
+.mobile-chat-history strong{color:#e7c77d;display:block}
+.mobile-chat-form{display:flex;flex:none;gap:6px;padding:8px 0}
+.mobile-chat-form input{min-width:0;flex:1;font-size:16px;background:#fff5dc;color:#211c13;border-radius:8px;padding:9px}
+.mobile-chat-form button{min-width:56px;min-height:44px;background:#e6c47d;color:#211c13;border-radius:999px}
+body[data-mobile-panel=chat] .mobile-sheet{inset:8px 6px max(8px,env(safe-area-inset-bottom));max-height:calc(var(--city-vh,100dvh) - 16px)}
+body[data-mobile-panel=chat] .mobile-sheet-content{display:flex;flex-direction:column;overflow:hidden}
+body.city-mobile #city-mobile-ui>.mobile-tabs.has-chat{grid-template-columns:repeat(4,minmax(0,1fr))}
+body.city-mobile #city-mobile-ui>.mobile-tabs.has-chat button{padding-left:2px;padding-right:2px;font-size:11px}
+.city-shop-loading{padding:24px;background:#30251d;color:#efd8a8;border:2px solid #997f4d;border-radius:12px;max-width:90vw}
+.city-shop-loading button{padding:12px;margin:8px;border-radius:10px;background:#e6c47d;color:#211c13}
+.gold-rulebook details{margin:10px 0;border:1px solid #685535;border-radius:10px;padding:4px 12px}
+.gold-rulebook summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:#f0cf88;font-weight:700}
+.gold-rulebook summary::before{content:'＋';margin-right:9px}
+.gold-rulebook details[open]>summary::before{content:'−'}
+.gold-rulebook details section{margin:12px 0}
+body.city-mobile [data-desktop-chat]{display:none!important}
+
+#city-mobile-ui [hidden]{display:none!important}

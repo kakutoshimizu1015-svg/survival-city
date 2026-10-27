@@ -6,8 +6,8 @@ def once(old,new):
  global s
  assert s.count(old)==1,(old,s.count(old))
  s=s.replace(old,new,1)
-s='import {drawGoldCard,goldRewardCard} from "../src/card-balance.js";\nimport {npcWalk,pickNpcNext} from "../src/city-random.js";\nimport {onGoldDeath,finishGoldGame,handleGoldPurchase} from "../src/gold-rules.js";\n'+s
-once('var _={gamePhase:', 'var _={goldMode:false,gold:null,gamePhase:')
+s='import {escapeChat} from "../src/chat-utils.js";\nimport {handleShopAction} from "../src/shop-session.js";\nimport {drawGoldCard,goldRewardCard} from "../src/card-balance.js";\nimport {npcWalk,pickNpcNext} from "../src/city-random.js";\nimport {onGoldDeath,finishGoldGame,handleGoldPurchase} from "../src/gold-rules.js";\n'+s
+once('var _={gamePhase:', 'var _={goldMode:false,gold:null,goldShop:null,shopAccess:null,gamePhase:')
 once('{kills:(e.kills||0)+1,p:t,hand:n}', '{kills:(e.kills||0)+1,npcKills:(e.npcKills||0)+1,p:t,hand:n}')
 once('o&&i.updatePlayer(r,e=>({kills:(e.kills||0)+1}))}', 'o&&i.updatePlayer(r,e=>({kills:(e.kills||0)+1}));onGoldDeath(v,e,r,a.pos,Y)}')
 # A gold-can loss replaces extra cash/equipment confiscation. Damage theft still applies.
@@ -30,6 +30,7 @@ s=s.replace('p:Math.floor(e.p*.66)', 'p:e.goldCans!==undefined?e.p:Math.floor(e.
 once('Wa=()=>{let t=v.getState();v.setState({gameOver:!0});', 'Wa=()=>{let t=v.getState();if(t.goldMode){finishGoldGame(v,{network:$,profile:e,saveWin:h,log:Y,emoji:Ra});return}v.setState({gameOver:!0});')
 once('let e=v.getState(),t=e.players[e.turn];t&&t.userId===r.userId&&', 'let e=v.getState(),t=e.players[e.turn];if(r.actionType===`BUY_GOLD`){handleGoldPurchase(v,r.userId,$,Y,G);return}t&&t.userId===r.userId&&')
 once('let n=!1;i&&a&&a[0].members.some(e=>s(e))&&(n=!0),!i&&s(t[0])&&(n=!0),n&&h(c.totalScore)', 'let n=r.gameState.pendingGameResult.goldMode?r.gameState.pendingGameResult.winnerIds?.includes(c.id):i?!!(a&&a[0].members.some(e=>s(e))):s(t[0]);n&&h(c.totalScore)')
+once('if(r.type===`REQUEST_ACTION`){if(!n().isHost)return;', 'if(r.type===`REQUEST_ACTION`&&r.actionType?.startsWith(`SHOP_`)){if(!n().isHost)return;const actor=v.getState().players[v.getState().turn];if(e.guestUserId===r.userId&&actor?.userId===r.userId)handleShopAction(v,r.actionType.slice(5),r.payload,actor.id);return;}if(r.type===`REQUEST_ACTION`){if(!n().isHost)return;')
 # Guests receive the final result directly after the category awards were removed.
 assert s.count('r.gameState.pendingGameResult')==4
 s=s.replace('r.gameState.pendingGameResult','(r.gameState.gameResult||r.gameState.pendingGameResult)')
@@ -43,5 +44,11 @@ once('let t=[6,7,10,15][Math.floor(Math.random()*4)];','let t=(e.goldMode?[6,7,1
 once('let a=v.getState(),o=a.players[a.turn];r&&Y(`🎲 ${r}`)', 'let a=v.getState(),o=a.players[a.turn];if(a.goldMode&&n!=null)n=goldRewardCard(n);r&&Y(`🎲 ${r}`)')
 # The old cart description promised double income but no income multiplier existed.
 once('p>0&&(a.fakeInfoDebuff>0', 't.goldMode&&a.equip?.cart&&(p*=2),p>0&&(a.fakeInfoDebuff>0')
+assert s.count('[チャット] ${r.chat.sender}: ${r.chat.text}')==2
+s=s.replace('[チャット] ${r.chat.sender}: ${r.chat.text}', '[チャット] ${escapeChat(r.chat.sender)}: ${escapeChat(r.chat.text)}')
+# Keep chat history independently from the short-lived speech bubbles.
+assert s.count('lobbyPlayers:[],chatQueue:[]')==2
+s=s.replace('lobbyPlayers:[],chatQueue:[]','lobbyPlayers:[],chatQueue:[],chatHistory:[]')
+once('addChatToQueue:t=>e(e=>({chatQueue:[...e.chatQueue,t]}))', 'addChatToQueue:t=>e(e=>e.chatHistory.some(m=>m.id===t.id)?e:({chatQueue:[...e.chatQueue,t],chatHistory:[...e.chatHistory,{id:t.id,sender:String(t.sender).slice(0,40),text:String(t.text).slice(0,40)}].slice(-100)}))')
 (root/'assets/useNetworkStore-CIe06z3C.js').write_text(s)
 print('Gold rules hooks generated; native legacy rules are conditional on goldMode.')

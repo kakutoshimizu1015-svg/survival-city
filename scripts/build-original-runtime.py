@@ -20,7 +20,7 @@ replace_once('children:`✕ ｷｬンｾﾙ`','children:`✕ キャンセル`')
 # Presentation hooks at the confirmed attack and current aiming direction. Cancels never fire this event.
 replace_once('b=()=>{if(_){if(v.length===0)', 'b=()=>{if(_){window.cityProjection?.playAttack({playerId:h.id,card:p,angle:i,targetPos:v.find(t=>t.id===y)?.pos});if(v.length===0)')
 replace_once('if(!g)return null;let _=r===`connected`', 'if(!g)return null;window.cityProjection?.setWeaponAim(i);let _=r===`connected`')
-# Replace only the presentation; all shop state, pricing, inventory and callbacks stay native.
+# Pixel presentation for shops; the gold-mode transaction handler is substituted below.
 replace_once('return!e||!a?null:(0,G.jsx)(`div`,{style:ea.overlay,', 'if(e&&a)return(0,G.jsx)(PixelShop,{react:W,player:a,mode:o,setMode:s,catalog:c,owned:k,cart:x,add:S,decrement:C,clear:w,total:E,count:O,canPay:P,capacity:F,buy:L,sell:z,selection:A,toggleSell:j,clearSell:M,sellTotal:N,shuffle:R,shuffled:g,shuffling:u,toast:y,close:I});return!e||!a?null:(0,G.jsx)(`div`,{style:ea.overlay,')
 start=s.index('r&&w&&(0,G.jsx)(`div`,{className:`modal-overlay`')
 end=s.index(',s?.active&&',start)
@@ -70,9 +70,33 @@ replace_once('},[g,u,a,n,w,b,i]),z=', '},[g,u,a,n,Q,w,b,i]),z=')
 replace_once('let t=e.filter(e=>!n.hand.includes(e)),r=t.length>0?t:e,i=r[Math.floor(Math.random()*r.length)];', 'e=e.filter(id=>!T.getState().goldMode||cardAvailable(id));let t=e.filter(e=>!n.hand.includes(e)),r=t.length>0?t:e,i=r[Math.floor(Math.random()*r.length)];')
 replace_once('t&&[`下剋上`,`大暴落`].includes(t.name)&&(t.ap??0)<=n.ap', 't&&[`下剋上`,`大暴落`].includes(t.name)&&!goldCardBlock(T.getState(),n,t.id)&&(t.id===13?1:0)<=n.ap')
 # Main help is also available before a match has initialized goldMode.
-replace_once('U=N===`DEV_MAIL_2026`;return n?', 'U=N===`DEV_MAIL_2026`;if(n)return(0,G.jsx)(GoldRulebook,{react:W,cards:Ce,onClose:()=>r({rulesActive:!1})});return n?')
-replace_once('if(!e)return null;let i=[`🎯 目的`', 'if(!e)return null;return(0,G.jsx)(GoldRulebook,{react:W,cards:Ce,onClose:()=>t({tutorialActive:!1})});let i=[`🎯 目的`')
-s='import {GoldRulebook} from "../src/gold-rulebook.js";\nimport {goldShopIds,goldShopPrice,shopPurchaseKey,cardAvailable,goldCardBlock} from "../src/card-balance.js";\nimport {EQUIPMENT_ITEM_IDS} from "../src/player-info.js";\nimport {PixelItemIcon} from "../src/pixel-item-art.js";\nimport {createGoldState,goldScore,goldCompare,goldRankOf} from "../src/gold-rules.js";\nimport {goldCpuStep} from "../src/gold-cpu.js";\nimport {GoldResults,GoldBadge} from "../src/gold-ui.js";\nimport {PixelShop,PixelEvent} from "../src/pixel-scenes.js";\nimport {createCityBoard} from "../src/city-board-map.js";\nfunction It(){return createCityBoard()}\n'+s
+replace_once('U=N===`DEV_MAIL_2026`;return n?', 'U=N===`DEV_MAIL_2026`;if(n)return(0,G.jsx)(GoldRulebook,{react:W,cards:Ce,miniGames:Ci,onClose:()=>r({rulesActive:!1})});return n?')
+replace_once('if(!e)return null;let i=[`🎯 目的`', 'if(!e)return null;return(0,G.jsx)(GoldRulebook,{react:W,cards:Ce,miniGames:Ci,onClose:()=>t({tutorialActive:!1})});let i=[`🎯 目的`')
+replace_once('if(e&&a)return(0,G.jsx)(PixelShop,', 'if(e&&a&&T.getState().goldMode)return(0,G.jsx)(GoldShop,{react:W,store:T,network:oe,cards:Ce,close:I});if(e&&a)return(0,G.jsx)(PixelShop,')
+# Open the guest hacker shop only after the host has granted paid remote access.
+replace_once('e&&_!==`${Q}:${n}`', 'e&&!T.getState().goldMode&&_!==`${Q}:${n}`')
+replace_once('k={bicycle:`🚲自転車`,', 'k={shoppingCart:`🛒買い物カート`,foldBike:`🚲折りたたみ自転車`,bicycle:`🚲自転車`,')
+replace_once('return n===`connected`?(0,G.jsx)(`div`,{style:{width:`100%`,padding:`0 5px`', 'return n===`connected`?(0,G.jsx)(`div`,{"data-desktop-chat":true,style:{width:`100%`,padding:`0 5px`')
+replace_once('[チャット] ${u}: ${d.text}', '[チャット] ${escapeChat(u)}: ${escapeChat(d.text)}')
+# Make every turn-order wait cancellable without changing the predetermined rolls.
+start=s.index('ta=()=>');end=s.index('na=()=>',start)
+part=s[start:end]
+part=part.replace('[a,o]=(0,W.useState)(null);','[a,o]=(0,W.useState)(null),skipWait=(0,W.useRef)(null);')
+part=part.replace('let n=!0;return(async()=>','let n=!0;const wait=ms=>new Promise(resolve=>{let timer;const done=()=>{clearTimeout(timer);if(skipWait.current===done)skipWait.current=null;resolve()};timer=setTimeout(done,ms);skipWait.current=done});return(async()=>')
+for ms in [800,2800,600]:part=part.replace(f'new Promise(e=>setTimeout(e,{ms}))',f'wait({ms})')
+part=part.replace('()=>{n=!1}', '()=>{n=!1;skipWait.current?.()}')
+part=part.replace('if(!r.showResult)return;', 'if(!r.showResult){skipWait.current?.();return}if(oe.getState().status===`connected`&&!oe.getState().isHost)return;')
+part=part.replace('className:`modal-overlay`,','className:`modal-overlay`,"data-turn-order":r.step,"data-order-result":r.showResult,',1)
+part=part.replace('onClick:e=>e.stopPropagation(),children:', 'onClick:e=>{e.stopPropagation();if(!r.showResult)s()},children:')
+part=part.replace('children:`タップしてゲーム開始！`','disabled:oe.getState().status===`connected`&&!oe.getState().isHost,children:oe.getState().status===`connected`&&!oe.getState().isHost?`ホストの開始を待っています`:`タップしてゲーム開始！`')
+part=part.replace('(0,G.jsx)(`div`,{style:{textAlign:`center`,marginTop:`15px`,color:`#bdc3c7`,fontWeight:`bold`},children:r.step===-1?`まもなくダイスロールが始まります...`:`順番を決定中...`})','(0,G.jsx)(`button`,{type:`button`,style:{width:`100%`,minHeight:44,marginTop:15},onClick:e=>{e.stopPropagation();s()},children:`タップでこの演出をスキップ`})')
+replace_once(s[start:end],part)
+# Keep the close control outside the settings scroll area, including Safari's dynamic viewport.
+old='className:`modal-overlay`,style:{display:`flex`,zIndex:3e4},onClick:()=>r({settingsActive:!1}),children:(0,G.jsxs)(`div`,{className:`modal-box`,style:{background:`#fdf5e6`,color:`#3e2723`,padding:`15px`,maxHeight:`90vh`,overflowY:`auto`},onClick:e=>e.stopPropagation(),children:['
+new='className:`modal-overlay city-settings-overlay`,style:{display:`flex`,zIndex:3e4},onClick:()=>r({settingsActive:!1}),children:(0,G.jsxs)(`div`,{className:`modal-box city-settings-dialog`,style:{background:`#fdf5e6`,color:`#3e2723`},onClick:e=>e.stopPropagation(),children:[(0,G.jsxs)(`div`,{className:`city-settings-content`,children:['
+replace_once(old,new)
+replace_once('children:`🏠 タイトルに戻る`}),(0,G.jsx)(q,{onClick:()=>r({settingsActive:!1})', 'children:`🏠 タイトルに戻る`})]}),(0,G.jsx)(q,{onClick:()=>r({settingsActive:!1})')
+s='import {escapeChat} from "../src/chat-utils.js";\nimport {GoldShop} from "../src/gold-shop.js";\nimport {GoldRulebook} from "../src/gold-rulebook.js";\nimport {goldShopIds,goldShopPrice,shopPurchaseKey,cardAvailable,goldCardBlock} from "../src/card-balance.js";\nimport {EQUIPMENT_ITEM_IDS} from "../src/player-info.js";\nimport {PixelItemIcon} from "../src/pixel-item-art.js";\nimport {createGoldState,goldScore,goldCompare,goldRankOf} from "../src/gold-rules.js";\nimport {goldCpuStep} from "../src/gold-cpu.js";\nimport {GoldResults,GoldBadge} from "../src/gold-ui.js";\nimport {PixelShop,PixelEvent} from "../src/pixel-scenes.js";\nimport {createCityBoard} from "../src/city-board-map.js";\nfunction It(){return createCityBoard()}\n'+s
 s+='\nexport {Mt as smallMap,Nt as mediumMap,Pt as largeMap,It as originalMap,Ti as miniGames,mr as tileDescriptions,tr as statusEquipment,nr as hasStatusEquipment};\n'
 (root/'assets/original-city-runtime.js').write_text(s)
 print('48-square district board, gold competition and presentation hooks generated.')
