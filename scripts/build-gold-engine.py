@@ -30,6 +30,9 @@ s=s.replace('p:Math.floor(e.p*.66)', 'p:e.goldCans!==undefined?e.p:Math.floor(e.
 once('Wa=()=>{let t=v.getState();v.setState({gameOver:!0});', 'Wa=()=>{let t=v.getState();if(t.goldMode){finishGoldGame(v,{network:$,profile:e,saveWin:h,log:Y,emoji:Ra});return}v.setState({gameOver:!0});')
 once('let e=v.getState(),t=e.players[e.turn];t&&t.userId===r.userId&&', 'let e=v.getState(),t=e.players[e.turn];if(r.actionType===`BUY_GOLD`){handleGoldPurchase(v,r.userId,$,Y,G);return}t&&t.userId===r.userId&&')
 once('let n=!1;i&&a&&a[0].members.some(e=>s(e))&&(n=!0),!i&&s(t[0])&&(n=!0),n&&h(c.totalScore)', 'let n=r.gameState.pendingGameResult.goldMode?r.gameState.pendingGameResult.winnerIds?.includes(c.id):i?!!(a&&a[0].members.some(e=>s(e))):s(t[0]);n&&h(c.totalScore)')
+# Guests receive the final result directly after the category awards were removed.
+assert s.count('r.gameState.pendingGameResult')==4
+s=s.replace('r.gameState.pendingGameResult','(r.gameState.gameResult||r.gameState.pendingGameResult)')
 # New matches randomize opening positions and route preferences. Legal road edges remain intact.
 once('Ua=(e,t,n,r=-1)=>{let i=e', 'Ua=(e,t,n,r=-1)=>{if(v.getState().goldMode)return npcWalk({...v.getState(),mapData:n},e,t,r);let i=e')
 once('a=e.next[Math.floor(Math.random()*e.next.length)]', 'a=v.getState().goldMode?pickNpcNext(v.getState(),a):e.next[Math.floor(Math.random()*e.next.length)]')

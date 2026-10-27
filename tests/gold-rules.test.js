@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createCityBoard} from '../src/city-board-map.js';
-import {createGoldState,goldScore,goldStandings,buyGoldPatch,goldDeathPatch,goldRoundPatch,pickupGoldPatch,routeTo,handleGoldPurchase} from '../src/gold-rules.js';
+import {createGoldState,goldScore,goldStandings,buyGoldPatch,goldDeathPatch,goldRoundPatch,pickupGoldPatch,routeTo,handleGoldPurchase,finishGoldGame} from '../src/gold-rules.js';
 const fixture=()=>{const s={players:[0,1,2].map(id=>({id,pos:id+1,p:20,hp:100,teamColor:'none',goldCans:0,pvpKills:0})),mapData:createCityBoard(),turn:0,roundCount:1,maxRounds:20,gamePhase:'playing'};return {...s,...createGoldState(s,()=>.5)};};
 test('spawn reachable by directed routes; excludes occupied/hospital tiles',()=>{const s=fixture();assert.ok(s.gold.spot);assert.ok(s.players.every(p=>p.pos!==s.gold.spot&&routeTo(s,p.pos,s.gold.spot)));assert.notEqual(s.mapData.find(t=>t.id===s.gold.spot).type,'center');});
 test('purchase costs 10 once; validates turn/location/funds; next round respawn',()=>{let s=fixture();assert.equal(buyGoldPatch(s,0),null);s.players[0].pos=s.gold.spot;s.players[0].p=9;assert.equal(buyGoldPatch(s,0),null);s.players[0].p=10;assert.equal(buyGoldPatch(s,1),null);const patch=buyGoldPatch(s,0);assert.equal(patch.players[0].p,0);assert.equal(patch.players[0].goldCans,1);s={...s,...patch};assert.equal(buyGoldPatch(s,0),null);assert.equal(goldRoundPatch(s),null);s.roundCount=2;assert.ok(goldRoundPatch(s));s.roundCount=20;assert.equal(goldRoundPatch(s),null);});
@@ -13,4 +13,10 @@ test('fresh games draw from multiple fair gold locations, recent locations are e
  const spots=new Set();for(let i=0;i<100;i++){const s=fixture();const next=createGoldState(s,()=>i/100);spots.add(next.gold.spot);assert.ok(s.players.every(p=>routeTo(s,p.pos,next.gold.spot)));}
  assert.ok(spots.size>=5,`only ${spots.size} distinct gold locations`);
  let s=fixture();s.gold={...s.gold,spot:null,nextRound:1,history:[4,5,6],lastSpot:6};for(let i=0;i<50;i++)assert.ok(!s.gold.history.includes(goldRoundPatch(s,()=>i/50).gold.spot));
+});
+test('finish goes directly to results with no awards and grants rewards once',()=>{
+ let s=fixture();s.players[0]={...s.players[0],name:'自分',goldCans:3,pvpKills:1,cans:4};const money=s.players.map(p=>p.p),wins=[],rewards=[];
+ const store={getState:()=>s,setState:patch=>{s={...s,...patch};}},services={network:{getState:()=>({status:'disconnected'})},profile:{getState:()=>({playerName:'自分',addGachaAssets:(...args)=>rewards.push(args)})},saveWin:score=>wins.push(score),log:()=>{},emoji:{}};
+ finishGoldGame(store,services);assert.equal(s.gameOver,true);assert.equal(s.awardsActive,false);assert.equal(s.awardsData,null);assert.equal(s.pendingGameResult,null);assert.equal(s.gameResult.results[0].totalScore,11);assert.deepEqual(s.players.map(p=>p.p),money);assert.deepEqual(wins,[11]);assert.deepEqual(rewards,[[4,11]]);
+ finishGoldGame(store,services);assert.equal(wins.length,1);assert.equal(rewards.length,1);
 });

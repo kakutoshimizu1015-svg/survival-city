@@ -55,8 +55,7 @@ export function goldStandings(s,emoji={}){
 }
 export function finishGoldGame(store,{network,profile,saveWin,log,emoji}){
  const s=store.getState();if(s.gameOver)return;const result=goldStandings(s,emoji);
- const awards=[['tiles','最多移動賞'],['cards','カードマスター'],['cans','空き缶王'],['trash','ゴミ漁り名人'],['shopP','爆買い王'],['jobs','バイト王'],['territories','不動産王'],['minigames','ミニゲーム王']].map(([key,name])=>{const value=Math.max(0,...s.players.map(p=>p.gameStats?.[key]||0)),winners=value?s.players.filter(p=>p.gameStats?.[key]===value):[];return {key,name,desc:'称号のみ・得点加算なし',value,winners:winners.map(p=>p.id),winnerNames:winners.map(p=>p.name).join(' と ')||'該当者なし'};});
- store.setState({gameOver:true,awardsActive:true,awardsData:awards,pendingGameResult:result,goldOffer:null});
+ store.setState({gameOver:true,awardsActive:false,awardsData:null,pendingGameResult:null,gameResult:result,goldOffer:null});
  log(`🏆 金缶争奪戦 終了！ 金缶×3＋対人キル×2（同点は所持P）`);
  const net=network.getState(),me=result.results.find(p=>net.status==='connected'?p.userId===net.myUserId:!p.isCPU&&p.name===profile.getState().playerName);
  if(me){if(result.winnerIds.includes(me.id))saveWin(me.totalScore);profile.getState().addGachaAssets(me.cans,me.totalScore);}

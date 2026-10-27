@@ -5,7 +5,7 @@ export function GoldRulebook({react:R,cards,onClose}){
  R.useEffect(()=>{const old=document.activeElement;closeRef.current?.focus();const key=e=>{if(e.key==='Escape'){e.preventDefault();onClose();}};window.addEventListener('keydown',key);return()=>{window.removeEventListener('keydown',key);if(old?.isConnected)old.focus();};},[]);
  const section=(title,...texts)=>h('section',{key:title},h('h3',null,title),...texts.map((text,i)=>h('p',{key:i},text)));
  return h('div',{className:'gold-rulebook-overlay',onClick:onClose},h('section',{className:'gold-rulebook',role:'dialog','aria-modal':true,'aria-label':'金缶争奪戦のルール',onClick:e=>e.stopPropagation()},h('header',null,h('h2',null,'金缶争奪戦'),h('button',{ref:closeRef,onClick:onClose,'aria-label':'ルールを閉じる'},'閉じる ×')),h('div',{className:'gold-rulebook-body'},
- section('勝ち方と順位','金缶1個＝3点、対人キル1回＝2点。合計点が高い人が勝ち。同点は所持Pで比較し、両方同じなら同順位。NPC討伐・デス・称号は得点に加算しません。','チーム戦の勝敗はメンバーの得点とPの合計。逆転カードの使用条件はチーム内でも個人のランキングを使います。'),
+ section('勝ち方と順位','金缶1個＝3点、対人キル1回＝2点。合計点が高い人が勝ち。同点は所持Pで比較し、両方同じなら同順位。NPC討伐・デスは得点に加算しません。','チーム戦の勝敗はメンバーの得点とPの合計。逆転カードの使用条件はチーム内でも個人のランキングを使います。'),
  section('金缶を手に入れる','マップに表示された販売場所で10P。購入にAPは不要です。購入後は次ラウンドに別の場所へ出現します（最終ラウンドの新規出現なし）。','相手を倒すとキル点に加えて金缶を最大1個奪います。NPC・毒などで倒れると、その場に金缶を1個落とします。復活時の無敵がある間は攻撃を受けません。'),
  section('自分の手番','サイコロ2個の合計がAPになり、ゾロ目は倍。通常の移動は1AP、雨は原則2AP。移動・缶拾い・ゴミ漁り・バイト・カードを組み合わせ、終わったらターン終了。','缶とゴミを買取所で換金して、金缶や武器を購入します。陣地はP収入を生みますが、維持費もあります。昼夜・天気・NPC・職業によって条件が変わります。'),
  section('武器の入手と攻撃','開始時の手札3枚のうち1枚はバットです。ショップにはレンガ3P・バット4Pが必ず並び、それぞれ1人につき1ラウンド4個まで購入できます。営業マンは2P引き（最低2P）。','一般武器は1回の攻撃につき2APとカード1枚を使います。カードの射程・威力を確認して照準を合わせます。攻撃をキャンセルするとカードとAPが戻ります。ジャンクガンはゴミを弾にして3回使える工作武器です。'),

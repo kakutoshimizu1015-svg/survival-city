@@ -36,7 +36,7 @@ replace_once('let r=n.cpuDifficulty||`normal`;if(r===`easy`)', 'let remaining=e.
 replace_once('){let t=e.mapData.find(e=>e.id===n.pos);if(!t)break;', '){if(e.goldMode&&goldCpuStep(T,{cards:Ce,useCard:Oe,damage:V,move:le,exchange:z,job:R,network:oe,log:H,sound:D})){await Kn(500);continue}let t=e.mapData.find(e=>e.id===n.pos);if(!t)break;')
 start=s.index('f&&(0,G.jsxs)(`div`,{className:`modal-overlay`',s.index('Ei=()=>'))
 end=s.index(',_&&(0,G.jsx)',start)
-replace_once(s[start:end], 'f&&(f.goldMode?(0,G.jsx)(GoldResults,{react:W,result:f,message:S,onExit:()=>T.getState().resetGame()}):'+s[start+3:end]+')')
+replace_once(s[start:end], 'f&&(f.goldMode?(0,G.jsx)(GoldResults,{react:W,result:f,message:S,onEnter:()=>D(`win`),onExit:()=>T.getState().resetGame()}):'+s[start+3:end]+')')
 replace_once('children:`✨ ボーナス +50P 獲得!! ✨`', 'children:T.getState().goldMode?`称号獲得！ 得点加算なし`:`✨ ボーナス +50P 獲得!! ✨`')
 replace_once('if(r){let e=[...i].sort((e,t)=>t.p-e.p);return', 'if(r&&!T.getState().goldMode){let e=[...i].sort((e,t)=>t.p-e.p);return')
 replace_once('qn=(e,t)=>{let n=', 'qn=(e,t)=>{if(t.goldMode)return goldScore(e);let n=')
