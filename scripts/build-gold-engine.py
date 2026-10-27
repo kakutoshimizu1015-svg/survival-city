@@ -6,7 +6,7 @@ def once(old,new):
  global s
  assert s.count(old)==1,(old,s.count(old))
  s=s.replace(old,new,1)
-s='import {npcWalk,pickNpcNext} from "../src/city-random.js";\nimport {onGoldDeath,finishGoldGame,handleGoldPurchase} from "../src/gold-rules.js";\n'+s
+s='import {drawGoldCard,goldRewardCard} from "../src/card-balance.js";\nimport {npcWalk,pickNpcNext} from "../src/city-random.js";\nimport {onGoldDeath,finishGoldGame,handleGoldPurchase} from "../src/gold-rules.js";\n'+s
 once('var _={gamePhase:', 'var _={goldMode:false,gold:null,gamePhase:')
 once('{kills:(e.kills||0)+1,p:t,hand:n}', '{kills:(e.kills||0)+1,npcKills:(e.npcKills||0)+1,p:t,hand:n}')
 once('o&&i.updatePlayer(r,e=>({kills:(e.kills||0)+1}))}', 'o&&i.updatePlayer(r,e=>({kills:(e.kills||0)+1}));onGoldDeath(v,e,r,a.pos,Y)}')
@@ -34,5 +34,11 @@ once('let n=!1;i&&a&&a[0].members.some(e=>s(e))&&(n=!0),!i&&s(t[0])&&(n=!0),n&&h
 once('Ua=(e,t,n,r=-1)=>{let i=e', 'Ua=(e,t,n,r=-1)=>{if(v.getState().goldMode)return npcWalk({...v.getState(),mapData:n},e,t,r);let i=e')
 once('a=e.next[Math.floor(Math.random()*e.next.length)]', 'a=v.getState().goldMode?pickNpcNext(v.getState(),a):e.next[Math.floor(Math.random()*e.next.length)]')
 once('_=e.next[Math.floor(Math.random()*e.next.length)]', '_=v.getState().goldMode?pickNpcNext(v.getState(),_):e.next[Math.floor(Math.random()*e.next.length)]')
+# Every reward source uses the active deck, including fixed minigame prizes.
+once('a=()=>Math.random()<.05?t[Math.floor(Math.random()*t.length)]:i[Math.floor(Math.random()*i.length)]', 'a=()=>v.getState().goldMode?drawGoldCard():Math.random()<.05?t[Math.floor(Math.random()*t.length)]:i[Math.floor(Math.random()*i.length)]')
+once('let t=[6,7,10,15][Math.floor(Math.random()*4)];','let t=(e.goldMode?[6,7,18,15]:[6,7,10,15])[Math.floor(Math.random()*4)];')
+once('let a=v.getState(),o=a.players[a.turn];r&&Y(`🎲 ${r}`)', 'let a=v.getState(),o=a.players[a.turn];if(a.goldMode&&n!=null)n=goldRewardCard(n);r&&Y(`🎲 ${r}`)')
+# The old cart description promised double income but no income multiplier existed.
+once('p>0&&(a.fakeInfoDebuff>0', 't.goldMode&&a.equip?.cart&&(p*=2),p>0&&(a.fakeInfoDebuff>0')
 (root/'assets/useNetworkStore-CIe06z3C.js').write_text(s)
 print('Gold rules hooks generated; native legacy rules are conditional on goldMode.')

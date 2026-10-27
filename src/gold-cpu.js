@@ -1,4 +1,5 @@
 import {routeTo,sameTeam,handleGoldPurchase,goldScore} from './gold-rules.js';
+import {basicWeaponPurchasePatch} from './card-balance.js';
 // Gold-aware decisions use the same AP, cards, damage and movement functions as human play.
 export function goldCpuStep(store,{cards,useCard,damage,move,exchange,job,network,log,sound}){
  const s=store.getState(),p=s.players[s.turn];if(!s.goldMode||!p?.isCPU||s.gameOver||s._roundEndInProgress)return false;
@@ -8,6 +9,10 @@ export function goldCpuStep(store,{cards,useCard,damage,move,exchange,job,networ
  if(p.hp<45){const heal=p.hand.findIndex(id=>cards.find(c=>c.id===id)?.type==='heal');if(heal>=0){useCard(heal,p.hand[heal]);return true;}}
  const enemies=s.players.filter(t=>t.id!==p.id&&!sameTeam(p,t)&&t.hp>0&&!t.respawnShield);
  const weapons=p.hand.map((id,index)=>({card:cards.find(c=>c.id===id),index})).filter(w=>w.card?.type==='weapon'&&w.card.dmg>0);
+ if(!weapons.length&&tile.type==='shop'){
+  const purchase=basicWeaponPurchasePatch(s,p,cards);
+  if(purchase){store.setState(purchase.patch);log(`🛒 CPUが「${purchase.card.name}」を購入！ −${purchase.price}P`);sound('coin');return true;}
+ }
  if(p.ap>=2){const attacks=weapons.flatMap(w=>enemies.filter(t=>(routeTo(s,p.pos,t.pos)?.path.length??Infinity)<=w.card.range).map(t=>({...w,target:t,value:(t.hp<=w.card.dmg?100:0)+(t.goldCans||0)*12+goldScore(t)*2-w.card.range}))).sort((a,b)=>b.value-a.value);
   if(attacks.length){const {card,index,target}=attacks[0];useCard(index,card.id);if(store.getState().weaponArcData){store.setState({weaponArcData:null});window.cityProjection?.playAttack({playerId:p.id,card,targetPos:target.pos});const hit=card.aoe?enemies.filter(t=>(routeTo(s,p.pos,t.pos)?.path.length??Infinity)<=card.range):[target];for(const t of hit)damage(t.id,card.dmg,card.name,p.id);return true;}}
  }

@@ -3,6 +3,7 @@ from pathlib import Path
 import argparse,shutil,subprocess
 parser=argparse.ArgumentParser();parser.add_argument('--destination',required=True);args=parser.parse_args()
 root=Path(__file__).resolve().parents[1];site=Path(args.destination).resolve();dist=site/'dist'
+subprocess.run(['python3',str(root/'scripts/build-card-balance.py')],check=True)
 subprocess.run(['python3',str(root/'scripts/build-gold-engine.py')],check=True)
 subprocess.run(['python3',str(root/'scripts/build-original-runtime.py')],check=True)
 for name in ['index.html','classic.html','quick.html','favicon.svg','icons.svg']:
@@ -15,9 +16,10 @@ if (dist/'survival-city-offline.html').exists():(dist/'survival-city-offline.htm
 if (dist/'assets/street-dusk-pixel.png').exists():(dist/'assets/street-dusk-pixel.png').unlink()
 shutil.copy2(root/'README.md',site/'README.md')
 (site/'scripts').mkdir(exist_ok=True)
-for file in ['build-original-runtime.py','build-gold-engine.py','verify-gold-cans.cjs','verify-city-readability.cjs','verify-npc-readability.cjs','package-original-preview.py','verify-original-rules.cjs','verify-original-interactions.cjs','verify-district-board.cjs','verify-npc-models.cjs','verify-player-items.cjs','preview-player-items.cjs','verify-pixel-scenes.cjs','verify-mobile-ui.cjs','verify-mobile-portraits.cjs','verify-mobile-map-controls.cjs','verify-mobile-flow.cjs']:
+for file in ['build-card-balance.py','verify-card-balance.cjs','build-original-runtime.py','build-gold-engine.py','verify-gold-cans.cjs','verify-city-readability.cjs','verify-npc-readability.cjs','package-original-preview.py','verify-original-rules.cjs','verify-original-interactions.cjs','verify-district-board.cjs','verify-npc-models.cjs','verify-player-items.cjs','preview-player-items.cjs','verify-pixel-scenes.cjs','verify-mobile-ui.cjs','verify-mobile-portraits.cjs','verify-mobile-map-controls.cjs','verify-mobile-flow.cjs']:
  shutil.copy2(root/'scripts'/file,site/'scripts'/file)
 (site/'tests').mkdir(exist_ok=True)
+shutil.copy2(root/'tests/card-balance.test.js',site/'tests/card-balance.test.js')
 shutil.copytree(root/'scripts/vendor',site/'scripts/vendor',dirs_exist_ok=True)
 shutil.copy2(root/'tests/npc-impact.test.js',site/'tests/npc-impact.test.js')
 shutil.copy2(root/'tests/city-random.test.js',site/'tests/city-random.test.js')

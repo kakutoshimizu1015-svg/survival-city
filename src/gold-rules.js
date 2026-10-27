@@ -1,9 +1,11 @@
 import {randomCityState} from './city-random.js';
+import {goldOpeningHand} from './card-balance.js';
 // Pure rules shared by the engine, CPU and UI. No rendering or global store imports.
 export const GOLD_PRICE=10;
 const safeName=s=>String(s||'プレイヤー').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 export const goldScore=p=>(p.goldCans||0)*3+(p.pvpKills||0)*2;
 export const goldCompare=(a,b)=>goldScore(b)-goldScore(a)||(b.p||0)-(a.p||0);
+export const goldRankOf=(players,p)=>1+players.filter(other=>goldCompare(other,p)<0).length;
 export const sameTeam=(a,b)=>a&&b&&a.id!==b.id&&a.teamColor&&a.teamColor!=='none'&&a.teamColor===b.teamColor;
 export function routeTo(s,from,to){
  const queue=[{id:from,path:[],cost:0}],best=new Map([[from,0]]),p=s.players?.find(p=>p.pos===from);
@@ -20,7 +22,7 @@ export function chooseGoldSpot(s,random=Math.random){
  return shortlist[Math.min(shortlist.length-1,Math.floor(random()*shortlist.length))]?.id??null;
 }
 export function createGoldState(s,random=Math.random){
- const state={...s,goldMode:true,gold:{version:1,spot:null,lastSpot:null,nextRound:1,issued:0,drops:{},history:[]},players:s.players.map(p=>({...p,goldCans:0,pvpKills:0,npcKills:0}))};
+ const state={...s,goldMode:true,gold:{version:1,spot:null,lastSpot:null,nextRound:1,issued:0,drops:{},history:[]},players:s.players.map(p=>({...p,hand:goldOpeningHand(p.hand,random),goldCans:0,pvpKills:0,npcKills:0}))};
  state.gold.spot=chooseGoldSpot(state,random);return {...randomCityState(state,random),goldMode:true,gold:state.gold,players:state.players};
 }
 export function canBuyGold(s,id){const p=s.players[s.turn];return !!(s.goldMode&&!s.gameOver&&!s._roundEndInProgress&&!s.mgActive&&!s.storyActive&&!s.shopActive&&!s.weaponArcData&&!s.diceAnim?.active&&p?.id===id&&p.hp>0&&s.gold?.spot!=null&&p.pos===s.gold.spot&&p.p>=GOLD_PRICE);}

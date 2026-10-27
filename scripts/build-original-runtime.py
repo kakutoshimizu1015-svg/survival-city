@@ -43,6 +43,7 @@ replace_once('qn=(e,t)=>{let n=', 'qn=(e,t)=>{if(t.goldMode)return goldScore(e);
 replace_once('r===`rank`?t.sort((e,t)=>t.p-e.p)', 'r===`rank`?t.sort(T.getState().goldMode?goldCompare:(e,t)=>t.p-e.p)')
 replace_once('children:[`⚔️ `,r.kills,`K / 💀`,r.deaths,`D`]', 'children:T.getState().goldMode?(0,G.jsx)(GoldBadge,{react:W,player:r}):[`⚔️ `,r.kills,`K / 💀`,r.deaths,`D`]')
 replace_once('children:[`❤️`,e.hp,` 💰`,e.p,`P 🎴`,e.hand?.length||0,` 🚩`,o]', 'children:T.getState().goldMode?[(0,G.jsx)(GoldBadge,{react:W,player:e}),(0,G.jsxs)(`div`,{className:`city-player-vitals`,children:[(0,G.jsxs)(`span`,{children:[`❤️ `,e.hp]}),(0,G.jsxs)(`span`,{children:[`💰 `,e.p,`P`]}),(0,G.jsxs)(`span`,{children:[`🎴 `,e.hand?.length||0]}),(0,G.jsxs)(`span`,{children:[`🚩 `,o]})]})]:[`❤️`,e.hp,` 💰`,e.p,`P 🎴`,e.hand?.length||0,` 🚩`,o]')
+replace_once('if(r===`rank`){let t=a.indexOf(e);', 'if(r===`rank`){let t=T.getState().goldMode?goldRankOf(a,e)-1:a.indexOf(e);')
 # Include the carried equipment that was missing from the original compact status bar.
 replace_once('tr=[{key:`stealth`', 'tr=[{key:`shoppingCart`,field:`equip.shoppingCart`,emoji:`🛒`,title:`買い物カート`},{key:`foldBike`,field:`equip.foldBike`,emoji:`🚲`,title:`折りたたみ自転車`},{key:`backpack`,field:`equip.backpack`,emoji:`🎒`,title:`リュック`},{key:`stealth`')
 # Use the same item illustrations in the original desktop hand and the pixel shop.
@@ -54,7 +55,24 @@ end=s.index('})',s.index('※ゲーム終了時の陣地の価値：',start))+2
 replace_once(s[start:end], '`金缶×3 ＋ 対人キル×2。同点は所持P。金缶は現地で10P、対人キルで最大1個奪取。NPC討伐は加点なし。`')
 s=s.replace('スコア ＝ 所持P × 2 ＋ 陣地の価値(スラム3/商業6/高級10) ＋ 資源価値 ＋ キル×3 − デス×5','スコア ＝ 金缶×3 ＋ 対人キル×2。同点は所持P。金缶は現地で10P、キルで最大1個奪取。')
 s=s.replace('死亡回数が多いと大きく減点されるので注意！','金缶は1個まで奪われます。NPCや環境で倒れると、その場に1個落とします。')
-s='import {EQUIPMENT_ITEM_IDS} from "../src/player-info.js";\nimport {PixelItemIcon} from "../src/pixel-item-art.js";\nimport {createGoldState,goldScore,goldCompare} from "../src/gold-rules.js";\nimport {goldCpuStep} from "../src/gold-cpu.js";\nimport {GoldResults,GoldBadge} from "../src/gold-ui.js";\nimport {PixelShop,PixelEvent} from "../src/pixel-scenes.js";\nimport {createCityBoard} from "../src/city-board-map.js";\nfunction It(){return createCityBoard()}\n'+s
+# Gold deck, predictable basic stock, and one shared rulebook for help/tutorial.
+replace_once('Li=()=>{let e=Ce.map', 'Li=()=>{if(T.getState().goldMode)return goldShopIds(Ce);let e=Ce.map')
+replace_once('let r=n?.[e.id]||0,i=e.type===`weapon`?', 'let r=n?.[shopPurchaseKey(T.getState(),t,e.id)]||0,i=e.type===`weapon`?')
+replace_once('price:Math.max(0,i-a),desc:e.desc', 'price:T.getState().goldMode?goldShopPrice(e,t):Math.max(0,i-a),desc:e.desc')
+replace_once('purchasedCards:i}=T(),a=t[n]', 'purchasedCards:i,roundCount:Q}=T(),a=t[n]')
+replace_once('g=m===n,[_,v]', 'g=m===`${Q}:${n}`,[_,v]')
+replace_once('e&&_!==n&&(v(n),l(Li()', 'e&&_!==`${Q}:${n}`&&(v(`${Q}:${n}`),l(Li()')
+replace_once('},[e,n,_,a,i,w]);let k=', '},[e,n,Q,_,a,i,w]);let k=')
+replace_once('t[i]=(t[i]||0)+r});let n=a.charType', 'const key=shopPurchaseKey(T.getState(),a,i);t[key]=(t[key]||0)+r});let n=a.charType')
+replace_once('h(n),d(!0),p(e=>e+720)', 'h(`${Q}:${n}`),d(!0),p(e=>e+720)')
+replace_once('},[g,u,a,n,w,b,i]),z=', '},[g,u,a,n,Q,w,b,i]),z=')
+# CPU hacking uses the active deck too; selected cards keep their original IDs.
+replace_once('let t=e.filter(e=>!n.hand.includes(e)),r=t.length>0?t:e,i=r[Math.floor(Math.random()*r.length)];', 'e=e.filter(id=>!T.getState().goldMode||cardAvailable(id));let t=e.filter(e=>!n.hand.includes(e)),r=t.length>0?t:e,i=r[Math.floor(Math.random()*r.length)];')
+replace_once('t&&[`下剋上`,`大暴落`].includes(t.name)&&(t.ap??0)<=n.ap', 't&&[`下剋上`,`大暴落`].includes(t.name)&&!goldCardBlock(T.getState(),n,t.id)&&(t.id===13?1:0)<=n.ap')
+# Main help is also available before a match has initialized goldMode.
+replace_once('U=N===`DEV_MAIL_2026`;return n?', 'U=N===`DEV_MAIL_2026`;if(n)return(0,G.jsx)(GoldRulebook,{react:W,cards:Ce,onClose:()=>r({rulesActive:!1})});return n?')
+replace_once('if(!e)return null;let i=[`🎯 目的`', 'if(!e)return null;return(0,G.jsx)(GoldRulebook,{react:W,cards:Ce,onClose:()=>t({tutorialActive:!1})});let i=[`🎯 目的`')
+s='import {GoldRulebook} from "../src/gold-rulebook.js";\nimport {goldShopIds,goldShopPrice,shopPurchaseKey,cardAvailable,goldCardBlock} from "../src/card-balance.js";\nimport {EQUIPMENT_ITEM_IDS} from "../src/player-info.js";\nimport {PixelItemIcon} from "../src/pixel-item-art.js";\nimport {createGoldState,goldScore,goldCompare,goldRankOf} from "../src/gold-rules.js";\nimport {goldCpuStep} from "../src/gold-cpu.js";\nimport {GoldResults,GoldBadge} from "../src/gold-ui.js";\nimport {PixelShop,PixelEvent} from "../src/pixel-scenes.js";\nimport {createCityBoard} from "../src/city-board-map.js";\nfunction It(){return createCityBoard()}\n'+s
 s+='\nexport {Mt as smallMap,Nt as mediumMap,Pt as largeMap,It as originalMap,Ti as miniGames,mr as tileDescriptions,tr as statusEquipment,nr as hasStatusEquipment};\n'
 (root/'assets/original-city-runtime.js').write_text(s)
 print('48-square district board, gold competition and presentation hooks generated.')
