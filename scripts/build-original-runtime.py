@@ -47,13 +47,14 @@ replace_once('children:[`❤️`,e.hp,` 💰`,e.p,`P 🎴`,e.hand?.length||0,` �
 replace_once('tr=[{key:`stealth`', 'tr=[{key:`shoppingCart`,field:`equip.shoppingCart`,emoji:`🛒`,title:`買い物カート`},{key:`foldBike`,field:`equip.foldBike`,emoji:`🚲`,title:`折りたたみ自転車`},{key:`backpack`,field:`equip.backpack`,emoji:`🎒`,title:`リュック`},{key:`stealth`')
 # Use the same item illustrations in the original desktop hand and the pixel shop.
 replace_once('children:[a.icon,` `,a.name]', 'children:[(0,G.jsx)(PixelItemIcon,{react:W,id:a.id,className:`city-hand-item-art`}),` `,a.name]')
+replace_once('title:e.title,children:e.emoji', 'title:e.title,children:(0,G.jsx)(PixelItemIcon,{react:W,id:EQUIPMENT_ITEM_IDS[e.key],className:`city-equipped-item-art`,alt:e.title})')
 # The full tutorial and rules must agree with the new result screen.
 start=s.index('`スコア ＝ `')
 end=s.index('})',s.index('※ゲーム終了時の陣地の価値：',start))+2
 replace_once(s[start:end], '`金缶×3 ＋ 対人キル×2。同点は所持P。金缶は現地で10P、対人キルで最大1個奪取。NPC討伐は加点なし。`')
 s=s.replace('スコア ＝ 所持P × 2 ＋ 陣地の価値(スラム3/商業6/高級10) ＋ 資源価値 ＋ キル×3 − デス×5','スコア ＝ 金缶×3 ＋ 対人キル×2。同点は所持P。金缶は現地で10P、キルで最大1個奪取。')
 s=s.replace('死亡回数が多いと大きく減点されるので注意！','金缶は1個まで奪われます。NPCや環境で倒れると、その場に1個落とします。')
-s='import {PixelItemIcon} from "../src/pixel-item-art.js";\nimport {createGoldState,goldScore,goldCompare} from "../src/gold-rules.js";\nimport {goldCpuStep} from "../src/gold-cpu.js";\nimport {GoldResults,GoldBadge} from "../src/gold-ui.js";\nimport {PixelShop,PixelEvent} from "../src/pixel-scenes.js";\nimport {createCityBoard} from "../src/city-board-map.js";\nfunction It(){return createCityBoard()}\n'+s
+s='import {EQUIPMENT_ITEM_IDS} from "../src/player-info.js";\nimport {PixelItemIcon} from "../src/pixel-item-art.js";\nimport {createGoldState,goldScore,goldCompare} from "../src/gold-rules.js";\nimport {goldCpuStep} from "../src/gold-cpu.js";\nimport {GoldResults,GoldBadge} from "../src/gold-ui.js";\nimport {PixelShop,PixelEvent} from "../src/pixel-scenes.js";\nimport {createCityBoard} from "../src/city-board-map.js";\nfunction It(){return createCityBoard()}\n'+s
 s+='\nexport {Mt as smallMap,Nt as mediumMap,Pt as largeMap,It as originalMap,Ti as miniGames,mr as tileDescriptions,tr as statusEquipment,nr as hasStatusEquipment};\n'
 (root/'assets/original-city-runtime.js').write_text(s)
 print('48-square district board, gold competition and presentation hooks generated.')

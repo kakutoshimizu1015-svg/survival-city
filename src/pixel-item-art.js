@@ -1,13 +1,18 @@
 // Small original pixel illustrations. SVG pixels stay crisp at every UI scale.
 const cache=new Map(),illustrated=new Map();
-const atlasURL=new URL('./art/survival-items.png',import.meta.url).href;
-// Atlas cells are sliced at runtime, preserving the original generated source image.
-const atlasItems=[17,18,19,20,21,48,47,'gold',46,8,28,27,25,1,30,34];
-let loading=false;
-function loadAtlas(){if(loading||typeof document==='undefined')return;loading=true;const image=new Image();image.onload=()=>{const w=image.naturalWidth/4,h=image.naturalHeight/4;for(let i=0;i<atlasItems.length;i++){const c=document.createElement('canvas');c.width=c.height=160;const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.drawImage(image,(i%4)*w,Math.floor(i/4)*h,w,h,0,0,160,160);illustrated.set(atlasItems[i],c.toDataURL('image/png'));}window.dispatchEvent(new Event('city-item-art-ready'));};image.src=atlasURL;}
-export function PixelItemIcon({react:R,id,className='',alt=''}){const [,refresh]=R.useState(0);R.useEffect(()=>{const update=()=>refresh(v=>v+1);window.addEventListener('city-item-art-ready',update);return()=>window.removeEventListener('city-item-art-ready',update);},[]);return R.createElement('img',{src:itemArt(id),alt,className,draggable:false});}
+// All 51 card IDs have an illustrated cell. Later sheets replace the early placeholder art.
+const atlases=[
+ {file:'survival-items.png',ids:[17,18,19,20,21,48,47,'gold',46,8,28,27,25,1,30,34]},
+ {file:'survival-items-actions.png',ids:[0,2,3,4,5,6,7,9,10,11,12,13,14,15,16,22]},
+ {file:'survival-items-tools.png',ids:[23,24,26,29,31,32,33,34,35,36,37,38,39,40,41,42]},
+ {file:'survival-items-special.png',ids:[43,44,45,30,48,49,50,'can','trash','tent','key','dice','medical','box','trophy','wallet']}
+];
+const sources=new Map();for(const sheet of atlases)sheet.ids.forEach((id,index)=>sources.set(id,{sheet,index}));
+export const ITEM_ART_IDS=[...sources.keys()].filter(id=>typeof id==='number').sort((a,b)=>a-b);
+function loadAtlas(id){const source=sources.get(id);if(!source||source.sheet.loading||typeof document==='undefined')return;const sheet=source.sheet;sheet.loading=true;const image=new Image();image.onload=()=>{const w=image.naturalWidth/4,h=image.naturalHeight/4;sheet.ids.forEach((key,i)=>{if(sources.get(key).sheet!==sheet)return;const c=document.createElement('canvas');c.width=c.height=160;const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.drawImage(image,(i%4)*w,Math.floor(i/4)*h,w,h,0,0,160,160);illustrated.set(key,c.toDataURL('image/png'));});window.dispatchEvent(new Event('city-item-art-ready'));};image.onerror=()=>{sheet.loading=false;};image.src=new URL('./art/'+sheet.file,import.meta.url).href;}
+export function PixelItemIcon({react:R,id,className='',alt=''}){const [,refresh]=R.useState(0);R.useEffect(()=>{const update=()=>refresh(v=>v+1);if(illustrated.has(id))update();window.addEventListener('city-item-art-ready',update);return()=>window.removeEventListener('city-item-art-ready',update);},[id]);return R.createElement('img',{src:itemArt(id),alt,className,draggable:false});}
 
-export function itemArt(id){loadAtlas();if(illustrated.has(id))return illustrated.get(id);if(cache.has(id))return cache.get(id);let p='';const ink='#252c2c',light='#e0c68e',metal='#9aa99b',wood='#a57950',red='#b76549',green='#708d68';
+export function itemArt(id){loadAtlas(id);if(illustrated.has(id))return illustrated.get(id);if(cache.has(id))return cache.get(id);let p='';const ink='#252c2c',light='#e0c68e',metal='#9aa99b',wood='#a57950',red='#b76549',green='#708d68';
  const r=(x,y,w,h,c)=>p+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`;
  const poly=(points,c)=>p+=`<polygon points="${points}" fill="${c}"/>`;
  const wheel=(x,y)=>{r(x,y,8,8,ink);r(x+2,y+2,4,4,metal);};

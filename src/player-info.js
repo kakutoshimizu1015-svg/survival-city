@@ -1,2 +1,4 @@
+import {itemArt} from './pixel-item-art.js';
+export const EQUIPMENT_ITEM_IDS={stealth:0,hasID:2,rainGear:1,bicycle:24,foldBike:45,shoes:25,cart:26,shoppingCart:46,shield:27,helmet:28,doll:29,backpack:8};
 const equipment=[['stealth','💨','ステルス'],['hasID','🪪','身分証'],['rainGear','☂️','雨具'],['equip.bicycle','🚲','自転車'],['equip.foldBike','🚲','折りたたみ自転車'],['equip.shoes','👢','安全靴'],['equip.cart','🛒','リヤカー'],['equip.shoppingCart','🛒','買い物カート'],['equip.shield','🛡️','盾'],['equip.helmet','🪖','ヘルメット'],['equip.doll','🎎','身代わり人形'],['equip.backpack','🎒','リュック']];
-export function equipmentHTML(p){return equipment.filter(([path])=>path.split('.').reduce((v,key)=>v?.[key],p)).map(([,icon,name])=>`<span title="${name}" aria-label="${name}">${icon}</span>`).join('')||'<small>装備なし</small>';}
+export function equipmentHTML(p){return equipment.filter(([path])=>path.split('.').reduce((v,key)=>v?.[key],p)).map(([path,icon,name])=>`<span title="${name}" aria-label="${name}"><img src="${itemArt(EQUIPMENT_ITEM_IDS[path.split('.').at(-1)])}" alt="${name}"></span>`).join('')||'<small>装備なし</small>';}
