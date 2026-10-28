@@ -1,4 +1,4 @@
-import {ATOM_BOARD,atomElevation,atomDistricts} from "./atom-map.js";
+import {ATOM_BOARD,createAtomElevation,atomDistricts,ATOM_LIGHT,isAtom} from "./atom-map.js";
 import {buildAtomScenery,createAtomThreatModel} from "./atom-scenery.js";
 import {createAtomNpcModel} from "./atom-models.js";
 import {buildKobanLandmarks} from "./koban-landmark.js";
@@ -14,17 +14,17 @@ import { buildDistrictScenery } from './city-scenery.js';
 // Presentation only: the original store remains the sole source of game rules.
 export const DISTRICTS={slum:{name:'スラム街',color:'#aa8665',ground:'#675f4e'},commercial:{name:'商業地区',color:'#df9c54',ground:'#907956'},luxury:{name:'高級住宅街',color:'#b3d7c0',ground:'#7b9876'}};
 export function createOriginalWorld(host,map){
- const isAtomBoard=map[0]?.boardLayout===ATOM_BOARD.id,isCityBoard=isAtomBoard||map[0]?.boardLayout===CITY_BOARD.id,districts=isAtomBoard?atomDistricts:DISTRICTS;
+ const isAtomBoard=isAtom({mapData:map}),atomHeight=isAtomBoard?createAtomElevation(map):null,isCityBoard=isAtomBoard||map[0]?.boardLayout===CITY_BOARD.id,districts=isAtomBoard?atomDistricts:DISTRICTS;
  const T=window.THREE,reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
  const renderer=new T.WebGLRenderer({antialias:false,alpha:true,powerPreference:'low-power'});renderer.setPixelRatio(1);renderer.outputColorSpace=T.SRGBColorSpace;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;
  renderer.domElement.className='original-world-canvas';host.prepend(renderer.domElement);
  const scene=new T.Scene(),camera=new T.OrthographicCamera(-60,60,40,-40,.1,500);
- scene.fog=new T.FogExp2(0x647c79,.0035);
+ scene.fog=new T.FogExp2(isAtomBoard?ATOM_LIGHT.day.fog:0x647c79,isAtomBoard?.0027:.0035);if(isAtomBoard)scene.background=new T.Color(ATOM_LIGHT.day.sky);
  const skyLight=new T.HemisphereLight(0xc5e2e0,0x51472f,2.1);scene.add(skyLight);
  const sun=new T.DirectionalLight(0xffd7a1,3);sun.position.set(-35,80,35);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-110,right:110,top:85,bottom:-85,near:1,far:240});sun.shadow.bias=-.0008;scene.add(sun);
  const materialCache=new Map(),batches=new Map(),boxGeometry=new T.BoxGeometry(1,1,1),dummy=new T.Object3D();
  const groundY=.38, animated=[], assets=[], nightEffects=[], windowMaterials=[];let raised=false;
- const elevation=(x,z=0)=>isAtomBoard?atomElevation(x,z):!isCityBoard?groundY:groundY+1.2*Math.max(0,Math.min(1,(x+24)/12))+1.6*Math.max(0,Math.min(1,(x-12)/12));
+ const elevation=(x,z=0)=>isAtomBoard?atomHeight(x,z):!isCityBoard?groundY:groundY+1.2*Math.max(0,Math.min(1,(x+24)/12))+1.6*Math.max(0,Math.min(1,(x-12)/12));
  const offset=(x,z)=>raised?elevation(x,z)-groundY:0;
  function mat(color,emissive=false){const key=color+':'+emissive;if(!materialCache.has(key))materialCache.set(key,new T.MeshLambertMaterial({color,emissive:emissive?color:0,emissiveIntensity:emissive?.65:0}));return materialCache.get(key);}
  function block(x,y,z,w,h,d,color,opts={}){
@@ -46,6 +46,7 @@ export function createOriginalWorld(host,map){
  function nightStrip(x,y,z,w,color){const m=mesh(new T.BoxGeometry(w,.12,.12),new T.MeshBasicMaterial({color}),x,y,z);m.visible=false;nightEffects.push({object:m,kind:'neon'});return m;}
  function updateNight(){
   const night=!!state.isNight;sun.intensity=night?.65:3;sun.color.set(night?'#9eb6ed':'#ffd7a1');skyLight.intensity=night?.65:2.1;scene.fog.color.set(night?0x263b53:0x647c79);
+  if(isAtomBoard){const palette=ATOM_LIGHT[night?'night':'day'];scene.background.set(palette.sky);scene.fog.color.set(palette.fog);water.material.color.set(palette.water);sun.color.set(palette.sun);sun.intensity=night?.85:2.5;skyLight.color.set(palette.ambient);skyLight.intensity=night?.85:1.8;host.dataset.atomLighting=night?'night':'day';}
   for(const m of windowMaterials)m.emissiveIntensity=night?2.4:.18;
   for(const e of nightEffects){e.object.visible=night;if(e.object.material?.transparent)e.object.material.opacity=e.kind==='fire'?.68:.5;}
   host.dataset.nightLighting=JSON.stringify({active:night,windows:windowMaterials.length,fire:nightEffects.filter(e=>e.kind==='fire').length,neon:nightEffects.filter(e=>e.kind==='neon').length});
@@ -121,7 +122,7 @@ export function createOriginalWorld(host,map){
   for(const side of [-1,1]){block(x+side*(w/2+.5),.9,z,.4,.8,d+1,'#38664a');tree(x+side*(w/2+.2),z-d/2-.8,.6,true);}
  }
  let counts={slum:0,commercial:0,luxury:0},features={},sceneryLots=[];
- if(isAtomBoard){const scenery=buildAtomScenery({T,scene,block,mesh,mat,cylinder,line,sign,squares,edges,elevation,nightGlow,nightStrip,animated});counts=scenery.counts;features=scenery.features;sceneryLots=scenery.lots;}else if(isCityBoard){const scenery=buildDistrictScenery({T,block,mesh,mat,cylinder,line,texture,sign,building,tree,mansion,worldPoint,animated,rnd,elevation,nightGlow,nightStrip});counts=scenery.counts;features={...scenery.features,...buildCityBackdrop({T,scene,block,mesh,mat,animated,width,depth,rnd})};sceneryLots=scenery.lots;}else{
+ if(isAtomBoard){const scenery=buildAtomScenery({T,scene,block,mesh,mat,cylinder,line,sign,squares,edges,elevation,nightGlow,nightStrip,animated,windowMaterials});counts=scenery.counts;features=scenery.features;sceneryLots=scenery.lots;}else if(isCityBoard){const scenery=buildDistrictScenery({T,block,mesh,mat,cylinder,line,texture,sign,building,tree,mansion,worldPoint,animated,rnd,elevation,nightGlow,nightStrip});counts=scenery.counts;features={...scenery.features,...buildCityBackdrop({T,scene,block,mesh,mat,animated,width,depth,rnd})};sceneryLots=scenery.lots;}else{
  const lots=[],builtLots=[];
  for(let z=-depth/2+5;z<depth/2-4;z+=6.5)for(let x=-width/2+5;x<width/2-4;x+=6.5){const area=districtAt(x,z),clearance=area==='luxury'?4.8:3.7;if(roadDistance(x,z)<clearance)continue;lots.push({x,z,area,distance:Math.hypot(x,z)});}
  lots.sort((a,b)=>a.distance-b.distance);
@@ -219,7 +220,7 @@ export function createOriginalWorld(host,map){
   if(cameraMode==='play')followAction(now);
   playerItems.draw(now,cam.yaw);combatEffects.draw(now);host.dataset.goldModels=JSON.stringify(goldModels.draw(state,now));
   host.dataset.npcModels=JSON.stringify(npcStatus);
-  projectDOM();renderer.render(scene,camera);host.dataset.triangles=String(renderer.info.render.triangles);host.dataset.districts=JSON.stringify(counts);host.dataset.scenery=JSON.stringify(features);host.dataset.interiorLots=String(sceneryLots.filter(p=>p.col>0&&p.col<8&&p.row>0&&p.row<5).length);host.dataset.boardLayout=isAtomBoard?ATOM_BOARD.id:isCityBoard?CITY_BOARD.id:'legacy';host.dataset.actorCount=String([...actors.values()].filter(a=>a.sprite.visible).length+npcStatus.length);
+  projectDOM();renderer.render(scene,camera);host.dataset.triangles=String(renderer.info.render.triangles);host.dataset.districts=JSON.stringify(counts);host.dataset.scenery=JSON.stringify(features);host.dataset.interiorLots=String(sceneryLots.filter(p=>p.col>0&&p.col<8&&p.row>0&&p.row<5).length);host.dataset.boardLayout=isAtomBoard?map[0].boardLayout:isCityBoard?CITY_BOARD.id:'legacy';host.dataset.actorCount=String([...actors.values()].filter(a=>a.sprite.visible).length+npcStatus.length);
  }
  // Vehicle moves take temporary priority; otherwise show the current turn, human or CPU.
  function followTarget(x,z,y,snap=false){

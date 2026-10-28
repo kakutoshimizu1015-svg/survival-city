@@ -7,7 +7,7 @@ export function atomActions(s,p){
  const t=s.mapData.find(t=>t.id===p.pos),a=s.atom,out=[];
  if(t?.atomKind==='taxi')for(const id of (a.power===0?[1,20]:[10,28]).filter(id=>id!==p.pos))out.push({id:'taxi:'+id,label:`空中タクシー → ${id}番`,detail:'1AP・3P / 着地先の効果あり / この街区の熱が上がる',ap:1,p:3,to:id});
  if(t?.atomKind==='switch')out.push({id:'switch',label:'次の路線を切替',detail:`1AP / 次ラウンドから${a.nextPower===0?'南北':'東西'}線へ / 全員が使う路線`,ap:1,p:0});
- if(t?.atomKind==='chute')out.push({id:'chute',label:`非常シュート → ${p.pos===37?10:28}番`,detail:'1AP / 下層へ一方通行 / 着地先の効果あり',ap:1,p:0,to:p.pos===37?10:28});
+ if(t?.atomKind==='chute'){const to=t.atomExit??(p.pos===37?10:28);out.push({id:'chute',label:`非常シュート → ${to}番`,detail:'1AP / 下層へ一方通行 / 着地先の効果あり',ap:1,p:0,to});}
  if(t?.atomKind==='hot')out.push({id:'hot',label:`原子炉を横断 → ${p.pos===43?53:43}番`,detail:'1AP・HP−10 / 対岸へ近道 / この街区の熱が上がる',ap:1,p:0,to:p.pos===43?53:43});
  if(t?.atomKind==='reclaim'&&a.boss.phase==='cooldown'&&a.claims[p.id]!==a.boss.cycle)out.push({id:'reclaim',label:'廃熱を回収 ＋5P',detail:'1AP / 冷却中に1人1回 / 次の捕捉候補になりやすい',ap:1,p:0});
  return out;
