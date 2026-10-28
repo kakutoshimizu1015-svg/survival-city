@@ -1,16 +1,11 @@
 // A recognizable police box beside each police square, leaving the token and road open.
-export function buildKobanLandmarks({T,squares,block,mesh,mat,sign,nightGlow,nightStrip,roadDistance,width,depth,scale=1,lots=[]}){
- const landmarks=[];
+export function buildKobanLandmarks({T,squares,block,mesh,mat,sign,nightGlow,nightStrip,scale=1}){
+ const landmarks=[],offsetScale=scale;scale*=.5;
  for(const tile of squares.values()){
   if(tile.type!=='koban')continue;
-  const distance=6.6*scale;
-  const candidates=[0,Math.PI/2,Math.PI,-Math.PI/2].map(angle=>{
-   const x=tile.x-Math.sin(angle)*distance,z=tile.z-Math.cos(angle)*distance;
-   const inside=Math.abs(x)+3*scale<width/2&&Math.abs(z)+3*scale<depth/2;
-   const clearance=Math.min(roadDistance(x,z),...lots.map(p=>Math.hypot(p.x-x,p.z-z)-4));
-   return {x,z,angle,score:clearance-(inside?0:100)};
-  });
-  const site=candidates.sort((a,b)=>b.score-a.score)[0],{x,z,angle}=site,c=Math.cos(angle),s=Math.sin(angle);
+  // Upper-left of the marker in the fixed play camera (yaw .3), at half size.
+  const site={x:tile.x-3*offsetScale,z:tile.z-3.2*offsetScale,angle:Math.atan2(3,3.2)};
+  const {x,z,angle}=site,c=Math.cos(angle),s=Math.sin(angle);
   const point=(u,v)=>[x+(u*c+v*s)*scale,z+(-u*s+v*c)*scale];
   const box=(u,y,v,w,h,d,color,glow=false)=>{const [xx,zz]=point(u,v);block(xx,.38+(y-.38)*scale,zz,w*scale,h*scale,d*scale,color,{ry:angle,glow});};
   const label=(u,y,v,text,bg,fg,w,h)=>{const [xx,zz]=point(u,v);sign(xx,.38+(y-.38)*scale,zz,text,bg,fg,w*scale,h*scale,angle);};

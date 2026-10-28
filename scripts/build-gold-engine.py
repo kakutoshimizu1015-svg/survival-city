@@ -10,7 +10,7 @@ s='import {escapeChat} from "../src/chat-utils.js";\nimport {handleShopAction} f
 once('var _={gamePhase:', 'var _={goldMode:false,gold:null,goldShop:null,shopAccess:null,gamePhase:')
 # Rest stops protect occupants before rolling a hit or consuming a doll.
 once('f.push(n.id),n.equip?.doll?', 'f.push(n.id),v.getState().goldMode&&s.find(tile=>tile.id===n.pos)?.type===`shelter`?(Y(`🏕️ ${n.name}は休憩所で収集車を回避！`),v.getState().addEventPopup(n.id,`🏕️`,`休憩所で安全！`,`収集車の攻撃を必ず回避`,`good`)):n.equip?.doll?')
-# Both dash paths enter the ordinary landing handler; the skill already paid 3 AP.
+# Both dash paths enter the ordinary landing handler; the skill already paid its AP cost.
 once('let r=v.getState(),i=r.mapData.find(e=>e.id===t),a=r.players[r.turn],o=a.pos,', 'let r=v.getState(),i=r.mapData.find(e=>e.id===t),a=r.players[r.turn];const dash=r.goldMode&&r.isDashPicking;if(!i||!a||dash&&(!r.isBranchPicking||!r.currentBranchOptions.includes(t)))return;let o=a.pos,')
 once('d=s+u;if(r.updateCurrentPlayer', 'd=dash?0:s+u;if(r.updateCurrentPlayer')
 once('rainGear:r.isRainy?!1:e.rainGear,nextMoveCostPenalty:0,', 'rainGear:dash?e.rainGear:r.isRainy?!1:e.rainGear,nextMoveCostPenalty:dash?e.nextMoveCostPenalty:0,')

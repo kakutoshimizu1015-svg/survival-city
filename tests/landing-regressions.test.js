@@ -16,14 +16,14 @@ function fixture(type='normal',fork=false){
  const dash=new Function('e','r','n','landDash','return '+extract(skills,'d=()=>',',f=()=>'))(store,net,say,move);
  return {store,move,dash,log,popups,stats,random,damage,net,setNet:value=>network=value,sent};
 }
-test('automatic dash lands on events and friendly NPCs, pays exactly 3 AP, skips intermediate squares',()=>{
+test('automatic dash lands on events and friendly NPCs, pays exactly 2 AP, skips intermediate squares',()=>{
  const f=fixture('event');f.store.setState({friendPos:3,yakuzaPos:1,traps:[{tileId:2,ownerId:9,type:'bottle'}]});f.dash();const s=f.store.getState(),p=s.players[0];
- assert.equal(p.pos,3);assert.equal(p.ap,5);assert.equal(p.hp,50);assert.equal(p.cannotMove,undefined);assert.equal(p.cans,1);assert.equal(p.nextMoveCostPenalty,2);assert.equal(s.friendCd,2);assert.equal(s.storyActive,true);assert.equal(s.traps.length,1);assert.deepEqual(f.stats,[['tiles',3]]);assert.equal(s.isDashPicking,false);
+ assert.equal(p.pos,3);assert.equal(p.ap,6);assert.equal(p.hp,50);assert.equal(p.cannotMove,undefined);assert.equal(p.cans,1);assert.equal(p.nextMoveCostPenalty,2);assert.equal(s.friendCd,2);assert.equal(s.storyActive,true);assert.equal(s.traps.length,1);assert.deepEqual(f.stats,[['tiles',3]]);assert.equal(s.isDashPicking,false);
 });
 test('chosen dash landing triggers hospital, police box, traps and NPC effects exactly once',()=>{
  for(const type of ['center','koban','normal']){
   const f=fixture(type,true);f.store.setState({friendPos:3,traps:type==='normal'?[{tileId:3,ownerId:9,type:'bottle'}]:[]});f.dash();assert.equal(f.store.getState().players[0].pos,0);assert.equal(f.store.getState().isDashPicking,true);f.move(999);assert.equal(f.store.getState().isDashPicking,true);f.move(3);
-  const s=f.store.getState(),p=s.players[0];assert.equal(p.cans,1);assert.equal(s.friendCd,2);assert.equal(s.isDashPicking,false);assert.equal(p.ap,type==='koban'?0:5);
+  const s=f.store.getState(),p=s.players[0];assert.equal(p.cans,1);assert.equal(s.friendCd,2);assert.equal(s.isDashPicking,false);assert.equal(p.ap,type==='koban'?0:6);
   if(type==='center')assert.equal(p.hp,80);if(type==='koban')assert.equal(p.cannotMove,true);if(type==='normal'){assert.equal(p.hp,35);assert.equal(s.traps.length,0);}
  }
 });
@@ -31,11 +31,20 @@ test('guest dash requests resolve on host through the same landing function',()=
  const host=fixture('event',true),guest=fixture('event',true);const sent=[];
  guest.setNet({status:'connected',isHost:false,myUserId:'human',hostConnection:{send:msg=>sent.push(msg)}});guest.dash();assert.equal(sent[0].actionType,'ACTION_DASH');assert.equal(guest.store.getState().players[0].ap,8);
  host.store.setState({friendPos:3});host.dash();guest.store.setState({players:host.store.getState().players,isDashPicking:true,isBranchPicking:true,currentBranchOptions:[3,4]});guest.move(3);
- assert.equal(sent[1].actionType,'EXECUTE_MOVE');assert.equal(guest.store.getState().players[0].pos,0);host.move(sent[1].payload);assert.equal(host.store.getState().players[0].ap,5);assert.equal(host.store.getState().players[0].cans,1);assert.equal(host.store.getState().storyActive,true);
+ assert.equal(sent[1].actionType,'EXECUTE_MOVE');assert.equal(guest.store.getState().players[0].pos,0);host.move(sent[1].payload);assert.equal(host.store.getState().players[0].ap,6);assert.equal(host.store.getState().players[0].cans,1);assert.equal(host.store.getState().storyActive,true);
 });
 test('truck route cannot damage resting players or consume dolls; exposed players still take damage',async()=>{
  const f=fixture('shelter');f.store.setState({truckPos:0,policeHp:0,players:[{...f.store.getState().players[0],pos:3,hp:100,equip:{doll:true}},{...f.store.getState().players[0],id:1,name:'相手',pos:0,hp:100}],gold:{},cityBeat:null});
  const factory=new Function('v','X','Y','G','Ua','q','J','Wa','Math','beginRound','roundWait','roundBeat','movingBeat','encounterBeat','finishRound','pickNpcNext','return '+extract(engine,'Ga=async()=>',',Z=!1'));
  const beats=[];await factory(f.store,async()=>{const beat=f.store.getState().cityBeat;if(beat)beats.push(beat);},()=>{},()=>{},()=>({finalPos:0,hitList:[3,0,3],finalPrevPos:3}),f.damage,()=>{},()=>{},f.random,beginRound,roundWait,roundBeat,movingBeat,encounterBeat,finishRound,pickNpcNext)();
  const [safe,exposed]=f.store.getState().players;assert.equal(safe.hp,100);assert.equal(safe.equip.doll,true);assert.equal(exposed.hp,50);assert.ok(beats.some(b=>b.lines?.some(l=>l.includes('休憩所'))));assert.equal(npcImpact(f.store.getState(),'truck',safe,{type:'shelter'}).tone,'good');
+});
+test('dash accepts exactly 2 AP, rejects 1 AP, and CPU delegates to the same landing rules',()=>{
+ for(const ap of [1,2,3]){
+  const f=fixture('center');f.store.getState().updateCurrentPlayer({ap});f.dash();const p=f.store.getState().players[0];assert.equal(p.ap,ap<2?ap:ap-2);assert.equal(p.pos,ap<2?0:3);assert.equal(p.hp,ap<2?50:80);
+ }
+ const runtime=readFileSync(new URL('../assets/original-city-runtime.js',import.meta.url),'utf8');assert.ok(runtime.includes('action:Ge,condition:F(2)&&j&&!N'));assert.ok(runtime.includes('疾風ダッシュ (2AP)'));
+ const start=runtime.indexOf('i&&i.score>0&&(e.goldMode?'),end=runtime.indexOf('}else if(n.charType===`sales`',start);assert.ok(start>0&&end>start);
+ const cpu=new Function('T','e','n','Ge','le','x','H','i','let d=false;'+runtime.slice(start,end)+';return d;');
+ const f=fixture('center',true);f.store.getState().updateCurrentPlayer({ap:2,isCPU:true});const s=f.store.getState();assert.equal(cpu(f.store,s,s.players[0],f.dash,f.move,()=>{throw Error('duplicate encounter');},()=>{},{score:10,tileId:3}),true);assert.equal(f.store.getState().players[0].ap,0);assert.equal(f.store.getState().players[0].hp,80);
 });

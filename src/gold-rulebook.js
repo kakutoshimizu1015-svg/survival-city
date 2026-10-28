@@ -6,6 +6,7 @@ import {PixelItemIcon} from './pixel-item-art.js';
 const characterTips={yankee:'近くの相手からPを取り、パンチで戦う。',athlete:'雨でも移動しやすい。ダッシュで近道できる。',survivor:'警察をかわすのが得意。休むとHPが回復する。',sales:'バイトと買い物が得意。手札を相手に売りつける。',hacker:'手札をたくさん持てる。どこからでも買い物できる。',musician:'仲間を集めてPをかせぐ。自分の陣地も守れる。',doctor:'自分のHPが回復する。相手への治療には毒も入る。',gambler:'サイコロが得意。APでカードを手に入れる。',detective:'NPCを動かす。道に罠をしかける。',chef:'食べ物で多く回復する。料理で攻撃もできる。',scavenger:'ゴミや空き缶から、装備や武器を作る。',billionaire:'Pをかせぐのが得意。お金で相手を困らせる。',god:'みんなを助けて、お礼のPをもらう。',emperor:'空き缶が多いほど強くなる。缶を飛ばして攻撃する。',sennin:'何もせずに待つと力がたまる。ためた力で大わざを使う。'};
 const skillText=(c,kind)=>{
  let text=`${c[kind]?.name||''} ${c[kind]?.desc||''}`;
+ if(c.id==='athlete'&&kind==='action')return '2APで3マス先へダッシュ。途中は飛び越え、着地先のイベントやNPCの効果は発生する。';
  if(c.id==='hacker'&&kind==='action')return '3APで、どこからでもショップを開く。品替えは店で3P、1ターン1回。';
  if(c.id==='emperor')text=text.replace('6ターン限定','1ターンに6マスまで');
  return text.replace('自身は死亡ペナ半減。','').replace('④死亡時P没収免除。','');

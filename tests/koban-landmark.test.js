@@ -12,7 +12,7 @@ test('every police square has a 3D police box beside the road with a sign, red l
   nightGlow:(...args)=>glows.push(args),nightStrip:(x,y,z,w)=>mesh(new T.BoxGeometry(w,.1,.1),new T.MeshBasicMaterial(),x,y,z)
  });
  assert.equal(models.length,map.filter(t=>t.type==='koban').length);assert.ok(signs.some(s=>s.text.includes('KOBAN')));assert.ok(signs.some(s=>s.text==='巡回中'));assert.equal(glows.length,models.length);assert.ok(blocks.some(b=>b.opts.glow&&b.color==='#e46e54'));
- for(const m of models){assert.ok(roadDistance(m.x,m.z)>5,'building clears the road');const t=squares.get(m.tileId);assert.ok(Math.hypot(m.x-t.x,m.z-t.z)>6);assert.ok(Math.abs(m.x)+3<60);}
+ for(const m of models){const t=squares.get(m.tileId);assert.ok(m.x<t.x&&m.z<t.z);assert.ok(Math.hypot(m.x-t.x,m.z-t.z)<4.5);const right=(m.x-t.x)*Math.cos(.3)-(m.z-t.z)*Math.sin(.3);const down=Math.sin(.65)*((m.x-t.x)*Math.sin(.3)+(m.z-t.z)*Math.cos(.3));assert.ok(right<0&&down<0,'upper-left in the play camera');assert.ok(Math.abs(m.x)+3<60);}
  scene.updateMatrixWorld(true);for(const b of blocks){const bounds=new T.Box3().setFromObject(b.o);assert.ok(bounds.min.y>=.3);assert.ok(Number.isFinite(bounds.max.x));}
- const bounds=new T.Box3().setFromObject(scene);assert.ok(bounds.max.y>5);
+ const bounds=new T.Box3().setFromObject(scene);assert.ok(bounds.max.y>2.7&&bounds.max.y<3);
 });

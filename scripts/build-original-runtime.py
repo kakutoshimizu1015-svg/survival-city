@@ -7,6 +7,12 @@ def replace_once(old,new):
  global s
  assert s.count(old)==1,(old,s.count(old))
  s=s.replace(old,new,1)
+# The main city UI and CPU use the same 2 AP dash as the host skill handler.
+replace_once('action:Ge,condition:F(3)&&j&&!N', 'action:Ge,condition:F(2)&&j&&!N')
+s=s.replace('疾風ダッシュ (3AP)', '疾風ダッシュ (2AP)').replace('疾風ダッシュ（3AP）', '疾風ダッシュ（2AP）').replace('`3AP: ピッタリ3マス先へ跳躍`','`2AP: ピッタリ3マス先へ跳躍`')
+replace_once('children:E.action.name', 'children:E.id===`athlete`?E.action.name.replace(`3AP`,`2AP`):E.action.name')
+replace_once('n.charType===`athlete`&&n.ap>=3&&', 'n.charType===`athlete`&&n.ap>=(e.goldMode?2:3)&&!n.cannotMove&&')
+replace_once('i&&i.score>0&&(T.getState().updateCurrentPlayer(e=>({ap:e.ap-3,pos:i.tileId})),H(`🏃 ${n.name}が【疾風ダッシュ】！(評価:${i.score})`),x(n.id),d=!0)', 'i&&i.score>0&&(e.goldMode?(Ge(),T.getState().isDashPicking&&T.getState().currentBranchOptions.includes(i.tileId)&&le(i.tileId)):(T.getState().updateCurrentPlayer(e=>({ap:e.ap-3,pos:i.tileId})),H(`🏃 ${n.name}が【疾風ダッシュ】！(評価:${i.score})`),x(n.id)),d=!0)')
 replace_once('id:`tile-${t.id}`,','id:`tile-${t.id}`,"data-original-tile":t.id,')
 replace_once('style:{gridColumn:A.col,gridRow:A.row,position:`relative`','"data-original-player":t.id,style:{gridColumn:A.col,gridRow:A.row,position:`relative`')
 replace_once('onClick:a?s:void 0,onMouseEnter:F', 'onClick:a?s:e=>window.cityInspectTile?.(t.id),onMouseEnter:F')
