@@ -1,5 +1,5 @@
-import {goldShopIds,goldShopPrice,shopPurchaseKey,shopVisitKey} from './card-balance.js';
-export function shopCatalog(s,p,cards,offer=s.goldShop){return (offer?.ids||[]).map(id=>{const c=cards.find(c=>c.id===id);return {...c,price:goldShopPrice(c,p),stock:Math.max(0,4-(s.purchasedCards?.[shopPurchaseKey(s,p,id)]||0))};});}
+import {cardAvailable,goldShopIds,goldShopPrice,shopPurchaseKey,shopVisitKey} from './card-balance.js';
+export function shopCatalog(s,p,cards,offer=s.goldShop){return (offer?.ids||[]).filter(id=>cardAvailable(id)&&cards.some(c=>c.id===id)).map(id=>{const c=cards.find(c=>c.id===id);return {...c,price:goldShopPrice(c,p),stock:Math.max(0,4-(s.purchasedCards?.[shopPurchaseKey(s,p,id)]||0))};});}
 // All prices, stock and inventory changes are computed from the host's current state.
 export function shopTransaction(s,cards,action,request={},actorId,random=Math.random){
  const p=s.players[s.turn],key=shopVisitKey(s),offer=s.goldShop?.key===key?s.goldShop:null;

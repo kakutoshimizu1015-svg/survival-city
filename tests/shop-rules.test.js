@@ -23,3 +23,8 @@ test('host receive hook binds SHOP requests to the actual peer before the legacy
  receive(packet,{guestUserId:'other'},()=>({isHost:true}),{getState:()=>state},handler);
  receive(packet,{guestUserId:'guest'},()=>({isHost:false}),{getState:()=>state},handler);assert.equal(called,1);
 });
+test('stale offers cannot display or sell retired cards, even before host cleanup',()=>{
+ const s=setup(),catalog=[...cards,{id:5,type:'action'},{id:43,type:'action'}];s.goldShop.ids=[17,18,5,43,999];
+ assert.deepEqual(shopCatalog(s,s.players[0],catalog).map(c=>c.id),[17,18]);
+ for(const id of [5,43,999]){const result=shopTransaction(s,catalog,'BUY',request(s,{cart:{[id]:1}}),0);assert.equal(result.ok,false);assert.equal(result.patch?.players,undefined);}
+});

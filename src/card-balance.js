@@ -5,7 +5,15 @@ export const RETIRED_CARD_IDS=Object.freeze([4,5,9,10,11,14,43]);
 export const BASIC_WEAPONS=Object.freeze([17,18]);
 export const GOLD_COMMON_CARDS=Object.freeze([0,1,2,3,6,7,8,15,16,17,18,19,20,24,25,26,27,28,29,30,31,32,33,34]);
 export const GOLD_RARE_CARDS=Object.freeze([12,13,35,36,37]);
-export const cardAvailable=id=>!RETIRED_CARD_IDS.includes(id);
+export const cardAvailable=id=>Number.isInteger(id)&&id>=0&&id<=50&&!RETIRED_CARD_IDS.includes(id);
+// Hosts also clean older/mixed-version state; guests receive the authoritative result.
+export function retiredCardCleanupPatch(s){
+ if(!s.goldMode)return null;
+ const patch={};
+ if(s.players.some(p=>p.hand?.some(id=>!cardAvailable(id))))patch.players=s.players.map(p=>p.hand?.some(id=>!cardAvailable(id))?{...p,hand:p.hand.filter(cardAvailable)}:p);
+ if(s.goldShop?.ids?.some(id=>!cardAvailable(id)))patch.goldShop={...s.goldShop,ids:s.goldShop.ids.filter(cardAvailable),revision:(s.goldShop.revision||0)+1};
+ return Object.keys(patch).length?patch:null;
+}
 const pick=(ids,random)=>ids[Math.min(ids.length-1,Math.floor(random()*ids.length))];
 export function drawGoldCard(random=Math.random,rareChance=.05){return pick(random()<rareChance?GOLD_RARE_CARDS:GOLD_COMMON_CARDS,random);}
 export function goldRewardCard(id,random=Math.random){return cardAvailable(id)?id:drawGoldCard(random);}

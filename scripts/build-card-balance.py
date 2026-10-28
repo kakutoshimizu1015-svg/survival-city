@@ -14,8 +14,8 @@ def catalog(once):
  once('export{e as t};','for(const card of e){const original={...card};Object.defineProperty(card,"desc",{enumerable:true,get(){return gameStore.getState().goldMode?goldCardDescription(original):original.desc;}})}export{e as t};')
 generate('original-card-catalog.js','cards-BGoWm8gy.js',catalog)
 def actions(once):
- once('var a=(a,o)=>{','import {goldCardBlock,lastGoldRank,goldComebackTarget} from "../src/card-balance.js";\nimport {sameTeam} from "../src/gold-rules.js";\nvar a=(a,o)=>{')
- once('if(!m)return;let h=', 'if(!m)return;if(c.goldMode){if(!p||p.hand?.[a]!==o)return;const reason=goldCardBlock(c,p,o);if(reason&&!f){n(`❌ ${reason}`);c.showToast(reason);return}}let h=')
+ once('var a=(a,o)=>{','import {cardAvailable,goldCardBlock,lastGoldRank,goldComebackTarget} from "../src/card-balance.js";\nimport {sameTeam} from "../src/gold-rules.js";\nvar a=(a,o)=>{')
+ once('if(!m)return;let h=', 'if(!m)return;if(c.goldMode){if(!p||p.hand?.[a]!==o)return;const reason=goldCardBlock(c,p,o);if(reason&&(!f||!cardAvailable(o))){n(`❌ ${reason}`);c.showToast(reason);return}}let h=')
  once('_=g.every(e=>p.p<=e.p)', '_=c.goldMode?lastGoldRank(c,p):g.every(e=>p.p<=e.p)')
  once('if(o===13&&!f){', 'if(o===13&&!f&&!c.goldMode){')
  once('u.forEach(e=>{e.id!==p.id&&(e.reaction===`reflect`?', 'u.forEach(e=>{e.id!==p.id&&(!c.goldMode||!sameTeam(e,p))&&(e.reaction===`reflect`?')

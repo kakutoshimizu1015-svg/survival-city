@@ -1,8 +1,10 @@
+import {readFileSync} from 'node:fs';
+import {installGoldSession} from '../src/gold-session.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {goldScore,goldCompare,goldRankOf} from '../src/gold-rules.js';
 import {goldCpuStep} from '../src/gold-cpu.js';
-import {RETIRED_CARD_IDS,cardAvailable,drawGoldCard,goldOpeningHand,lastGoldRank,goldComebackTarget,goldCardBlock,goldShopIds,goldShopPrice,shopPurchaseKey,basicWeaponStock,basicWeaponPurchasePatch} from '../src/card-balance.js';
+import {retiredCardCleanupPatch,RETIRED_CARD_IDS,cardAvailable,drawGoldCard,goldOpeningHand,lastGoldRank,goldComebackTarget,goldCardBlock,goldShopIds,goldShopPrice,shopPurchaseKey,basicWeaponStock,basicWeaponPurchasePatch} from '../src/card-balance.js';
 const player=(id,score=0,p=10)=>({id,p,hp:100,goldCans:score,pvpKills:0,hand:[],maxHand:7,pos:1,teamColor:'none'});
 const state=players=>({players,goldMode:true,turn:0,roundCount:1,mapData:[{id:1,type:'shop'}],purchasedCards:{}});
 const cards=[{id:17,type:'weapon',dmg:10},{id:18,type:'weapon',dmg:20},...Array.from({length:51},(_,id)=>({id,type:'action'})).filter(c=>c.id!==17&&c.id!==18)];
@@ -45,4 +47,26 @@ test('CPU buys basic weapons through the same price and stock rules',()=>{
  let s=state([{...player(0,0,10),isCPU:true,charType:'sales',ap:3}]);const store={getState:()=>s,setState:patch=>{s={...s,...patch};}};
  const services={cards,network:{getState:()=>({status:'disconnected'})},log:()=>{},sound:()=>{}};
  assert.equal(goldCpuStep(store,services),true);assert.deepEqual(s.players[0].hand,[18]);assert.equal(s.players[0].p,8);assert.equal(basicWeaponStock(s,s.players[0],18),3);
+});
+test('retired cards are removed from old hands and shop stock, preserving active cards and funds',()=>{
+ const s=state([{...player(0),hand:[18,...RETIRED_CARD_IDS,20,18]},{...player(1),hand:[25,26,46]}]);s.goldShop={ids:[17,18,5,43,26],revision:2,receipts:[]};
+ const patch=retiredCardCleanupPatch(s);assert.deepEqual(patch.players[0].hand,[18,20,18]);assert.equal(patch.players[1],s.players[1]);assert.equal(patch.players[0].p,s.players[0].p);assert.deepEqual(patch.goldShop.ids,[17,18,26]);assert.equal(patch.goldShop.revision,3);
+ assert.equal(retiredCardCleanupPatch({...s,...patch}),null);assert.equal(retiredCardCleanupPatch({...s,goldMode:false}),null);
+});
+test('retired cards cannot activate even in gold creative mode',()=>{
+ const source=readFileSync(new URL('../assets/cards-C7BZxg2n.js',import.meta.url),'utf8'),start=source.indexOf('var a=(a,o)=>'),end=source.indexOf(',o=e=>',start);
+ const make=new Function('r','t','i','n','goldCardBlock','cardAvailable','return '+source.slice(start+6,end));
+ for(const isCreativeMode of [false,true])for(const id of RETIRED_CARD_IDS){
+  const p={...player(0),hand:[id]},s={...state([p]),isCreativeMode,showToast:()=>{}};
+  const use=make({getState:()=>({status:'disconnected'})},{getState:()=>s},[{id,type:'action'}],()=>{},goldCardBlock,cardAvailable);
+  use(0,id);assert.deepEqual(p.hand,[id]);assert.equal(p.p,10);
+ }
+});
+test('only the host cleans retired cards, including cards injected after initialization',async()=>{
+ for(const isHost of [false,true]){
+  let s={...state([{...player(0),hand:[18,5]}]),gamePhase:'playing',gold:{spot:1,drops:{}}};const subscribers=[];
+  const store={getState:()=>s,subscribe:fn=>subscribers.push(fn),setState:patch=>{s={...s,...patch};subscribers.forEach(fn=>fn(s));}};
+  installGoldSession(store,{getState:()=>({status:'connected',isHost})},()=>{},()=>{});await Promise.resolve();assert.deepEqual(s.players[0].hand,isHost?[18]:[18,5]);
+  store.setState({players:[{...s.players[0],hand:[20,43]}]});await Promise.resolve();await Promise.resolve();assert.deepEqual(s.players[0].hand,isHost?[20]:[20,43]);
+ }
 });
