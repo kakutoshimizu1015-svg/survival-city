@@ -16,7 +16,7 @@ export function installCityNotices(store,network,getWorld){
   else if(!timer){if(current)queue.unshift(current);next();}
   const n=beat||current;panel.hidden=!n;if(!n)return;
   panel.dataset.phase=beat?.phase||'notice';
-  const label=beat?(beat.phase==='report'?'街の時間 · 1/4':beat.phase.startsWith('truck')?'街の時間 · 2/4':beat.phase.startsWith('police')?'街の時間 · 3/4':'街の時間 · 4/4'):(n.label||'できごと');
+  const label=beat?(beat.phase==='report'?'街の時間 · 1/4':(beat.phase.startsWith('truck')||beat.phase.startsWith('atom'))?'街の時間 · 2/4':beat.phase.startsWith('police')?'街の時間 · 3/4':'街の時間 · 4/4'):(n.label||'できごと');
   const html=`<small>${esc(label)}</small><strong>${esc(plain(n.title))}</strong><div>${(n.lines||[]).map(line=>`<p>${esc(plain(line))}</p>`).join('')}</div>`;
   if(signature!==html){signature=html;panel.innerHTML=html;}
  }

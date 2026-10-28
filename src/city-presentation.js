@@ -1,17 +1,18 @@
+import {atomText} from './atom-rules.js';
 // Host-owned round beats are synchronized with the game. They do not change damage or movement rules.
 let serial=0;
 export class RoundCancelled extends Error{constructor(){super('Round presentation cancelled');this.name='RoundCancelled';}}
 export function beginRound(store){if(!store.getState().goldMode)return null;const id=Date.now()+':'+(++serial);store.setState({cityRoundId:id,cityBeat:null});return id;}
 export async function roundWait(store,id,ms,wait){if(id&&(store.getState().cityRoundId!==id||store.getState().gamePhase!=='playing'))throw new RoundCancelled();await wait(ms);if(id&&(store.getState().cityRoundId!==id||store.getState().gamePhase!=='playing'))throw new RoundCancelled();}
 export async function roundBeat(store,id,phase,title,lines,focus,ms,wait){
- if(!id)return;const pages=Math.max(1,Math.ceil(lines.length/3));
+ if(!id)return;title=atomText(store.getState(),title);lines=lines.map(x=>atomText(store.getState(),x));const pages=Math.max(1,Math.ceil(lines.length/3));
  for(let page=0;page<pages;page++){
   if(store.getState().cityRoundId!==id||store.getState().gamePhase!=='playing')throw new RoundCancelled();
   store.setState({cityBeat:{id:id+':'+(++serial),phase,title:pages>1?`${title} (${page+1}/${pages})`:title,lines:lines.slice(page*3,page*3+3),focus}});
   await roundWait(store,id,ms,wait);
  }
 }
-export function movingBeat(store,id,vehicle){if(!id)return;store.setState({cityBeat:{id:id+':'+vehicle,phase:vehicle+'-move',title:vehicle==='truck'?'収集車が通ります':'パトカーが巡回中',lines:['通りすぎるまで待とう'],focus:vehicle}});}
+export function movingBeat(store,id,vehicle){if(!id)return;store.setState({cityBeat:{id:id+':'+vehicle,phase:vehicle+'-move',title:atomText(store.getState(),vehicle==='truck'?'収集車が通ります':'パトカーが巡回中'),lines:['通りすぎるまで待とう'],focus:vehicle}});}
 export async function encounterBeat(store,id,vehicle,before,pos,wait){
  if(!id)return false;let shown=false;
  for(const old of before.filter(p=>p.hp>0&&p.pos===pos)){
@@ -31,6 +32,6 @@ export function withCombat(store,damage,target,amount,source,attacker=null){
  const result=damage(target,amount,source,attacker);if(!(result>0)||pos==null||!(hp>0))return result;
  const after=store.getState(),next=after.players.find(p=>p.id===target),winner=after.players.find(p=>p.id===attacker);
  const defeated=npc?after[npc+'Hp']<=0:(next?.deaths||0)>(victim?.deaths||0),goldStolen=from&&victim&&defeated?Math.max(0,(winner?.goldCans||0)-(from.goldCans||0)):0;
- const event={id:Date.now()+':'+(++serial),target,attacker,attackerName:from?.name||null,source:source||'攻撃',pos,fromPos:from?.pos,damage:Math.min(hp,result),defeated,goldStolen,killPoints:from?Math.min(2,Math.max(0,((winner?.pvpKills||0)-(from.pvpKills||0))*2)):0,name:victim?.name||({police:'パトカー',uncle:'おじさん',yakuza:'ヤクザ',loanshark:'闇金',friend:'仲間'}[npc]||'NPC'),createdAt:Date.now()};
+ const event={id:Date.now()+':'+(++serial),target,attacker,attackerName:from?.name||null,source:source||'攻撃',pos,fromPos:from?.pos,damage:Math.min(hp,result),defeated,goldStolen,killPoints:from?Math.min(2,Math.max(0,((winner?.pvpKills||0)-(from.pvpKills||0))*2)):0,name:victim?.name||atomText(after,({police:'パトカー',uncle:'おじさん',yakuza:'ヤクザ',loanshark:'闇金',friend:'仲間'}[npc]||'NPC')),createdAt:Date.now()};
  store.setState({cityCombat:[...(after.cityCombat||[]),event].slice(-16)});return result;
 }

@@ -106,5 +106,6 @@ s='import {escapeChat} from "../src/chat-utils.js";\nimport {GoldShop} from "../
 s+='\nexport {Mt as smallMap,Nt as mediumMap,Pt as largeMap,It as originalMap,Ti as miniGames,mr as tileDescriptions,tr as statusEquipment,nr as hasStatusEquipment};\n'
 import runpy
 s=runpy.run_path(str(Path(__file__).resolve().with_name('build-presentation-hooks.py')))['patch_runtime'](s)
+s=runpy.run_path(str(Path(__file__).resolve().with_name('build-atom-hooks.py')))['patch_runtime'](s)
 (root/'assets/original-city-runtime.js').write_text(s)
 print('48-square district board, gold competition and presentation hooks generated.')

@@ -1,3 +1,6 @@
+import {isAtom} from "./atom-map.js";
+import {ATOM_NPCS,atomText} from "./atom-rules.js";
+import {I as ruleStore} from "../assets/useNetworkStore-CIe06z3C.js";
 import {GOLD_TILE_RULES,WORLD_RULES} from './rule-details.js';
 import {NPC_INFO,npcImpact} from './npc-impact.js';
 import {n as characters} from '../assets/useNetworkStore-CIe06z3C.js';
@@ -13,7 +16,7 @@ const skillText=(c,kind)=>{
 };
 const sentences=text=>String(text||'').split(/(?<=[。！])\s*|\n/u).filter(Boolean);
 export function GoldRulebook({react:R,cards,miniGames=[],onClose}){
- const h=R.createElement,closeRef=R.useRef(null);
+ const atom=isAtom(ruleStore.getState()),h=R.createElement,closeRef=R.useRef(null);
  R.useEffect(()=>{const old=document.activeElement;closeRef.current?.focus();const key=e=>{if(e.key==='Escape'){e.preventDefault();onClose();}};window.addEventListener('keydown',key);return()=>{window.removeEventListener('keydown',key);if(old?.isConnected)old.focus();};},[]);
  const list=(texts)=>h('ul',{className:'easy-rule-list'},...texts.flatMap(sentences).map((text,i)=>h('li',{key:i},text)));
  const section=(title,...texts)=>h('section',{key:title},h('h3',null,title),list(texts));
@@ -29,9 +32,10 @@ export function GoldRulebook({react:R,cards,miniGames=[],onClose}){
  details('たたかい','⚔️ 武器を使ってみよう',list(['最初の手札にバットが1枚ある。','店ではレンガ3P、バット4Pで買える。','手札で武器を選び、向きを合わせて「攻撃！」を押す。','ふつうの武器は、1回で2APとカード1枚を使う。','「射程」は届く距離。「ダメージ」は減らせるHP。','HPが0になると病院で復活する。しばらく攻撃を受けない。','収集車や毒でたおれると、金缶をその場に1個落とす。','ジャンクガンは、ゴミを弾にして3回使える。'])),
  details('順位','🏆 点数が同じなら？',list(['点数が同じなら、Pが多い人が上の順位。','点数もPも同じなら、同じ順位になる。','チーム戦は、仲間の点数とPを足してくらべる。','街のNPCをたおしても、点数は増えない。','「首位まであと○点」は、いまの点数とPで計算する。'])),
  details('逆転','↗️ いちばん下の順位のとき',list(['「大暴落」「下剋上」「行政の見落とし」は、いちばん下の順位の人だけ使える。','同じ最下位なら、どちらの人も使える。','チーム戦でも、このカードは自分だけの順位で決まる。','下剋上：自分より上の敵から、一番上の人のお金を10Pまでうばう。','相手がいない・お金がないときは、カードもAPも使わない。','大暴落：味方のお金は減らさない。'])),
+ details('第0区','⚛ 明日の楽園・第0区',list(['外の道は時計回り。高架の内側は反時計回り。坂道で行き来できる。','マザー・ゼロは街の熱を見張る巨大な機械。設備を使うと、その街区の熱が上がる。','赤いマスは次ラウンドの照射先。全員が1回行動してから、45ダメージの照射が来る。','赤いマスから逃げよう。防護シェルターなら必ず無傷。身代わり人形や復活保護も有効。','照射後は冷却中。回収口で1APを使うと5P。1人1回。','タクシーは1AP＋3P。給電中の停留所へ飛べる。','配電盤は1AP。次ラウンドのタクシーを東西線／南北線に切り替える。','非常シュートは1APで下層へ。戻るには別の道を使う。','原子炉横断は1AP＋HP10。対岸への近道。着地点の効果も発生する。','この街のロボットは現代都市のNPCに対応する。お世話ロボは缶、契約回収ロボはP、警備ロボはHPと手札に関わる。'])),
  ...WORLD_RULES.map(([title,...texts])=>details(title,title,list(texts))),
  details('マス','📍 マスのしるし',...Object.values(GOLD_TILE_RULES).map(t=>section(t.title,t.desc))),
- details('NPC','🚛 街の人・車・動物',...Object.keys(NPC_INFO).map(key=>{const p={p:100,hand:[18],equip:{},respawnShield:0},info=npcImpact({players:[p],turn:0},key,p,{type:'can'});const easy={truck:'走っているときにぶつかると、55%の確率でHPが50減る。',police:'つかまると、次のAPが2減る。',uncle:'手札を1枚、勝手に捨ててしまう。',animal:'同じマスでは、缶拾いもゴミ漁りもできない。',yakuza:'HPが15〜20減る。手札も1枚うばう。',loanshark:'持っているPの20%を取る。取られるのは20Pまで。',friend:'空き缶を1個くれる。'};return section(info.icon+' '+info.name,easy[key]);}),list(['装備やキャラの力で、助かることもある。','マスをタッチすると、いまの自分がどうなるか分かる。'])),
+ details('NPC',atom?'🤖 第0区のロボット':'🚛 街の人・車・動物',...Object.keys(NPC_INFO).map(key=>{const p={p:100,hand:[18],equip:{},respawnShield:0},info=npcImpact({players:[p],turn:0},key,p,{type:'can'});const easy={truck:'走っているときにぶつかると、55%の確率でHPが50減る。',police:'つかまると、次のAPが2減る。',uncle:'手札を1枚、勝手に捨ててしまう。',animal:'同じマスでは、缶拾いもゴミ漁りもできない。',yakuza:'HPが15〜20減る。手札も1枚うばう。',loanshark:'持っているPの20%を取る。取られるのは20Pまで。',friend:'空き缶を1個くれる。'};return section(info.icon+' '+(atom?ATOM_NPCS[key]:info.name),atom&&key==='truck'?'赤い予告マスへ45ダメージの照射。防護シェルターなら必ず回避。':easy[key]);}),list(['装備やキャラの力で、助かることもある。','マスをタッチすると、いまの自分がどうなるか分かる。'])),
  details('マップ','🗺️ マップの見かた',list(['マスをタッチすると説明が出る。赤は危険、緑はうれしいこと。','「マップ巡回」を押すと、自由に見られる。','スマホ：1本指で移動。2本指を左右に動かすと回転。','2本指を上下に動かすと角度が変わる。指を開く・閉じるとズーム。','パソコン：ドラッグで移動。右ドラッグで回転。ホイールでズーム。','「プレイに戻る」を押すと、ゲームのカメラに戻る。'])),
  details('キャラクター','👤 キャラの得意なこと',...characters.map(c=>h('section',{key:c.id},h('h3',null,c.name),h('p',null,characterTips[c.id]),h('details',null,h('summary',null,'スキルのくわしい効果'),list([skillText(c,'passive'),skillText(c,'action')]))))),
  details('ミニゲーム','🎮 ミニゲームの操作',...Object.values(miniGames).map(c=>section(c.name,c.desc))),

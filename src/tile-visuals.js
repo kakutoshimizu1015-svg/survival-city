@@ -1,5 +1,10 @@
 // A shared visual vocabulary for physical spaces, touch targets and route choices.
 export const TILE_VISUALS={
+ taxi:{name:'空中タクシー',color:'#64b6bd',path:'M3 15h18l-3-5H6z M8 10l2-4h4l2 4 M6 18h3 M15 18h3'},
+ switch:{name:'配電盤',color:'#d5bb5e',path:'M4 4h16v16H4z M8 8h8 M8 12h4 M15 11v6'},
+ chute:{name:'非常シュート',color:'#d38f65',path:'M7 3v8c0 5 4 7 11 7 M14 14l5 4-5 4'},
+ hot:{name:'原子炉横断',color:'#e47858',path:'M12 2l-8 12h7l-1 8 10-13h-7z'},
+ reclaim:{name:'廃熱回収',color:'#a3b95f',path:'M4 10h16v11H4z M8 3v4 M12 2v5 M16 3v4 M9 14h6 M12 12v6'},
  normal:{name:'街路',color:'#718b82',path:'M10 10h4v4h-4z'},
  center:{name:'回復',color:'#d46564',path:'M9 3h6v6h6v6h-6v6H9v-6H3V9h6z',fill:true},
  can:{name:'空き缶',color:'#d39446',path:'M7 5h10v14H7z M7 8h10 M7 16h10 M10 3h4'},

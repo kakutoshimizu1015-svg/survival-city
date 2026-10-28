@@ -1,3 +1,4 @@
+import {isAtom} from "./atom-map.js";
 import {PixelShop} from './pixel-scenes.js';
 import {shopCatalog} from './shop-rules.js';
 import {shopVisitKey} from './card-balance.js';
@@ -14,7 +15,7 @@ export function GoldShop({react:R,store,network,cards,close}){
  const catalog=shopCatalog(s,p,cards),owned=p.hand.map((id,index)=>({...cards.find(c=>c.id===id),uniqueId:`${index}_${id}`,sellPrice:2}));
  const count=Object.values(cart).reduce((a,b)=>a+b,0),total=catalog.reduce((sum,c)=>sum+c.price*(cart[c.id]||0),0);
  function send(action,extra={}){if(pending)return;const id=globalThis.crypto.randomUUID(),payload={id,key,revision:offer.revision,...extra};setPending(id);setNotice('ホストに確認中…');const result=requestShopAction(store,network,action,payload);if(result){setPending(null);setNotice(result.message);if(result.ok){setCart({});setSelection(new Set());}}}
- return h(PixelShop,{react:R,player:p,mode,setMode,catalog,owned,cart,
+ return h(PixelShop,{react:R,theme:isAtom(s)?'atom':'city',player:p,mode,setMode,catalog,owned,cart,
  add:id=>{const c=catalog.find(c=>c.id===id);if(c&&!pending)setCart(old=>({...old,[id]:Math.min(c.stock,(old[id]||0)+1)}));},
  decrement:id=>setCart(old=>{const next={...old};if(next[id]>1)next[id]--;else delete next[id];return next}),clear:()=>setCart({}),
  total,count,canPay:total<=p.p,capacity:p.maxHand||7,buy:()=>send('BUY',{cart}),sell:()=>send('SELL',{selection:[...selection]}),selection,

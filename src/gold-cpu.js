@@ -1,8 +1,10 @@
+import {atomCpuStep} from "./atom-cpu.js";
 import {routeTo,sameTeam,handleGoldPurchase,goldScore} from './gold-rules.js';
 import {basicWeaponPurchasePatch} from './card-balance.js';
 // Gold-aware decisions use the same AP, cards, damage and movement functions as human play.
 export function goldCpuStep(store,{cards,useCard,damage,move,exchange,job,network,log,sound}){
  const s=store.getState(),p=s.players[s.turn];if(!s.goldMode||!p?.isCPU||s.gameOver||s._roundEndInProgress)return false;
+ if(atomCpuStep(store,{move,damage,log}))return true;
  if(handleGoldPurchase(store,p.userId,network,log,sound))return true;
  const tile=s.mapData.find(t=>t.id===p.pos);if(!tile)return false;
  if(tile.type==='exchange'&&(p.cans||p.trash)){exchange();return true;}

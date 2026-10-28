@@ -1,3 +1,5 @@
+import {installAtomUI} from "./atom-ui.js";
+import {isAtom,atomDistricts} from "./atom-map.js";
 import {installCityNotices} from "./city-notices.js";
 import {viewerPlayer,NPC_INFO} from './npc-impact.js';
 import {tileInfo,tileDetailHTML,tileTooltipText} from './tile-info.js';
@@ -9,10 +11,11 @@ import { tileVisual, tileIconURL } from './tile-visuals.js';
 import { installMobileUI } from './mobile-ui.js';
 import '../assets/original-city-runtime.js';
 import { t as itemCards } from '../assets/cards-BGoWm8gy.js';
-import { I as gameStore, t as networkStore, k as gameLog, N as gameSound } from '../assets/useNetworkStore-CIe06z3C.js';
+import { w as atomMove, j as atomDamage, I as gameStore, t as networkStore, k as gameLog, N as gameSound } from '../assets/useNetworkStore-CIe06z3C.js';
 import { createOriginalWorld, DISTRICTS } from './original-world.js';
 const goldSession=installGoldSession(gameStore,networkStore,gameLog,gameSound);
 installGoldUI(gameStore,networkStore,goldSession);
+installAtomUI(gameStore,networkStore,{move:atomMove,damage:atomDamage,log:gameLog});
 // Read game state and project the original interactive nodes. No replacement rules.
 let world=null,board=null,mapKey='',pending=false,failed=false;
 function syncCameraControls(){
@@ -36,7 +39,7 @@ window.cityInspectTile=id=>{
 function routeInfo(container,state){
  let routes=container.querySelector('.city-route-options');if(!routes){routes=document.createElement('nav');routes.className='city-route-options';routes.setAttribute('aria-label','進むマスを選ぶ');routes.onclick=e=>{const b=e.target.closest('[data-city-route]');if(b&&world?.getCameraMode()!=='tour')document.querySelector(`[data-original-tile="${b.dataset.cityRoute}"]`)?.click();};container.append(routes);}
  const show=(state.isBranchPicking||state.isDashPicking)&&world?.getCameraMode()!=='tour';routes.hidden=!show;if(!show)return;
- const html=(state.currentBranchOptions||[]).map((id,i)=>{const t=state.mapData.find(t=>t.id===id);if(!t)return '';const info=tileInfo(state,t,tileDescriptions);return `<button data-city-route="${id}" title="${esc(info.desc)}"><strong>${i+1}. ${tileIconHTML(t.type)}${id}番 ${esc(info.title)}</strong><span>${esc(info.short)}</span>${info.extra?`<small>${esc(info.extra)}</small>`:''}</button>`;}).join('');if(routes.innerHTML!==html)routes.innerHTML=html;
+ const html=(state.currentBranchOptions||[]).map((id,i)=>{const t=state.mapData.find(t=>t.id===id);if(!t)return '';const info=tileInfo(state,t,tileDescriptions);return `<button data-city-route="${id}" title="${esc(info.desc)}"><strong>${i+1}. ${tileIconHTML(t.atomKind||t.type)}${id}番 ${esc(info.title)}</strong><span>${esc(info.short)}</span>${info.extra?`<small>${esc(info.extra)}</small>`:''}</button>`;}).join('');if(routes.innerHTML!==html)routes.innerHTML=html;
 }
 function controls(container){
  const existing=container.querySelector('.city-world-tools');if(existing){container.dataset.cameraMode='play';const b=existing.querySelector('[data-camera=mode]');b.textContent='マップ巡回';b.setAttribute('aria-pressed','false');return;}
@@ -69,7 +72,7 @@ function refresh(){pending=false;const state=gameStore.getState();document.body.
   try{document.body.classList.add('city-3d');world=createOriginalWorld(host,state.mapData);window.cityProjection=world;controls(document.querySelector('#board-area'));}
   catch(error){console.warn('3D world unavailable; original board remains playable.',error);failed=true;document.body.classList.remove('city-3d');window.cityProjection=null;return;}
  }
- for(const t of state.mapData){const el=host.querySelector(`[data-original-tile="${t.id}"]`);if(!el)continue;el.dataset.symbol='';el.dataset.tileType=t.type;el.style.setProperty('--tile-color',tileVisual(t.type).color);el.style.setProperty('--tile-icon',`url("${tileIconURL(t.type)}")`);const route=(state.isBranchPicking||state.isDashPicking)?state.currentBranchOptions?.indexOf(t.id):-1;el.dataset.routeNumber=route>=0?String(route+1):'';el.dataset.square=String(t.id);el.style.setProperty('--district-color',DISTRICTS[t.area]?.color||'#b8c2a2');el.setAttribute('aria-label',`${t.id}番 ${DISTRICTS[t.area]?.name} ${t.name}`);el.setAttribute('role','button');el.tabIndex=0;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}};}
+ for(const t of state.mapData){const el=host.querySelector(`[data-original-tile="${t.id}"]`);if(!el)continue;el.dataset.symbol='';el.dataset.tileType=t.type;el.style.setProperty('--tile-color',tileVisual(t.atomKind||t.type).color);el.style.setProperty('--tile-icon',`url("${tileIconURL(t.atomKind||t.type)}")`);const route=(state.isBranchPicking||state.isDashPicking)?state.currentBranchOptions?.indexOf(t.id):-1;el.dataset.routeNumber=route>=0?String(route+1):'';el.dataset.square=String(t.id);el.style.setProperty('--district-color',(isAtom(state)?atomDistricts:DISTRICTS)[t.area]?.color||'#b8c2a2');el.setAttribute('aria-label',`${t.id}番 ${(isAtom(state)?atomDistricts:DISTRICTS)[t.area]?.name} ${t.name}`);el.setAttribute('role','button');el.tabIndex=0;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}};}
  for(const p of state.players){const el=host.querySelector(`[data-original-player="${p.id}"]`);if(el){el.style.setProperty('--player-color',p.color);el.classList.toggle('current-player',p.id===state.turn);}}
  if((state.shopActive||state.storyActive)&&world?.getCameraMode()==='tour')world.setCameraMode('play');
  world.update({...state,viewerId:viewerPlayer(state,networkStore.getState().myUserId)?.id});syncCameraControls();routeInfo(document.querySelector('#board-area'),state);const detail=document.querySelector('.city-tile-detail');if(detail){const t=state.mapData.find(t=>t.id===Number(detail.dataset.tileId));if(t){const html=tileDetailHTML(t,window.cityGetTileInfo(t.id)),article=detail.querySelector('.city-tile-content');if(detail._content!==html){detail._content=html;article.outerHTML=html;}}}

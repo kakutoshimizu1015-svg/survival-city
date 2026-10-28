@@ -1,3 +1,5 @@
+import {isAtom} from "../src/atom-map.js";
+import {advanceAtomThreat} from "../src/atom-rules.js";
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
 import {beginRound,roundWait,roundBeat,movingBeat,encounterBeat,finishRound} from '../src/city-presentation.js';
 import {pickNpcNext} from '../src/city-random.js';import {npcImpact} from '../src/npc-impact.js';
@@ -12,7 +14,7 @@ function fixture(type='normal',fork=false){
  state={...state,updatePlayer,updateCurrentPlayer:patch=>updatePlayer(state.players[state.turn].id,patch),incrementGameStat:(id,key,n)=>stats.push([key,n]),addEventPopup:(...args)=>popups.push(args),showToast:text=>log.push(text)};
  const profile={getState:()=>({incrementStat:()=>{},incrementNpcEncounter:()=>{}})},net={getState:()=>network},sound=()=>{},say=x=>log.push(x),random=Object.assign(Object.create(Math),{random:()=>.1}),damage=(id,n)=>updatePlayer(id,p=>({hp:p.hp-n}));
  const encounter=new Function('v','e','q','Y','G','Math','return '+extract(engine,'J=t=>',',Y=e=>'))(store,profile,damage,say,sound,random);
- const move=new Function('v','$','e','Y','G','J','q','y','K','Math','onGoldDeath','return '+extract(engine,'Nt=t=>',',Pt=()=>'))(store,net,profile,say,sound,encounter,damage,()=>false,()=>99,random,()=>{});
+ const move=new Function('v','$','e','Y','G','J','q','y','K','Math','onGoldDeath','isAtom','return '+extract(engine,'Nt=t=>',',Pt=()=>'))(store,net,profile,say,sound,encounter,damage,()=>false,()=>99,random,()=>{},isAtom);
  const dash=new Function('e','r','n','landDash','return '+extract(skills,'d=()=>',',f=()=>'))(store,net,say,move);
  return {store,move,dash,log,popups,stats,random,damage,net,setNet:value=>network=value,sent};
 }
@@ -35,8 +37,8 @@ test('guest dash requests resolve on host through the same landing function',()=
 });
 test('truck route cannot damage resting players or consume dolls; exposed players still take damage',async()=>{
  const f=fixture('shelter');f.store.setState({truckPos:0,policeHp:0,players:[{...f.store.getState().players[0],pos:3,hp:100,equip:{doll:true}},{...f.store.getState().players[0],id:1,name:'相手',pos:0,hp:100}],gold:{},cityBeat:null});
- const factory=new Function('v','X','Y','G','Ua','q','J','Wa','Math','beginRound','roundWait','roundBeat','movingBeat','encounterBeat','finishRound','pickNpcNext','return '+extract(engine,'Ga=async()=>',',Z=!1'));
- const beats=[];await factory(f.store,async()=>{const beat=f.store.getState().cityBeat;if(beat)beats.push(beat);},()=>{},()=>{},()=>({finalPos:0,hitList:[3,0,3],finalPrevPos:3}),f.damage,()=>{},()=>{},f.random,beginRound,roundWait,roundBeat,movingBeat,encounterBeat,finishRound,pickNpcNext)();
+ const factory=new Function('v','X','Y','G','Ua','q','J','Wa','Math','beginRound','roundWait','roundBeat','movingBeat','encounterBeat','finishRound','pickNpcNext','isAtom','advanceAtomThreat','return '+extract(engine,'Ga=async()=>',',Z=!1'));
+ const beats=[];await factory(f.store,async()=>{const beat=f.store.getState().cityBeat;if(beat)beats.push(beat);},()=>{},()=>{},()=>({finalPos:0,hitList:[3,0,3],finalPrevPos:3}),f.damage,()=>{},()=>{},f.random,beginRound,roundWait,roundBeat,movingBeat,encounterBeat,finishRound,pickNpcNext,isAtom,advanceAtomThreat)();
  const [safe,exposed]=f.store.getState().players;assert.equal(safe.hp,100);assert.equal(safe.equip.doll,true);assert.equal(exposed.hp,50);assert.ok(beats.some(b=>b.lines?.some(l=>l.includes('休憩所'))));assert.equal(npcImpact(f.store.getState(),'truck',safe,{type:'shelter'}).tone,'good');
 });
 test('dash accepts exactly 2 AP, rejects 1 AP, and CPU delegates to the same landing rules',()=>{

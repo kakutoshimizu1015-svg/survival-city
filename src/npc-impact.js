@@ -1,11 +1,14 @@
+import {isAtom} from "./atom-map.js";
+import {ATOM_NPCS} from "./atom-rules.js";
 export const NPC_INFO={truck:{name:'ゴミ収集車',icon:'🚛'},police:{name:'パトカー・警察官',icon:'🚓'},uncle:{name:'厄介なおじさん',icon:'🧓'},animal:{name:'野良動物',icon:'🐀'},yakuza:{name:'ヤクザ',icon:'😎'},loanshark:{name:'闇金',icon:'💼'},friend:{name:'仲間のホームレス',icon:'🤝'}};
 export function viewerPlayer(s,userId){return (userId&&s.players.find(p=>p.userId===userId))||(!s.players[s.turn]?.isCPU&&s.players[s.turn])||s.players.find(p=>!p.isCPU)||s.players[s.turn];}
 // Describes existing encounter rules; this module never applies effects or consumes equipment.
 export function npcImpact(s,key,p=viewerPlayer(s),tile){
- const info=NPC_INFO[key];if(!info||!p)return null;
+ const info=isAtom(s)?{...NPC_INFO[key],name:ATOM_NPCS[key],icon:key==='friend'?'🤖':'⚙'}:NPC_INFO[key];if(!info||!p)return null;
  const result=(tone,desc)=>({...info,key,tone,desc});
  if(key==='animal')return result(['can','trash'].includes(tile?.type)?'bad':'neutral','同じマスでは缶拾い・ゴミ漁りができない');
  if(key==='truck'){
+  if(isAtom(s))return result(tile?.type==='shelter'?'good':'bad',tile?.type==='shelter'?'防護シェルターで照射を必ず回避':`R${s.atom?.boss.strikeRound}開始時に45ダメージ。赤いマスから退避しよう`);
   if(s.goldMode&&tile?.type==='shelter')return result('good','休憩所にいる間は収集車を必ず回避。人形も消費しない');
   if(p.equip?.doll)return result('bad','暴走時は身代わり人形を1個消費して回避');
   if(p.respawnShield>0)return result('neutral','復活無敵でダメージ回避中。通常は暴走時55%で50ダメージ');
@@ -34,5 +37,5 @@ export function npcImpact(s,key,p=viewerPlayer(s),tile){
  }
  return null;
 }
-export function tileNpcEffects(s,t,p=viewerPlayer(s),visibleKeys){return Object.keys(NPC_INFO).filter(k=>s[k+'Pos']===t.id&&(k==='truck'||(s[k+'Hp']??10)>0)&&(!visibleKeys||visibleKeys.includes(k))).map(k=>npcImpact(s,k,p,t)).filter(Boolean);}
+export function tileNpcEffects(s,t,p=viewerPlayer(s),visibleKeys){const effects=Object.keys(NPC_INFO).filter(k=>s[k+'Pos']===t.id&&(k==='truck'||(s[k+'Hp']??10)>0)&&(!visibleKeys||visibleKeys.includes(k))).map(k=>npcImpact(s,k,p,t)).filter(Boolean);if(isAtom(s)&&s.atom?.boss.phase==='locked'&&s.atom.boss.targets.includes(t.id)){const effect=npcImpact(s,'truck',p,t);if(effect)effects.unshift(effect);}return effects;}
 export function impactTone(effects){return effects.some(e=>e.tone==='bad')?'bad':effects.some(e=>e.tone==='good')?'good':effects.length?'neutral':null;}

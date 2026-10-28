@@ -1,3 +1,6 @@
+import {ATOM_BOARD,atomElevation,atomDistricts} from "./atom-map.js";
+import {buildAtomScenery,createAtomThreatModel} from "./atom-scenery.js";
+import {createAtomNpcModel} from "./atom-models.js";
 import {buildKobanLandmarks} from "./koban-landmark.js";
 import {createCombatEffects} from "./combat-effects.js";
 import {createNpcSignals} from './npc-signals.js';
@@ -11,7 +14,7 @@ import { buildDistrictScenery } from './city-scenery.js';
 // Presentation only: the original store remains the sole source of game rules.
 export const DISTRICTS={slum:{name:'スラム街',color:'#aa8665',ground:'#675f4e'},commercial:{name:'商業地区',color:'#df9c54',ground:'#907956'},luxury:{name:'高級住宅街',color:'#b3d7c0',ground:'#7b9876'}};
 export function createOriginalWorld(host,map){
- const isCityBoard=map[0]?.boardLayout===CITY_BOARD.id;
+ const isAtomBoard=map[0]?.boardLayout===ATOM_BOARD.id,isCityBoard=isAtomBoard||map[0]?.boardLayout===CITY_BOARD.id,districts=isAtomBoard?atomDistricts:DISTRICTS;
  const T=window.THREE,reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
  const renderer=new T.WebGLRenderer({antialias:false,alpha:true,powerPreference:'low-power'});renderer.setPixelRatio(1);renderer.outputColorSpace=T.SRGBColorSpace;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;
  renderer.domElement.className='original-world-canvas';host.prepend(renderer.domElement);
@@ -21,7 +24,7 @@ export function createOriginalWorld(host,map){
  const sun=new T.DirectionalLight(0xffd7a1,3);sun.position.set(-35,80,35);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-110,right:110,top:85,bottom:-85,near:1,far:240});sun.shadow.bias=-.0008;scene.add(sun);
  const materialCache=new Map(),batches=new Map(),boxGeometry=new T.BoxGeometry(1,1,1),dummy=new T.Object3D();
  const groundY=.38, animated=[], assets=[], nightEffects=[], windowMaterials=[];let raised=false;
- const elevation=(x,z=0)=>!isCityBoard?groundY:groundY+1.2*Math.max(0,Math.min(1,(x+24)/12))+1.6*Math.max(0,Math.min(1,(x-12)/12));
+ const elevation=(x,z=0)=>isAtomBoard?atomElevation(x,z):!isCityBoard?groundY:groundY+1.2*Math.max(0,Math.min(1,(x+24)/12))+1.6*Math.max(0,Math.min(1,(x-12)/12));
  const offset=(x,z)=>raised?elevation(x,z)-groundY:0;
  function mat(color,emissive=false){const key=color+':'+emissive;if(!materialCache.has(key))materialCache.set(key,new T.MeshLambertMaterial({color,emissive:emissive?color:0,emissiveIntensity:emissive?.65:0}));return materialCache.get(key);}
  function block(x,y,z,w,h,d,color,opts={}){
@@ -85,23 +88,23 @@ export function createOriginalWorld(host,map){
   if(type==='tower')for(let y=2;y<h;y+=2)block(x,groundY+y,z,w+.12,.1,d+.12,'#86a6a0');
  }
  const minCol=Math.min(...map.map(t=>t.col)),maxCol=Math.max(...map.map(t=>t.col)),minRow=Math.min(...map.map(t=>t.row)),maxRow=Math.max(...map.map(t=>t.row));
- const midCol=(minCol+maxCol)/2,midRow=(minRow+maxRow)/2,step=isCityBoard?CITY_BOARD.spacing:4;
+ const midCol=(minCol+maxCol)/2,midRow=(minRow+maxRow)/2,step=isAtomBoard?ATOM_BOARD.spacing:isCityBoard?CITY_BOARD.spacing:4;
  const worldPoint=(col,row)=>[(col-midCol)*step,(row-midRow)*step];
  const squares=new Map(map.map(t=>[t.id,{...t,x:worldPoint(t.col,t.row)[0],z:worldPoint(t.col,t.row)[1]}]));
  const width=(maxCol-minCol)*step+24,depth=(maxRow-minRow)*step+(isCityBoard?32:24);
  const edges=[];const seen=new Set();for(const t of map)for(const next of t.next){const key=[t.id,next].sort((a,b)=>a-b).join(':');if(squares.has(next)&&!seen.has(key)){seen.add(key);edges.push([squares.get(t.id),squares.get(next)]);}}
  const nearest=(x,z)=>{let best=Infinity,result;for(const t of squares.values()){const d=(t.x-x)**2+(t.z-z)**2;if(d<best){best=d;result=t;}}return result;};
- const districtAt=(x,z)=>isCityBoard?cityDistrictAt(x/step+midCol-1,z/step+midRow-1):nearest(x,z).area;
+ const districtAt=(x,z)=>!isAtomBoard&&isCityBoard?cityDistrictAt(x/step+midCol-1,z/step+midRow-1):nearest(x,z).area;
  function roadDistance(x,z){let result=Infinity;for(const [a,b] of edges){const dx=b.x-a.x,dz=b.z-a.z,f=Math.max(0,Math.min(1,((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz||1)));result=Math.min(result,Math.hypot(x-a.x-dx*f,z-a.z-dz*f));}return result;}
  block(0,-1.4,0,width,2.9,depth,'#354e4c');
- const terrain=texture((c,w,h)=>{for(let y=0;y<h;y+=4)for(let x=0;x<w;x+=4){const area=districtAt((x/w-.5)*width,(y/h-.5)*depth);c.fillStyle=DISTRICTS[area]?.ground||'#6b7c60';c.fillRect(x,y,4,4);c.fillStyle=['#00000008','#fff5d716','#0000000d'][Math.floor(rnd()*3)];c.fillRect(x,y,3,1);}},512,256);
- const groundGeo=new T.PlaneGeometry(width,depth,isCityBoard?100:1,1);groundGeo.rotateX(-Math.PI/2);const vertices=groundGeo.attributes.position;for(let i=0;i<vertices.count;i++)vertices.setY(i,elevation(vertices.getX(i),vertices.getZ(i)));groundGeo.computeVertexNormals();mesh(groundGeo,new T.MeshLambertMaterial({map:terrain}),0,0,0);
+ const terrain=texture((c,w,h)=>{for(let y=0;y<h;y+=4)for(let x=0;x<w;x+=4){const area=districtAt((x/w-.5)*width,(y/h-.5)*depth);c.fillStyle=districts[area]?.ground||'#6b7c60';c.fillRect(x,y,4,4);c.fillStyle=['#00000008','#fff5d716','#0000000d'][Math.floor(rnd()*3)];c.fillRect(x,y,3,1);}},512,256);
+ const groundGeo=new T.PlaneGeometry(width,depth,isCityBoard?100:1,1);groundGeo.rotateX(-Math.PI/2);const vertices=groundGeo.attributes.position;for(let i=0;i<vertices.count;i++)vertices.setY(i,isAtomBoard?groundY:elevation(vertices.getX(i),vertices.getZ(i)));groundGeo.computeVertexNormals();mesh(groundGeo,new T.MeshLambertMaterial({map:terrain}),0,0,0);
  const water=mesh(new T.PlaneGeometry(600,600),new T.MeshPhongMaterial({color:0x356f77,shininess:35,specular:0xbaa982}),0,-1,0);water.rotation.x=-Math.PI/2;
  // Retaining walls make the three terraces visible at the waterfront.
- for(let x=-width/2;x<width/2;x+=1.6)for(const z of [-depth/2,depth/2]){const top=elevation(x);block(x,(top-2.6)/2,z,1.6,top+2.6,.4,'#6b7c69');for(let y=-1.7;y<top;y+=.65)block(x,y,z+Math.sign(z)*.23,1.4,.48,.12,'#92a18a');}
- for(let z=-depth/2;z<depth/2;z+=1.6)for(const x of [-width/2,width/2]){const top=elevation(x);block(x,(top-2.6)/2,z,.4,top+2.6,1.6,'#6b7c69');for(let y=-1.7;y<top;y+=.65)block(x+Math.sign(x)*.23,y,z,.12,.48,1.4,'#92a18a');}
+ for(let x=-width/2;x<width/2;x+=1.6)for(const z of [-depth/2,depth/2]){const top=isAtomBoard?groundY:elevation(x,z);block(x,(top-2.6)/2,z,1.6,top+2.6,.4,'#6b7c69');for(let y=-1.7;y<top;y+=.65)block(x,y,z+Math.sign(z)*.23,1.4,.48,.12,'#92a18a');}
+ for(let z=-depth/2;z<depth/2;z+=1.6)for(const x of [-width/2,width/2]){const top=isAtomBoard?groundY:elevation(x,z);block(x,(top-2.6)/2,z,.4,top+2.6,1.6,'#6b7c69');for(let y=-1.7;y<top;y+=.65)block(x+Math.sign(x)*.23,y,z,.12,.48,1.4,'#92a18a');}
  raised=true;
- function ribbon(a,b,roadWidth,color,lift){const dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz),nx=dz/len*roadWidth/2,nz=-dx/len*roadWidth/2;const v=[];for(const [p,side] of [[a,-1],[a,1],[b,-1],[b,1]])v.push(p.x+nx*side,elevation(p.x)+lift,p.z+nz*side);const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(v,3));g.setIndex([0,1,2,1,3,2]);g.computeVertexNormals();const m=mesh(g,new T.MeshLambertMaterial({color,side:T.DoubleSide}),0,0,0,true);m.castShadow=false;}
+ function ribbon(a,b,roadWidth,color,lift){const dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz),nx=dz/len*roadWidth/2,nz=-dx/len*roadWidth/2;const v=[];for(const [p,side] of [[a,-1],[a,1],[b,-1],[b,1]])v.push(p.x+nx*side,elevation(p.x,p.z)+lift,p.z+nz*side);const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(v,3));g.setIndex([0,1,2,1,3,2]);g.computeVertexNormals();const m=mesh(g,new T.MeshLambertMaterial({color,side:T.DoubleSide}),0,0,0,true);m.castShadow=false;}
  for(const [a,b] of edges){const len=Math.hypot(b.x-a.x,b.z-a.z),ry=Math.atan2(b.x-a.x,b.z-a.z),lane=a.lane||b.lane,roadWidth=isCityBoard?(lane==='alley'?3.0:lane==='camp'?3.6:lane==='park'?4.2:5.5):3.1;const luxury=a.area==='luxury'&&b.area==='luxury';ribbon(a,b,roadWidth,luxury?'#e1d4b4':'#a99d7e',.12);ribbon(a,b,roadWidth-.65,luxury?'#a5b4ac':a.area==='slum'&&b.area==='slum'?'#81765b':'#596e68',.18);
   if(!b.next.includes(a.id)){const dx=(b.x-a.x)/len,dz=(b.z-a.z)/len,mx=(a.x+b.x)/2,mz=(a.z+b.z)/2;for(const side of [-1,1])line([mx-dx*.6+dz*.5*side,.64,mz-dz*.6-dx*.5*side],[mx+dx*.35,.64,mz+dz*.35],.075,'#e5d49b');}
   if(isCityBoard&&luxury){for(let f=.2;f<.9;f+=.15){const x=a.x+(b.x-a.x)*f,z=a.z+(b.z-a.z)*f;block(x,.59,z,roadWidth-.7,.035,.055,'#d9d6bb',{ry});}}
@@ -118,7 +121,7 @@ export function createOriginalWorld(host,map){
   for(const side of [-1,1]){block(x+side*(w/2+.5),.9,z,.4,.8,d+1,'#38664a');tree(x+side*(w/2+.2),z-d/2-.8,.6,true);}
  }
  let counts={slum:0,commercial:0,luxury:0},features={},sceneryLots=[];
- if(isCityBoard){const scenery=buildDistrictScenery({T,block,mesh,mat,cylinder,line,texture,sign,building,tree,mansion,worldPoint,animated,rnd,elevation,nightGlow,nightStrip});counts=scenery.counts;features={...scenery.features,...buildCityBackdrop({T,scene,block,mesh,mat,animated,width,depth,rnd})};sceneryLots=scenery.lots;}else{
+ if(isAtomBoard){const scenery=buildAtomScenery({T,scene,block,mesh,mat,cylinder,line,sign,squares,edges,elevation,nightGlow,nightStrip,animated});counts=scenery.counts;features=scenery.features;sceneryLots=scenery.lots;}else if(isCityBoard){const scenery=buildDistrictScenery({T,block,mesh,mat,cylinder,line,texture,sign,building,tree,mansion,worldPoint,animated,rnd,elevation,nightGlow,nightStrip});counts=scenery.counts;features={...scenery.features,...buildCityBackdrop({T,scene,block,mesh,mat,animated,width,depth,rnd})};sceneryLots=scenery.lots;}else{
  const lots=[],builtLots=[];
  for(let z=-depth/2+5;z<depth/2-4;z+=6.5)for(let x=-width/2+5;x<width/2-4;x+=6.5){const area=districtAt(x,z),clearance=area==='luxury'?4.8:3.7;if(roadDistance(x,z)<clearance)continue;lots.push({x,z,area,distance:Math.hypot(x,z)});}
  lots.sort((a,b)=>a.distance-b.distance);
@@ -141,15 +144,16 @@ export function createOriginalWorld(host,map){
  for(let x=-width/2-6;x<width/2+6;x+=8){block(x,1.6,-depth/2-7,1,6,1.2,'#6b8178');block(x,4.7,-depth/2-7,8.1,.65,3,'#849287');}
  for(let i=0;i<16;i++){const x=-width/2+i*width/15;building(x,-depth/2-20-rnd()*6,3+rnd()*2,3,5+rnd()*10,'#69858a','tower');}
  }
- const kobans=buildKobanLandmarks({T,squares,block,mesh,mat,sign,nightGlow,nightStrip,roadDistance,width,depth,lots:sceneryLots,scale:isCityBoard?1:.4});features.koban=kobans.length;
+ const kobans=isAtomBoard?[]:buildKobanLandmarks({T,squares,block,mesh,mat,sign,nightGlow,nightStrip,roadDistance,width,depth,lots:sceneryLots,scale:isCityBoard?1:.4});features.koban=kobans.length;
  for(const {material,matrices} of batches.values()){const inst=new T.InstancedMesh(boxGeometry,material,matrices.length);matrices.forEach((m,i)=>inst.setMatrixAt(i,m));inst.castShadow=true;inst.receiveShadow=true;scene.add(inst);}
  const tileMeshes=new Map();
  for(const t of squares.values()){
-  const color=tileVisual(t.type).color,hole=t.type==='manhole';
+  const color=tileVisual(t.atomKind||t.type).color,hole=t.type==='manhole';
   const slab=mesh(hole?new T.CylinderGeometry(isCityBoard?1.65:.9,isCityBoard?1.65:.9,.24,24):isCityBoard?new T.CylinderGeometry(1.7,1.85,.26,24):new T.BoxGeometry(1.6,.2,1.6),new T.MeshLambertMaterial({color,emissive:color,emissiveIntensity:.03}),t.x,.74,t.z);tileMeshes.set(t.id,slab);
-  const top=texture((c,w,h)=>{c.clearRect(0,0,w,h);c.fillStyle=color;c.beginPath();c.arc(w/2,h/2,w/2-3,0,Math.PI*2);c.fill();c.strokeStyle='#fff1cd';c.lineWidth=5;c.stroke();c.fillStyle='#142e38';c.globalAlpha=.32;c.beginPath();c.arc(w/2,h/2,w*.37,0,Math.PI*2);c.fill();c.globalAlpha=1;drawTileIcon(c,t.type,w*.24,h*.24,w*.52);},128,128);
+  const top=texture((c,w,h)=>{c.clearRect(0,0,w,h);c.fillStyle=color;c.beginPath();c.arc(w/2,h/2,w/2-3,0,Math.PI*2);c.fill();c.strokeStyle='#fff1cd';c.lineWidth=5;c.stroke();c.fillStyle='#142e38';c.globalAlpha=.32;c.beginPath();c.arc(w/2,h/2,w*.37,0,Math.PI*2);c.fill();c.globalAlpha=1;drawTileIcon(c,t.atomKind||t.type,w*.24,h*.24,w*.52);},128,128);
   const cap=mesh(new T.PlaneGeometry(isCityBoard?3.25:1.5,isCityBoard?3.25:1.5),new T.MeshBasicMaterial({map:top,transparent:true,alphaTest:.1}),t.x,.93,t.z);cap.rotation.x=-Math.PI/2;cap.castShadow=false;
  }
+ const atomThreat=isAtomBoard?createAtomThreatModel({T,scene,squares,elevation,reduced}):null;
  const textureCache=new Map(),actors=new Map(),npcActors=new Map();
  const npcSignals=createNpcSignals({T,scene,squares,elevation,host,reduced,isCityBoard});
  const goldModels=createGoldModels({T,scene,squares,elevation,host,reduced});
@@ -157,7 +161,7 @@ export function createOriginalWorld(host,map){
  const combatEffects=createCombatEffects({T,scene,squares,elevation,host,reduced,project});
  const routeOccluders=scene.children.filter(o=>o.geometry?.type==='BoxGeometry'),routeRay=new T.Raycaster();
  const cam={yaw:.3,pitch:isCityBoard?.65:.8,zoom:1,target:new T.Vector3(0,0,0)};let state=null,raf,dead=false,dirty=true,w=1,h=1,last=0,followKey='',cameraChanged=true,cameraMode='play';const vehicleShots=[];let vehicleShot=null;
- function sync(){cameraChanged=true;const r=host.getBoundingClientRect();w=Math.max(1,r.width);h=Math.max(1,r.height);const aspect=w/h,span=cameraMode==='play'?Math.max(30,Math.min(42,h/15),24/aspect):Math.max(48,(width+(isCityBoard?30:10))/aspect)/cam.zoom;camera.left=-span*aspect/2;camera.right=span*aspect/2;camera.top=span/2;camera.bottom=-span/2;camera.updateProjectionMatrix();const t=cam.target;camera.position.set(t.x+Math.sin(cam.yaw)*120*Math.cos(cam.pitch),Math.sin(cam.pitch)*120,t.z+Math.cos(cam.yaw)*120*Math.cos(cam.pitch));camera.lookAt(t);camera.updateMatrixWorld();const ratio=Math.min(window.devicePixelRatio||1,2,1800/w,1400/h);if(renderer.getPixelRatio()!==ratio)renderer.setPixelRatio(ratio);if(renderer.domElement.width!==Math.floor(w*ratio)||renderer.domElement.height!==Math.floor(h*ratio))renderer.setSize(w,h,false);host.dataset.renderScale=ratio.toFixed(2);renderer.domElement.style.width='100%';renderer.domElement.style.height='100%';dirty=true;host.dataset.yaw=cam.yaw.toFixed(3);host.dataset.cameraMode=cameraMode;host.dataset.cameraPose=JSON.stringify({yaw:cam.yaw,pitch:cam.pitch,zoom:cam.zoom,x:cam.target.x,z:cam.target.z});host.dataset.worldStatus='ready';}
+ function sync(){cameraChanged=true;const r=host.getBoundingClientRect();w=Math.max(1,r.width);h=Math.max(1,r.height);const aspect=w/h,span=cameraMode==='play'?Math.max(state?.cityBeat?.focus==='atom'?70:30,Math.min(42,h/15),24/aspect):Math.max(48,(width+(isCityBoard?30:10))/aspect)/cam.zoom;camera.left=-span*aspect/2;camera.right=span*aspect/2;camera.top=span/2;camera.bottom=-span/2;camera.updateProjectionMatrix();const t=cam.target;camera.position.set(t.x+Math.sin(cam.yaw)*120*Math.cos(cam.pitch),Math.sin(cam.pitch)*120,t.z+Math.cos(cam.yaw)*120*Math.cos(cam.pitch));camera.lookAt(t);camera.updateMatrixWorld();const ratio=Math.min(window.devicePixelRatio||1,2,1800/w,1400/h);if(renderer.getPixelRatio()!==ratio)renderer.setPixelRatio(ratio);if(renderer.domElement.width!==Math.floor(w*ratio)||renderer.domElement.height!==Math.floor(h*ratio))renderer.setSize(w,h,false);host.dataset.renderScale=ratio.toFixed(2);renderer.domElement.style.width='100%';renderer.domElement.style.height='100%';dirty=true;host.dataset.yaw=cam.yaw.toFixed(3);host.dataset.cameraMode=cameraMode;host.dataset.cameraPose=JSON.stringify({yaw:cam.yaw,pitch:cam.pitch,zoom:cam.zoom,x:cam.target.x,z:cam.target.z});host.dataset.worldStatus='ready';}
  function project(x,y,z){const p=new T.Vector3(x,y,z).project(camera);return {x:(p.x+1)*w/2,y:(1-p.y)*h/2};}
  function projectGrid(col,row){const [x,z]=worldPoint(col,row);return project(x,elevation(x,z)+.62,z);}
  function focus(ids,zoom=true){const pts=ids.map(id=>squares.get(id)).filter(Boolean);if(!pts.length)return;cam.target.set(pts.reduce((a,p)=>a+p.x,0)/pts.length,0,pts.reduce((a,p)=>a+p.z,0)/pts.length);if(zoom)cam.zoom=1.8;sync();let ps=pts.map(t=>project(t.x,elevation(t.x,t.z)+.62,t.z));const dx=Math.max(...ps.map(p=>p.x))-Math.min(...ps.map(p=>p.x)),dy=Math.max(...ps.map(p=>p.y))-Math.min(...ps.map(p=>p.y));cam.zoom*=Math.min(1,(w-95)/Math.max(1,dx),(h-160)/Math.max(1,dy));sync();}
@@ -168,7 +172,7 @@ export function createOriginalWorld(host,map){
  function projectDOM(){
   for(const t of squares.values()){const el=host.querySelector(`[data-original-tile="${t.id}"]`);if(!el)continue;const p=project(t.x,elevation(t.x,t.z)+.62,t.z);el.style.setProperty('--world-x',(p.x-el.offsetWidth/2)+'px');el.style.setProperty('--world-y',(p.y-el.offsetHeight/2)+'px');
    if(isCityBoard&&cameraChanged){const target=new T.Vector3(t.x,elevation(t.x,t.z)+.62,t.z),direction=camera.getWorldDirection(new T.Vector3());routeRay.set(target.clone().addScaledVector(direction,-200),direction);routeRay.far=198.5;el.classList.toggle('tile-obscured',routeRay.intersectObjects(routeOccluders,false).length>0);}
-   const target=el.classList.contains('tile-highlight-branch')||el.classList.contains('tile-highlight-dash'),slab=tileMeshes.get(t.id);slab.material.emissiveIntensity=target?.7:.03;const owner=state?.players.find(p=>p.id===state?.territories[t.id]);slab.material.color.set(target?'#ffe7a0':owner?.color||DISTRICTS[t.area]?.color||'#a7bb8d');
+   const target=el.classList.contains('tile-highlight-branch')||el.classList.contains('tile-highlight-dash'),slab=tileMeshes.get(t.id);slab.material.emissiveIntensity=target?.7:.03;const owner=state?.players.find(p=>p.id===state?.territories[t.id]);slab.material.color.set(target?'#ffe7a0':owner?.color||districts[t.area]?.color||'#a7bb8d');
   }
   for(const el of host.querySelectorAll('[data-original-player]')){const a=actors.get('p'+el.dataset.originalPlayer);if(!a)continue;const p=project(a.sprite.position.x,a.sprite.position.y+2.7,a.sprite.position.z);el.style.setProperty('--world-x',p.x+'px');el.style.setProperty('--world-y',p.y+'px');}
   if(cameraChanged){cameraChanged=false;if(state?.weaponArcData)window.dispatchEvent(new Event('resize'));}
@@ -183,7 +187,7 @@ export function createOriginalWorld(host,map){
    const present=!!point&&(key==='truck'||(state[key+'Hp']??10)>0)&&[...(tile?.querySelectorAll('img')||[])].some(i=>i.src.includes(key));
    let a=npcActors.get(key);const wasVisible=a?.model.root.visible;
    if(!present){if(a)a.model.root.visible=false;continue;}
-   if(!a){const model=createNpcModel(T,key);model.root.scale.setScalar(isCityBoard?1:.58);scene.add(model.root);a={model,pos:null,start:0,from:[point.x,point.z],to:[point.x,point.z],angle:.3,targetAngle:.3};npcActors.set(key,a);}
+   if(!a){const model=isAtomBoard?createAtomNpcModel(T,key):createNpcModel(T,key);model.root.scale.setScalar(isCityBoard?1:.58);scene.add(model.root);a={model,pos:null,start:0,from:[point.x,point.z],to:[point.x,point.z],angle:.3,targetAngle:.3};npcActors.set(key,a);}
    a.model.root.visible=true;visibleNpcs.push({key,pos});
    const crowd=npcOccupied.get(pos)||0;npcOccupied.set(pos,crowd+1);
    const ox=crowd?Math.cos(crowd*2.4)*2.3:0,oz=crowd?Math.sin(crowd*2.4)*2.3:0;
@@ -201,7 +205,7 @@ export function createOriginalWorld(host,map){
   updateNight();projectDOM();
  }
  function draw(now){if(dead)return;raf=requestAnimationFrame(draw);if(document.hidden||now-last<40)return;const moving=[...actors.values(),...npcActors.values()].some(a=>a.start&&now-a.start<400);if(reduced&&!dirty&&!moving&&!playerItems.active()&&!combatEffects.active()&&!vehicleShot&&!vehicleShots.length)return;last=now;dirty=false;for(const a of actors.values()){const f=reduced?1:Math.min(1,(now-a.start)/400),x=a.from[0]+(a.to[0]-a.from[0])*f,z=a.from[1]+(a.to[1]-a.from[1])*f;a.sprite.position.set(x+(a.offset||0)+Math.sin(cam.yaw)*(a.frontOffset||0),elevation(x,z)+.62+(f<1?Math.sin(f*Math.PI)*.35:0),z+Math.cos(cam.yaw)*(a.frontOffset||0));}if(!reduced&&state?.isNight)for(const e of nightEffects)if(e.kind==='fire')e.object.material.opacity=.62+Math.sin(now*.007+e.object.position.x)*.06; if(!reduced)for(const a of animated){if(a.kind==='fire')a.object.scale.y=.9+Math.sin(now*.008)*.12;else if(a.kind==='train'){a.object.position.x=((now*.001*a.speed+a.span/2+a.offset)%a.span)-a.span/2;host.dataset.trainX=a.object.position.x.toFixed(2);}}
-  npcSignals.draw(now);
+  npcSignals.draw(now);atomThreat?.draw(state,now);
   const npcStatus=[];
   for(const [key,a] of npcActors){
    if(!a.model.root.visible)continue;
@@ -215,7 +219,7 @@ export function createOriginalWorld(host,map){
   if(cameraMode==='play')followAction(now);
   playerItems.draw(now,cam.yaw);combatEffects.draw(now);host.dataset.goldModels=JSON.stringify(goldModels.draw(state,now));
   host.dataset.npcModels=JSON.stringify(npcStatus);
-  projectDOM();renderer.render(scene,camera);host.dataset.triangles=String(renderer.info.render.triangles);host.dataset.districts=JSON.stringify(counts);host.dataset.scenery=JSON.stringify(features);host.dataset.interiorLots=String(sceneryLots.filter(p=>p.col>0&&p.col<8&&p.row>0&&p.row<5).length);host.dataset.boardLayout=isCityBoard?CITY_BOARD.id:'legacy';host.dataset.actorCount=String([...actors.values()].filter(a=>a.sprite.visible).length+npcStatus.length);
+  projectDOM();renderer.render(scene,camera);host.dataset.triangles=String(renderer.info.render.triangles);host.dataset.districts=JSON.stringify(counts);host.dataset.scenery=JSON.stringify(features);host.dataset.interiorLots=String(sceneryLots.filter(p=>p.col>0&&p.col<8&&p.row>0&&p.row<5).length);host.dataset.boardLayout=isAtomBoard?ATOM_BOARD.id:isCityBoard?CITY_BOARD.id:'legacy';host.dataset.actorCount=String([...actors.values()].filter(a=>a.sprite.visible).length+npcStatus.length);
  }
  // Vehicle moves take temporary priority; otherwise show the current turn, human or CPU.
  function followTarget(x,z,y,snap=false){
@@ -229,6 +233,7 @@ export function createOriginalWorld(host,map){
   host.dataset.cameraSubject='player:'+p.id;followTarget(x,z,elevation(x,z)+1.5,snap);
  }
  function followAction(now){
+  if(state.cityBeat?.focus==='atom'){vehicleShots.length=0;vehicleShot=null;host.dataset.cameraSubject='atom';const pts=(state.atom?.boss.targets||[]).map(id=>squares.get(id)).filter(Boolean);const x=pts.length?pts.reduce((n,p)=>n+p.x,0)/pts.length:0,z=pts.length?pts.reduce((n,p)=>n+p.z,0)/pts.length:0;followTarget(x*.6,z*.6,12);return;}
   if(state.cityBeat){vehicleShots.length=0;vehicleShot=null;const key=state.cityBeat.focus,a=npcActors.get(key);if(a?.model.root.visible){const p=a.model.root.position;host.dataset.cameraSubject=key;followTarget(p.x,p.z,p.y+2.5);}return;}
 
   if(vehicleShot&&((now>=vehicleShot.until&&(!state?._roundEndInProgress||vehicleShots.length))||(!npcActors.get(vehicleShot.key)?.model.root.visible&&!state?._roundEndInProgress)))vehicleShot=null;

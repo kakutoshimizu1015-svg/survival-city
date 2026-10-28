@@ -1,3 +1,5 @@
+import {isAtom} from "../src/atom-map.js";
+import {advanceAtomThreat} from "../src/atom-rules.js";
 import {pickNpcNext} from '../src/city-random.js';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
 import {beginRound,roundWait,roundBeat,movingBeat,encounterBeat,finishRound,withCombat} from '../src/city-presentation.js';
@@ -15,10 +17,10 @@ test('actual generated round: reports precede movement, collisions wait for arri
  const s={...fixture(),truckPos:0,policePos:3,policeHp:10,policeCd:0,territories:{},players:[{...fixture().players[0],name:'自分',pos:1,equip:{},hp:100,penaltyAP:0}],gold:{spot:null,nextSpot:12,nextRound:2},animalPos:999,unclePos:999,yakuzaPos:999,loansharkPos:999,friendPos:999};
  const store=memory(s,state=>history.push({time:clock,phase:state.cityBeat?.phase,focus:state.cityBeat?.focus,pos:state.truckPos,police:state.policePos,round:state.roundCount,busy:state._roundEndInProgress}));
  const wait=async ms=>{clock+=ms},damage=(id,n)=>{damageTimes.push(clock);store.getState().updatePlayer(id,p=>({hp:p.hp-n}));};
- const names=['v','X','Y','G','Ua','q','J','Wa','Math','beginRound','roundWait','roundBeat','movingBeat','encounterBeat','finishRound','pickNpcNext'];
+ const names=['v','X','Y','G','Ua','q','J','Wa','Math','beginRound','roundWait','roundBeat','movingBeat','encounterBeat','finishRound','pickNpcNext','isAtom','advanceAtomThreat'];
  const run=new Function(...names,'return '+source.slice(start+3,end));
  const walk=(pos,n)=>({finalPos:pos===3?1:2,hitList:pos===3?[1]:[1,2],finalPrevPos:1});
- await run(store,wait,()=>{},()=>{},walk,damage,()=>{},()=>{},Object.assign(Object.create(Math),{random:()=>.1}),beginRound,roundWait,roundBeat,movingBeat,encounterBeat,finishRound,pickNpcNext)();
+ await run(store,wait,()=>{},()=>{},walk,damage,()=>{},()=>{},Object.assign(Object.create(Math),{random:()=>.1}),beginRound,roundWait,roundBeat,movingBeat,encounterBeat,finishRound,pickNpcNext,isAtom,advanceAtomThreat)();
  const stages=history.map(x=>x.phase).filter((p,i,a)=>p&&p!==a[i-1]);
  for(const name of ['report','truck-intro','truck-result','truck-end','police-intro','police-result','forecast'])assert.ok(stages.includes(name),name);
  assert.ok(stages.indexOf('report')<stages.indexOf('truck-intro'));assert.ok(stages.indexOf('truck-end')<stages.indexOf('police-intro'));assert.ok(stages.indexOf('police-result')<stages.indexOf('forecast'));
@@ -28,11 +30,11 @@ test('actual generated round: reports precede movement, collisions wait for arri
 test('classic mode keeps native round timing and outcomes; cancelling a paced round cannot resume in the title',async()=>{
  const patched=readFileSync(new URL('../assets/useNetworkStore-CIe06z3C.js',import.meta.url),'utf8'),original=readFileSync(new URL('../scripts/vendor/original-network-store.js',import.meta.url),'utf8');
  async function run(source,goldMode,cancel=false){
-  const start=source.indexOf('Ga=async()=>'),end=source.indexOf(',Z=!1',start),names=['v','X','Y','G','Ua','q','J','Wa','Math','beginRound','roundWait','roundBeat','movingBeat','encounterBeat','finishRound','pickNpcNext'];
+  const start=source.indexOf('Ga=async()=>'),end=source.indexOf(',Z=!1',start),names=['v','X','Y','G','Ua','q','J','Wa','Math','beginRound','roundWait','roundBeat','movingBeat','encounterBeat','finishRound','pickNpcNext','isAtom','advanceAtomThreat'];
   const factory=new Function(...names,'return '+source.slice(start+3,end));let clock=0,hits=0;
   const store=memory({...fixture(),goldMode,truckPos:0,policePos:3,policeHp:10,policeCd:0,territories:{},players:[{id:0,name:'自分',pos:1,p:20,hp:100,equip:{},penaltyAP:0}]});
   const wait=async ms=>{clock+=ms;if(cancel)store.setState({gamePhase:'title',cityRoundId:null,cityBeat:null,_roundEndInProgress:false});};
-  await factory(store,wait,()=>{},()=>{},(pos,n)=>({finalPos:pos===3?1:2,hitList:pos===3?[1]:[1,2],finalPrevPos:1}),(id,n)=>{hits++;store.getState().updatePlayer(id,p=>({hp:p.hp-n}))},()=>{},()=>{},Object.assign(Object.create(Math),{random:()=>.1}),beginRound,roundWait,roundBeat,movingBeat,encounterBeat,finishRound,pickNpcNext)();
+  await factory(store,wait,()=>{},()=>{},(pos,n)=>({finalPos:pos===3?1:2,hitList:pos===3?[1]:[1,2],finalPrevPos:1}),(id,n)=>{hits++;store.getState().updatePlayer(id,p=>({hp:p.hp-n}))},()=>{},()=>{},Object.assign(Object.create(Math),{random:()=>.1}),beginRound,roundWait,roundBeat,movingBeat,encounterBeat,finishRound,pickNpcNext,isAtom,advanceAtomThreat)();
   return {clock,hits,state:store.getState()};
  }
  const a=await run(original,false),b=await run(patched,false);assert.equal(a.clock,b.clock);assert.deepEqual(a.state.players,b.state.players);assert.equal(a.state.roundCount,b.state.roundCount);
