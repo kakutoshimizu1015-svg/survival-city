@@ -8,6 +8,15 @@ def once(old,new):
  s=s.replace(old,new,1)
 s='import {escapeChat} from "../src/chat-utils.js";\nimport {handleShopAction} from "../src/shop-session.js";\nimport {drawGoldCard,goldRewardCard} from "../src/card-balance.js";\nimport {npcWalk,pickNpcNext} from "../src/city-random.js";\nimport {onGoldDeath,finishGoldGame,handleGoldPurchase} from "../src/gold-rules.js";\n'+s
 once('var _={gamePhase:', 'var _={goldMode:false,gold:null,goldShop:null,shopAccess:null,gamePhase:')
+# Rest stops protect occupants before rolling a hit or consuming a doll.
+once('f.push(n.id),n.equip?.doll?', 'f.push(n.id),v.getState().goldMode&&s.find(tile=>tile.id===n.pos)?.type===`shelter`?(Y(`🏕️ ${n.name}は休憩所で収集車を回避！`),v.getState().addEventPopup(n.id,`🏕️`,`休憩所で安全！`,`収集車の攻撃を必ず回避`,`good`)):n.equip?.doll?')
+# Both dash paths enter the ordinary landing handler; the skill already paid 3 AP.
+once('let r=v.getState(),i=r.mapData.find(e=>e.id===t),a=r.players[r.turn],o=a.pos,', 'let r=v.getState(),i=r.mapData.find(e=>e.id===t),a=r.players[r.turn];const dash=r.goldMode&&r.isDashPicking;if(!i||!a||dash&&(!r.isBranchPicking||!r.currentBranchOptions.includes(t)))return;let o=a.pos,')
+once('d=s+u;if(r.updateCurrentPlayer', 'd=dash?0:s+u;if(r.updateCurrentPlayer')
+once('rainGear:r.isRainy?!1:e.rainGear,nextMoveCostPenalty:0,', 'rainGear:dash?e.rainGear:r.isRainy?!1:e.rainGear,nextMoveCostPenalty:dash?e.nextMoveCostPenalty:0,')
+once('Y(`🚶 「${i.name}」に移動。`)', 'Y(dash?`💨 疾風ダッシュ！「${i.name}」に着地。`:`🚶 「${i.name}」に移動。`)')
+once('r.incrementGameStat(a.id,`tiles`,1),a.isCPU||e.getState().incrementStat(`totalTilesMoved`,1)', 'r.incrementGameStat(a.id,`tiles`,dash?3:1),a.isCPU||e.getState().incrementStat(`totalTilesMoved`,dash?3:1)')
+once('交番・NPC・罠を飛び越える戦略移動が可能。', '途中の交番・NPC・罠は飛び越えます。着地先のマス・NPC・罠の効果は発生します。')
 once('{kills:(e.kills||0)+1,p:t,hand:n}', '{kills:(e.kills||0)+1,npcKills:(e.npcKills||0)+1,p:t,hand:n}')
 once('o&&i.updatePlayer(r,e=>({kills:(e.kills||0)+1}))}', 'o&&i.updatePlayer(r,e=>({kills:(e.kills||0)+1}));onGoldDeath(v,e,r,a.pos,Y)}')
 # A gold-can loss replaces extra cash/equipment confiscation. Damage theft still applies.

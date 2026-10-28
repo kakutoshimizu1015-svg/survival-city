@@ -6,6 +6,7 @@ export function npcImpact(s,key,p=viewerPlayer(s),tile){
  const result=(tone,desc)=>({...info,key,tone,desc});
  if(key==='animal')return result(['can','trash'].includes(tile?.type)?'bad':'neutral','同じマスでは缶拾い・ゴミ漁りができない');
  if(key==='truck'){
+  if(s.goldMode&&tile?.type==='shelter')return result('good','休憩所にいる間は収集車を必ず回避。人形も消費しない');
   if(p.equip?.doll)return result('bad','暴走時は身代わり人形を1個消費して回避');
   if(p.respawnShield>0)return result('neutral','復活無敵でダメージ回避中。通常は暴走時55%で50ダメージ');
   return result('bad','暴走時に接触すると55%で50ダメージ');

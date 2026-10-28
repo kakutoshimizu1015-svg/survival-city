@@ -1,3 +1,4 @@
+import {buildKobanLandmarks} from "./koban-landmark.js";
 import {createCombatEffects} from "./combat-effects.js";
 import {createNpcSignals} from './npc-signals.js';
 import {createGoldModels} from './gold-models.js';
@@ -140,6 +141,7 @@ export function createOriginalWorld(host,map){
  for(let x=-width/2-6;x<width/2+6;x+=8){block(x,1.6,-depth/2-7,1,6,1.2,'#6b8178');block(x,4.7,-depth/2-7,8.1,.65,3,'#849287');}
  for(let i=0;i<16;i++){const x=-width/2+i*width/15;building(x,-depth/2-20-rnd()*6,3+rnd()*2,3,5+rnd()*10,'#69858a','tower');}
  }
+ const kobans=buildKobanLandmarks({T,squares,block,mesh,mat,sign,nightGlow,nightStrip,roadDistance,width,depth,lots:sceneryLots,scale:isCityBoard?1:.4});features.koban=kobans.length;
  for(const {material,matrices} of batches.values()){const inst=new T.InstancedMesh(boxGeometry,material,matrices.length);matrices.forEach((m,i)=>inst.setMatrixAt(i,m));inst.castShadow=true;inst.receiveShadow=true;scene.add(inst);}
  const tileMeshes=new Map();
  for(const t of squares.values()){

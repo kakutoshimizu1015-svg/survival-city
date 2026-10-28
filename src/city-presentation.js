@@ -17,7 +17,7 @@ export async function encounterBeat(store,id,vehicle,before,pos,wait){
  for(const old of before.filter(p=>p.hp>0&&p.pos===pos)){
   const p=store.getState().players.find(p=>p.id===old.id);if(!p)continue;
   const died=(p.deaths||0)>(old.deaths||0),damage=died?old.hp:Math.max(0,old.hp-p.hp),penalty=(p.penaltyAP||0)-(old.penaltyAP||0),doll=old.equip?.doll&&!p.equip?.doll;
-  const blessed=old.godBlessing&&!p.godBlessing;const lines=doll?['身代わり人形が守った！']:blessed?[`神の加護で助かった！ HP ${p.hp}`]:died?['HPが0に。病院で復活します。']:damage?[`HP −${damage}　残り${p.hp}`]:penalty?[`次のサイコロのAP −${penalty}`]:old.respawnShield>0?['復活したばかりなので無傷！']:['ぶつからずにすんだ！'];
+  const blessed=old.godBlessing&&!p.godBlessing;const safe=vehicle==='truck'&&store.getState().goldMode&&store.getState().mapData.find(t=>t.id===pos)?.type==='shelter';const lines=safe?['休憩所にいるので、収集車を必ず回避！']:doll?['身代わり人形が守った！']:blessed?[`神の加護で助かった！ HP ${p.hp}`]:died?['HPが0に。病院で復活します。']:damage?[`HP −${damage}　残り${p.hp}`]:penalty?[`次のサイコロのAP −${penalty}`]:old.respawnShield>0?['復活したばかりなので無傷！']:['ぶつからずにすんだ！'];
   if(died&&(old.goldCans||0)>(p.goldCans||0))lines.push('金缶を1個、道に落とした');
   await roundBeat(store,id,vehicle+'-result',p.name+'の結果',lines,vehicle,2200,wait);shown=true;
  }

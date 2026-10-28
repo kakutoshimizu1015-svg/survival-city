@@ -25,6 +25,9 @@ def actions(once):
  once('y.p+=8,n(`🏦 行政の見落とし！', 'y.p=p.p+8,n(`🏦 行政の見落とし！')
 generate('original-card-actions.js','cards-C7BZxg2n.js',actions)
 def skills(once):
+ once('import{I as e,j as t,k as n,t as r}', 'import{I as e,j as t,k as n,t as r,w as landDash}')
+ once('if(a.ap<3)return;let o=new Set', 'if(a.ap<3||i.goldMode&&(a.charType!==`athlete`||a.cannotMove||i.isBranchPicking||i._roundEndInProgress))return;let o=new Set')
+ once('i.updateCurrentPlayer(e=>({ap:e.ap-3})),c.length===1?', 'if(i.goldMode){i.updateCurrentPlayer(e=>({ap:e.ap-3}));e.setState({isBranchPicking:!0,currentBranchOptions:c,isDashPicking:!0});if(c.length===1)landDash(c[0]);else n(`💨 疾風ダッシュ！着地点を選んでください`);return}i.updateCurrentPlayer(e=>({ap:e.ap-3})),c.length===1?')
  once('e.setState({shopStockTurn:-1,shopActive:!0})', 'e.setState({shopStockTurn:-1,shopActive:!0,shopAccess:`${i.roundCount}:${i.turn}`})')
  once('l=Math.random()<.1?s[Math.floor(Math.random()*s.length)]:c[Math.floor(Math.random()*c.length)];', 'l=i.goldMode?drawGoldCard(Math.random,.1):Math.random()<.1?s[Math.floor(Math.random()*s.length)]:c[Math.floor(Math.random()*c.length)];')
 generate('original-skills.js','skills-CsxruNUN.js',skills)
