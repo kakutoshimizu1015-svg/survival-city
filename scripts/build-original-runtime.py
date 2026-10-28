@@ -98,5 +98,7 @@ replace_once(old,new)
 replace_once('children:`🏠 タイトルに戻る`}),(0,G.jsx)(q,{onClick:()=>r({settingsActive:!1})', 'children:`🏠 タイトルに戻る`})]}),(0,G.jsx)(q,{onClick:()=>r({settingsActive:!1})')
 s='import {escapeChat} from "../src/chat-utils.js";\nimport {GoldShop} from "../src/gold-shop.js";\nimport {GoldRulebook} from "../src/gold-rulebook.js";\nimport {goldShopIds,goldShopPrice,shopPurchaseKey,cardAvailable,goldCardBlock} from "../src/card-balance.js";\nimport {EQUIPMENT_ITEM_IDS} from "../src/player-info.js";\nimport {PixelItemIcon} from "../src/pixel-item-art.js";\nimport {createGoldState,goldScore,goldCompare,goldRankOf} from "../src/gold-rules.js";\nimport {goldCpuStep} from "../src/gold-cpu.js";\nimport {GoldResults,GoldBadge} from "../src/gold-ui.js";\nimport {PixelShop,PixelEvent} from "../src/pixel-scenes.js";\nimport {createCityBoard} from "../src/city-board-map.js";\nfunction It(){return createCityBoard()}\n'+s
 s+='\nexport {Mt as smallMap,Nt as mediumMap,Pt as largeMap,It as originalMap,Ti as miniGames,mr as tileDescriptions,tr as statusEquipment,nr as hasStatusEquipment};\n'
+import runpy
+s=runpy.run_path(str(Path(__file__).resolve().with_name('build-presentation-hooks.py')))['patch_runtime'](s)
 (root/'assets/original-city-runtime.js').write_text(s)
 print('48-square district board, gold competition and presentation hooks generated.')

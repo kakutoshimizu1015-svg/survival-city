@@ -22,13 +22,14 @@ export function chooseGoldSpot(s,random=Math.random){
  return shortlist[Math.min(shortlist.length-1,Math.floor(random()*shortlist.length))]?.id??null;
 }
 export function createGoldState(s,random=Math.random){
- const state={...s,goldMode:true,gold:{version:1,spot:null,lastSpot:null,nextRound:1,issued:0,drops:{},history:[]},players:s.players.map(p=>({...p,hand:goldOpeningHand(p.hand,random),goldCans:0,pvpKills:0,npcKills:0}))};
+ const state={...s,goldMode:true,gold:{version:1,spot:null,lastSpot:null,nextRound:1,nextSpot:null,issued:0,drops:{},history:[]},players:s.players.map(p=>({...p,hand:goldOpeningHand(p.hand,random),goldCans:0,pvpKills:0,npcKills:0}))};
  state.gold.spot=chooseGoldSpot(state,random);return {...randomCityState(state,random),goldMode:true,gold:state.gold,players:state.players};
 }
 export function canBuyGold(s,id){const p=s.players[s.turn];return !!(s.goldMode&&!s.gameOver&&!s._roundEndInProgress&&!s.mgActive&&!s.storyActive&&!s.shopActive&&!s.weaponArcData&&!s.diceAnim?.active&&p?.id===id&&p.hp>0&&s.gold?.spot!=null&&p.pos===s.gold.spot&&p.p>=GOLD_PRICE);}
-export function buyGoldPatch(s,id){
+export function buyGoldPatch(s,id,random=Math.random){
  if(!canBuyGold(s,id))return null;
- return {players:s.players.map(p=>p.id===id?{...p,p:p.p-GOLD_PRICE,goldCans:(p.goldCans||0)+1}:p),gold:{...s.gold,spot:null,lastSpot:s.gold.spot,history:[...(s.gold.history||[]),s.gold.spot].slice(-3),nextRound:s.roundCount+1,issued:s.gold.issued+1}};
+ const patch={players:s.players.map(p=>p.id===id?{...p,p:p.p-GOLD_PRICE,goldCans:(p.goldCans||0)+1}:p),gold:{...s.gold,spot:null,lastSpot:s.gold.spot,history:[...(s.gold.history||[]),s.gold.spot].slice(-3),nextRound:s.roundCount+1,nextSpot:null,issued:s.gold.issued+1}};
+ if(patch.gold.nextRound<s.maxRounds)patch.gold.nextSpot=chooseGoldSpot({...s,...patch},random);return patch;
 }
 export function goldDeathPatch(s,victimId,attackerId,deathTile){
  if(!s.goldMode||!s.gold)return null;
@@ -43,7 +44,21 @@ export function onGoldDeath(store,victimId,attackerId,deathTile,log){
  const victim=before.players.find(p=>p.id===victimId),attacker=before.players.find(p=>p.id===attackerId),pvp=attacker&&attacker.id!==victimId&&!sameTeam(attacker,victim),lost=Math.min(1,victim.goldCans||0);
  store.setState(patch);log(pvp?`⚔️ ${safeName(attacker.name)}が${safeName(victim.name)}を撃破！ +2点${lost?'・金缶を1個奪った！':'（相手の金缶は0個）'}`:lost?`🥫 ${safeName(victim.name)}が金缶を1個、${deathTile}番に落とした！`:'☠️ 復活して再挑戦！');
 }
-export function goldRoundPatch(s,random=Math.random){if(!s.goldMode||!s.gold||s.gold.spot!=null||s.roundCount<s.gold.nextRound||s.roundCount>=s.maxRounds)return null;const spot=chooseGoldSpot(s,random);return spot==null?null:{gold:{...s.gold,spot}};}
+export function goldRoundPatch(s,random=Math.random){
+ if(!s.goldMode||!s.gold||s._roundEndInProgress||s.gold.spot!=null||s.roundCount<s.gold.nextRound||s.roundCount>=s.maxRounds)return null;
+ // A reservation remains valid even if somebody has moved onto it to wait.
+ const promised=s.gold.nextSpot,spot=promised!=null&&s.mapData.some(t=>t.id===promised)?promised:chooseGoldSpot(s,random);
+ return spot==null?null:{gold:{...s.gold,spot,nextSpot:null}};
+}
+export function goldChase(s,p){
+ if(!p||!s.players.length)return {text:'',detail:''};
+ const standings=goldStandings(s),team=standings.isTeamGame;
+ const groups=team?standings.sortedTeams:standings.results.map(a=>({total:goldScore(a),p:a.p,members:[a]}));
+ const me=groups.find(g=>g.members.some(a=>a.id===p.id)),top=groups[0];if(!me||!top)return {text:'',detail:''};
+ const tied=me.total===top.total&&me.p===top.p,equals=groups.filter(g=>g.total===top.total&&g.p===top.p).length;
+ const points=Math.max(0,top.total-me.total)+(me.p<top.p?1:0);
+ return {points:tied?0:points,team,text:tied?(equals>1?'同率首位！':'いま首位！'):`首位まであと${points}点`,detail:team?'チームの合計でくらべています':!tied&&me.total===top.total?`点数は同じ。あと${top.p-me.p}Pでも首位！`:'金缶1個＝3点 · 相手を倒す＝2点'};
+}
 export function pickupGoldPatch(s,id){const p=s.players.find(p=>p.id===id),amount=s.gold?.drops?.[p?.pos]||0;if(!s.goldMode||!p||!amount||s.gameOver||p.hp<=0)return null;const drops={...s.gold.drops};delete drops[p.pos];return {gold:{...s.gold,drops},players:s.players.map(a=>a.id===id?{...a,goldCans:(a.goldCans||0)+amount}:a)};}
 export function goldStandings(s,emoji={}){
  const results=s.players.map(p=>({...p,totalScore:goldScore(p),goldValue:(p.goldCans||0)*3,killBonus:(p.pvpKills||0)*2,emoji:emoji[p.charType]||'👤'})).sort(goldCompare);

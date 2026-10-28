@@ -1,3 +1,4 @@
+import {installCityNotices} from "./city-notices.js";
 import {viewerPlayer,NPC_INFO} from './npc-impact.js';
 import {tileInfo,tileDetailHTML,tileTooltipText} from './tile-info.js';
 import {tileDescriptions} from '../assets/original-city-runtime.js';
@@ -92,3 +93,4 @@ new MutationObserver(schedule).observe(document.querySelector('#root'),{childLis
 window.addEventListener('pagehide',e=>{if(!e.persisted)world?.dispose();});schedule();
 
 installMobileUI(gameStore);
+installCityNotices(gameStore,networkStore,()=>world);

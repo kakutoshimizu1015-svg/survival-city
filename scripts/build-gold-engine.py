@@ -50,5 +50,7 @@ s=s.replace('[チャット] ${r.chat.sender}: ${r.chat.text}', '[チャット] $
 assert s.count('lobbyPlayers:[],chatQueue:[]')==2
 s=s.replace('lobbyPlayers:[],chatQueue:[]','lobbyPlayers:[],chatQueue:[],chatHistory:[]')
 once('addChatToQueue:t=>e(e=>({chatQueue:[...e.chatQueue,t]}))', 'addChatToQueue:t=>e(e=>e.chatHistory.some(m=>m.id===t.id)?e:({chatQueue:[...e.chatQueue,t],chatHistory:[...e.chatHistory,{id:t.id,sender:String(t.sender).slice(0,40),text:String(t.text).slice(0,40)}].slice(-100)}))')
+import runpy
+s=runpy.run_path(str(Path(__file__).resolve().with_name('build-presentation-hooks.py')))['patch_engine'](s)
 (root/'assets/useNetworkStore-CIe06z3C.js').write_text(s)
 print('Gold rules hooks generated; native legacy rules are conditional on goldMode.')

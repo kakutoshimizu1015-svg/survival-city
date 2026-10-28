@@ -1,5 +1,5 @@
 import {itemArt,PixelItemIcon} from './pixel-item-art.js';
-import {goldScore,goldCompare,goldRankOf,canBuyGold,GOLD_PRICE} from './gold-rules.js';
+import {goldScore,goldCompare,goldRankOf,canBuyGold,GOLD_PRICE,goldChase} from './gold-rules.js';
 export const GOLD_ICON='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40"><path fill="#704517" d="M7 4h18v5l3 6-3 6 2 14-5 3H9l-5-5 3-14-3-5 3-5z"/><path fill="#e3ab32" d="M9 6h14v5l3 5-5 6 3 12-4 2H10l-4-4 4-14-4-4 3-3z"/><path fill="#fff1a2" d="M10 9h4v8l-3 10v5H8l3-14zM8 5h16v3H8zM9 33h13v3H9z"/><path fill="#98600f" d="M18 11h4l-3 9 3 12h-4l-2-12z"/><path fill="#fff5c0" d="M25 1h2v3h3v2h-3v3h-2V6h-3V4h3z"/></svg>');
 export const goldIconHTML=()=>`<img class="gold-can-icon" src="${itemArt('gold')}" alt="金缶">`;
 export function GoldBadge({react:R,player:p}){return R.createElement('span',{className:'gold-badge'},R.createElement('span',null,R.createElement(PixelItemIcon,{react:R,id:'gold',alt:'金缶',className:'gold-can-icon'}),` ${p.goldCans||0}`),R.createElement('span',null,`⚔️ ${p.pvpKills||0}`),R.createElement('b',null,`${goldScore(p)}点`));}
@@ -13,9 +13,10 @@ export function installGoldUI(store,network,session){
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let html='';
  function update(){const s=store.getState(),board=document.querySelector('#board-area');if(board&&box.parentNode!==board)board.append(box);box.hidden=!s.goldMode||s.gamePhase!=='playing'||s.gameOver;if(box.hidden)return;
   const p=s.players[s.turn],tile=s.mapData.find(t=>t.id===s.gold?.spot),net=network.getState(),mine=p&&!p.isCPU&&(net.status!=='connected'||p.userId===net.myUserId),can=mine&&canBuyGold(s,p.id)&&!s.shopActive&&!s.mgActive&&!s.storyActive&&!s.weaponArcData&&!s.turnBannerActive&&!document.body.classList.contains('city-touring');
-  const text=`${goldIconHTML()}<div><strong>${tile?'金缶 · '+tile.id+'番':s.roundCount>=s.maxRounds?'最終ラウンド · 金缶を守れ！':'次の金缶は次ラウンド'}</strong><small>${tile?esc(tile.name)+' · 10Pで獲得':'金缶×3 ＋ 対人キル×2'}</small></div>${tile?`<button data-gold-focus aria-label="金缶の場所を見る">場所</button>`:''}${p?.pos===tile?.id&&mine?`<button data-buy-gold ${can?'':'disabled'}>${p.p<GOLD_PRICE?'10P必要':'金缶を買う'}</button>`:''}`;
+  const next=s.mapData.find(t=>t.id===s.gold?.nextSpot),me=s.players.find(a=>net.status==='connected'?a.userId===net.myUserId:!a.isCPU)||p,chase=goldChase(s,me);
+  const text=`${goldIconHTML()}<div><strong>${tile?'金缶 · '+tile.id+'番':s.roundCount>=s.maxRounds?'最終ラウンド · 金缶を守れ！':next?'次の金缶 · '+next.id+'番':s.gold?.nextRound>=s.maxRounds?'新しい金缶はもう出ません':'次の金缶を準備中'}</strong><small>${tile?esc(tile.name)+' · 10Pで獲得':next?esc(next.name)+' · '+s.gold.nextRound+'ラウンドに登場':'金缶×3 ＋ 対人キル×2'}</small><b class="gold-chase" title="${esc(chase.detail)}">${chase.team?'チーム · ':''}${esc(chase.text)}</b></div>${tile||next?`<button data-gold-focus aria-label="金缶の場所を見る">場所</button>`:''}${p?.pos===tile?.id&&mine?`<button data-buy-gold ${can?'':'disabled'}>${p.p<GOLD_PRICE?'10P必要':'金缶を買う'}</button>`:''}`;
   if(text!==html){html=text;box.innerHTML=text;}
  }
- box.addEventListener('click',e=>{if(e.target.closest('[data-buy-gold]'))session.buy();if(e.target.closest('[data-gold-focus]'))window.cityProjection?.inspectTile(store.getState().gold.spot);});
+ box.addEventListener('click',e=>{if(e.target.closest('[data-buy-gold]'))session.buy();if(e.target.closest('[data-gold-focus]'))window.cityProjection?.inspectTile(store.getState().gold.spot??store.getState().gold.nextSpot);});
  window.addEventListener('city-item-art-ready',update);store.subscribe(()=>queueMicrotask(update));new MutationObserver(update).observe(document.querySelector('#root'),{childList:true,subtree:true});new MutationObserver(update).observe(document.body,{attributes:true,attributeFilter:['class']});update();
 }

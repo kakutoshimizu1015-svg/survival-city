@@ -1,23 +1,39 @@
-import {GOLD_TILE_RULES,WORLD_RULES} from "./rule-details.js";
-import {NPC_INFO,npcImpact} from "./npc-impact.js";
-import {n as characters} from "../assets/useNetworkStore-CIe06z3C.js";
+import {GOLD_TILE_RULES,WORLD_RULES} from './rule-details.js';
+import {NPC_INFO,npcImpact} from './npc-impact.js';
+import {n as characters} from '../assets/useNetworkStore-CIe06z3C.js';
 import {cardAvailable,goldCardDescription} from './card-balance.js';
 import {PixelItemIcon} from './pixel-item-art.js';
+const characterTips={yankee:'近くの相手からPを取り、パンチで戦う。',athlete:'雨でも移動しやすい。ダッシュで近道できる。',survivor:'警察をかわすのが得意。休むとHPが回復する。',sales:'バイトと買い物が得意。手札を相手に売りつける。',hacker:'手札をたくさん持てる。どこからでも買い物できる。',musician:'仲間を集めてPをかせぐ。自分の陣地も守れる。',doctor:'自分のHPが回復する。相手への治療には毒も入る。',gambler:'サイコロが得意。APでカードを手に入れる。',detective:'NPCを動かす。道に罠をしかける。',chef:'食べ物で多く回復する。料理で攻撃もできる。',scavenger:'ゴミや空き缶から、装備や武器を作る。',billionaire:'Pをかせぐのが得意。お金で相手を困らせる。',god:'みんなを助けて、お礼のPをもらう。',emperor:'空き缶が多いほど強くなる。缶を飛ばして攻撃する。',sennin:'何もせずに待つと力がたまる。ためた力で大わざを使う。'};
+const skillText=(c,kind)=>{
+ let text=`${c[kind]?.name||''} ${c[kind]?.desc||''}`;
+ if(c.id==='hacker'&&kind==='action')return '3APで、どこからでもショップを開く。品替えは店で3P、1ターン1回。';
+ if(c.id==='emperor')text=text.replace('6ターン限定','1ターンに6マスまで');
+ return text.replace('自身は死亡ペナ半減。','').replace('④死亡時P没収免除。','');
+};
+const sentences=text=>String(text||'').split(/(?<=[。！])\s*|\n/u).filter(Boolean);
 export function GoldRulebook({react:R,cards,miniGames=[],onClose}){
  const h=R.createElement,closeRef=R.useRef(null);
  R.useEffect(()=>{const old=document.activeElement;closeRef.current?.focus();const key=e=>{if(e.key==='Escape'){e.preventDefault();onClose();}};window.addEventListener('keydown',key);return()=>{window.removeEventListener('keydown',key);if(old?.isConnected)old.focus();};},[]);
- const section=(title,...texts)=>h('section',{key:title},h('h3',null,title),...texts.map((text,i)=>h('p',{key:i},text)));
- return h('div',{className:'gold-rulebook-overlay',onClick:onClose},h('section',{className:'gold-rulebook',role:'dialog','aria-modal':true,'aria-label':'金缶争奪戦のルール',onClick:e=>e.stopPropagation()},h('header',null,h('h2',null,'金缶争奪戦'),h('button',{ref:closeRef,onClick:onClose,'aria-label':'ルールを閉じる'},'閉じる ×')),h('div',{className:'gold-rulebook-body'},
- section('勝ち方と順位','金缶1個＝3点、対人キル1回＝2点。合計点が高い人が勝ち。同点は所持Pで比較し、両方同じなら同順位。NPC討伐・デスは得点に加算しません。','チーム戦の勝敗はメンバーの得点とPの合計。逆転カードの使用条件はチーム内でも個人のランキングを使います。'),
- section('金缶を手に入れる','マップに表示された販売場所で10P。購入にAPは不要です。購入後は次ラウンドに別の場所へ出現します（最終ラウンドの新規出現なし）。','相手を倒すとキル点に加えて金缶を最大1個奪います。NPC・毒などで倒れると、その場に金缶を1個落とします。復活時の無敵がある間は攻撃を受けません。'),
- section('自分の手番','サイコロ2個の合計がAPになり、ゾロ目は倍。通常の移動は1AP、雨は原則2AP。移動・缶拾い・ゴミ漁り・バイト・カードを組み合わせ、終わったらターン終了。','缶とゴミを買取所で換金して、金缶や武器を購入します。陣地はP収入を生みますが、維持費もあります。昼夜・天気・NPC・職業によって条件が変わります。'),
- section('武器の入手と攻撃','開始時の手札3枚のうち1枚はバットです。ショップにはレンガ3P・バット4Pが必ず並び、それぞれ1人につき1ラウンド4個まで購入できます。営業マンは2P引き（最低2P）。','一般武器は1回の攻撃につき2APとカード1枚を使います。カードの射程・威力を確認して照準を合わせます。攻撃をキャンセルするとカードとAPが戻ります。ジャンクガンはゴミを弾にして3回使える工作武器です。'),
- section('逆転カードの「最下位」','金缶×3＋対人キル×2の得点順位で判定。同点は所持P、得点とPの両方が同じ最下位なら全員が対象です。所持Pだけ少ない首位には使えません。','下剋上は、自分より上位の敵のうち最上位から最大10Pを奪います。上位の敵がいない、またはその相手が0PならカードもAPも消費しません。大暴落は味方を巻き込みません。'),
- section('マップと詳細','マスをタップ／クリックすると、その場所の効果とNPCの影響を表示します。赤い印は不利益、緑は恩恵。巡回中は1本指で移動、2本指の開閉でズーム、左右移動で回転、上下移動で角度を調整できます。','キャラクターの能力は自分の肖像を押して確認。ショップや手札の説明は、下のカード一覧と同じ効果を表示します。'),
- ...WORLD_RULES.map(([title,...texts])=>h('details',{key:title,'data-rule-section':title},h('summary',null,title),section(title,...texts))),
- h('details',{'data-rule-section':'マス'},h('summary',null,'マスの種類・効果一覧'),...Object.values(GOLD_TILE_RULES).map(t=>section(t.title,t.desc))),
- h('details',{'data-rule-section':'NPC'},h('summary',null,'敵・味方NPCの説明'),...Object.keys(NPC_INFO).map(key=>{const p={p:100,hand:[18],equip:{},respawnShield:0},info=npcImpact({players:[p],turn:0},key,p,{type:'can'});return section(info.icon+' '+info.name,info.desc)}),h('p',null,'装備品・職業・復活無敵によって回避条件が変わります。実際のマス説明には自分の現在の状態が反映されます。')),
- h('details',{'data-rule-section':'キャラクター'},h('summary',null,'キャラクター・特殊スキル'),...characters.map(c=>section(c.name,`${c.passive?.name||''} ${c.passive?.desc||''}`,`${c.action?.name||''} ${c.action?.desc||''}`))),
- h('details',{'data-rule-section':'ミニゲーム'},h('summary',null,'ミニゲーム'),h('p',null,'イベントで出現したミニゲームの画面に従って操作します。勝敗・報酬は結果とログに表示されます。'),...Object.values(miniGames).map(c=>section(c.name||c.title,c.desc||c.description||''))),
- h('details',{'data-rule-section':'カード'},h('summary',null,'使用カード一覧 · 効果と消費AP'),h('div',{className:'gold-rule-cards'},...cards.filter(c=>cardAvailable(c.id)).map(c=>h('article',{key:c.id,'data-rule-card':c.id},h(PixelItemIcon,{react:R,id:c.id}),h('div',null,h('strong',null,c.name),h('p',null,goldCardDescription(c))))))))));
+ const list=(texts)=>h('ul',{className:'easy-rule-list'},...texts.flatMap(sentences).map((text,i)=>h('li',{key:i},text)));
+ const section=(title,...texts)=>h('section',{key:title},h('h3',null,title),list(texts));
+ const details=(key,title,...children)=>h('details',{'data-rule-section':key,key},h('summary',null,title),...children);
+ return h('div',{className:'gold-rulebook-overlay',onClick:onClose},h('section',{className:'gold-rulebook',role:'dialog','aria-modal':true,'aria-label':'金缶争奪戦のルール',onClick:e=>e.stopPropagation()},
+ h('header',null,h('h2',null,'あそびかた'),h('button',{ref:closeRef,onClick:onClose,'aria-label':'ルールを閉じる'},'閉じる ×')),
+ h('div',{className:'gold-rulebook-body'},
+ h('p',{className:'easy-rule-goal'},'金缶を集めよう。最後に点数が多い人の勝ち！'),
+ h('div',{className:'easy-rule-score'},h('div',null,h(PixelItemIcon,{react:R,id:'gold'}),h('strong',null,'金缶1個'),h('b',null,'3点')),h('div',null,h(PixelItemIcon,{react:R,id:18}),h('strong',null,'相手をたおす'),h('b',null,'2点'))),
+ h('ol',{className:'easy-rule-steps'},h('li',null,h('b',null,'🎲 サイコロをふる'),h('span',null,'出た数だけ、APがもらえる。')),h('li',null,h('b',null,'🚶 移動して行動する'),h('span',null,'お金を集める。金缶を買う。武器で戦う。')),h('li',null,h('b',null,'🛑 終わったら「ターン終了」'),h('span',null,'全員が終わると、次のラウンドへ。'))),
+ h('div',{className:'easy-rule-words'},h('span',null,'⚡ AP＝行動に使う力'),h('span',null,'💰 P＝お金'),h('span',null,'❤️ HP＝体力')),
+ details('金缶','🥫 金缶はどこにある？',list(['金缶のあるマスへ行き、10Pで買う。APはいらない。','誰かが買うと、次の場所を予告する。次のラウンドにそこへ出る。','うすい金缶は予告のしるし。まだ買えない。','最後のラウンドには、新しい金缶は出ない。','相手をたおすと、その人の金缶を1個までうばえる。','道に落ちた金缶は、そのマスへ行くと拾える。'])),
+ details('たたかい','⚔️ 武器を使ってみよう',list(['最初の手札にバットが1枚ある。','店ではレンガ3P、バット4Pで買える。','手札で武器を選び、向きを合わせて「攻撃！」を押す。','ふつうの武器は、1回で2APとカード1枚を使う。','「射程」は届く距離。「ダメージ」は減らせるHP。','HPが0になると病院で復活する。しばらく攻撃を受けない。','収集車や毒でたおれると、金缶をその場に1個落とす。','ジャンクガンは、ゴミを弾にして3回使える。'])),
+ details('順位','🏆 点数が同じなら？',list(['点数が同じなら、Pが多い人が上の順位。','点数もPも同じなら、同じ順位になる。','チーム戦は、仲間の点数とPを足してくらべる。','街のNPCをたおしても、点数は増えない。','「首位まであと○点」は、いまの点数とPで計算する。'])),
+ details('逆転','↗️ いちばん下の順位のとき',list(['「大暴落」「下剋上」「行政の見落とし」は、いちばん下の順位の人だけ使える。','同じ最下位なら、どちらの人も使える。','チーム戦でも、このカードは自分だけの順位で決まる。','下剋上：自分より上の敵から、一番上の人のお金を10Pまでうばう。','相手がいない・お金がないときは、カードもAPも使わない。','大暴落：味方のお金は減らさない。'])),
+ ...WORLD_RULES.map(([title,...texts])=>details(title,title,list(texts))),
+ details('マス','📍 マスのしるし',...Object.values(GOLD_TILE_RULES).map(t=>section(t.title,t.desc))),
+ details('NPC','🚛 街の人・車・動物',...Object.keys(NPC_INFO).map(key=>{const p={p:100,hand:[18],equip:{},respawnShield:0},info=npcImpact({players:[p],turn:0},key,p,{type:'can'});const easy={truck:'走っているときにぶつかると、55%の確率でHPが50減る。',police:'つかまると、次のAPが2減る。',uncle:'手札を1枚、勝手に捨ててしまう。',animal:'同じマスでは、缶拾いもゴミ漁りもできない。',yakuza:'HPが15〜20減る。手札も1枚うばう。',loanshark:'持っているPの20%を取る。取られるのは20Pまで。',friend:'空き缶を1個くれる。'};return section(info.icon+' '+info.name,easy[key]);}),list(['装備やキャラの力で、助かることもある。','マスをタッチすると、いまの自分がどうなるか分かる。'])),
+ details('マップ','🗺️ マップの見かた',list(['マスをタッチすると説明が出る。赤は危険、緑はうれしいこと。','「マップ巡回」を押すと、自由に見られる。','スマホ：1本指で移動。2本指を左右に動かすと回転。','2本指を上下に動かすと角度が変わる。指を開く・閉じるとズーム。','パソコン：ドラッグで移動。右ドラッグで回転。ホイールでズーム。','「プレイに戻る」を押すと、ゲームのカメラに戻る。'])),
+ details('キャラクター','👤 キャラの得意なこと',...characters.map(c=>h('section',{key:c.id},h('h3',null,c.name),h('p',null,characterTips[c.id]),h('details',null,h('summary',null,'スキルのくわしい効果'),list([skillText(c,'passive'),skillText(c,'action')]))))),
+ details('ミニゲーム','🎮 ミニゲームの操作',...Object.values(miniGames).map(c=>section(c.name,c.desc))),
+ details('カード','🎴 カード一覧 · くわしい効果',h('div',{className:'gold-rule-cards'},...cards.filter(c=>cardAvailable(c.id)).map(c=>h('article',{key:c.id,'data-rule-card':c.id},h(PixelItemIcon,{react:R,id:c.id}),h('div',null,h('strong',null,c.name),list([goldCardDescription(c)]))))))
+ )));
 }
