@@ -23,7 +23,7 @@ export function installCityNotices(store,network,getWorld){
  function flush(){queued=false;const s=store.getState(),batch=pending;pending=[];
   const combats=batch.filter(n=>n.combat).map(n=>n.combat),grouped=new Map();
   for(const n of batch){
-   if(n.combat){const e=n.combat;getWorld()?.showCombat(e);if(!n.round)add({title:e.defeated?e.name+'が倒れた！':e.name+'に命中！',lines:[`HP −${e.damage}`,...(e.goldStolen?[`${e.attackerName||'相手'}が金缶を${e.goldStolen}個うばった！ ＋2点`]:e.killPoints>0?[`${e.attackerName||'相手'}に ＋2点`]:[])],label:e.attackerName?e.attackerName+'の攻撃 · '+e.source:e.source});continue;}
+   if(n.combat){const e=n.combat;getWorld()?.showCombat(e);if(!n.round)add({title:e.defeated?e.name+'が倒れた！':e.name+'に命中！',lines:[`HP −${e.damage}`,...(e.killPoints>0?[`${e.attackerName||'相手'}に ＋2点`]:[]),...(e.goldRecovered?[`${e.attackerName||'相手'}が同じマスで金缶${e.goldRecovered}個を回収！`]:e.goldDropped?[`金缶${e.goldDropped}個が${e.pos}番に落下。到着すると無料で拾える！`]:[])],label:e.attackerName?e.attackerName+'の攻撃 · '+e.source:e.source});continue;}
    if(n.round)continue;
    if(n.playerId!=null){if(combats.some(c=>c.target===n.playerId))continue;const old=grouped.get(n.playerId);if(old){old.lines.push(...n.lines);if(n.title.includes('死亡'))old.title=n.title;}else grouped.set(n.playerId,n);}
    else add(n);

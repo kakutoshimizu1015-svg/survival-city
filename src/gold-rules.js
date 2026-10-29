@@ -38,13 +38,17 @@ export function goldDeathPatch(s,victimId,attackerId,deathTile){
  const victim=s.players.find(p=>p.id===victimId),attacker=s.players.find(p=>p.id===attackerId);
  if(!victim)return null;
  const pvp=attacker&&attacker.id!==victimId&&!sameTeam(attacker,victim),lost=Math.min(1,victim.goldCans||0),drops={...s.gold.drops};
- if(!pvp&&lost)drops[deathTile]=(drops[deathTile]||0)+lost;
- return {players:s.players.map(p=>p.id===victimId?{...p,goldCans:(p.goldCans||0)-lost}:pvp&&p.id===attacker.id?{...p,goldCans:(p.goldCans||0)+lost,pvpKills:(p.pvpKills||0)+1}:p),gold:{...s.gold,drops}};
+ if(lost)drops[deathTile]=(drops[deathTile]||0)+lost;
+ return {players:s.players.map(p=>p.id===victimId?{...p,goldCans:(p.goldCans||0)-lost}:pvp&&p.id===attacker.id?{...p,pvpKills:(p.pvpKills||0)+1}:p),gold:{...s.gold,drops}};
 }
 export function onGoldDeath(store,victimId,attackerId,deathTile,log){
  const before=store.getState(),patch=goldDeathPatch(before,victimId,attackerId,deathTile);if(!patch)return;
  const victim=before.players.find(p=>p.id===victimId),attacker=before.players.find(p=>p.id===attackerId),pvp=attacker&&attacker.id!==victimId&&!sameTeam(attacker,victim),lost=Math.min(1,victim.goldCans||0);
- store.setState(patch);log(pvp?`⚔️ ${safeName(attacker.name)}が${safeName(victim.name)}を撃破！ +2点${lost?'・金缶を1個奪った！':'（相手の金缶は0個）'}`:lost?`🥫 ${safeName(victim.name)}が金缶を1個、${deathTile}番に落とした！`:'☠️ 復活して再挑戦！');
+ store.setState(patch);log(pvp?`⚔️ ${safeName(attacker.name)}が${safeName(victim.name)}を撃破！ +2点${lost?`・金缶1個が${deathTile}番に落ちた！`:'（相手の金缶は0個）'}`:lost?`🥫 ${safeName(victim.name)}が金缶を1個、${deathTile}番に落とした！`:'☠️ 復活して再挑戦！');
+ // Same-space kills recover the drop in place, including counterattacks outside
+ // the killer's turn. Ranged kills never transfer gold across the board.
+ const live=store.getState().players.find(p=>p.id===attackerId);
+ if(lost&&live&&live.id!==victimId&&live.pos===deathTile&&live.hp>0)collectGoldDrop(store,live.id,log);
 }
 export function goldRoundPatch(s,random=Math.random){
  if(!s.goldMode||!s.gold||s._roundEndInProgress||s.gold.spot!=null||s.roundCount<s.gold.nextRound||s.roundCount>=s.maxRounds)return null;
@@ -62,6 +66,10 @@ export function goldChase(s,p){
  return {points:tied?0:points,team,text:tied?(equals>1?'同率首位！':'いま首位！'):`首位まであと${points}点`,detail:team?'チームの合計でくらべています':!tied&&me.total===top.total?`点数は同じ。あと${top.p-me.p}Pでも首位！`:'金缶1個＝3点 · 相手を倒す＝2点'};
 }
 export function pickupGoldPatch(s,id){const p=s.players.find(p=>p.id===id),amount=s.gold?.drops?.[p?.pos]||0;if(!s.goldMode||!p||!amount||s.gameOver||p.hp<=0)return null;const drops={...s.gold.drops};delete drops[p.pos];return {gold:{...s.gold,drops},players:s.players.map(a=>a.id===id?{...a,goldCans:(a.goldCans||0)+amount}:a)};}
+export function collectGoldDrop(store,id,log){
+ const s=store.getState(),p=s.players.find(p=>p.id===id),amount=s.gold?.drops?.[p?.pos]||0,patch=pickupGoldPatch(s,id);
+ if(!patch)return false;store.setState(patch);log(`🥫 ${safeName(p.name)}が${p.pos}番で落ちた金缶${amount}個を無料で拾った！`);return true;
+}
 export function goldStandings(s,emoji={}){
  const results=s.players.map(p=>({...p,totalScore:goldScore(p),goldValue:(p.goldCans||0)*3,killBonus:(p.pvpKills||0)*2,emoji:emoji[p.charType]||'👤'})).sort(goldCompare);
  const isTeamGame=results.some(p=>p.teamColor&&p.teamColor!=='none'),groups=new Map();

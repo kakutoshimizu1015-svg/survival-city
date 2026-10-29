@@ -58,9 +58,9 @@ replace_once('title:e.title,children:e.emoji', 'title:e.title,children:(0,G.jsx)
 # The full tutorial and rules must agree with the new result screen.
 start=s.index('`スコア ＝ `')
 end=s.index('})',s.index('※ゲーム終了時の陣地の価値：',start))+2
-replace_once(s[start:end], '`金缶×3 ＋ 対人キル×2。同点は所持P。金缶は現地で10P、対人キルで最大1個奪取。NPC討伐は加点なし。`')
-s=s.replace('スコア ＝ 所持P × 2 ＋ 陣地の価値(スラム3/商業6/高級10) ＋ 資源価値 ＋ キル×3 − デス×5','スコア ＝ 金缶×3 ＋ 対人キル×2。同点は所持P。金缶は現地で10P、キルで最大1個奪取。')
-s=s.replace('死亡回数が多いと大きく減点されるので注意！','金缶は1個まで奪われます。NPCや環境で倒れると、その場に1個落とします。')
+replace_once(s[start:end], '`金缶×3 ＋ 対人キル×2。同点は所持P。金缶は現地で10P、対人キルで2点。金缶は倒れた場所に最大1個落下し、到着で無料回収。NPC討伐は加点なし。`')
+s=s.replace('スコア ＝ 所持P × 2 ＋ 陣地の価値(スラム3/商業6/高級10) ＋ 資源価値 ＋ キル×3 − デス×5','スコア ＝ 金缶×3 ＋ 対人キル×2。同点は所持P。金缶は現地で10P、倒れると金缶を最大1個落とし、到着した人が無料回収。')
+s=s.replace('死亡回数が多いと大きく減点されるので注意！','倒れると、その場に金缶を最大1個落とします。拾うにはそのマスへ移動しよう。')
 # Gold deck, predictable basic stock, and one shared rulebook for help/tutorial.
 replace_once('Li=()=>{let e=Ce.map', 'Li=()=>{if(T.getState().goldMode)return goldShopIds(Ce);let e=Ce.map')
 replace_once('let r=n?.[e.id]||0,i=e.type===`weapon`?', 'let r=n?.[shopPurchaseKey(T.getState(),t,e.id)]||0,i=e.type===`weapon`?')

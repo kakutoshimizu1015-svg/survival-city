@@ -31,7 +31,7 @@ export function withCombat(store,damage,target,amount,source,attacker=null){
  const pos=npc?before[npc+'Pos']:victim?.pos,hp=npc?before[npc+'Hp']:victim?.hp;
  const result=damage(target,amount,source,attacker);if(!(result>0)||pos==null||!(hp>0))return result;
  const after=store.getState(),next=after.players.find(p=>p.id===target),winner=after.players.find(p=>p.id===attacker);
- const defeated=npc?after[npc+'Hp']<=0:(next?.deaths||0)>(victim?.deaths||0),goldStolen=from&&victim&&defeated?Math.max(0,(winner?.goldCans||0)-(from.goldCans||0)):0;
- const event={id:Date.now()+':'+(++serial),target,attacker,attackerName:from?.name||null,source:source||'攻撃',pos,fromPos:from?.pos,damage:Math.min(hp,result),defeated,goldStolen,killPoints:from?Math.min(2,Math.max(0,((winner?.pvpKills||0)-(from.pvpKills||0))*2)):0,name:victim?.name||atomText(after,({police:'パトカー',uncle:'おじさん',yakuza:'ヤクザ',loanshark:'闇金',friend:'仲間'}[npc]||'NPC')),createdAt:Date.now()};
+ const defeated=npc?after[npc+'Hp']<=0:(next?.deaths||0)>(victim?.deaths||0),goldDropped=victim&&defeated?Math.min(1,Math.max(0,(victim.goldCans||0)-(next?.goldCans||0))):0,goldRecovered=from&&victim&&defeated&&from.pos===pos?Math.max(0,(winner?.goldCans||0)-(from.goldCans||0)):0;
+ const event={id:Date.now()+':'+(++serial),target,attacker,attackerName:from?.name||null,source:source||'攻撃',pos,fromPos:from?.pos,damage:Math.min(hp,result),defeated,goldDropped,goldRecovered,killPoints:from?Math.min(2,Math.max(0,((winner?.pvpKills||0)-(from.pvpKills||0))*2)):0,name:victim?.name||atomText(after,({police:'パトカー',uncle:'おじさん',yakuza:'ヤクザ',loanshark:'闇金',friend:'仲間'}[npc]||'NPC')),createdAt:Date.now()};
  store.setState({cityCombat:[...(after.cityCombat||[]),event].slice(-16)});return result;
 }

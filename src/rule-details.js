@@ -1,6 +1,6 @@
 // Shared by the board tooltip and the rulebook; descriptions reflect the active gold rules.
 export const GOLD_TILE_RULES={
- center:{title:'🏥 病院',desc:'HPが0になるとここで復活。対人戦では金缶を1個までうばわれ、NPCや環境で倒れると元の場所に1個落とします。'},
+ center:{title:'🏥 病院',desc:'HPが0になるとここで復活。倒れた場所に金缶を最大1個落とします。最初にそのマスへ行った人が無料で拾えます。'},
  normal_slum:{title:'🏚️ スラムの道',desc:'持ち主がいない道は3Pで買える。収入1P、維持費0P。'},
  normal_commercial:{title:'🏙️ 商業の道',desc:'持ち主がいない道は3Pで買える。収入2P、維持費1P。'},
  normal_luxury:{title:'🏰 高級住宅街の道',desc:'持ち主がいない道は3Pで買える。収入3P、維持費2P。'},
