@@ -1,9 +1,9 @@
-import {reclaimOffer,taxiRoutes,taxiRandomDestinations,terminalAvailable,TERMINAL_STORY} from './atom-gimmicks.js';
+import {reclaimOffer,taxiRoutes,taxiCooldown,taxiRandomDestinations,terminalAvailable,TERMINAL_STORY} from './atom-gimmicks.js';
 import {atomEarning,atomEarnKey} from './atom-economy.js';
 import {isAtom} from './atom-map.js';
 export const ATOM_NPCS={police:'住所確認ドローン',uncle:'故障した検品ロボ',animal:'ケーブル食いロボ',yakuza:'警備アンドロイド',loanshark:'契約回収ロボ',friend:'お世話ロボット',truck:'マザー・ゼロ'};
 export function atomText(s,text){if(!isAtom(s))return text;let value=String(text??'');for(const [a,b] of [['仲間のホームレス',ATOM_NPCS.friend],['ゴミ収集車',ATOM_NPCS.truck],['収集車',ATOM_NPCS.truck],['パトカー',ATOM_NPCS.police],['厄介なおじさん',ATOM_NPCS.uncle],['野良動物',ATOM_NPCS.animal],['ヤクザ',ATOM_NPCS.yakuza],['闇金',ATOM_NPCS.loanshark],['病院','無料修理ポッド'],['交番','住所確認ゲート']])value=value.split(a).join(b);return value.replace(/空き缶を(\d+)(?:個|つ)/g,(_,n)=>`${Number(n)*2}Pを`).replace(/ゴミを(\d+)(?:個|つ)/g,(_,n)=>`${Number(n)*3}Pを`).replace(/空き缶[＋+](\d+)/g,(_,n)=>`支援金＋${Number(n)*2}P`).replace(/ゴミ[＋+](\d+)/g,(_,n)=>`報酬＋${Number(n)*3}P`).replace(/缶の加護/g,'資金の加護').replace(/ゴミをいくつ消費して撃つ？/g,'弾代を選んで撃つ？').replace(/発射する缶の数/g,'弾代').replace(/缶バリスタ/g,'電力砲');}
-export function initialAtomState(){return {power:0,nextPower:0,heat:[0,0,0,0],claims:{},earned:{},boss:{phase:'sleep',targets:[],strikeRound:null,cycle:0,lastSector:null}};}
+export function initialAtomState(){return {power:0,nextPower:0,heat:[0,0,0,0],claims:{},earned:{},taxiCooldowns:{},boss:{phase:'sleep',targets:[],strikeRound:null,cycle:0,lastSector:null}};}
 export function atomActions(s,p){
  if(!isAtom(s)||!p||!s.atom)return [];
  const t=s.mapData.find(t=>t.id===p.pos),a=s.atom,out=[];
@@ -26,6 +26,7 @@ export function executeAtomAction(store,actorId,request,{move,damage,log,random=
  if(action.id==='terminal'){store.setState({storyActive:true,storyIndex:TERMINAL_STORY});return true;}
  const t=s.mapData.find(t=>t.id===p.pos),heat=[...s.atom.heat];heat[t.sector]=(heat[t.sector]||0)+(action.income?.heat??(action.id==='reclaim'?3:2));
  let atom={...s.atom,heat,revision:(s.atom.revision||0)+1};if(action.id==='switch')atom.nextPower=1-atom.nextPower;
+ if(action.id.startsWith('taxi:'))atom.taxiCooldowns={...atom.taxiCooldowns,[p.pos]:{round:s.roundCount+2,turn:s.turn}};
  if(action.income)atom.earned={...Object.fromEntries(Object.entries(atom.earned||{}).filter(([key])=>key.startsWith(s.roundCount+':'))),[atomEarnKey(s,p,action.id)]:true};
  if(action.id==='reclaim'){if(action.offer.cool)atom.claims={...atom.claims,[p.id]:atom.boss.cycle};else atom.reclaimed={...atom.reclaimed,[p.id]:action.offer.key};}
  store.setState({atom});store.getState().updatePlayer(p.id,e=>({ap:e.ap-action.ap,p:e.p-action.p+(action.income?.reward??(action.offer?.reward??0)),...((action.income||action.id==='reclaim')?{atomIncomeBonus:false}:{})}));
@@ -34,7 +35,7 @@ export function executeAtomAction(store,actorId,request,{move,damage,log,random=
  const alive=store.getState().players.find(a=>a.id===p.id);if(action.to!=null&&alive?.pos===p.pos&&(alive.deaths||0)===(p.deaths||0)){
   store.setState({atomLanding:{playerId:p.id,to:action.to}});try{move(action.to);}finally{store.setState({atomLanding:null});}
  }
- log(`⚛ ${p.name}：${action.label}`);return true;
+ log(`⚛ ${p.name}：${action.label}${action.id.startsWith('taxi:')?` ／ ${p.pos}番の乗り場は全員2ターン休止（R${s.roundCount+2}の${s.turn+1}番手から再開）`:''}`);return true;
 }
 export function atomActionRequest(s,action){return {action,round:s.roundCount,turn:s.turn,pos:s.players[s.turn]?.pos,revision:s.atom?.revision||0};}
 export function chooseAtomTarget(s,random=Math.random){
@@ -64,6 +65,7 @@ export async function advanceAtomThreat(store,nextRound,{beat,damage,wait,log,ra
  }
 }
 export function atomTileDescription(s,t){
+ if(t.atomKind==='taxi'&&taxiCooldown(s,t.id))return taxiCooldown(s,t.id).text+'。この乗り場は全員、無料・有料とも利用できません。';
  if(t.atomKind==='taxi')return taxiRoutes(s,{...(s.players?.[s.turn]||{}),pos:t.id}).map(a=>`${a.label}。${a.detail}`).join(' ／ ');
  const descriptions={
   repair:'2APで6Pをもらう。自分の手番に1回。',
@@ -87,7 +89,7 @@ export function atomTileNotes(t){
   repair:'安全靴なら1AP。スカベンジャーなら報酬＋3P。',
   siphon:'盗電で地域の熱が上がる。次のボスの攻撃先に選ばれやすくなる。',
   trial:'HPの消費は装備で軽減できない。営業マンなら報酬＋2P。',
-  taxi:'無料便は乗るまで行き先不明。有料便はマップ上の候補から選ぶ。金缶の販売・落下・出現予告マスには行かない。どちらも到着先の効果を受ける。',
+  taxi:'利用した乗り場は全員2ターン休止（全員が2周）。別の乗り場は利用できる。無料便は乗るまで行き先不明。有料便はマップ上の候補から選ぶ。金缶の販売・落下・出現予告マスには行かない。どちらも到着先の効果を受ける。',
   switch:'切替前にもう一度使うと元に戻る。使うとボスに狙われやすくなる。',
   chute:'着いたマスの効果も受ける。使うとボスに狙われやすくなる。',
   hot:'着いたマスの効果も受ける。HPが足りないと倒れるので注意。',

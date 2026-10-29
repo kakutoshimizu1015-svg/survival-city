@@ -1,3 +1,4 @@
+import {taxiCooldown} from './atom-gimmicks.js';
 import {isAtom} from './atom-map.js';
 import {atomActions,canAtomAct,atomActionRequest,executeAtomAction,atomThreatText} from './atom-rules.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -29,8 +30,9 @@ export function installAtomUI(store,network,services){
   const board=document.querySelector('#board-area'),panel=document.querySelector('#action-panel');if(board&&alert.parentNode!==board)board.append(alert);if(panel&&controls.parentNode!==panel)panel.append(controls);
   const p=s.players[s.turn],net=network.getState(),mine=p&&!p.isCPU&&(net.status!=='connected'||p.userId===net.myUserId),can=mine&&canAtomAct(s,p),tour=document.body.classList.contains('city-touring');
   const actions=mine?atomActions(s,p):[],flights=actions.filter(a=>a.id.startsWith('taxi:'));
-  const shown=flights.length?[{id:'taxi-menu',label:'🚕 タクシーを選ぶ',detail:'無料はランダム。有料はマップから行き先を選ぶ。',ap:1,p:0}]:actions;
-  const html=shown.map(a=>`<button data-atom-action="${esc(a.id)}" title="${esc(a.detail)}" ${can&&!tour&&p.ap>=a.ap&&p.p>=a.p&&(!a.income?.hp||p.hp>a.income.hp)?'':'disabled'}>⚛ ${esc(a.label)} (${a.ap}AP${a.p?'・'+a.p+'P':''})</button>`).join('');if(controlsHTML!==html){controlsHTML=html;controls.innerHTML=html;}
+  const cooldown=mine&&s.mapData.find(t=>t.id===p.pos)?.atomKind==='taxi'?taxiCooldown(s,p.pos):null;
+  const shown=cooldown?[{id:'taxi-menu',label:'🚕 '+cooldown.text,detail:'この乗り場は全員、無料・有料とも利用できません。',ap:1,p:0,blocked:true}]:flights.length?[{id:'taxi-menu',label:'🚕 タクシーを選ぶ',detail:'無料はランダム。有料はマップから行き先を選ぶ。',ap:1,p:0}]:actions;
+  const html=shown.map(a=>`<button data-atom-action="${esc(a.id)}" title="${esc(a.detail)}" ${!a.blocked&&can&&!tour&&p.ap>=a.ap&&p.p>=a.p&&(!a.income?.hp||p.hp>a.income.hp)?'':'disabled'}>⚛ ${esc(a.label)} (${a.ap}AP${a.p?'・'+a.p+'P':''})</button>`).join('');if(controlsHTML!==html){controlsHTML=html;controls.innerHTML=html;}
   if(taxiOpen&&(!can||!flights.length||taxiContext!==`${s.roundCount}:${s.turn}:${p.pos}`))closeTaxi();
   if(taxiOpen){
    const paid=flights.filter(a=>!a.random),choice=paid.find(a=>a.to===selected);if(!choice)selected=null;

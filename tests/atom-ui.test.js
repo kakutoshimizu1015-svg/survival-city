@@ -57,3 +57,12 @@ test('free guest sends no destination and paid map taps preview before confirmat
  open();click({'data-taxi-paid':true});window.cityTaxiSelectTile(ids[0]);f.store.setState({gold:{spot:ids[0],drops:{}}});f.flush();click({'data-taxi-confirm':true});assert.equal(sent.length,2,'a newly occupied gold space loses its selection');click({'data-taxi-close':true});assert.equal(window.cityTaxiSelectTile(ids[1]),false);
  }finally{f.restore();}
 });
+
+test('host cooldown closes an open guest picker and displays the shared countdown until reopening',()=>{
+ const f=fixture();try{f.install();f.store.setState({diceRolled:true,turnOrderActive:false});f.changePlayer({pos:1,ap:5,p:15});f.setNet({status:'connected',myUserId:'human',isHost:false});f.flush();const controls=f.nodes.find(n=>n.className==='atom-actions');
+ controls.onclick({target:{closest:()=>({dataset:{atomAction:'taxi-menu'}})}});f.flush();const taxi=f.nodes.find(n=>n.className==='atom-taxi-overlay');assert.equal(taxi.hidden,false);
+ f.store.setState({atom:{...initialAtomState(),taxiCooldowns:{1:{round:3,turn:0}}}});f.flush();assert.equal(taxi.hidden,true);assert.match(controls.innerHTML,/あと2ターン/);assert.match(controls.innerHTML,/disabled/);
+ f.store.setState({roundCount:2});f.flush();assert.match(controls.innerHTML,/あと1ターン/);
+ f.store.setState({roundCount:3});f.flush();assert.ok(!controls.innerHTML.includes('disabled'));assert.match(controls.innerHTML,/タクシーを選ぶ/);
+ }finally{f.restore();}
+});

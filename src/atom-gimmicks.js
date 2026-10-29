@@ -16,7 +16,17 @@ export function reclaimOffer(s,p,t){
 }
 export function atomUnsafe(s,id){return s.atom?.boss.phase==='locked'&&s.atom.boss.targets.includes(id)&&s.mapData.find(t=>t.id===id)?.type!=='shelter';}
 export const taxiRandomDestinations=(s,p)=>s.mapData.filter(t=>t.id!==p.pos&&t.id!==s.constructionPos);
+// Cooldowns belong to the departure stand, shared by every player and fare.
+// Reopen at the same place in the turn order two rounds later.
+export function taxiCooldown(s,id){
+ const until=s.atom?.taxiCooldowns?.[id];if(!until)return null;
+ const round=s.roundCount||1,turn=s.turn||0;
+ if(round>until.round||round===until.round&&turn>=until.turn)return null;
+ const n=Math.max(1,s.players?.length||1),remaining=Math.max(1,Math.ceil(((until.round-round)*n+until.turn-turn)/n));
+ return {remaining,round:until.round,turn:until.turn,text:`クールタイム あと${remaining}ターン（R${until.round}の${until.turn+1}番手から再開）`};
+}
 export function taxiRoutes(s,p){
+ if(taxiCooldown(s,p.pos))return [];
  const out=taxiRandomDestinations(s,p).length?[{id:'taxi:free',label:'無料便：行き先はおまかせ',detail:'0P・1AP。乗ってからランダムなマスへ。危険な場所に着くこともある。',ap:1,p:0,random:true}]:[];
  const gold=new Set([s.gold?.spot,s.gold?.nextSpot,...Object.entries(s.gold?.drops||{}).filter(([,n])=>n>0).map(([id])=>Number(id))]);
  const candidates=s.mapData.filter(t=>t.id!==p.pos&&t.id!==s.constructionPos&&!gold.has(t.id)&&(t.type==='shop'||t.type==='shelter'||['repair','trial','terminal','reclaim'].includes(t.atomKind)));

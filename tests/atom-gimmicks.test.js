@@ -5,7 +5,7 @@ import {createAtomBoard,isAtom} from '../src/atom-map.js';
 import {canOwnTile,territoryCleanup} from '../src/territory-rules.js';
 import {atomEconomyUpgrade} from '../src/atom-economy.js';
 import {initialAtomState,atomActions,atomActionRequest,executeAtomAction,atomTileDescription} from '../src/atom-rules.js';
-import {taxiRoutes,terminalAvailable,terminalTurn} from '../src/atom-gimmicks.js';
+import {taxiRoutes,taxiCooldown,terminalAvailable,terminalTurn} from '../src/atom-gimmicks.js';
 import {atomStories,atomCpuStoryChoice} from '../src/atom-stories.js';
 import {settleAtomCpuEvent} from '../src/atom-cpu.js';
 import {routeTo} from '../src/gold-rules.js';
@@ -35,7 +35,7 @@ test('waste heat pays 4 normally, 12 under warning, 15 in cooldown; caps, bonuse
 test('free taxi hides its destination until host execution and can land anywhere including danger',()=>{
  const f=fixture(),s=f.store.getState(),routes=taxiRoutes(s,f.p()),free=routes.find(a=>a.random);assert.equal(free.id,'taxi:free');assert.equal(free.to,undefined);assert.ok(!/番/.test(free.label+free.detail));
  f.set({p:0});const request=atomActionRequest(f.store.getState(),free.id);assert.ok(executeAtomAction(f.store,0,request,{...f.services,random:()=>0}));assert.equal(f.p().pos,2);assert.equal(f.p().p,0);assert.equal(f.p().ap,19);assert.equal(executeAtomAction(f.store,0,request,f.services),false);
- f.set({pos:1});f.store.setState({atom:{...f.store.getState().atom,boss:{phase:'locked',targets:[64],strikeRound:2}},constructionPos:2});assert.ok(executeAtomAction(f.store,0,atomActionRequest(f.store.getState(),'taxi:free'),{...f.services,random:()=>.99999}));assert.equal(f.p().pos,64);assert.equal(f.p().ap,18);
+ f.set({pos:1});f.store.setState({roundCount:3,atom:{...f.store.getState().atom,boss:{phase:'locked',targets:[64],strikeRound:2}},constructionPos:2});assert.ok(executeAtomAction(f.store,0,atomActionRequest(f.store.getState(),'taxi:free'),{...f.services,random:()=>.99999}));assert.equal(f.p().pos,64);assert.equal(f.p().ap,18);
  f.set({pos:1,ap:0});assert.equal(f.use('taxi:free'),false);assert.equal(f.use('taxi:free:6'),false,'client cannot choose a free destination');
 });
 test('paid candidates cover the map, never land on gold, and stale/forged destinations cannot spend money',()=>{
@@ -62,3 +62,24 @@ test('terminal arrival is deterministic and safe from post-death dialogs, withou
 });
 
 test('taxi details render before the host initializes the new game',()=>{const s={mapData:createAtomBoard(),atom:null,players:[]};assert.match(atomTileDescription(s,s.mapData[0]),/無料便/);assert.equal(taxiRoutes(s,{pos:1}).filter(a=>!a.random).length,4);});
+
+test('stand cooldown blocks both fares for everyone until exactly two circuits, not other stands',()=>{
+ for(const fare of ['free','paid']){
+  const f=fixture(),s=f.store.getState();f.store.setState({players:[s.players[0],{...s.players[0],id:1,isCPU:true},{...s.players[0],id:2}],turn:1});
+  const action=taxiRoutes(f.store.getState(),f.p()).find(a=>fare==='free'?a.random:!a.random),request=atomActionRequest(f.store.getState(),action.id);
+  assert.ok(executeAtomAction(f.store,1,request,f.services));assert.deepEqual(f.store.getState().atom.taxiCooldowns[1],{round:3,turn:1});
+  for(const [round,turn,remaining] of [[1,1,2],[1,2,2],[2,0,2],[2,1,1],[2,2,1],[3,0,1]]){
+   f.store.setState({roundCount:round,turn});f.set({pos:1});assert.equal(taxiCooldown(f.store.getState(),1).remaining,remaining);assert.deepEqual(taxiRoutes(f.store.getState(),f.p()),[]);
+   const before={ap:f.p().ap,p:f.p().p};for(const id of ['taxi:free',action.id])assert.equal(executeAtomAction(f.store,f.p().id,atomActionRequest(f.store.getState(),id),f.services),false);assert.deepEqual({ap:f.p().ap,p:f.p().p},before);
+   assert.match(atomTileDescription(f.store.getState(),s.mapData[0]),/全員/);
+  }
+  f.set({pos:10});assert.ok(taxiRoutes(f.store.getState(),f.p()).length>0);assert.equal(taxiCooldown(f.store.getState(),10),null);
+  f.store.setState({roundCount:3,turn:1});f.set({pos:1});assert.equal(taxiCooldown(f.store.getState(),1),null);assert.ok(taxiRoutes(f.store.getState(),f.p()).length>0);
+  const second=atomActionRequest(f.store.getState(),'taxi:free');assert.ok(executeAtomAction(f.store,1,second,f.services));assert.deepEqual(f.store.getState().atom.taxiCooldowns[1],{round:5,turn:1});
+ }
+});
+test('failed bookings do not start a cooldown, old saves remain usable and fresh matches reset it',()=>{
+ const f=fixture();f.set({ap:0});assert.equal(f.use('taxi:free'),false);assert.deepEqual(f.store.getState().atom.taxiCooldowns,{});
+ f.set({ap:5,p:0});const paid=taxiRoutes(f.store.getState(),f.p()).find(a=>!a.random);assert.equal(f.use(paid.id),false);assert.equal(taxiCooldown(f.store.getState(),1),null);
+ f.store.setState({atom:{...f.store.getState().atom,taxiCooldowns:undefined}});assert.ok(f.use('taxi:free'));f.store.setState({atom:initialAtomState()});assert.equal(taxiCooldown(f.store.getState(),1),null);
+});
