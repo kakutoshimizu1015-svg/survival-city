@@ -37,10 +37,12 @@ export function createAtomBoard(){
  for(const id of [4,15,24,33,39,48])set(id,'event','未来市民サービス');
  for(const id of [11,29])set(id,'koban','住所確認ゲート');
  for(const id of [9,27])set(id,'normal','路線の配電盤','switch');
- for(const id of [37,47])set(id,'normal','非常用シュート','chute');
- for(const id of [41,51])set(id,'normal','廃熱の回収口','reclaim');
+ for(const id of [32,37,47])set(id,'normal','非常滑り台','chute');
+ for(const id of [14,36,41,51])set(id,'normal','廃熱の回収口','reclaim');
  for(const id of [43,53])set(id,'normal','原子炉の整備通路','hot');
- map[36].atomExit=10;map[46].atomExit=16;
+ for(const id of [4,24,39,48])set(id,'event','市民サービス端末','terminal');
+ for(const t of map.filter(t=>t.ring==='ramp'))t.noTerritory=true;
+ map[31].atomExit=35;map[36].atomExit=2;map[46].atomExit=14;
  // Free walking always connects every square. Optional machines never strand a pawn.
  return map;
 }

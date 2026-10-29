@@ -6,9 +6,10 @@ def patch_engine(s):
   nonlocal s
   assert s.count(old)==1,('atom economy engine',old,s.count(old))
   s=s.replace(old,new,1)
- s='import {atomPlayerPatch,atomCharacterText} from "../src/atom-economy.js";\n'+s
+ s='import {canOwnTile} from "../src/territory-rules.js";\nimport {atomPlayerPatch,atomCharacterText} from "../src/atom-economy.js";\n'+s
  once('updatePlayer:(t,n)=>e(e=>({players:e.players.map(e=>e.id===t?{...e,...typeof n==`function`?n(e):n}:e)}))','updatePlayer:(t,n)=>e(s=>({players:s.players.map(p=>p.id===t?{...p,...atomPlayerPatch(s,p,typeof n==`function`?n(p):n)}:p)}))')
  once('updateCurrentPlayer:t=>e(e=>({players:e.players.map((n,r)=>r===e.turn?{...n,...typeof t==`function`?t(n):t}:n)}))','updateCurrentPlayer:t=>e(s=>({players:s.players.map((p,i)=>i===s.turn?{...p,...atomPlayerPatch(s,p,typeof t==`function`?t(p):t)}:p)}))')
+ once('if(!r||r.type!==`normal`)', 'if(!canOwnTile(r))')
  # Disable obsolete engine endpoints too, so remote requests cannot keep farming resources.
  for action in ['CAN','TRASH','EXCHANGE','JOB']:
   token='actionType:`ACTION_'+action+'`,userId:';start=s.index(token);end=s.index('return}',start)+7
@@ -46,7 +47,13 @@ def patch_cards(s):
  return s
 
 def patch_runtime(s):
- s='import {atomResource} from "../src/atom-economy.js";\nconst atomFunds=(p,k)=>atomResource(T.getState(),p,k);\n'+s
+ def once(old,new):
+  nonlocal s
+  assert s.count(old)==1,('atom territory runtime',old,s.count(old))
+  s=s.replace(old,new,1)
+ s='import {canOwnTile} from "../src/territory-rules.js";\nimport {atomResource} from "../src/atom-economy.js";\nconst atomFunds=(p,k)=>atomResource(T.getState(),p,k);\n'+s
+ once('ae=j&&i&&E===`normal`', 'ae=j&&i&&canOwnTile(T.getState().mapData.find(t=>t.id===S.pos))')
+ once('n.pos!==e.unclePos&&t.type===`normal`', 'n.pos!==e.unclePos&&canOwnTile(t)')
  # Only the live action panel, not accounts / gacha / trade inventories.
  s=s.replace('S.cans','atomFunds(S,"cans")').replace('S.trash','atomFunds(S,"trash")')
  for id in ['can','trash','job']:

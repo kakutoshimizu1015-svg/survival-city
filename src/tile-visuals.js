@@ -5,9 +5,11 @@ export const TILE_VISUALS={
  trial:{name:'人体実験',color:'#b28ac7',path:'M8 2h8 M10 2v8L3 21h18l-7-11V2 M7 15h10'},
  taxi:{name:'空中タクシー',color:'#64b6bd',path:'M3 15h18l-3-5H6z M8 10l2-4h4l2 4 M6 18h3 M15 18h3'},
  switch:{name:'配電盤',color:'#d5bb5e',path:'M4 4h16v16H4z M8 8h8 M8 12h4 M15 11v6'},
- chute:{name:'非常シュート',color:'#d38f65',path:'M7 3v8c0 5 4 7 11 7 M14 14l5 4-5 4'},
+ terminal:{name:'市民サービス端末',color:'#71b7a3',path:'M3 4h18v14H3z M8 9h1 M15 9h1 M8 14h8 M12 18v4 M8 22h8'},
+ chute:{name:'非常滑り台',color:'#d38f65',path:'M7 3v8c0 5 4 7 11 7 M14 14l5 4-5 4'},
  hot:{name:'原子炉横断',color:'#e47858',path:'M12 2l-8 12h7l-1 8 10-13h-7z'},
  reclaim:{name:'廃熱回収',color:'#a3b95f',path:'M4 10h16v11H4z M8 3v4 M12 2v5 M16 3v4 M9 14h6 M12 12v6'},
+ ramp:{name:'連絡通路',color:'#9caa9a',path:'M3 20h5v-5h5v-5h5V5h3 M6 6l3-3 3 3 M9 3v8'},
  normal:{name:'街路',color:'#718b82',path:'M10 10h4v4h-4z'},
  center:{name:'回復',color:'#d46564',path:'M9 3h6v6h6v6h-6v6H9v-6H3V9h6z',fill:true},
  can:{name:'空き缶',color:'#d39446',path:'M7 5h10v14H7z M7 8h10 M7 16h10 M10 3h4'},
@@ -36,6 +38,7 @@ Object.assign(TILE_VISUALS,{
 export function tileVisualKey(tile){
  if(typeof tile==='string')return tile;
  if(tile?.atomKind)return tile.atomKind;
+ if(tile?.noTerritory)return 'ramp';
  const type=tile?.type||'normal';
  return tile?.boardLayout?.startsWith('atom-zero-')&&TILE_VISUALS['atom-'+type]?'atom-'+type:type;
 }

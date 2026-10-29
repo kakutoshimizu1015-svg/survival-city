@@ -36,10 +36,19 @@ test('starting District Zero settles the forecast DOM before the next animation 
 });
 test('equipment buttons settle when disabled and after becoming enabled; actual forecast changes still render',()=>{
  const f=fixture();try{f.install();f.flush();f.changePlayer({pos:1});f.flush();const controls=f.nodes.find(n=>n.className==='atom-actions'),alert=f.nodes.find(n=>n.className==='atom-threat');assert.ok(controls.innerHTML.includes('disabled=""'));
-  f.store.setState({diceRolled:true,turnOrderActive:false});f.changePlayer({ap:8});f.flush();assert.ok(!controls.innerHTML.includes('disabled'));assert.ok(controls.innerHTML.includes('taxi:20'));const writes=controls.writes;f.store.setState({logs:['unrelated log']});f.flush();assert.equal(controls.writes,writes);
+  f.store.setState({diceRolled:true,turnOrderActive:false});f.changePlayer({ap:8});f.flush();assert.ok(!controls.innerHTML.includes('disabled'));assert.ok(controls.innerHTML.includes('taxi-menu'));controls.onclick({target:{closest:()=>({dataset:{atomAction:'taxi-menu'}})}});f.flush();const taxi=f.nodes.find(n=>n.className==='atom-taxi-overlay');assert.equal(taxi.hidden,false);assert.match(taxi.innerHTML,/無料便/);assert.match(taxi.innerHTML,/有料便/);assert.match(taxi.innerHTML,/3P・1AP/);taxi.onclick({target:{closest:selector=>selector==='[data-taxi-close]'?{}:null}});f.flush();assert.equal(taxi.hidden,true);const writes=controls.writes;f.store.setState({logs:['unrelated log']});f.flush();assert.equal(controls.writes,writes);
   f.store.setState({atom:{...initialAtomState(),boss:{phase:'locked',strikeRound:3,targets:[1,2,3]}}});f.flush();assert.ok(alert.innerHTML.includes('R3'));assert.equal(alert.writes,2);
   f.setNet({status:'connected',myUserId:'spectator'});f.flush();assert.equal(controls.innerHTML,'');
   f.store.setState({cityBeat:{phase:'atom-warning'}});f.flush();assert.equal(alert.hidden,true);
   f.store.setState({gamePhase:'title'});f.flush();assert.equal(controls.hidden,true);
+ }finally{f.restore();}
+});
+
+test('online guest chooses a visible fare through the host endpoint without changing local state',()=>{
+ const f=fixture(),sent=[];try{f.install();f.store.setState({diceRolled:true,turnOrderActive:false});f.changePlayer({pos:1,ap:5,p:0});f.setNet({status:'connected',myUserId:'human',isHost:false,hostConnection:{send:message=>sent.push(message)}});f.flush();
+ const controls=f.nodes.find(n=>n.className==='atom-actions');controls.onclick({target:{closest:()=>({dataset:{atomAction:'taxi-menu'}})}});f.flush();
+ const taxi=f.nodes.find(n=>n.className==='atom-taxi-overlay'),free=taxi.innerHTML.match(/data-taxi-flight="(taxi:free:\d+)"/)[1];assert.match(taxi.innerHTML,/taxi:paid:[\d]+" disabled/);
+ taxi.onclick({target:{closest:selector=>selector==='[data-taxi-flight]'?{dataset:{taxiFlight:free}}:null}});
+ assert.equal(sent.length,1);assert.equal(sent[0].actionType,'ATOM_ACTION');assert.equal(sent[0].payload.action,free);assert.equal(sent[0].payload.pos,1);assert.equal(f.store.getState().players[0].pos,1);assert.equal(taxi.hidden,true);
  }finally{f.restore();}
 });

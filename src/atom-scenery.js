@@ -81,8 +81,23 @@ export function buildAtomScenery({T,scene,block,mesh,mat,cylinder,line,sign,squa
   if(t.atomKind==='repair'){block(sx,1,sz,2,.4,1.3,'#9c795b');cylinder(sx,1.7,sz,.7,.8,1.1,'#88b4ab',8);block(sx,1.9,sz+.7,.8,.25,.12,'#f5d086',{glow:true});}
   if(t.atomKind==='siphon'){block(sx,1.6,sz,1.4,2.5,1,'#5e9392');cylinder(sx,3.1,sz,.35,.45,.7,'#e4bb6b',8);nightStrip(sx,2.1,sz+.6,1,'#f2d577');sign(sx,2.5,sz+.6,'⚡','#345c66','#f4d27f',1,.6);}
   if(t.atomKind==='trial'){cylinder(sx,1.4,sz,.95,1.1,2,'#84ae9e',10);cylinder(sx,2.1,sz,.7,.7,.9,'#b9d69c',10);sign(sx,3,sz,'治験','#685775','#f4d7a5',2,.6);}
+  if(t.atomKind==='terminal'){block(sx,1.6,sz,1.8,2.6,1.1,'#6d9f98');block(sx,2,sz+.58,1.3,.85,.1,'#b8e1ba',{glow:true});for(const x of [-.3,.3])block(sx+x,2.1,sz+.65,.18,.18,.08,'#395956');block(sx,1.8,sz+.65,.55,.1,.08,'#395956');sign(sx,3.4,sz,'点検 / 治験','#426d70','#f3d79c',3.5,.7);}
   if(t.type==='shop')sign(sx,3.4,sz,'SHOP','#3a6671','#f0d39b',2.7,.85);
   if(t.type==='shelter'){mesh(new T.SphereGeometry(1.7,10,5,0,Math.PI*2,0,Math.PI/2),mat('#80b695'),sx,1.2,sz);block(sx,.9,sz+1.5,1,1,.2,'#345d53');sign(sx,2.5,sz,'防護','#3a705e','#d9efbd',1.8,.6);}
+ }
+ // Open, curved evacuation slides make the one-way height shortcuts visible.
+ for(const t of squares.values())if(t.atomKind==='chute'){
+  const end=squares.get(t.atomExit);if(!end)continue;
+  const dx=end.x-t.x,dz=end.z-t.z,len=Math.hypot(dx,dz),nx=-dz/len,nz=dx/len;
+  const top=elevation(t.x,t.z)+.6,bottom=elevation(end.x,end.z)+.6,points=[],vertices=[],indices=[];
+  for(let i=0;i<=40;i++){const f=i/40,bend=2.7+Math.sin(f*Math.PI)*3,x=t.x+dx*f+nx*bend,z=t.z+dz*f+nz*bend,y=top+(bottom-top)*(f*f*(3-2*f));points.push(new T.Vector3(x,y+.55,z));
+   for(const [w,h] of [[-1,.65],[-.7,0],[.7,0],[1,.65]])vertices.push(x+nx*w,y+h,z+nz*w);
+   if(i)for(let j=0;j<3;j++){const a=(i-1)*4+j,b=i*4+j;indices.push(a,b,a+1,a+1,b,b+1);}
+  }
+  const slide=geometry(vertices,indices,'#c6c9a9');slide.name='atom-emergency-slide';slide.userData={from:t.id,to:end.id};
+  for(const side of [-1,1]){const rail=points.map(v=>new T.Vector3(v.x+nx*side,v.y,v.z+nz*side));mesh(new T.TubeGeometry(new T.CatmullRomCurve3(rail),40,.12,5,false),mat('#de9c68'),0,0,0,true);}
+  for(const f of [.25,.5,.75]){const p=points[Math.round(f*40)];block(p.x,p.y/2,p.z,.35,p.y,.35,'#6c8e86',{absolute:true});}
+  sign(t.x+nx*3,top+2-elevation(t.x+nx*3,t.z+nz*3)+.38,t.z+nz*3,`↓ ${end.id}番へ`,'#416f73','#ffe5a2',3.5,.8);
  }
  // The reactor stays a recognisable round landmark inside the angular plaza.
  cylinder(0,1,0,8.5,10,2,'#c2a67b',16);cylinder(0,4,0,6,7,5,'#719d95',16);cylinder(0,7,0,7,6,1,'#e1c494',16);
@@ -109,7 +124,7 @@ export function buildAtomScenery({T,scene,block,mesh,mat,cylinder,line,sign,squa
   for(const x of [-1,1]){piece(new T.BoxGeometry(.2,.9,1.3),'#e6d19d',x,.4,-1.5);const engine=piece(new T.CylinderGeometry(.35,.35,.7,8),'#8ce1c9',x,-.3,-1.4);engine.rotation.x=Math.PI/2;}
   scene.add(car);animated.push({kind:'flyover',object:car,index:i});
  }
- return {counts,lots,features:{atomPods:counts.slum,atomMarkets:counts.commercial,skyGardens:counts.luxury,terracedPlaza:true,rooftopStreet:true,stairRoutes:stairs,elevatedDecks:bridges,skylineTowers:23,tallestTower:tallest,aerialTraffic:5,mapFlyovers:2,addressGates:[...squares.values()].filter(t=>t.type==='koban').length}};
+ return {counts,lots,features:{atomPods:counts.slum,atomMarkets:counts.commercial,skyGardens:counts.luxury,terracedPlaza:true,rooftopStreet:true,stairRoutes:stairs,elevatedDecks:bridges,skylineTowers:23,tallestTower:tallest,aerialTraffic:5,mapFlyovers:2,emergencySlides:[...squares.values()].filter(t=>t.atomKind==='chute').length,serviceTerminals:[...squares.values()].filter(t=>t.atomKind==='terminal').length,addressGates:[...squares.values()].filter(t=>t.type==='koban').length}};
 }
 export function createAtomThreatModel({T,scene,squares,elevation,reduced}){
  const root=new T.Group();root.position.set(0,22,0);scene.add(root);

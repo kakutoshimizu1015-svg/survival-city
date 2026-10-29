@@ -1,4 +1,4 @@
-import {isAtom} from './atom-map.js';
+import {createAtomBoard,isAtom} from './atom-map.js';
 // Resource callbacks from shared events resolve directly to credits in District Zero.
 // No hidden can/trash inventory or exchange step is retained.
 export const atomResource=(s,p,kind)=>isAtom(s)?Math.floor(Math.max(0,p.p)/(kind==='cans'?2:3)):(p[kind]||0);
@@ -24,10 +24,15 @@ export const ATOM_EARNINGS={repair:{name:'廃ロボット修理',icon:'🤖',ap:
 export function atomEarning(s,p,kind){const a=ATOM_EARNINGS[kind];if(!a)return null;return {...a,ap:kind==='repair'&&p.equip?.shoes?1:a.ap,reward:a.reward+(kind==='repair'&&p.charType==='scavenger'?3:kind==='trial'&&p.charType==='sales'?2:0)+(p.atomIncomeBonus?5:0)};}
 export const atomEarnKey=(s,p,kind)=>`${s.roundCount}:${s.turn}:${p.id}:${kind}`;
 // Hosts upgrade a running older District Zero board once; IDs and routes stay intact.
+let upgradeTemplate;
 export function atomEconomyUpgrade(s){
  if(!isAtom(s))return null;
  const old={can:['normal','repair','廃ロボット修理'],trash:['normal','siphon','盗電・電力の横流し'],job:['normal','trial','新薬の人体実験'],exchange:['shop',null,'廃品ロボット商店']},patch={};
  if(s.mapData.some(t=>old[t.type]))patch.mapData=s.mapData.map(t=>{const v=old[t.type];return v?{...t,type:v[0],atomKind:v[1],name:v[2]}:t;});
  if(s.players.some(p=>p.cans||p.trash))patch.players=s.players.map(p=>({...p,p:p.p+(p.cans||0)*2+(p.trash||0)*3,cans:0,trash:0}));
+ // Upgrade only square roles, never the saved walking graph or positions.
+ const template=upgradeTemplate??=new Map(createAtomBoard().map(t=>[t.id,t]));let changed=false;
+ const map=(patch.mapData||s.mapData).map(t=>{const target=template.get(t.id);if(!target||t.boardLayout!=='atom-zero-v2')return t;const fields={type:target.type,name:target.name,atomKind:target.atomKind,noTerritory:target.noTerritory,atomExit:target.atomExit};if(Object.keys(fields).every(k=>t[k]===fields[k]))return t;changed=true;return {...t,...fields};});
+ if(changed)patch.mapData=map;
  return Object.keys(patch).length?patch:null;
 }

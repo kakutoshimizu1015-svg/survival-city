@@ -1,3 +1,4 @@
+import {atomCpuStoryChoice} from './atom-stories.js';
 import {atomResource} from './atom-economy.js';
 import {isAtom} from './atom-map.js';
 import {atomActions,atomActionRequest,executeAtomAction,canAtomAct} from './atom-rules.js';
@@ -11,7 +12,8 @@ export function atomCpuStep(store,services){
   const routes=s.mapData.filter(t=>!unsafe(t.id)).map(t=>routeTo(s,p.pos,t.id)).filter(r=>r?.path.length).sort((a,b)=>a.cost-b.cost);
   const cost=(s.isRainy&&!p.rainGear&&p.charType!=='athlete'&&!p.equip?.foldBike?2:1)+(p.nextMoveCostPenalty||0);if(routes[0]&&p.ap>=cost){services.move(routes[0].path[0]);return true;}
  }
- const reclaim=actions.find(a=>a.id==='reclaim');if(reclaim)return executeAtomAction(store,p.id,atomActionRequest(s,reclaim.id),services);
+ const reclaim=actions.find(a=>a.id==='reclaim'&&(!unsafe(p.pos)||p.hp>60&&p.ap>=4));if(reclaim)return executeAtomAction(store,p.id,atomActionRequest(s,reclaim.id),services);
+ const terminal=actions.find(a=>a.id==='terminal');if(terminal&&p.p<20)return executeAtomAction(store,p.id,atomActionRequest(s,terminal.id),services);
  const income=actions.find(a=>a.income&&(!a.income.hp||p.hp>45));
  if(income&&p.p<20)return executeAtomAction(store,p.id,atomActionRequest(s,income.id),services);
  if(p.p<10&&p.hp>=35){
@@ -29,7 +31,7 @@ export function atomCpuStep(store,services){
 export async function settleAtomCpuEvent(store,choose,wait,random=Math.random){
  const before=store.getState(),actor=before.players[before.turn];if(!isAtom(before)||!actor?.isCPU||(!before.storyActive&&!before.mgActive))return;
  await wait(800);const s=store.getState();if(s.gamePhase!=='playing'||s.gameOver||s.roundCount!==before.roundCount||s.players[s.turn]?.id!==actor.id)return;
- if(s.storyActive)choose(s.players[s.turn].hp<50?0:1);
+ if(s.storyActive)choose(atomCpuStoryChoice(s));
  else if(s.mgActive)store.setState({mgResult:random()>.5?'大成功！':'失敗...',mgActive:false});
  await wait(400);
 }

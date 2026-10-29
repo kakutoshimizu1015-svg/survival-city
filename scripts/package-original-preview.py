@@ -19,7 +19,7 @@ shutil.copy2(root/'README.md',site/'README.md')
 for file in ['build-atom-economy.py','build-atom-hooks.py','build-presentation-hooks.py','build-card-balance.py','verify-mobile-repairs.cjs','verify-card-balance.cjs','build-original-runtime.py','build-gold-engine.py','verify-gold-cans.cjs','verify-city-readability.cjs','verify-npc-readability.cjs','package-original-preview.py','verify-original-rules.cjs','verify-original-interactions.cjs','verify-district-board.cjs','verify-npc-models.cjs','verify-player-items.cjs','preview-player-items.cjs','verify-pixel-scenes.cjs','verify-mobile-ui.cjs','verify-mobile-portraits.cjs','verify-mobile-map-controls.cjs','verify-mobile-flow.cjs']:
  shutil.copy2(root/'scripts'/file,site/'scripts'/file)
 (site/'tests').mkdir(exist_ok=True)
-for name in ['atom-economy.test.js','desktop-log.test.js','tile-readability.test.js','atom-ui.test.js','atom-world.test.js','dice-relief.test.js','landing-regressions.test.js','koban-landmark.test.js','city-presentation.test.js','city-notices.test.js','combat-effects.test.js','easy-rulebook.test.js']:
+for name in ['atom-gimmicks.test.js','atom-economy.test.js','desktop-log.test.js','tile-readability.test.js','atom-ui.test.js','atom-world.test.js','dice-relief.test.js','landing-regressions.test.js','koban-landmark.test.js','city-presentation.test.js','city-notices.test.js','combat-effects.test.js','easy-rulebook.test.js']:
  shutil.copy2(root/'tests'/name,site/'tests'/name)
 shutil.copy2(root/'tests/shop-rules.test.js',site/'tests/shop-rules.test.js')
 shutil.copy2(root/'tests/card-balance.test.js',site/'tests/card-balance.test.js')
