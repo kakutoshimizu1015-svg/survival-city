@@ -68,7 +68,20 @@ export function buildAtomScenery({T,scene,block,mesh,mat,cylinder,line,sign,squa
   else if(t.atomKind==='reclaim'){cylinder(sx,.9,sz,1.2,1.4,1.3,'#b2895e');cylinder(sx,1.7,sz,.6,.7,.5,'#77ded0');}
   else if(t.atomKind==='chute'){cylinder(sx,1.4,sz,1,1.6,2,'#c89b6b');sign(sx,2.7,sz,'↓','#865847','#ffe0b0',1.5,.7);}
   else if(t.atomKind==='hot'){block(sx,.8,sz,1.7,.7,1.7,'#b7784e');nightStrip(sx,1.3,sz,1.8,'#f4b45f');}
-  if(t.type==='koban'){block(sx,1.4,sz,1.9,2,1.7,'#d7cbaa');mesh(new T.SphereGeometry(1.1,8,5,0,Math.PI*2,0,Math.PI/2),mat('#718f95'),sx,2.4,sz);sign(sx,1.8,sz+.9,'住所確認','#425d6c','#f7daa0',1.8,.45);}
+  if(t.type==='koban'){
+   // A compact, unmistakable checkpoint arch beside its space, not a distant house.
+   const y=elevation(t.x,t.z),gate=mesh(new T.BoxGeometry(3.9,.25,2.1),mat('#8c9e92'),sx,y+.1,sz,true);gate.name='atom-address-gate';gate.userData.tileId=t.id;
+   for(const side of [-1,1]){block(sx+side*1.55,y+1.9,sz,.55,3.6,.75,'#d7cbaa',{absolute:true});lamp(sx+side*1.55,y+2.8,sz+.41,.23,1,.12,side<0?'#ed8a70':'#96dfbd');}
+   block(sx,y+3.8,sz,3.8,.7,1,'#5e8e89',{absolute:true});lamp(sx,y+3.8,sz+.55,2.5,.16,.1,'#eec477');
+   block(sx,y+1.35,sz+.2,2.65,.18,.16,'#d9a075',{absolute:true});
+   for(let i=0;i<5;i++)block(sx-1.1+i*.5,y+1.35,sz+.3,.22,.2,.06,i%2?'#354f59':'#e7be74',{absolute:true});
+   block(sx+1.1,y+1.2,sz+.7,.45,.9,.4,'#456d72',{absolute:true});lamp(sx+1.1,y+1.45,sz+.93,.23,.28,.06,'#9ee3c6');
+   sign(sx,y+3.75-elevation(sx,sz)+.38,sz+.65,'住所確認','#345967','#ffe0a0',2.9,.55);
+  }
+  if(t.atomKind==='repair'){block(sx,1,sz,2,.4,1.3,'#9c795b');cylinder(sx,1.7,sz,.7,.8,1.1,'#88b4ab',8);block(sx,1.9,sz+.7,.8,.25,.12,'#f5d086',{glow:true});}
+  if(t.atomKind==='siphon'){block(sx,1.6,sz,1.4,2.5,1,'#5e9392');cylinder(sx,3.1,sz,.35,.45,.7,'#e4bb6b',8);nightStrip(sx,2.1,sz+.6,1,'#f2d577');sign(sx,2.5,sz+.6,'⚡','#345c66','#f4d27f',1,.6);}
+  if(t.atomKind==='trial'){cylinder(sx,1.4,sz,.95,1.1,2,'#84ae9e',10);cylinder(sx,2.1,sz,.7,.7,.9,'#b9d69c',10);sign(sx,3,sz,'治験','#685775','#f4d7a5',2,.6);}
+  if(t.type==='shop')sign(sx,3.4,sz,'SHOP','#3a6671','#f0d39b',2.7,.85);
   if(t.type==='shelter'){mesh(new T.SphereGeometry(1.7,10,5,0,Math.PI*2,0,Math.PI/2),mat('#80b695'),sx,1.2,sz);block(sx,.9,sz+1.5,1,1,.2,'#345d53');sign(sx,2.5,sz,'防護','#3a705e','#d9efbd',1.8,.6);}
  }
  // The reactor stays a recognisable round landmark inside the angular plaza.
@@ -88,7 +101,15 @@ export function buildAtomScenery({T,scene,block,mesh,mat,cylinder,line,sign,squa
  const planet=mesh(new T.SphereGeometry(17,24,12),mat('#edce9e'),-71,57,-127,true);planet.castShadow=false;
  const orbit=mesh(new T.TorusGeometry(25,.22,4,64),mat('#dec6a3'),-71,57,-127,true);orbit.rotation.x=.25;orbit.rotation.z=-.35;orbit.castShadow=false;
  for(let i=0;i<3;i++){const car=new T.Group(),body=new T.Mesh(new T.BoxGeometry(4,1.1,2),mat(['#ddaa86','#8bb9ad','#d5c58d'][i]));car.add(body);const roof=new T.Mesh(new T.BoxGeometry(2,.8,1.7),mat('#456b70'));roof.position.y=.8;car.add(roof);car.position.set(0,19+i*4,-65-i*4);scene.add(car);animated.push({kind:'train',object:car,speed:3+i,span:190,offset:i*62});}
- return {counts,lots,features:{atomPods:counts.slum,atomMarkets:counts.commercial,skyGardens:counts.luxury,terracedPlaza:true,rooftopStreet:true,stairRoutes:stairs,elevatedDecks:bridges,skylineTowers:23,tallestTower:tallest,aerialTraffic:3}};
+ for(let i=0;i<2;i++){
+  const car=new T.Group();car.name='atom-map-flyover';car.visible=false;
+  const piece=(g,c,x,y,z)=>{const m=new T.Mesh(g,mat(c));m.position.set(x,y,z);car.add(m);return m;};
+  piece(new T.BoxGeometry(2.2,.8,4.6),i?'#df9a7e':'#99c8b8',0,0,0);
+  piece(new T.BoxGeometry(1.7,.8,2.3),'#315562',0,.7,0);
+  for(const x of [-1,1]){piece(new T.BoxGeometry(.2,.9,1.3),'#e6d19d',x,.4,-1.5);const engine=piece(new T.CylinderGeometry(.35,.35,.7,8),'#8ce1c9',x,-.3,-1.4);engine.rotation.x=Math.PI/2;}
+  scene.add(car);animated.push({kind:'flyover',object:car,index:i});
+ }
+ return {counts,lots,features:{atomPods:counts.slum,atomMarkets:counts.commercial,skyGardens:counts.luxury,terracedPlaza:true,rooftopStreet:true,stairRoutes:stairs,elevatedDecks:bridges,skylineTowers:23,tallestTower:tallest,aerialTraffic:5,mapFlyovers:2,addressGates:[...squares.values()].filter(t=>t.type==='koban').length}};
 }
 export function createAtomThreatModel({T,scene,squares,elevation,reduced}){
  const root=new T.Group();root.position.set(0,22,0);scene.add(root);

@@ -28,6 +28,7 @@ export function goldComebackTarget(s,p){
 export function goldCardBlock(s,p,id){
  if(!s.goldMode)return '';
  if(!cardAvailable(id))return 'このカードは金缶争奪戦の出現対象から外れました。';
+ if(id===40&&s.atom&&p.atomIncomeBonus)return '次の稼ぎの＋5Pが残っています。先に専用の稼ぎを使ってください。';
  if([12,13,42].includes(id)&&!lastGoldRank(s,p))return '得点順位が最下位のときだけ使えます（金缶×3＋対人キル×2、同点は所持P）。';
  if(id===13){const target=goldComebackTarget(s,p);if(!target)return '自分より上位の相手がいません。';if(target.p<=0)return '最上位の相手に奪えるPがありません。';}
  return '';

@@ -418,3 +418,5 @@ body.city-mobile [data-desktop-chat]{display:none!important}
 .city-tile-notes summary{cursor:pointer;color:#e8ce91;min-height:30px;display:flex;align-items:center}
 .city-tile-notes summary:before{content:'＋';margin-right:6px}.city-tile-notes[open] summary:before{content:'−'}
 .city-tile-notes p{margin:5px 0;color:#d4d0ba}
+/* District Zero pays directly in P; no resource market or exchange inventory. */
+body.city-atom #map-env-hud span:has(#hud-can-price),body.city-atom #map-env-hud span:has(#hud-trash-price),body.city-atom #map-env-hud br{display:none!important}

@@ -30,10 +30,10 @@ export function createAtomBoard(){
  set(20,'normal','空飛ぶ乗合タクシー','taxi');
  for(const id of [6,23,46,54])set(id,'shelter','防護シェルター');
  for(const id of [8,26,40,50])set(id,'shop','廃品ロボット商店');
- for(const id of [3,13,31,44])set(id,'can','空き燃料缶');
- for(const id of [5,16,25,34])set(id,'trash','廃棄パーツの山');
- for(const id of [12,30,52])set(id,'exchange','資源再生カウンター');
- for(const id of [7,22,42])set(id,'job','原子炉の臨時作業');
+ for(const id of [3,13,31,44])set(id,'normal','廃ロボット修理','repair');
+ for(const id of [5,16,25,34])set(id,'normal','盗電・電力の横流し','siphon');
+ for(const id of [12,30,52])set(id,'shop','廃品ロボット商店');
+ for(const id of [7,22,42])set(id,'normal','新薬の人体実験','trial');
  for(const id of [4,15,24,33,39,48])set(id,'event','未来市民サービス');
  for(const id of [11,29])set(id,'koban','住所確認ゲート');
  for(const id of [9,27])set(id,'normal','路線の配電盤','switch');

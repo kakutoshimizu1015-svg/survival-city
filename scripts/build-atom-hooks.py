@@ -26,7 +26,9 @@ def patch_engine(s):
  forecast=part[a:b].replace('Ua(d.finalPos,y,s)','Ua(v.getState().truckPos,y,s)')
  part=part[:a]+'if(!isAtom(e)){'+forecast+'}'+part[b:]
  s=s[:start]+part+s[end:]
- return s
+ from runpy import run_path
+ from pathlib import Path
+ return run_path(str(Path(__file__).with_name('build-atom-economy.py')))['patch_engine'](s)
 
 def patch_runtime(s):
  def once(old,new):
@@ -44,4 +46,6 @@ def patch_runtime(s):
  once('(0,G.jsx)(q,{onClick:()=>Ze(`truckPos`)', '!isAtom(T.getState())&&(0,G.jsx)(q,{onClick:()=>Ze(`truckPos`)')
  once('e.storyActive&&(T.setState({storyActive:!1}),T.getState().updateCurrentPlayer(e=>({p:e.p+5})),H(`📖 ${n.name}はイベントで5P獲得した！`),await Kn(400))', 'e.storyActive&&(isAtom(e)?j(n.hp<50?0:1):(T.setState({storyActive:!1}),T.getState().updateCurrentPlayer(e=>({p:e.p+5})),H(`📖 ${n.name}はイベントで5P獲得した！`)),await Kn(400))')
  once('network:oe,log:H,sound:D})){await Kn(500);continue}', 'network:oe,log:H,sound:D})){await Kn(500);await settleAtomCpuEvent(T,j,Kn);continue}')
- return s
+ from runpy import run_path
+ from pathlib import Path
+ return run_path(str(Path(__file__).with_name('build-atom-economy.py')))['patch_runtime'](s)

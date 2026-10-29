@@ -64,7 +64,7 @@ function controls(container){
  },true);
  container.addEventListener('keydown',e=>{if(e.key==='Escape'&&world?.getCameraMode()==='tour')nav.querySelector('[data-camera=mode]').click();},true);
 }
-function refresh(){pending=false;const state=gameStore.getState();document.body.dataset.cityPhase=state.gamePhase;
+function refresh(){pending=false;const state=gameStore.getState();document.body.dataset.cityPhase=state.gamePhase;document.body.classList.toggle('city-atom',isAtom(state));
  const host=document.querySelector('#game-board');
  if(!host||state.gamePhase!=='playing'){world?.dispose();world=null;board=null;mapKey='';document.body.classList.remove('city-3d');syncCameraControls();return;}
  const signature=state.mapData.map(t=>[t.id,t.col,t.row,t.area,t.type,t.next.join('.')].join(':')).join('|');

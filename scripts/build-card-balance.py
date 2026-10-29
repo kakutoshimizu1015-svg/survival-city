@@ -10,8 +10,8 @@ def generate(source,target,transform):
  transform(once)
  (root/'assets'/target).write_text(s)
 def catalog(once):
- once('var e=[','import {I as gameStore} from "./useNetworkStore-CIe06z3C.js";\nimport {goldCardDescription} from "../src/card-balance.js";\nvar e=[')
- once('export{e as t};','for(const card of e){const original={...card};Object.defineProperty(card,"desc",{enumerable:true,get(){return gameStore.getState().goldMode?goldCardDescription(original):original.desc;}})}export{e as t};')
+ once('var e=[','import {I as gameStore} from "./useNetworkStore-CIe06z3C.js";\nimport {atomCardDescription} from "../src/atom-economy.js";\nimport {goldCardDescription} from "../src/card-balance.js";\nvar e=[')
+ once('export{e as t};','for(const card of e){const original={...card};Object.defineProperty(card,"desc",{enumerable:true,get(){return atomCardDescription(gameStore.getState(),original.id)||(gameStore.getState().goldMode?goldCardDescription(original):original.desc);}})}export{e as t};')
 generate('original-card-catalog.js','cards-BGoWm8gy.js',catalog)
 def actions(once):
  once('var a=(a,o)=>{','import {cardAvailable,goldCardBlock,lastGoldRank,goldComebackTarget} from "../src/card-balance.js";\nimport {sameTeam} from "../src/gold-rules.js";\nvar a=(a,o)=>{')
@@ -33,3 +33,8 @@ def skills(once):
 generate('original-skills.js','skills-CsxruNUN.js',skills)
 p=root/'assets/skills-CsxruNUN.js';p.write_text('import {drawGoldCard} from "../src/card-balance.js";\n'+p.read_text())
 print('Card catalogue, comeback eligibility and draw skills generated.')
+
+from runpy import run_path
+hooks=run_path(str(root/'scripts/build-atom-economy.py'))
+for file,fn in [('skills-CsxruNUN.js','patch_skills'),('cards-C7BZxg2n.js','patch_cards')]:
+ p=root/'assets'/file;p.write_text(hooks[fn](p.read_text()))

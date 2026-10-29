@@ -6,6 +6,8 @@ export function viewerPlayer(s,userId){return (userId&&s.players.find(p=>p.userI
 export function npcImpact(s,key,p=viewerPlayer(s),tile){
  const info=isAtom(s)?{...NPC_INFO[key],name:ATOM_NPCS[key],icon:key==='friend'?'🤖':'⚙'}:NPC_INFO[key];if(!info||!p)return null;
  const result=(tone,desc)=>({...info,key,tone,desc});
+ if(isAtom(s)&&key==='animal')return result('neutral','資源拾いのない第0区では作業を妨げない');
+ if(isAtom(s)&&key==='friend')return result(p.respawnShield>0?'neutral':'good',p.respawnShield>0?'復活保護中は接触イベントなし':'出会うと支援金2Pをもらえる');
  if(key==='animal')return result(['can','trash'].includes(tile?.type)?'bad':'neutral','同じマスでは缶拾い・ゴミ漁りができない');
  if(key==='truck'){
   if(isAtom(s))return result(tile?.type==='shelter'?'good':'bad',tile?.type==='shelter'?'防護シェルターで照射を必ず回避':`R${s.atom?.boss.strikeRound}開始時に45ダメージ。赤いマスから退避しよう`);

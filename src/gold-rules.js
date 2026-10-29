@@ -25,7 +25,7 @@ export function chooseGoldSpot(s,random=Math.random){
 }
 export function createGoldState(s,random=Math.random){
  const state={...s,goldMode:true,gold:{version:1,spot:null,lastSpot:null,nextRound:1,nextSpot:null,issued:0,drops:{},history:[]},players:s.players.map(p=>({...p,hand:goldOpeningHand(p.hand,random),goldCans:0,pvpKills:0,npcKills:0,_lowRollRelief:0}))};
- state.gold.spot=chooseGoldSpot(state,random);return {...randomCityState(state,random),goldMode:true,gold:state.gold,players:state.players,atom:isAtom(s)?initialAtomState():null,...(isAtom(s)?{truckPos:999,truckForecast:null}:{})};
+ if(isAtom(s))state.players=state.players.map(p=>({...p,p:p.p+(p.cans||0)*2+(p.trash||0)*3,cans:0,trash:0}));state.gold.spot=chooseGoldSpot(state,random);return {...randomCityState(state,random),goldMode:true,gold:state.gold,players:state.players,atom:isAtom(s)?initialAtomState():null,...(isAtom(s)?{truckPos:999,truckForecast:null}:{})};
 }
 export function canBuyGold(s,id){const p=s.players[s.turn];return !!(s.goldMode&&!s.gameOver&&!s._roundEndInProgress&&!s.mgActive&&!s.storyActive&&!s.shopActive&&!s.weaponArcData&&!s.diceAnim?.active&&p?.id===id&&p.hp>0&&s.gold?.spot!=null&&p.pos===s.gold.spot&&p.p>=GOLD_PRICE);}
 export function buyGoldPatch(s,id,random=Math.random){

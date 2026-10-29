@@ -1,5 +1,8 @@
 // A shared visual vocabulary for physical spaces, touch targets and route choices.
 export const TILE_VISUALS={
+ repair:{name:'修理',color:'#54a5b1',path:'M14 3a6 6 0 0 0-7 7L2 18l4 4 8-8a6 6 0 0 0 7-7l-5 4-4-4z'},
+ siphon:{name:'盗電',color:'#e4bf4e',path:'M13 2L4 14h7l-1 8L21 9h-8z',fill:true},
+ trial:{name:'人体実験',color:'#b28ac7',path:'M8 2h8 M10 2v8L3 21h18l-7-11V2 M7 15h10'},
  taxi:{name:'空中タクシー',color:'#64b6bd',path:'M3 15h18l-3-5H6z M8 10l2-4h4l2 4 M6 18h3 M15 18h3'},
  switch:{name:'配電盤',color:'#d5bb5e',path:'M4 4h16v16H4z M8 8h8 M8 12h4 M15 11v6'},
  chute:{name:'非常シュート',color:'#d38f65',path:'M7 3v8c0 5 4 7 11 7 M14 14l5 4-5 4'},

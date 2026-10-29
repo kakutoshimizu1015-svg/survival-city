@@ -1,3 +1,4 @@
+import {animateAtomFlyover} from './atom-traffic.js';
 import {ATOM_BOARD,createAtomElevation,atomDistricts,ATOM_LIGHT,isAtom} from "./atom-map.js";
 import {buildAtomScenery,createAtomThreatModel} from "./atom-scenery.js";
 import {createAtomNpcModel} from "./atom-models.js";
@@ -205,7 +206,7 @@ export function createOriginalWorld(host,map){
   if(!followKey){playView();followKey='initialized';}
   updateNight();projectDOM();
  }
- function draw(now){if(dead)return;raf=requestAnimationFrame(draw);if(document.hidden||now-last<40)return;const moving=[...actors.values(),...npcActors.values()].some(a=>a.start&&now-a.start<400);if(reduced&&!dirty&&!moving&&!playerItems.active()&&!combatEffects.active()&&!vehicleShot&&!vehicleShots.length)return;last=now;dirty=false;for(const a of actors.values()){const f=reduced?1:Math.min(1,(now-a.start)/400),x=a.from[0]+(a.to[0]-a.from[0])*f,z=a.from[1]+(a.to[1]-a.from[1])*f;a.sprite.position.set(x+(a.offset||0)+Math.sin(cam.yaw)*(a.frontOffset||0),elevation(x,z)+.62+(f<1?Math.sin(f*Math.PI)*.35:0),z+Math.cos(cam.yaw)*(a.frontOffset||0));}if(!reduced&&state?.isNight)for(const e of nightEffects)if(e.kind==='fire')e.object.material.opacity=.62+Math.sin(now*.007+e.object.position.x)*.06; if(!reduced)for(const a of animated){if(a.kind==='fire')a.object.scale.y=.9+Math.sin(now*.008)*.12;else if(a.kind==='train'){a.object.position.x=((now*.001*a.speed+a.span/2+a.offset)%a.span)-a.span/2;host.dataset.trainX=a.object.position.x.toFixed(2);}}
+ function draw(now){if(dead)return;raf=requestAnimationFrame(draw);if(document.hidden||now-last<40)return;const moving=[...actors.values(),...npcActors.values()].some(a=>a.start&&now-a.start<400);if(reduced&&!dirty&&!moving&&!playerItems.active()&&!combatEffects.active()&&!vehicleShot&&!vehicleShots.length)return;last=now;dirty=false;for(const a of actors.values()){const f=reduced?1:Math.min(1,(now-a.start)/400),x=a.from[0]+(a.to[0]-a.from[0])*f,z=a.from[1]+(a.to[1]-a.from[1])*f;a.sprite.position.set(x+(a.offset||0)+Math.sin(cam.yaw)*(a.frontOffset||0),elevation(x,z)+.62+(f<1?Math.sin(f*Math.PI)*.35:0),z+Math.cos(cam.yaw)*(a.frontOffset||0));}if(!reduced&&state?.isNight)for(const e of nightEffects)if(e.kind==='fire')e.object.material.opacity=.62+Math.sin(now*.007+e.object.position.x)*.06; if(!reduced)for(const a of animated){if(a.kind==='fire')a.object.scale.y=.9+Math.sin(now*.008)*.12;else if(a.kind==='flyover')animateAtomFlyover(a,now);else if(a.kind==='train'){a.object.position.x=((now*.001*a.speed+a.span/2+a.offset)%a.span)-a.span/2;host.dataset.trainX=a.object.position.x.toFixed(2);}}
   npcSignals.draw(now);atomThreat?.draw(state,now);
   const npcStatus=[];
   for(const [key,a] of npcActors){
