@@ -13,8 +13,8 @@ test('future city uses its own physical-space icons while modern city keeps its 
  for(const t of map.filter(t=>t.atomKind))assert.equal(tileVisualKey(t),t.atomKind);
 });
 test('tile instructions show actual destinations and retain advanced conditions as optional detail',()=>{
- const taxi=map.find(t=>t.id===1),info=tileInfo(state,taxi,{});assert.match(info.desc,/無料便/);assert.match(info.desc,/有料便/);assert.match(info.desc,/3P・1AP/);assert.match(info.notes,/シェルター/);
- const switched=tileInfo({...state,atom:{...state.atom,power:1}},taxi,{});const routes=taxiRoutes({...state,atom:{...state.atom,power:1}},{pos:1});for(const route of routes)assert.ok(switched.desc.includes(route.to+'番'));assert.notEqual(switched.desc,info.desc);
+ const taxi=map.find(t=>t.id===1),info=tileInfo(state,taxi,{});assert.match(info.desc,/無料便/);assert.match(info.desc,/有料便/);assert.match(info.desc,/3P・1AP/);assert.match(info.notes,/行き先不明/);
+ const switched=tileInfo({...state,atom:{...state.atom,power:1}},taxi,{});const routes=taxiRoutes({...state,atom:{...state.atom,power:1}},{pos:1});for(const route of routes.filter(a=>!a.random))assert.ok(switched.desc.includes(route.to+'番'));assert.ok(!switched.desc.includes('無料便 →'));assert.notEqual(switched.desc,info.desc);
  const chute=tileInfo(state,map.find(t=>t.id===47),{});assert.match(chute.desc,/14番/);
  const shop=tileInfo(state,map.find(t=>t.type==='shop'),{});assert.ok(shop.desc.length<shop.notes.length);assert.match(shop.notes,/手札/);
  const html=tileDetailHTML(taxi,{...info,title:'<img src=x>',notes:'<script>unsafe</script>'});assert.ok(!html.includes('<script>'));assert.match(html,/<details class="city-tile-notes">/);assert.ok(!html.includes('<details open'));

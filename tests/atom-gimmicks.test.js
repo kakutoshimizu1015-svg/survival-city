@@ -32,15 +32,17 @@ test('waste heat pays 4 normally, 12 under warning, 15 in cooldown; caps, bonuse
  f.store.setState({atom:{...f.store.getState().atom,boss:{phase:'cooldown',targets:[],cycle:1}}});assert.ok(f.use('reclaim'));assert.equal(f.p().p,36);assert.equal(f.use('reclaim'),false);
  f.store.setState({roundCount:3});assert.equal(f.use('reclaim'),false,'cooldown cap spans turns');f.store.setState({atom:{...f.store.getState().atom,boss:{phase:'cooldown',targets:[],cycle:2}}});f.set({ap:0});assert.equal(f.use('reclaim'),false);f.set({ap:1});assert.ok(f.use('reclaim'));assert.equal(f.p().p,51);
 });
-test('taxi displays two real destinations, free shelter costs only AP and paid service prioritizes dropped cans',()=>{
- const f=fixture(),s=f.store.getState();let routes=taxiRoutes(s,f.p());assert.equal(routes.length,2);const free=routes.find(a=>a.p===0),paid=routes.find(a=>a.p===3);assert.equal(paid.to,20);assert.equal(s.mapData[free.to-1].type,'shelter');assert.ok(routeTo(s,free.to,20).cost>=routeTo(s,paid.to,20).cost);
- f.set({p:0});assert.equal(f.use(paid.id),false);assert.ok(f.use(free.id));assert.equal(f.p().p,0);assert.equal(f.p().ap,19);assert.equal(f.p().pos,free.to);
- f.set({pos:1,p:3});f.store.setState({gold:{spot:20,drops:{35:1}}});routes=taxiRoutes(f.store.getState(),f.p());assert.match(routes[1].label,/落ちた金缶/);assert.equal(routes[1].to,35);const request=atomActionRequest(f.store.getState(),routes[1].id);assert.ok(f.use(routes[1].id));assert.equal(f.p().p,0);assert.equal(f.p().pos,35);assert.equal(executeAtomAction(f.store,0,request,f.services),false);
- f.set({pos:1,p:10});f.store.setState({gold:{spot:null,nextSpot:null,drops:{}},constructionPos:7});routes=taxiRoutes(f.store.getState(),f.p());assert.equal(routes.length,2);assert.ok(['trial','terminal','reclaim'].includes(f.store.getState().mapData[routes[1].to-1].atomKind));assert.notEqual(routes[1].to,7);assert.match(routes[1].label,/高額報酬/);
+test('free taxi hides its destination until host execution and can land anywhere including danger',()=>{
+ const f=fixture(),s=f.store.getState(),routes=taxiRoutes(s,f.p()),free=routes.find(a=>a.random);assert.equal(free.id,'taxi:free');assert.equal(free.to,undefined);assert.ok(!/番/.test(free.label+free.detail));
+ f.set({p:0});const request=atomActionRequest(f.store.getState(),free.id);assert.ok(executeAtomAction(f.store,0,request,{...f.services,random:()=>0}));assert.equal(f.p().pos,2);assert.equal(f.p().p,0);assert.equal(f.p().ap,19);assert.equal(executeAtomAction(f.store,0,request,f.services),false);
+ f.set({pos:1});f.store.setState({atom:{...f.store.getState().atom,boss:{phase:'locked',targets:[64],strikeRound:2}},constructionPos:2});assert.ok(executeAtomAction(f.store,0,atomActionRequest(f.store.getState(),'taxi:free'),{...f.services,random:()=>.99999}));assert.equal(f.p().pos,64);assert.equal(f.p().ap,18);
+ f.set({pos:1,ap:0});assert.equal(f.use('taxi:free'),false);assert.equal(f.use('taxi:free:6'),false,'client cannot choose a free destination');
 });
-test('taxi fallback rewards really are high and every shelter provides irradiation protection',()=>{
- const f=fixture();f.store.setState({gold:{spot:null,drops:{}}});const route=taxiRoutes(f.store.getState(),f.p())[1];const tile=f.store.getState().mapData[route.to-1];assert.ok(tile.atomKind==='trial'||tile.atomKind==='terminal'||f.store.getState().atom.boss.phase==='cooldown');
- for(const origin of [1,10,20,28])for(const power of [0,1]){f.set({pos:origin});f.store.setState({atom:{...f.store.getState().atom,power}});const free=taxiRoutes(f.store.getState(),f.p())[0];assert.equal(f.store.getState().mapData[free.to-1].type,'shelter');assert.match(free.label,new RegExp(free.to+'番'));}
+test('paid candidates cover the map, never land on gold, and stale/forged destinations cannot spend money',()=>{
+ const f=fixture(),s=f.store.getState();const routes=taxiRoutes(s,f.p()).filter(a=>!a.random);assert.equal(routes.length,4);assert.equal(new Set(routes.map(a=>s.mapData[a.to-1].sector)).size,4);
+ const [sale,drop,forecast,blocked]=routes.map(a=>a.to);f.store.setState({gold:{spot:sale,nextSpot:forecast,drops:{[drop]:1}},constructionPos:blocked});const next=taxiRoutes(f.store.getState(),f.p()).filter(a=>!a.random);assert.ok(next.length>1);assert.ok(next.every(a=>![sale,drop,forecast,blocked].includes(a.to)));assert.ok(next.every(a=>a.p===3&&a.ap===1));
+ for(const id of [sale,drop,forecast,blocked,999])assert.equal(f.use('taxi:paid:'+id),false);
+ const target=next[0];f.set({p:2});assert.equal(f.use(target.id),false);f.set({p:3});assert.ok(f.use(target.id));assert.equal(f.p().p,0);assert.equal(f.p().pos,target.to);assert.equal(f.p().ap,19);
 });
 test('terminal host choices enforce HP/AP and one job per turn; decline is free and CPU never stalls',async()=>{
  const f=fixture();f.set({pos:4,hp:15,ap:2,p:0});f.store.setState({storyActive:true,storyIndex:4});const choose=new Function('v','$','isAtom','atomStories','Wt','Y','return '+extract('Gt=e=>',',Kt=e=>'))(f.store,network,isAtom,atomStories,[],m=>f.logs.push(m));
@@ -59,4 +61,4 @@ test('terminal arrival is deterministic and safe from post-death dialogs, withou
  const modern={...f.store.getState(),mapData:[{id:1,type:'manhole',next:[2]},{id:2,type:'normal',next:[1]}]};assert.deepEqual(atomActions(modern,{...f.p(),pos:1}),[]);assert.equal(isAtom(modern),false);
 });
 
-test('taxi details render before the host initializes the new game',()=>{const s={mapData:createAtomBoard(),atom:null,players:[]};assert.match(atomTileDescription(s,s.mapData[0]),/無料便/);assert.equal(taxiRoutes(s,{pos:1}).length,2);});
+test('taxi details render before the host initializes the new game',()=>{const s={mapData:createAtomBoard(),atom:null,players:[]};assert.match(atomTileDescription(s,s.mapData[0]),/無料便/);assert.equal(taxiRoutes(s,{pos:1}).filter(a=>!a.random).length,4);});

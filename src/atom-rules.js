@@ -1,4 +1,4 @@
-import {reclaimOffer,taxiRoutes,terminalAvailable,TERMINAL_STORY} from './atom-gimmicks.js';
+import {reclaimOffer,taxiRoutes,taxiRandomDestinations,terminalAvailable,TERMINAL_STORY} from './atom-gimmicks.js';
 import {atomEarning,atomEarnKey} from './atom-economy.js';
 import {isAtom} from './atom-map.js';
 export const ATOM_NPCS={police:'住所確認ドローン',uncle:'故障した検品ロボ',animal:'ケーブル食いロボ',yakuza:'警備アンドロイド',loanshark:'契約回収ロボ',friend:'お世話ロボット',truck:'マザー・ゼロ'};
@@ -11,7 +11,7 @@ export function atomActions(s,p){
  if(income&&a.earned?.[atomEarnKey(s,p,t.atomKind)]!==true)out.push({id:t.atomKind,label:`${income.icon} ${income.name} ＋${income.reward}P${income.hp?`・HP−${income.hp}`:''}`,detail:`${income.ap}AP${income.hp?'・HP−'+income.hp:''} / 自分の手番に1回${income.heat?' / ボスに狙われやすくなる':''}`,ap:income.ap,p:0,income});
  if(t?.atomKind==='taxi')out.push(...taxiRoutes(s,p));
  if(t?.atomKind==='terminal'&&(terminalAvailable(s,p,'repair')||terminalAvailable(s,p,'trial')))out.push({id:'terminal',label:'市民サービス端末を使う',detail:'点検か実験を選ぶ。費用を見てから決められる。',ap:0,p:0});
- if(t?.atomKind==='switch')out.push({id:'switch',label:'次の路線を切替',detail:'1AP。次ラウンドから無料便のシェルターが切り替わる。',ap:1,p:0});
+ if(t?.atomKind==='switch')out.push({id:'switch',label:'次の路線を切替',detail:'1AP。次ラウンドから有料便の行き先が切り替わる。',ap:1,p:0});
  if(t?.atomKind==='chute'){const to=t.atomExit??(p.pos===37?10:28);out.push({id:'chute',label:`非常滑り台 → ${to}番`,detail:'1APで下層へ。一方通行。到着先の効果も受ける。',ap:1,p:0,to});}
  if(t?.atomKind==='hot')out.push({id:'hot',label:`原子炉を横断 → ${p.pos===43?53:43}番`,detail:'1AP＋HP10で近道。ボスに狙われやすくなる。',ap:1,p:0,to:p.pos===43?53:43});
  if(t?.atomKind==='reclaim'){const offer=reclaimOffer(s,p,t);if(offer)out.push({id:'reclaim',label:`${offer.label} ＋${offer.reward}P`,detail:`1AP / ${offer.detail}`,ap:1,p:0,offer});}
@@ -19,9 +19,10 @@ export function atomActions(s,p){
 }
 export function canAtomAct(s,p){return isAtom(s)&&s.goldMode&&s.gamePhase==='playing'&&!s.gameOver&&!s._roundEndInProgress&&s.diceRolled&&!s.diceAnim?.active&&!s.turnOrderActive&&!s.turnBannerActive&&!s.isBranchPicking&&!s.isDashPicking&&!s.shopActive&&!s.mgActive&&!s.storyActive&&!s.weaponArcData&&!Object.keys(s).some(k=>/^is.*Picking$/.test(k)&&s[k])&&p?.id===s.players[s.turn]?.id&&p.hp>0&&!p.cannotMove;}
 // State changes and landing are synchronous on the host; request keys reject replay.
-export function executeAtomAction(store,actorId,request,{move,damage,log}){
+export function executeAtomAction(store,actorId,request,{move,damage,log,random=Math.random}){
  const s=store.getState(),p=s.players.find(p=>p.id===actorId);if(!canAtomAct(s,p)||request?.round!==s.roundCount||request?.turn!==s.turn||request?.pos!==p.pos||request?.revision!==(s.atom.revision||0))return false;
- const action=atomActions(s,p).find(a=>a.id===request.action);if(!action||p.ap<action.ap||p.p<action.p||action.income?.hp&&p.hp<=action.income.hp||action.to!=null&&action.to===s.constructionPos)return false;
+ let action=atomActions(s,p).find(a=>a.id===request.action);if(!action||p.ap<action.ap||p.p<action.p||action.income?.hp&&p.hp<=action.income.hp||action.to!=null&&action.to===s.constructionPos)return false;
+ if(action.random){const targets=taxiRandomDestinations(s,p);if(!targets.length)return false;const to=targets[Math.min(targets.length-1,Math.floor(random()*targets.length))].id;action={...action,to,label:`無料便で${to}番に到着！`};}
  if(action.id==='terminal'){store.setState({storyActive:true,storyIndex:TERMINAL_STORY});return true;}
  const t=s.mapData.find(t=>t.id===p.pos),heat=[...s.atom.heat];heat[t.sector]=(heat[t.sector]||0)+(action.income?.heat??(action.id==='reclaim'?3:2));
  let atom={...s.atom,heat,revision:(s.atom.revision||0)+1};if(action.id==='switch')atom.nextPower=1-atom.nextPower;
@@ -69,7 +70,7 @@ export function atomTileDescription(s,t){
   siphon:'1APで5Pをもらう。この地域がボスに狙われやすくなる。手番に1回。',
   trial:'2AP＋HP15で12Pをもらう。HP16以上が必要。手番に1回。',
   terminal:'安全な点検：2APで6P。新薬の実験：2AP＋HP15で12P。どちらかを手番に1回。',
-  switch:'1APで無料タクシーの路線を切替。次ラウンドから別のシェルターへ。',
+  switch:'1APで有料タクシーの路線を切替。次ラウンドから別の候補へ。',
   chute:`1APで${t.atomExit??(t.id===37?10:28)}番へ滑り降りる。逆向きには戻れない。`,
   hot:`1AP＋HP10で${t.id===43?53:43}番へ近道。ボスに狙われやすくなる。`,
   reclaim:s.atom?.boss.phase==='cooldown'?'1APで15P。冷却中に1人1回。':s.atom?.boss.phase==='locked'&&s.atom.boss.targets.includes(t.id)?`1APで12P。R${s.atom.boss.strikeRound}開始に照射！回収後に逃げよう。手番に1回。`:'1APで4P。手番に1回。照射予告中は12P、冷却中は15P。'
@@ -86,7 +87,7 @@ export function atomTileNotes(t){
   repair:'安全靴なら1AP。スカベンジャーなら報酬＋3P。',
   siphon:'盗電で地域の熱が上がる。次のボスの攻撃先に選ばれやすくなる。',
   trial:'HPの消費は装備で軽減できない。営業マンなら報酬＋2P。',
-  taxi:'無料便は照射を防ぐシェルターへ。有料便は金缶を優先し、なければ高額な仕事へ。金缶の購入代10Pは別。ほかのプレイヤーの攻撃は防げない。',
+  taxi:'無料便は乗るまで行き先不明。有料便はマップ上の候補から選ぶ。金缶の販売・落下・出現予告マスには行かない。どちらも到着先の効果を受ける。',
   switch:'切替前にもう一度使うと元に戻る。使うとボスに狙われやすくなる。',
   chute:'着いたマスの効果も受ける。使うとボスに狙われやすくなる。',
   hot:'着いたマスの効果も受ける。HPが足りないと倒れるので注意。',

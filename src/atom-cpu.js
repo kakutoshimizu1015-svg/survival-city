@@ -11,6 +11,7 @@ export function atomCpuStep(store,services){
   const exit=actions.find(a=>a.to!=null&&!unsafe(a.to)&&!(a.id==='hot'&&p.hp<=10));if(exit)return executeAtomAction(store,p.id,atomActionRequest(s,exit.id),services);
   const routes=s.mapData.filter(t=>!unsafe(t.id)).map(t=>routeTo(s,p.pos,t.id)).filter(r=>r?.path.length).sort((a,b)=>a.cost-b.cost);
   const cost=(s.isRainy&&!p.rainGear&&p.charType!=='athlete'&&!p.equip?.foldBike?2:1)+(p.nextMoveCostPenalty||0);if(routes[0]&&p.ap>=cost){services.move(routes[0].path[0]);return true;}
+  const gamble=actions.find(a=>a.random);if(gamble)return executeAtomAction(store,p.id,atomActionRequest(s,gamble.id),services);
  }
  const reclaim=actions.find(a=>a.id==='reclaim'&&(!unsafe(p.pos)||p.hp>60&&p.ap>=4));if(reclaim)return executeAtomAction(store,p.id,atomActionRequest(s,reclaim.id),services);
  const terminal=actions.find(a=>a.id==='terminal');if(terminal&&p.p<20)return executeAtomAction(store,p.id,atomActionRequest(s,terminal.id),services);

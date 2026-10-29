@@ -1,4 +1,3 @@
-import {routeTo} from './gold-rules.js';
 import {atomEarning} from './atom-economy.js';
 export const TERMINAL_STORY=4;
 export const terminalTurn=s=>`${s.roundCount}:${s.turn}`;
@@ -16,19 +15,16 @@ export function reclaimOffer(s,p,t){
  return {reward:(cool?15:danger?12:4)+(p.atomIncomeBonus?5:0),key,cool,danger,label:cool?'冷却中の廃熱回収':danger?'危険な廃熱回収':'廃熱回収',detail:cool?'冷却中に1人1回':danger?`R${b.strikeRound}開始に45ダメージ。回収後は赤いマスから逃げよう！`:'自分の手番に1回'};
 }
 export function atomUnsafe(s,id){return s.atom?.boss.phase==='locked'&&s.atom.boss.targets.includes(id)&&s.mapData.find(t=>t.id===id)?.type!=='shelter';}
+export const taxiRandomDestinations=(s,p)=>s.mapData.filter(t=>t.id!==p.pos&&t.id!==s.constructionPos);
 export function taxiRoutes(s,p){
- const valid=t=>t.id!==p.pos&&t.id!==s.constructionPos;
- const badNpc=id=>['police','uncle','yakuza','loanshark'].some(k=>s[k+'Pos']===id&&!(s[k+'Cd']>0)&&s[k+'Hp']!==0);
- const drops=Object.entries(s.gold?.drops||{}).filter(([id,n])=>n>0&&Number(id)!==p.pos).map(([id])=>Number(id));
- const gold=[...drops,s.gold?.spot??s.gold?.nextSpot].filter(id=>id!=null&&id!==p.pos&&s.mapData.some(t=>t.id===id&&valid(t)));
- const goal=gold[0],distance=(a,b)=>routeTo(s,a,b)?.cost??Infinity;
- const shelters=s.mapData.filter(t=>valid(t)&&t.type==='shelter'&&!badNpc(t.id)).sort((a,b)=>goal!=null?distance(b.id,goal)-distance(a.id,goal)||a.id-b.id:distance(p.pos,a.id)-distance(p.pos,b.id)||a.id-b.id);
- // The switch swaps the free route; a free landing always protects against irradiation.
- const free=shelters[s.atom?.power===1&&shelters.length>1?1:0];
- let paid=goal!=null?s.mapData.find(t=>t.id===goal):null,reason=drops.includes(goal)?'落ちた金缶':goal!=null?'金缶（購入は別途10P）':'高額報酬';
- if(!paid)paid=s.mapData.filter(t=>valid(t)&&(['trial','terminal'].includes(t.atomKind)||t.atomKind==='reclaim'&&(s.atom?.boss?.phase==='cooldown'||atomUnsafe(s,t.id)))).sort((a,b)=>Number(atomUnsafe(s,a.id))-Number(atomUnsafe(s,b.id))||distance(p.pos,a.id)-distance(p.pos,b.id)||a.id-b.id)[0];
- const out=[];
- if(free)out.push({id:'taxi:free:'+free.id,label:`無料便 → ${free.id}番 防護シェルター`,detail:'0P・1AP。金缶から遠回りでも、照射を必ず回避。',ap:1,p:0,to:free.id});
- if(paid)out.push({id:'taxi:paid:'+paid.id,label:`有料便 → ${paid.id}番 ${reason}`,detail:`3P・1AP。${paid.name}へ直行。${atomUnsafe(s,paid.id)?'⚠ 照射予告中！到着後に退避が必要。':badNpc(paid.id)?'⚠ NPCが待ち構えている。':'到着先の効果も受ける。'}`,ap:1,p:3,to:paid.id});
+ const out=taxiRandomDestinations(s,p).length?[{id:'taxi:free',label:'無料便：行き先はおまかせ',detail:'0P・1AP。乗ってからランダムなマスへ。危険な場所に着くこともある。',ap:1,p:0,random:true}]:[];
+ const gold=new Set([s.gold?.spot,s.gold?.nextSpot,...Object.entries(s.gold?.drops||{}).filter(([,n])=>n>0).map(([id])=>Number(id))]);
+ const candidates=s.mapData.filter(t=>t.id!==p.pos&&t.id!==s.constructionPos&&!gold.has(t.id)&&(t.type==='shop'||t.type==='shelter'||['repair','trial','terminal','reclaim'].includes(t.atomKind)));
+ // Stable, geographically spread destinations. The switch changes the paid route.
+ candidates.sort((a,b)=>a.id-b.id);const chosen=[];
+ for(let sector=0;sector<4;sector++){const group=candidates.filter(t=>t.sector===sector);if(group.length)chosen.push(group[(s.atom?.power||0)%group.length]);}
+ for(const t of chosen){const badNpc=['police','uncle','yakuza','loanshark'].some(k=>s[k+'Pos']===t.id&&!(s[k+'Cd']>0)&&s[k+'Hp']!==0);
+  out.push({id:'taxi:paid:'+t.id,label:`有料便 → ${t.id}番 ${t.name}`,detail:`3P・1AP。${atomUnsafe(s,t.id)?'⚠ 照射予告中。到着後は退避が必要。':badNpc?'⚠ NPCがいるマス。':'到着先の効果も受ける。'}`,ap:1,p:3,to:t.id});
+ }
  return out;
 }

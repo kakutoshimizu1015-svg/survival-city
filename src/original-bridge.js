@@ -33,6 +33,7 @@ window.cityGetTileInfo=id=>{
 };
 window.cityTileTooltip=(id,e,x=0,y=0)=>{if(window.cityMobileActive)return;const info=window.cityGetTileInfo(id);if(info)gameStore.getState().setTooltipData({title:`${id}番 ${info.title}`,desc:tileTooltipText(info),visible:true,x:e?.clientX??x,y:e?.clientY??y});};
 window.cityInspectTile=id=>{
+ if(window.cityTaxiSelectTile?.(id))return;
  const s=gameStore.getState(),tile=s.mapData.find(t=>t.id===id),container=document.querySelector('#board-area');if(!tile||!container)return;
  let detail=container.querySelector('.city-tile-detail');if(!detail){detail=document.createElement('aside');detail.className='city-tile-detail';detail.setAttribute('role','dialog');detail.setAttribute('aria-label','マスの説明');container.append(detail);}
  const info=window.cityGetTileInfo(id);detail.dataset.tileId=id;detail.innerHTML=`<button aria-label="マスの説明を閉じる">×</button>${tileDetailHTML(tile,info)}`;detail.querySelector('button').onclick=()=>detail.remove();
