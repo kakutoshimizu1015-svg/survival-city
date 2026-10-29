@@ -5,7 +5,7 @@ import {buildKobanLandmarks} from "./koban-landmark.js";
 import {createCombatEffects} from "./combat-effects.js";
 import {createNpcSignals} from './npc-signals.js';
 import {createGoldModels} from './gold-models.js';
-import { tileVisual, drawTileIcon } from './tile-visuals.js';
+import { tileVisualKey, tileVisual, drawTileIcon } from './tile-visuals.js';
 import { createPlayerItems } from './player-items.js';
 import { createNpcModel, NPC_KEYS } from './npc-models.js';
 import { buildCityBackdrop } from './city-backdrop.js';
@@ -149,9 +149,9 @@ export function createOriginalWorld(host,map){
  for(const {material,matrices} of batches.values()){const inst=new T.InstancedMesh(boxGeometry,material,matrices.length);matrices.forEach((m,i)=>inst.setMatrixAt(i,m));inst.castShadow=true;inst.receiveShadow=true;scene.add(inst);}
  const tileMeshes=new Map();
  for(const t of squares.values()){
-  const color=tileVisual(t.atomKind||t.type).color,hole=t.type==='manhole';
+  const color=tileVisual(tileVisualKey(t)).color,hole=t.type==='manhole';
   const slab=mesh(hole?new T.CylinderGeometry(isCityBoard?1.65:.9,isCityBoard?1.65:.9,.24,24):isCityBoard?new T.CylinderGeometry(1.7,1.85,.26,24):new T.BoxGeometry(1.6,.2,1.6),new T.MeshLambertMaterial({color,emissive:color,emissiveIntensity:.03}),t.x,.74,t.z);tileMeshes.set(t.id,slab);
-  const top=texture((c,w,h)=>{c.clearRect(0,0,w,h);c.fillStyle=color;c.beginPath();c.arc(w/2,h/2,w/2-3,0,Math.PI*2);c.fill();c.strokeStyle='#fff1cd';c.lineWidth=5;c.stroke();c.fillStyle='#142e38';c.globalAlpha=.32;c.beginPath();c.arc(w/2,h/2,w*.37,0,Math.PI*2);c.fill();c.globalAlpha=1;drawTileIcon(c,t.atomKind||t.type,w*.24,h*.24,w*.52);},128,128);
+  const top=texture((c,w,h)=>{c.clearRect(0,0,w,h);c.fillStyle=color;c.beginPath();c.arc(w/2,h/2,w/2-3,0,Math.PI*2);c.fill();c.strokeStyle='#fff1cd';c.lineWidth=5;c.stroke();c.fillStyle='#142e38';c.globalAlpha=.32;c.beginPath();c.arc(w/2,h/2,w*.37,0,Math.PI*2);c.fill();c.globalAlpha=1;drawTileIcon(c,tileVisualKey(t),w*.24,h*.24,w*.52);},128,128);
   const cap=mesh(new T.PlaneGeometry(isCityBoard?3.25:1.5,isCityBoard?3.25:1.5),new T.MeshBasicMaterial({map:top,transparent:true,alphaTest:.1}),t.x,.93,t.z);cap.rotation.x=-Math.PI/2;cap.castShadow=false;
  }
  const atomThreat=isAtomBoard?createAtomThreatModel({T,scene,squares,elevation,reduced}):null;

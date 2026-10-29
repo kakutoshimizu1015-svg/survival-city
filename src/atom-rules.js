@@ -5,11 +5,11 @@ export function initialAtomState(){return {power:0,nextPower:0,heat:[0,0,0,0],cl
 export function atomActions(s,p){
  if(!isAtom(s)||!p||!s.atom)return [];
  const t=s.mapData.find(t=>t.id===p.pos),a=s.atom,out=[];
- if(t?.atomKind==='taxi')for(const id of (a.power===0?[1,20]:[10,28]).filter(id=>id!==p.pos))out.push({id:'taxi:'+id,label:`空中タクシー → ${id}番`,detail:'1AP・3P / 着地先の効果あり / この街区の熱が上がる',ap:1,p:3,to:id});
+ if(t?.atomKind==='taxi')for(const id of (a.power===0?[1,20]:[10,28]).filter(id=>id!==p.pos))out.push({id:'taxi:'+id,label:`空中タクシー → ${id}番`,detail:'1AP＋3Pでワープ。着いたマスの効果あり。ボスに狙われやすくなる。',ap:1,p:3,to:id});
  if(t?.atomKind==='switch')out.push({id:'switch',label:'次の路線を切替',detail:`1AP / 次ラウンドから${a.nextPower===0?'南北':'東西'}線へ / 全員が使う路線`,ap:1,p:0});
- if(t?.atomKind==='chute'){const to=t.atomExit??(p.pos===37?10:28);out.push({id:'chute',label:`非常シュート → ${to}番`,detail:'1AP / 下層へ一方通行 / 着地先の効果あり',ap:1,p:0,to});}
- if(t?.atomKind==='hot')out.push({id:'hot',label:`原子炉を横断 → ${p.pos===43?53:43}番`,detail:'1AP・HP−10 / 対岸へ近道 / この街区の熱が上がる',ap:1,p:0,to:p.pos===43?53:43});
- if(t?.atomKind==='reclaim'&&a.boss.phase==='cooldown'&&a.claims[p.id]!==a.boss.cycle)out.push({id:'reclaim',label:'廃熱を回収 ＋5P',detail:'1AP / 冷却中に1人1回 / 次の捕捉候補になりやすい',ap:1,p:0});
+ if(t?.atomKind==='chute'){const to=t.atomExit??(p.pos===37?10:28);out.push({id:'chute',label:`非常シュート → ${to}番`,detail:'1APで滑り降りる。着いたマスの効果あり。逆には戻れない。',ap:1,p:0,to});}
+ if(t?.atomKind==='hot')out.push({id:'hot',label:`原子炉を横断 → ${p.pos===43?53:43}番`,detail:'1AP＋HP10で近道。ボスに狙われやすくなる。',ap:1,p:0,to:p.pos===43?53:43});
+ if(t?.atomKind==='reclaim'&&a.boss.phase==='cooldown'&&a.claims[p.id]!==a.boss.cycle)out.push({id:'reclaim',label:'廃熱を回収 ＋5P',detail:'1APで5P。冷却中に1人1回。次にボスに狙われやすくなる。',ap:1,p:0});
  return out;
 }
 export function canAtomAct(s,p){return isAtom(s)&&s.goldMode&&s.gamePhase==='playing'&&!s.gameOver&&!s._roundEndInProgress&&s.diceRolled&&!s.diceAnim?.active&&!s.turnOrderActive&&!s.turnBannerActive&&!s.isBranchPicking&&!s.isDashPicking&&!s.shopActive&&!s.mgActive&&!s.storyActive&&!s.weaponArcData&&p?.id===s.players[s.turn]?.id&&p.hp>0&&!p.cannotMove;}
@@ -55,9 +55,25 @@ export async function advanceAtomThreat(store,nextRound,{beat,damage,wait,log,ra
  }
 }
 export function atomTileDescription(s,t){
- const descriptions={taxi:'空飛ぶ乗合タクシー。1AP＋3Pで給電中の停留所へ。行先は「設備」ボタンで選べます。',switch:'1APで次ラウンドの給電路線を切り替える。全員のタクシーの行先が変わります。',chute:'1APで下層へ一方通行。着地点の効果は発生します。',hot:'1APとHP10で原子炉の対岸へ近道。熱が上がり、マザーの捕捉候補になります。',reclaim:'マザーの冷却中だけ、1APで5Pを回収。1人1回。'};
+ const descriptions={
+  taxi:`1AP＋3Pでワープ。今の行き先：${(s.atom?.power===1?[10,28]:[1,20]).filter(id=>id!==t.id).map(id=>id+'番').join('・')}。`,
+  switch:'1APでタクシーの行き先を変更。次のラウンドから全員に反映。',
+  chute:`1APで${t.atomExit??(t.id===37?10:28)}番へ滑り降りる。逆向きには戻れない。`,
+  hot:`1AP＋HP10で${t.id===43?53:43}番へ近道。ボスに狙われやすくなる。`,
+  reclaim:s.atom?.boss.phase==='cooldown'?'1APで5Pもらえる。今回の冷却中、1人1回まで。':'ボスが攻撃した後に使える。1APで5Pもらえる。'
+ };
  if(t.atomKind)return descriptions[t.atomKind];
- if(t.type==='shelter')return '防護シェルター。ここにいればマザー・ゼロの照射を必ず回避します。';
- if(t.type==='koban')return '住所確認ゲート。登録住所がないため、このターンは移動できなくなります。';
+ if(t.type==='shelter')return 'ここにいれば、マザー・ゼロの攻撃を必ずよける。';
+ if(t.type==='koban')return 'このターンは移動できなくなる。';
  return null;
+}
+
+export function atomTileNotes(t){
+ return {
+  taxi:'移動先のマスの効果も受ける。使うとボスに狙われやすくなる。タクシーの行き先は配電盤で変えられる。',
+  switch:'切替前にもう一度使うと元に戻る。使うとボスに狙われやすくなる。',
+  chute:'着いたマスの効果も受ける。使うとボスに狙われやすくなる。',
+  hot:'着いたマスの効果も受ける。HPが足りないと倒れるので注意。',
+  reclaim:'使うと次にボスに狙われやすくなる。ボスが次の攻撃を終えると、また1回使える。',
+ }[t.atomKind]|| (t.type==='shelter'?'ほかの敵やプレイヤーの攻撃は防げない。':'');
 }

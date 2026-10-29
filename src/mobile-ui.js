@@ -1,6 +1,6 @@
 import {goldScore,goldCompare,goldRankOf} from './gold-rules.js';
 import {goldIconHTML} from './gold-ui.js';
-import { tileIconHTML } from './tile-visuals.js';
+import { tileIconHTML, tileVisualKey } from './tile-visuals.js';
 import { t as itemCards } from '../assets/cards-BGoWm8gy.js';
 import { itemArt } from './pixel-item-art.js';
 import { c as characterTypes,P as chatStore,t as networkStore } from '../assets/useNetworkStore-CIe06z3C.js';
@@ -45,7 +45,7 @@ export function installMobileUI(store){
   const tour=document.body.classList.contains('city-touring');const branch=s.isBranchPicking||s.isDashPicking;
   root.classList.toggle('choosing-route',branch);document.body.classList.toggle('mobile-branch',branch);
   const actions=root.querySelector('.mobile-actions');
-  if(branch){const ids=s.currentBranchOptions||[];const html=ids.map((id,i)=>{const t=s.mapData.find(t=>t.id===id),info=t&&getTileInfo(s,t,tileDescriptions);return `<button data-route="${id}" ${tour?'disabled':''}><b><em>${i+1}</em>${tileIconHTML(t?.type)}${esc(t?.name||'進む')}</b><span>${esc(info?.short||'進む')}</span>${info?.extra?`<small>${esc(info.extra)}</small>`:''}</button>`;}).join('');set(actions,html);}
+  if(branch){const ids=s.currentBranchOptions||[];const html=ids.map((id,i)=>{const t=s.mapData.find(t=>t.id===id),info=t&&getTileInfo(s,t,tileDescriptions);return `<button data-route="${id}" ${tour?'disabled':''}><b><em>${i+1}</em>${tileIconHTML(tileVisualKey(t))}${esc(t?.name||'進む')}</b><span>${esc(info?.short||'進む')}</span>${info?.extra?`<small>${esc(info.extra)}</small>`:''}</button>`;}).join('');set(actions,html);}
   else{const buttons=[...document.querySelectorAll('#action-panel button')];set(actions,buttons.map(b=>actionButton(b,tour)).join('')||`<p>${esc(p.name)}の手番です</p>`);}
   const rows=Math.max(2,Math.ceil(actions.querySelectorAll('button').length/(branch?2:4)));document.body.style.setProperty('--mobile-action-rows',rows);
 

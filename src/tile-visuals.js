@@ -17,6 +17,25 @@ export const TILE_VISUALS={
  manhole:{name:'ワープ',color:'#599aba',path:'M21 12a9 9 0 1 1-18 0 9 9 0 1 1 18 0 M17 12a5 5 0 1 1-10 0 5 5 0 1 1 10 0 M10 12h4'},
  koban:{name:'交番',color:'#6477bf',path:'M12 2l9 4v7c0 5-9 9-9 9s-9-4-9-9V6z M8 10h8 M12 7v9'}
 };
+// Atomic-age signs are painted onto the physical spaces, with the same keys
+// used for route cards and the accessible interactive markers.
+Object.assign(TILE_VISUALS,{
+ 'atom-can':{name:'燃料缶',color:'#d39446',path:'M6 6h12v15H6z M9 6V3h6v3 M12 9l-3 5h4l-1 4 4-6h-4z'},
+ 'atom-trash':{name:'廃棄パーツ',color:'#8a9d50',path:'M4 4h7v7H4z M14 12h7v8h-7z M7 15v6 M4 18h6 M16 3v5 M13 6h6'},
+ 'atom-shop':{name:'ロボット商店',color:'#4d9ac5',path:'M4 7h16v14H4z M12 7V3 M10 3h4 M7 11h2 M15 11h2 M8 17h8'},
+ 'atom-center':{name:'修理ポッド',color:'#d46564',path:'M6 2h12l3 5v14H3V7z M10 8h4v4h4v4h-4v4h-4v-4H6v-4h4z'},
+ 'atom-shelter':{name:'防護シェルター',color:'#53a58d',path:'M12 2l9 4v7c0 5-9 9-9 9s-9-4-9-9V6z M7 13l4 4 6-8'},
+ 'atom-job':{name:'原子炉の仕事',color:'#b88855',path:'M3 9h18v12H3z M8 9V5h8v4 M12 11l-3 4h4l-1 4 4-5h-4z'},
+ 'atom-exchange':{name:'資源の買取',color:'#d3ae43',path:'M9 4h7l4 7 M16 8l4 3 1-5 M20 15l-4 6H8 M11 18l-3 3 3 2 M4 18l-3-7 4-6 M2 10l3-5 3 4'},
+ 'atom-event':{name:'ロボットのイベント',color:'#a277b8',path:'M3 5h18v14H3z M8 9h1 M15 9h1 M8 14h8 M12 5V2 M6 19l-2 3'},
+ 'atom-koban':{name:'住所確認ゲート',color:'#6477bf',path:'M3 22V3h18v19 M7 22V7h10v15 M7 13h10 M12 10v6'}
+});
+export function tileVisualKey(tile){
+ if(typeof tile==='string')return tile;
+ if(tile?.atomKind)return tile.atomKind;
+ const type=tile?.type||'normal';
+ return tile?.boardLayout?.startsWith('atom-zero-')&&TILE_VISUALS['atom-'+type]?'atom-'+type:type;
+}
 export const tileVisual=type=>TILE_VISUALS[type]||TILE_VISUALS.normal;
 export function tileIconURL(type){const v=tileVisual(type);return 'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="${v.path}" fill="${v.fill?'#fff4d4':'none'}" stroke="#fff4d4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`);}
 export function drawTileIcon(ctx,type,x,y,size){const v=tileVisual(type);ctx.save();ctx.translate(x,y);ctx.scale(size/24,size/24);ctx.strokeStyle='#fff4d4';ctx.fillStyle='#fff4d4';ctx.lineWidth=2.2;ctx.lineCap='round';ctx.lineJoin='round';const path=new Path2D(v.path);if(v.fill)ctx.fill(path);ctx.stroke(path);ctx.restore();}
