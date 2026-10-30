@@ -66,3 +66,17 @@ test('host cooldown closes an open guest picker and displays the shared countdow
  f.store.setState({roundCount:3});f.flush();assert.ok(!controls.innerHTML.includes('disabled'));assert.match(controls.innerHTML,/タクシーを選ぶ/);
  }finally{f.restore();}
 });
+
+test('map badges track the shared countdown, follow projection and disappear at reopening without DOM churn',async()=>{
+ const {createTaxiCooldownMarkers}=await import('../src/taxi-cooldown-markers.js');
+ const old=globalThis.document;class Node{constructor(){this.children=[];this.dataset={};this.style={};this.attributes={};this.writes=0;}set textContent(value){this.text=value;this.writes++;}get textContent(){return this.text;}setAttribute(k,v){this.attributes[k]=v;}append(...nodes){this.children.push(...nodes);}remove(){this.removed=true;}}
+ globalThis.document={createElement:()=>new Node()};try{
+  const host=new Node(),markers=createTaxiCooldownMarkers(host,createAtomBoard()),layer=host.children[0],first=layer.children.find(b=>b.dataset.taxiCooldown==='1');let shift=0;const project=(col,row)=>({x:col*10+shift,y:row*10});
+  const s={roundCount:1,turn:1,players:[{},{},{}],atom:{taxiCooldowns:{1:{round:3,turn:1}}}};
+  markers.update(s,project);assert.equal(layer.hidden,false);assert.equal(first.hidden,false);assert.equal(first.children[0].textContent,'×');assert.equal(first.children[1].textContent,'あと2');assert.ok(layer.children.filter(b=>b!==first).every(b=>b.hidden));assert.match(first.attributes['aria-label'],/R3の2番手/);
+  const writes=first.children[1].writes,left=Number.parseFloat(first.style.left);shift=40;markers.update(s,project);assert.equal(first.style.left,left+40+'px');assert.equal(first.children[1].writes,writes);
+  markers.update({...s,roundCount:2},project);assert.equal(first.children[1].textContent,'あと1');markers.update({...s,roundCount:3,turn:0},project);assert.equal(first.hidden,false);markers.update({...s,roundCount:3,turn:1},project);assert.equal(first.hidden,true);assert.equal(layer.hidden,true);
+  markers.update({...s,atom:initialAtomState()},project);assert.equal(layer.hidden,true);markers.dispose();assert.equal(layer.removed,true);
+  const modern=new Node();createTaxiCooldownMarkers(modern,[{id:1,type:'manhole'}]).update(s,project);assert.equal(modern.children.length,0);
+ }finally{globalThis.document=old;}
+});

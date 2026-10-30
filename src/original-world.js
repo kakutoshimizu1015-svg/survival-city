@@ -1,3 +1,4 @@
+import {createTaxiCooldownMarkers} from './taxi-cooldown-markers.js';
 import {animateAtomFlyover} from './atom-traffic.js';
 import {ATOM_BOARD,createAtomElevation,atomDistricts,ATOM_LIGHT,isAtom} from "./atom-map.js";
 import {buildAtomScenery,createAtomThreatModel} from "./atom-scenery.js";
@@ -155,6 +156,7 @@ export function createOriginalWorld(host,map){
   const top=texture((c,w,h)=>{c.clearRect(0,0,w,h);c.fillStyle=color;c.beginPath();c.arc(w/2,h/2,w/2-3,0,Math.PI*2);c.fill();c.strokeStyle='#fff1cd';c.lineWidth=5;c.stroke();c.fillStyle='#142e38';c.globalAlpha=.32;c.beginPath();c.arc(w/2,h/2,w*.37,0,Math.PI*2);c.fill();c.globalAlpha=1;drawTileIcon(c,tileVisualKey(t),w*.24,h*.24,w*.52);},128,128);
   const cap=mesh(new T.PlaneGeometry(isCityBoard?3.25:1.5,isCityBoard?3.25:1.5),new T.MeshBasicMaterial({map:top,transparent:true,alphaTest:.1}),t.x,.93,t.z);cap.rotation.x=-Math.PI/2;cap.castShadow=false;
  }
+ const taxiCooldownMarkers=createTaxiCooldownMarkers(host,map);
  const atomThreat=isAtomBoard?createAtomThreatModel({T,scene,squares,elevation,reduced}):null;
  const textureCache=new Map(),actors=new Map(),npcActors=new Map();
  const npcSignals=createNpcSignals({T,scene,squares,elevation,host,reduced,isCityBoard});
@@ -172,6 +174,7 @@ export function createOriginalWorld(host,map){
   a.sprite.material.color.set(color||'#ffffff');return a;
  }
  function projectDOM(){
+  taxiCooldownMarkers.update(state,projectGrid);
   for(const t of squares.values()){const el=host.querySelector(`[data-original-tile="${t.id}"]`);if(!el)continue;const p=project(t.x,elevation(t.x,t.z)+.62,t.z);el.style.setProperty('--world-x',(p.x-el.offsetWidth/2)+'px');el.style.setProperty('--world-y',(p.y-el.offsetHeight/2)+'px');
    if(isCityBoard&&cameraChanged){const target=new T.Vector3(t.x,elevation(t.x,t.z)+.62,t.z),direction=camera.getWorldDirection(new T.Vector3());routeRay.set(target.clone().addScaledVector(direction,-200),direction);routeRay.far=198.5;el.classList.toggle('tile-obscured',routeRay.intersectObjects(routeOccluders,false).length>0);}
    const target=el.classList.contains('tile-highlight-branch')||el.classList.contains('tile-highlight-dash'),slab=tileMeshes.get(t.id);slab.material.emissiveIntensity=target?.7:.03;const owner=state?.players.find(p=>p.id===state?.territories[t.id]);slab.material.color.set(target?'#ffe7a0':owner?.color||districts[t.area]?.color||'#a7bb8d');
@@ -283,6 +286,6 @@ export function createOriginalWorld(host,map){
  return {update,showCombat(event){combatEffects.show(event);dirty=true;},inspectTile(id){const t=squares.get(id);if(!t)return;setCameraMode('tour');cam.target.set(t.x,elevation(t.x,t.z)+1.5,t.z);cam.zoom=3.5;sync();},wasCameraGesture:()=>gestureMoved,setCameraMode,getCameraMode:()=>cameraMode,useItem(id,card){playerItems.use(id,card);dirty=true;},playAttack(data){playerItems.attack(data);dirty=true;},setWeaponAim(angle){playerItems.setAim(angle);dirty=true;},tilt(d){if(cameraMode!=='tour')return;cam.pitch=Math.max(.38,Math.min(1.15,cam.pitch+d*.1));sync();},rotate(d){if(cameraMode!=='tour')return;cam.yaw+=d*Math.PI/8;sync();},zoom(d){if(cameraMode!=='tour')return;cam.zoom=Math.max(.4,Math.min(5,cam.zoom*d));sync();},center(){if(cameraMode!=='tour')return;focus([state?.players[state.turn]?.pos]);},overview(){if(cameraMode==='tour')fixedView();},district(area){if(cameraMode!=='tour')return;focus(map.filter(t=>t.area===area).map(t=>t.id));if(isCityBoard&&area==='luxury'){cam.target.y=5;cam.zoom*=.78;sync();}},projectGrid,
   aimEnd(t,range,angle){return projectGrid(t.col+Math.cos(angle*Math.PI/180)*range,t.row+Math.sin(angle*Math.PI/180)*range);},
   weaponArc(t,range,angle){const points=[projectGrid(t.col,t.row)];for(let d=angle-75;d<=angle+75;d+=5)points.push(projectGrid(t.col+Math.cos(d*Math.PI/180)*range,t.row+Math.sin(d*Math.PI/180)*range));return points.map((p,i)=>`${i?'L':'M'} ${p.x} ${p.y}`).join(' ')+' Z';},
-  dispose(){combatEffects.dispose();dead=true;cancelAnimationFrame(twoFingerFrame);inputEvents.abort();playerItems.dispose();cancelAnimationFrame(raf);resize.disconnect();scene.traverse(o=>{o.geometry?.dispose();if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();});for(const tex of [...assets,...textureCache.values()])tex.dispose();renderer.dispose();canvas.remove();}
+  dispose(){taxiCooldownMarkers.dispose();combatEffects.dispose();dead=true;cancelAnimationFrame(twoFingerFrame);inputEvents.abort();playerItems.dispose();cancelAnimationFrame(raf);resize.disconnect();scene.traverse(o=>{o.geometry?.dispose();if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();});for(const tex of [...assets,...textureCache.values()])tex.dispose();renderer.dispose();canvas.remove();}
  };
 }
